@@ -1,0 +1,52 @@
+# SEC EDGAR settings
+edgar:
+  email: ${EDGAR_EMAIL}
+  organization: ${EDGAR_ORGANIZATION}
+  filing_types:
+    - "10-K"
+  limit: 3
+
+# Tickers (focus set for current phase)
+tickers:
+  - NVDA
+  - ASML
+  - MU
+  - AMD
+
+# Data paths
+paths:
+  raw: "data/raw"
+  processed: "data/processed"
+  logs: "log"
+  news: "data/news"
+  schemas: "data/schemas"
+  evaluate: "data/evaluate"
+
+# Preprocessing
+preprocess:
+  markdown_method: "html2text"  # html2text | markitdown | beautifulsoup
+  extract_sections: true
+  use_fallback_extraction: true
+  target_sections:
+    - "Item 1"
+    - "Item 1A"
+    - "Item 5"
+    - "Item 7"
+    - "Item 8"
+
+# Text splitting (for KG extraction)
+chunker:
+  chunk_size: 4500
+  chunk_overlap: 600
+
+# LLM
+llm:
+  provider: "deepseek"
+  model: "deepseek-chat"
+  temperature: 0.0
+  base_url: "https://api.deepseek.com"
+
+# KG Extraction
+kg:
+  max_workers: 16
+  batch_size: 5
