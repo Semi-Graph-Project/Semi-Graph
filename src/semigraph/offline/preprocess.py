@@ -316,7 +316,7 @@ def clean_and_save_documents(
     do_fallback = use_fallback_extraction if use_fallback_extraction is not None else cfg.use_fallback_extraction
 
     filing_year = _year_from_accession(filing_id)
-    dated_dir = out_path / ticker / f"FY{filing_year}"
+    dated_dir = out_path / ticker / f"FY{filing_year}-10K"
     dated_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"\nProcessing: {input_file}")
