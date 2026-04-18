@@ -84,7 +84,9 @@ semigraph/
 │   │   └── schema.py         # OntologyRegistry — single source of truth
 │   ├── offline/
 │   │   ├── ingest.py         # SEC EDGAR download
-│   │   └── preprocess.py     # HTML → Markdown → section extraction
+│   │   ├── preprocess.py     # HTML → Markdown → section extraction
+│   │   ├── chunker.py        # Token-aware text splitter → List[Chunk]
+│   │   └── kg_extract.py     # Stage 1: GLiNER NER | Stage 2: DeepSeek relationships (WIP)
 │   └── online/               # (WIP) agentic query layer
 ├── tests/
 │   └── test_ontology.py      # 52 unit tests (zero external dependencies)
@@ -164,6 +166,7 @@ data/processed/
 | Data Models | Pydantic v2 |
 | SEC Data | `sec-edgar-downloader` |
 | HTML → Markdown | `html2text` |
+| NER (Entity Detection) | `GLiNER` (`urchade/gliner_medium-v2.1`) |
 | Config | YAML + `python-dotenv` |
 | Testing | pytest |
 
@@ -183,12 +186,14 @@ data/processed/
 - [x] **Preprocess pipeline** — HTML → Markdown → section extraction with readable output (`TICKER/FY{YEAR}/Item_X.md`)
 - [x] **Regex fix** — handle `html2text` backslash-escaped dots (`ITEM 7\.`) in AMD-style 10-Ks
 - [x] **E2E validation** — 9 filings processed (NVDA FY2024–2026, MU FY2023–2025, AMD FY2024–2026)
+- [x] **Chunker** — `RecursiveCharacterTextSplitter` (4,500 chars / 600 overlap) → `Chunk` Pydantic model with deterministic `chunk_id` and provenance metadata; 96–121 chunks per filing
+- [x] **GLiNER NER (Stage 1)** — local entity detection (`urchade/gliner_medium-v2.1`), section-aware label mapping derived from `OntologyRegistry`, deduplication by `(text, label)`
 
 ### In Progress
 
 - [ ] **Step 3 — KG Extraction pipeline**
-  - [ ] `offline/chunker.py` — token-aware text splitter per section
-  - [ ] `offline/kg_extract.py` — LLM structured extraction → `GraphExtractionResult`
+  - [x] `offline/chunker.py` — token-aware text splitter per section
+  - [ ] `offline/kg_extract.py` — Stage 2: DeepSeek relationship extraction → `GraphExtractionResult`
   - [ ] `offline/kg_store.py` — Neo4j MERGE upsert (idempotent)
 
 ### Planned

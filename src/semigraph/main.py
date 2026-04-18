@@ -1,18 +1,26 @@
-from semigraph.connections import get_neo4j, get_llm
+from semigraph.offline.chunker import chunk_filing
+from semigraph.offline.kg_extract import extract_entities_gliner
+from semigraph.config import get_config
+from semigraph.offline.chunker import chunk_section
+import os
 from dotenv import load_dotenv
 
 load_dotenv()  # Load environment variables from .env
 
 
-llm = get_llm()
-response = llm.invoke("Say hello in one word.")
-print(response.content) 
+if __name__ == "__main__":
 
-# Test 2: Neo4j
-graph = get_neo4j()
-result = graph.query("RETURN 1 AS test")
-print(result)
+    #load NVDA item_1.md
 
+    with open("/home/kantinan/programming/project/data/processed/NVDA/FY2026-10K/Item_1.md", "r", encoding="utf-8") as f:
+        text = f.read()
 
-llm2 = get_llm()
-print(llm is llm2)
+    chunks = chunk_section(text, ticker="NVDA", fiscal_year="2026", section="Item_1")
+    
+    print(chunks[2].text)
+    entities = extract_entities_gliner(chunks[0].text, section="Item_1",threshold=0.3)
+    print("----------")
+    for e in entities:
+        print(f"  [{e.label}] {e.text}")
+
+    
