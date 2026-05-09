@@ -1,118 +1,306 @@
+"""
+LLM-driven knowledge graph extraction.
 
+A single DeepSeek call extracts both entities (nodes) and relationships from a
+chunk, constrained by the FinReflectKG ontology in semigraph.ontology.schema.
+
+Output passes through:
+  1. JSON parsing (tolerant of code fences / prose noise)
+  2. Pydantic validation (semigraph.ontology.nodes)
+  3. Ontology validation (types must exist in NODE_CATALOG / RELATIONSHIP_CATALOG,
+     and relationship endpoints must respect source/target type constraints)
+
+Anything that fails validation is silently dropped — invalid LLM output never
+corrupts the graph.
+"""
 from __future__ import annotations
 
-from typing import List, Optional
+import json
+import re
+from typing import List
 
-from pydantic import BaseModel, Field
+from pydantic import ValidationError
+
+from semigraph.ontology.nodes import (
+    GraphExtractionResult,
+    GraphNode,
+    GraphRelationship,
+)
+from semigraph.ontology.schema import (
+    NODE_CATALOG,
+    RELATIONSHIP_CATALOG,
+    OntologyRegistry,
+)
 
 
-class Entity(BaseModel):
-    """A named entity detected by GLiNER.
-        \n\n
-        Attr:
-            text
-            label
-            score
+# ===========================================================================
+# Prompt
+# ===========================================================================
+
+_EXTRACTION_PROMPT = """You are a knowledge graph extractor for SEC 10-K filings.
+
+Given a text chunk, extract entities (nodes) and relationships that are
+EXPLICITLY stated. Use ONLY the entity types and relationship types defined
+in the schema below.
+
+{schema_block}
+
+# Output format
+
+Return ONLY a valid JSON object with this exact structure:
+
+{{
+  "nodes": [
+    {{
+      "id": "<actual name from text, lowercased, no extra punctuation>",
+      "type": "<one of the allowed entity types>",
+      "properties": {{}}
+    }}
+  ],
+  "relationships": [
+    {{
+      "source": "<id of source node, must appear in nodes list>",
+      "source_type": "<entity type of source>",
+      "target": "<id of target node, must appear in nodes list>",
+      "target_type": "<entity type of target>",
+      "type": "<one of the allowed relationship types, lowercase>"
+    }}
+  ]
+}}
+
+# Rules
+
+1. Use the ACTUAL name found in the text as the id (e.g. "nvidia", "tsmc",
+   "data center segment"). Never use generic ids like "Company_1" or "Risk_A".
+2. Lowercase all ids; strip surrounding quotes / punctuation.
+3. Both endpoints of every relationship MUST appear in the nodes list.
+4. Use ONLY entity types and relationship types from the schema above.
+5. Respect source/target type constraints — do not link an entity to a
+   relationship that does not allow that pair.
+6. Do not invent facts. If the text does not state a relationship, omit it.
+7. Skip any node or triple you are unsure about.
+8. Return at most 40 nodes and 40 relationships per chunk.
+
+# Naming rules — CRITICAL for graph quality
+
+9. NEVER extract pronouns or generic references as entities. Forbidden ids
+   include: "the company", "company", "we", "us", "our", "the registrant",
+   "it", "they", "them", "the corporation". When the text uses a pronoun,
+   resolve it to the actual named entity (e.g. "the company" in an NVIDIA
+   filing → "nvidia") and emit that name. If unresolvable, omit the entity.
+
+10. Any publicly traded company is type ORG — including the filing company,
+    its competitors, suppliers, customers, and partners. Do NOT use type COMP
+    for entities that are also public companies (e.g. amd, intel, nvidia,
+    tsmc, broadcom). Reserve type COMP only for non-public business entities
+    that do not fit ORG (private firms, joint ventures, business divisions
+    that are not the filing company itself).
+
+11. Use the SHORTEST canonical form of a company name as the id. Drop legal
+    suffixes ("inc", "inc.", "corporation", "corp", "ltd", "limited", "llc",
+    "plc"). Examples:
+      "NVIDIA Corporation" → "nvidia"
+      "Advanced Micro Devices, Inc." → "advanced micro devices"
+      "Micron Technology, Inc." → "micron"  (use "micron" not "micron technology")
+    For products, use the canonical name without version-prefix variants when
+    possible (prefer "amd epyc" over "5th gen amd epyc processors" unless the
+    generation is the entity being discussed).
+
+Output JSON only, no commentary, no markdown fences."""
+
+
+def _build_schema_block(section: str) -> str:
+    """Generate the schema description embedded in the system prompt."""
+    registry = OntologyRegistry()
+    return registry.build_schema_prompt(section)
+
+
+# ===========================================================================
+# JSON parsing — tolerant of LLM noise
+# ===========================================================================
+
+
+def _extract_json_object(text: str) -> dict:
     """
-    text: str
-    label: str      # matches NODE_CATALOG key e.g. "Company", "RiskFactor"
-    score: float = Field(ge=0.0, le=1.0)
+    Pull the first JSON object out of LLM text.
+    Handles cases where the model adds prose or markdown fences despite instructions.
+    """
+    text = re.sub(r"^```(?:json)?\s*", "", text.strip())
+    text = re.sub(r"\s*```$", "", text)
+
+    start = text.find("{")
+    if start == -1:
+        return {}
+    depth = 0
+    for i in range(start, len(text)):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                try:
+                    return json.loads(text[start : i + 1])
+                except json.JSONDecodeError:
+                    return {}
+    return {}
 
 
-# ---------------------------------------------------------------------------
-# Stage 1 — GLiNER entity detection
-# ---------------------------------------------------------------------------
-
-# Map ontology node types → GLiNER-friendly label strings
-# GLiNER uses these strings as "entity type" prompts to the model
-GLINER_LABEL_MAP: dict[str, str] = {
-    "Company":            "company or corporation",
-    "BusinessSegment":    "business segment or division",
-    "Product":            "product or platform",
-    "Technology":         "technology or architecture",
-    "GeographicMarket":   "country or geographic region",
-    "Industry":           "industry or market sector",
-    "RiskFactor":         "risk factor or business risk",
-    "Executive":          "executive officer or board director",
-    "StrategicInitiative": "strategic initiative or program",
-    "FiscalYear":          "fiscal year or annual reporting period",
-}
-
-# Inverted map: gliner label string → ontology key
-_LABEL_TO_ONTOLOGY = {v: k for k, v in GLINER_LABEL_MAP.items()}
-
-# Derive section → node types from schema.py (single source of truth)
-# schema uses "Item 1" (space), chunker uses "Item_1" (underscore) — translate on load
-from semigraph.ontology.schema import SECTION_CONFIG  # noqa: E402
-
-SECTION_LABELS: dict[str, list[str]] = {
-    section.replace(" ", "_"): cfg["nodes"]
-    for section, cfg in SECTION_CONFIG.items()
-}
-
-_gliner_model = None  # module-level cache — load once, reuse
+# ===========================================================================
+# Validation
+# ===========================================================================
 
 
-def _get_gliner_model(model_name: str = "urchade/gliner_medium-v2.1"):
-    """Lazy-load GLiNER model. Cached after first call."""
-    global _gliner_model
-    if _gliner_model is None:
+# Pronoun / generic-reference blacklist — defense in depth against prompt rule 9.
+# These should never appear as entities; the LLM should resolve them to the
+# actual named entity (e.g. "the company" → "nvidia") or omit them.
+_PRONOUN_BLACKLIST: frozenset[str] = frozenset({
+    "the company", "company", "we", "us", "our", "the registrant",
+    "the registrants", "it", "they", "them", "the corporation",
+    "the firm", "the issuer", "the parent", "the group",
+})
+
+
+def _normalize_id(value: str) -> str:
+    """Match the lowercasing + whitespace-stripping rule from the prompt."""
+    return value.strip().strip('"\'').lower()
+
+
+def _validate_nodes(raw_nodes: list) -> tuple[List[GraphNode], set[tuple[str, str]]]:
+    """
+    Filter out nodes whose type is not in the ontology, then build a set of
+    (id, type) keys for downstream relationship validation.
+    """
+    valid: List[GraphNode] = []
+    keys: set[tuple[str, str]] = set()
+
+    if not isinstance(raw_nodes, list):
+        return valid, keys
+
+    for n in raw_nodes:
+        if not isinstance(n, dict):
+            continue
+        if "id" not in n or "type" not in n:
+            continue
+        if n["type"] not in NODE_CATALOG:
+            continue
+
+        nid = _normalize_id(str(n["id"]))
+        if not nid:
+            continue
+        if nid in _PRONOUN_BLACKLIST:
+            continue
+
         try:
-            from gliner import GLiNER  # type: ignore
-            print(f"[GLiNER] Loading model: {model_name}")
-            _gliner_model = GLiNER.from_pretrained(model_name)
-            print("[GLiNER] Model ready.")
-        except ImportError as e:
-            raise ImportError(
-                "GLiNER not installed. Run: pip install gliner"
-            ) from e
-    return _gliner_model
+            node = GraphNode(
+                id=nid,
+                type=n["type"],
+                properties=n.get("properties") or {},
+            )
+        except ValidationError:
+            continue
+
+        valid.append(node)
+        keys.add((nid, n["type"]))
+
+    return valid, keys
 
 
-def extract_entities_gliner(
-    text: str,
-    section: str,
-    threshold: float = 0.4,
-    model_name: str = "urchade/gliner_medium-v2.1",
-) -> List[Entity]:
-    """
-    Stage 1: Detect named entities from chunk text using GLiNER.
+def _is_valid_triple(triple: dict, allowed_keys: set[tuple[str, str]]) -> bool:
+    """A triple is valid only if both endpoints exist as nodes and the
+    relationship type respects the ontology's source/target constraints."""
+    if not isinstance(triple, dict):
+        return False
+    required = {"source", "source_type", "target", "target_type", "type"}
+    if not required.issubset(triple.keys()):
+        return False
 
-    Args:
-        text:       Raw chunk text (markdown stripped ideally).
-        section:    Section key e.g. "Item_1A" — controls which labels to detect.
-        threshold:  Minimum confidence score (default 0.4).
-        model_name: HuggingFace model id for GLiNER.
+    src_key = (_normalize_id(str(triple["source"])), triple["source_type"])
+    tgt_key = (_normalize_id(str(triple["target"])), triple["target_type"])
+    if src_key not in allowed_keys or tgt_key not in allowed_keys:
+        return False
 
-    Returns:
-        List[Entity] deduplicated by (text, label).
-    """
-    ontology_keys = SECTION_LABELS.get(section, list(GLINER_LABEL_MAP.keys()))
-    gliner_labels = [GLINER_LABEL_MAP[k] for k in ontology_keys if k in GLINER_LABEL_MAP]
+    if triple["source_type"] not in NODE_CATALOG:
+        return False
+    if triple["target_type"] not in NODE_CATALOG:
+        return False
+    if triple["type"] not in RELATIONSHIP_CATALOG:
+        return False
 
-    if not gliner_labels:
+    rel_info = RELATIONSHIP_CATALOG[triple["type"]]
+    if rel_info["source_type"] != "any" and rel_info["source_type"] != triple["source_type"]:
+        return False
+    if rel_info["target_type"] != "any" and rel_info["target_type"] != triple["target_type"]:
+        return False
+
+    return True
+
+
+def _validate_relationships(
+    raw_rels: list, allowed_keys: set[tuple[str, str]]
+) -> List[GraphRelationship]:
+    if not isinstance(raw_rels, list):
         return []
 
-    model = _get_gliner_model(model_name)
-
-    # GLiNER has an internal token limit (~512); predict_entities handles long text
-    # by sliding window when the model supports it, but we keep chunks ≤4500 chars
-    # so this is within safe limits for the medium model.
-    raw = model.predict_entities(text, gliner_labels, threshold=threshold)
-
-    seen: set[tuple[str, str]] = set()
-    entities: List[Entity] = []
-
-    for hit in raw:
-        ontology_label = _LABEL_TO_ONTOLOGY.get(hit["label"], hit["label"])
-        key = (hit["text"].strip(), ontology_label)
-        if key in seen:
+    valid: List[GraphRelationship] = []
+    for triple in raw_rels:
+        if not _is_valid_triple(triple, allowed_keys):
             continue
-        seen.add(key)
-        entities.append(Entity(
-            text=hit["text"].strip(),
-            label=ontology_label,
-            score=round(hit["score"], 4),
-        ))
+        try:
+            valid.append(GraphRelationship(
+                source=_normalize_id(str(triple["source"])),
+                source_type=triple["source_type"],
+                target=_normalize_id(str(triple["target"])),
+                target_type=triple["target_type"],
+                type=triple["type"],
+                properties=triple.get("properties") or {},
+            ))
+        except ValidationError:
+            continue
+    return valid
 
-    return entities
+
+# ===========================================================================
+# Public API
+# ===========================================================================
+
+
+def extract_chunk(
+    text: str,
+    section: str,
+    llm=None,
+) -> GraphExtractionResult:
+    """
+    Extract nodes and relationships from a single chunk via one LLM call.
+
+    Args:
+        text:    Chunk text.
+        section: Section key e.g. "Item_1A" or "Item 1A" — drives schema selection.
+        llm:     Optional LangChain ChatOpenAI client. If None, uses get_llm().
+
+    Returns:
+        GraphExtractionResult with ontology-valid nodes and relationships.
+    """
+    if llm is None:
+        from semigraph.connections import get_llm
+        llm = get_llm()
+
+    section_key = section.replace("_", " ")
+    schema_block = _build_schema_block(section_key)
+
+    system_prompt = _EXTRACTION_PROMPT.format(schema_block=schema_block)
+    user_prompt = f"# Text chunk\n{text}\n\nNow extract nodes and relationships."
+
+    response = llm.invoke([
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ])
+    raw = response.content if hasattr(response, "content") else str(response)
+
+    parsed = _extract_json_object(raw)
+    if not isinstance(parsed, dict):
+        return GraphExtractionResult(nodes=[], relationships=[])
+
+    nodes, allowed_keys = _validate_nodes(parsed.get("nodes", []))
+    relationships = _validate_relationships(parsed.get("relationships", []), allowed_keys)
+
+    return GraphExtractionResult(nodes=nodes, relationships=relationships)

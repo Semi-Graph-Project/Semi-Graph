@@ -16,6 +16,7 @@ data/processed/
 data/news/
 data/schemas/
 data/evaluate/
+data/neo4j/
 
 # Keep directory stubs so the folders exist after clone
 !data/.gitkeep
@@ -66,3 +67,8 @@ htmlcov/
 *.swo
 .DS_Store
 Thumbs.db
+
+# ====================
+# Claude.MD
+#--------------------
+CLAUDE.MD/

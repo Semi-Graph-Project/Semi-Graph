@@ -7,7 +7,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 load_dotenv()
 
 llm = ChatOpenAI(
-    model="deepseek-reasoner",
+    model="deepseek-v4-pro",
     api_key=os.getenv("DEEPSEEK_API_KEY"),
     base_url="https://api.deepseek.com",
     temperature=0.7

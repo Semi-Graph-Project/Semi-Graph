@@ -27,12 +27,13 @@ preprocess:
   markdown_method: "html2text"  # html2text | markitdown | beautifulsoup
   extract_sections: true
   use_fallback_extraction: true
+  # KG extraction targets — narrative-rich sections only.
+  # Item 5 (stock perf) and Item 8 (financial tables) are skipped — their
+  # numeric data lives in PostgreSQL via the financial_query tool instead.
   target_sections:
     - "Item 1"
     - "Item 1A"
-    - "Item 5"
     - "Item 7"
-    - "Item 8"
 
 # Text splitting (for KG extraction)
 chunker:
@@ -42,7 +43,7 @@ chunker:
 # LLM
 llm:
   provider: "deepseek"
-  model: "deepseek-chat"
+  model: "deepseek-v4-flash"
   temperature: 0.0
   base_url: "https://api.deepseek.com"
 
@@ -50,3 +51,11 @@ llm:
 kg:
   max_workers: 16
   batch_size: 5
+
+# Embeddings (Phase B — local HuggingFace model, no API)
+embeddings:
+  model: "BAAI/bge-base-en-v1.5"   # 768 dim, ~1.5 GB RAM, MTEB 63.5
+  dimensions: 768
+  batch_size: 32                    # CPU-friendly; raise on GPU
+  device: "cpu"                     # "cpu" | "cuda" | "mps"
+  normalize: true                   # L2-normalize → cosine sim works as dot product

@@ -147,27 +147,28 @@ class TestOntologyRegistrySections:
         assert "Item 1" in sections
         assert "Item 1A" in sections
         assert "Item 7" in sections
-        assert "Item 10" in sections
 
     @pytest.mark.parametrize("section,expected_node", [
-        ("Item 1",  "BusinessSegment"),
-        ("Item 1",  "Company"),
-        ("Item 1",  "GeographicMarket"),
-        ("Item 1A", "RiskFactor"),
-        ("Item 7",  "StrategicInitiative"),
-        ("Item 10", "Executive"),
+        ("Item 1",  "ORG"),
+        ("Item 1",  "SEGMENT"),
+        ("Item 1",  "PRODUCT"),
+        ("Item 1",  "GPE"),
+        ("Item 1A", "RISK_FACTOR"),
+        ("Item 1A", "MACRO_CONDITION"),
+        ("Item 7",  "FIN_METRIC"),
+        ("Item 7",  "ACCOUNTING_POLICY"),
     ])
     def test_get_nodes_contains_expected(self, registry, section, expected_node):
         assert expected_node in registry.get_nodes(section)
 
     @pytest.mark.parametrize("section,expected_rel", [
-        ("Item 1",  "HAS_SEGMENT"),
-        ("Item 1",  "COMPETES_WITH"),
-        ("Item 1",  "SUPPLIED_BY"),
-        ("Item 1A", "HAS_RISK"),
-        ("Item 1A", "RELATED_TO"),
-        ("Item 7",  "PURSUES"),
-        ("Item 10", "HAS_EXECUTIVE"),
+        ("Item 1",  "has_stake_in"),
+        ("Item 1",  "competes_with"),
+        ("Item 1",  "operates_in"),
+        ("Item 1A", "discloses"),
+        ("Item 1A", "negatively_impacts"),
+        ("Item 7",  "guides_on"),
+        ("Item 7",  "invests_in"),
     ])
     def test_get_relationships_contains_expected(self, registry, section, expected_rel):
         assert expected_rel in registry.get_relationships(section)
@@ -209,7 +210,7 @@ class TestOntologyRegistryDetails:
         return OntologyRegistry()
 
     def test_get_node_hints_known_type(self, registry):
-        hints = registry.get_node_hints("Product")
+        hints = registry.get_node_hints("PRODUCT")
         assert "definition" in hints
         assert "examples" in hints
         assert "properties" in hints
@@ -219,9 +220,9 @@ class TestOntologyRegistryDetails:
         assert registry.get_node_hints("NonExistentNode") == {}
 
     def test_get_relationship_info_known(self, registry):
-        info = registry.get_relationship_info("COMPETES_WITH")
-        assert info["source_type"] == "Company"
-        assert info["target_type"] == "Company"
+        info = registry.get_relationship_info("competes_with")
+        assert info["source_type"] == "ORG"
+        assert info["target_type"] == "COMP"
         assert "description" in info
         assert "hint" in info
 
@@ -229,20 +230,44 @@ class TestOntologyRegistryDetails:
         assert registry.get_relationship_info("FAKE_REL") == {}
 
     @pytest.mark.parametrize("rel_type,expected_source,expected_target", [
-        ("HAS_SEGMENT",   "Company",          "BusinessSegment"),
-        ("SUPPLIED_BY",   "Company",          "Company"),
-        ("COMPETES_WITH", "Company",          "Company"),
-        ("HAS_RISK",      "Company",          "RiskFactor"),
-        ("THREATENS",     "RiskFactor",       "BusinessSegment"),
-        ("RELATED_TO",    "RiskFactor",       "GeographicMarket"),
-        ("HAS_EXECUTIVE", "Company",          "Executive"),
-        ("PURSUES",       "Company",          "StrategicInitiative"),
-        ("INVOLVES",      "StrategicInitiative", "Technology"),
+        ("has_stake_in",     "ORG",      "SEGMENT"),
+        ("operates_in",      "ORG",      "GPE"),
+        ("competes_with",    "ORG",      "COMP"),
+        ("partners_with",    "ORG",      "COMP"),
+        ("complies_with",    "ORG",      "REGULATORY_REQUIREMENT"),
+        ("regulates",        "ORG_REG",  "ORG"),
+        ("listed_on",        "ORG",      "FIN_MARKET"),
+        ("guides_on",        "ORG",      "FIN_METRIC"),
+        ("faces",            "ORG",      "RISK_FACTOR"),
+        ("causes_shortage_of", "EVENT",  "RAW_MATERIAL"),
+        ("CONTAINS_SECTION", "Document", "Section"),
+        ("HAS_CHUNK",        "Section",  "Chunk"),
+        ("FILED_BY",         "Document", "ORG"),
+        ("FOR_FISCAL_YEAR",  "Document", "FiscalYear"),
     ])
     def test_relationship_source_target_types(self, registry, rel_type, expected_source, expected_target):
         info = registry.get_relationship_info(rel_type)
         assert info["source_type"] == expected_source, f"{rel_type} source mismatch"
         assert info["target_type"] == expected_target, f"{rel_type} target mismatch"
+
+    def test_provenance_node_types_present(self, registry):
+        """Provenance Layer nodes must exist in NODE_CATALOG."""
+        for nt in ("Document", "Section", "Chunk", "FiscalYear"):
+            assert nt in NODE_CATALOG, f"Provenance node '{nt}' missing"
+
+    def test_provenance_edges_present(self, registry):
+        """Provenance Layer edges must exist in RELATIONSHIP_CATALOG."""
+        for rt in ("CONTAINS_SECTION", "HAS_CHUNK", "NEXT_CHUNK",
+                   "MENTIONS", "FILED_BY", "FOR_FISCAL_YEAR"):
+            assert rt in RELATIONSHIP_CATALOG, f"Provenance edge '{rt}' missing"
+
+    def test_domain_node_types_count(self, registry):
+        """We expect ~20 domain entity types."""
+        domain = registry.all_domain_node_types()
+        assert 18 <= len(domain) <= 25, f"Unexpected domain node count: {len(domain)}"
+        # Spot-check a few core types
+        for nt in ("ORG", "COMP", "FIN_METRIC", "RISK_FACTOR", "RAW_MATERIAL"):
+            assert nt in domain, f"Core domain type '{nt}' missing"
 
 
 # ===========================================================================
@@ -279,7 +304,7 @@ class TestBuildSchemaPrompt:
         # Should not crash; may return minimal string
         assert isinstance(prompt, str)
 
-    @pytest.mark.parametrize("section", ["Item 1", "Item 1A", "Item 7", "Item 10"])
+    @pytest.mark.parametrize("section", ["Item 1", "Item 1A", "Item 7"])
     def test_all_sections_generate_prompt(self, registry, section):
         prompt = registry.build_schema_prompt(section)
         assert len(prompt) > 50, f"Prompt for '{section}' is too short"

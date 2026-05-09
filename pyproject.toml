@@ -29,6 +29,8 @@ dependencies = [
     "pydantic-settings",
     "pandas",
     "gliner",
+    "sentence-transformers>=3.0",
+    "rapidfuzz>=3.0",
     # News
     "GoogleNews",
     "yfinance",

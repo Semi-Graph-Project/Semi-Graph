@@ -1,16 +1,21 @@
 """
 OntologyRegistry — single source of truth for the knowledge graph schema.
 
-Defines:
-  - NODE_CATALOG       : all allowed node types with extraction hints for LLM prompts
-  - RELATIONSHIP_CATALOG: all allowed relationship types with source/target constraints
-  - SECTION_CONFIG     : which nodes/relationships to extract from each 10-K section
+Adopts the FinReflectKG ontology (Arun et al., ICAIF '25, arXiv:2508.17906)
+which was co-designed by LLM and financial Subject Matter Experts and
+validated empirically on 17.5M triples extracted from S&P 500 10-K filings.
+
+Two layers:
+  - DOMAIN LAYER  : entity types and relationships from FinReflectKG schema
+                    (semantic content of 10-K disclosures)
+  - PROVENANCE LAYER: Document / Section / Chunk / FiscalYear
+                    (structural anchor for citation tracing)
 
 Usage:
     registry = OntologyRegistry()
-    nodes = registry.get_nodes("Item 1")          # ["Company", "BusinessSegment", ...]
-    rels  = registry.get_relationships("Item 1A") # ["HAS_RISK", "THREATENS", ...]
-    prompt_block = registry.build_schema_prompt("Item 1")  # formatted string for LLM
+    nodes = registry.get_nodes("Item 1A")     # entity types relevant for Item 1A
+    rels  = registry.get_relationships("Item 1A")
+    prompt_block = registry.build_schema_prompt("Item 1A")
 """
 from __future__ import annotations
 
@@ -18,333 +23,468 @@ from typing import Dict, List
 
 
 # ---------------------------------------------------------------------------
-# Node catalogue
-# Each entry has: definition, examples, properties, hint
+# Domain Layer — entity types from FinReflectKG ontology
 # ---------------------------------------------------------------------------
 NODE_CATALOG: Dict[str, dict] = {
-    "Company": {
-        "definition": (
-            "A legal corporate entity. For cross-company relationships (competitors, "
-            "suppliers, customers), create a Company node for the other company too."
-        ),
-        "examples": [
-            "NVIDIA Corporation",
-            "Taiwan Semiconductor Manufacturing Company",
-            "Advanced Micro Devices",
-        ],
+    # ---------- Organizations ----------
+    "ORG": {
+        "definition": "The filing company that issued the 10-K (the subject of the filing).",
+        "examples": ["NVIDIA Corporation", "Advanced Micro Devices", "Intel"],
         "properties": {
-            "name": "Official company name — set equal to id (required)",
-            "ticker": "Stock symbol e.g. NVDA (optional)",
-            "summary": "1-2 sentence description of what the company does (required)",
+            "name": "Official company name (required, lowercased)",
+            "ticker": "Stock ticker symbol e.g. NVDA (optional)",
+            "summary": "One-line description of the company (optional)",
         },
-        "hint": (
-            "Extract from cover page. When competitors, suppliers, or customers are named "
-            "in text, create a Company node for them too."
-        ),
+        "hint": "Extract from the cover page. Each filing has exactly one filer ORG.",
     },
-
-    "BusinessSegment": {
-        "definition": "A GAAP-reportable operating division of the company.",
-        "examples": ["Data Center", "Gaming", "Professional Visualization", "Automotive"],
+    "COMP": {
+        "definition": "External company referenced in the filing — competitor, supplier, customer, or partner. NOT the filer.",
+        "examples": ["TSMC", "Samsung Electronics", "Microsoft", "Apple"],
         "properties": {
-            "name": "Official segment name (required)",
-            "summary": "What this segment sells and to whom (required)",
+            "name": "Company name (required, lowercased)",
+            "summary": "Brief role mentioned in the filing (optional)",
         },
-        "hint": (
-            "Only formal reportable segments — not generic product categories. "
-            "Look for 'our reportable segments are' or 'we operate through'."
-        ),
+        "hint": "Look for named third parties in competition, supply chain, or customer concentration discussions.",
     },
-
-    "Product": {
-        "definition": "A specific named product, platform, or service offering.",
-        "examples": ["H100 GPU", "CUDA", "GeForce RTX 4090", "DGX SuperPOD", "NVIDIA AI Enterprise"],
-        "properties": {
-            "name": "Product name (required)",
-            "category": "GPU / Software / Platform / Service / Other (optional)",
-            "summary": "What this product does and who buys it (required)",
-        },
-        "hint": "Named products/platforms only. Avoid generic phrases like 'our chips' — look for proper nouns.",
-    },
-
-    "Technology": {
-        "definition": "A core proprietary technology, architecture, or technical platform.",
-        "examples": ["Transformer Engine", "NVLink", "Hopper Architecture", "CUDA", "InfiniBand"],
-        "properties": {
-            "name": "Technology name (required)",
-            "summary": "What it does and why it matters competitively (required)",
-        },
-        "hint": "Proprietary or specifically named technology. Not vague terms like 'AI technology'.",
-    },
-
-    "GeographicMarket": {
-        "definition": "A specific country, region, or geographic area of operation or revenue.",
-        "examples": ["United States", "Greater China", "EMEA", "Taiwan", "Japan"],
-        "properties": {
-            "name": "Standardized region or country name (required)",
-            "type": "Country / Region / Continent (optional)",
-        },
-        "hint": (
-            "Use standardized names: 'Greater China' not just 'China'. "
-            "Extract from geographic revenue breakdown or operational footprint."
-        ),
-    },
-
-    "Industry": {
-        "definition": (
-            "An industry or market sector. Shared node across companies — "
-            "do NOT create a new one per filing."
-        ),
-        "examples": ["Semiconductor", "Data Center Infrastructure", "Automotive AI", "Cloud Computing"],
-        "properties": {
-            "name": "Industry name (required)",
-            "summary": "Brief description of what this industry covers (optional)",
-        },
-        "hint": "High-level classification. Can connect multiple companies in cross-company analysis.",
-    },
-
-    "RiskFactor": {
-        "definition": (
-            "A specific risk factor from Item 1A that could materially affect the business. "
-            "Each major risk paragraph = one node."
-        ),
-        "examples": [
-            "China export control restrictions",
-            "Customer concentration risk",
-            "TSMC supply dependency",
-            "Cybersecurity breach risk",
-        ],
-        "properties": {
-            "name": "Short descriptive title of the risk (required)",
-            "category": "Geopolitical / Regulatory / Operational / Financial / Competitive / Technology (required)",
-            "summary": (
-                "Full risk: what could happen AND what the impact would be. "
-                "1-3 sentences (required)"
-            ),
-        },
-        "hint": (
-            "Do NOT use generic names like 'Risk 1'. "
-            "Derive a descriptive title from the risk paragraph header or first sentence."
-        ),
-    },
-
-    "Executive": {
-        "definition": "A named executive officer or board director.",
-        "examples": ["Jensen Huang", "Colette Kress", "Dawn Hudson"],
+    "PERSON": {
+        "definition": "Named individual — typically executives or board members.",
+        "examples": ["Jensen Huang", "Lisa Su", "Pat Gelsinger"],
         "properties": {
             "name": "Full name (required)",
-            "title": "Official title e.g. CEO, CFO, President, Director (required)",
-            "summary": "Brief background if mentioned in text (optional)",
+            "title": "Official title e.g. CEO, CFO, Director (optional)",
         },
-        "hint": "Found in Item 10 (Directors & Executive Officers). Extract name+title pairs.",
+        "hint": "Extract from cover page, executive bios, and Item 10. Name + title pairs.",
     },
-
-    "StrategicInitiative": {
-        "definition": (
-            "A named strategic program, R&D effort, acquisition, partnership, "
-            "or major business initiative mentioned in MD&A."
-        ),
-        "examples": [
-            "Blackwell Architecture Development",
-            "Automotive AI Platform Roadmap",
-            "NVIDIA AI Enterprise Expansion",
-        ],
+    "ORG_REG": {
+        "definition": "Regulatory body or industry organization.",
+        "examples": ["SEC", "FDA", "FTC", "FCC"],
         "properties": {
-            "name": "Initiative name or a short descriptive label (required)",
-            "type": "R&D / Acquisition / Partnership / CostReduction / Expansion / Other (required)",
-            "summary": "What this initiative aims to achieve and why (required)",
+            "name": "Organization name (required)",
         },
-        "hint": (
-            "Look for 'we are investing in', 'we plan to', 'our strategy includes', "
-            "'we acquired', 'we partnered with' in MD&A (Item 7)."
-        ),
+        "hint": "Bodies that regulate or oversee the filer.",
+    },
+    "ORG_GOV": {
+        "definition": "Government entity (executive, legislative, judicial branches).",
+        "examples": ["US Treasury", "Department of Commerce", "European Commission"],
+        "properties": {"name": "Government entity name (required)"},
+        "hint": "Distinct from regulators — these are policy-making/governing bodies.",
     },
 
+    # ---------- Business structure ----------
+    "SEGMENT": {
+        "definition": "Internal business division or operating segment of the filer.",
+        "examples": ["Data Center", "Gaming", "Professional Visualization", "Cloud"],
+        "properties": {
+            "name": "Segment name (required)",
+            "summary": "What this segment sells and serves (optional)",
+        },
+        "hint": "Look for 'our reportable segments' or 'we operate through' phrases.",
+    },
+    "PRODUCT": {
+        "definition": "A specific named product, platform, or service offering.",
+        "examples": ["H100 GPU", "CUDA", "GeForce RTX", "Xeon"],
+        "properties": {
+            "name": "Product name (required)",
+            "summary": "What it does (optional)",
+        },
+        "hint": "Named products only. Avoid generic 'our chips' phrasing.",
+    },
+
+    # ---------- Financial concepts (NAMES, not values) ----------
+    "FIN_METRIC": {
+        "definition": (
+            "A named financial metric or measure. The CONCEPT, not a value. "
+            "Numeric values are stored in PostgreSQL, not in the graph."
+        ),
+        "examples": ["revenue", "gross margin", "operating income", "R&D expense"],
+        "properties": {"name": "Metric name (required, lowercased)"},
+        "hint": "Extract metric names mentioned in narrative discussion (MD&A, Risk Factors).",
+    },
+    "FIN_INST": {
+        "definition": "Financial instrument issued, held, or referenced.",
+        "examples": ["common stock", "convertible note", "treasury bond", "warrant"],
+        "properties": {"name": "Instrument name (required)"},
+        "hint": "Extract from Item 5 (equity), Item 8 (financial statements), capitalization discussions.",
+    },
+    "FIN_MARKET": {
+        "definition": "Stock exchange, market, or financial index.",
+        "examples": ["NASDAQ", "NYSE", "S&P 500", "PHLX Semiconductor Index"],
+        "properties": {"name": "Market name (required)"},
+        "hint": "Where the filer is listed or benchmarked against.",
+    },
+    "FIN_ASSET": {
+        "definition": "A financial asset class held or managed by the company.",
+        "examples": ["money market funds", "corporate bonds", "marketable securities"],
+        "properties": {"name": "Asset class name (required)"},
+        "hint": "From investments/cash equivalents discussion.",
+    },
+    "ACCOUNTING_POLICY": {
+        "definition": "An accounting policy, standard, or methodology applied by the filer.",
+        "examples": ["revenue recognition", "ASC 606", "fair value measurement", "lease accounting"],
+        "properties": {"name": "Policy name (required)"},
+        "hint": "Look in 'Significant Accounting Policies' note and Item 7 narrative.",
+    },
+
+    # ---------- Risk and macro ----------
+    "RISK_FACTOR": {
+        "definition": "A specific risk that could materially affect the business. Each major risk paragraph = one node.",
+        "examples": ["china export controls", "customer concentration", "tsmc supply dependency", "cybersecurity breach"],
+        "properties": {
+            "name": "Short descriptive title of the risk (required)",
+            "summary": "What could happen and the potential impact (optional, 1-3 sentences)",
+        },
+        "hint": "Extract from Item 1A. Use descriptive titles, not 'Risk 1'.",
+    },
+    "MACRO_CONDITION": {
+        "definition": "A macroeconomic condition that influences the business.",
+        "examples": ["inflation", "interest rate hike", "recession", "supply chain disruption"],
+        "properties": {"name": "Condition name (required)"},
+        "hint": "Look for economy-wide forces mentioned as drivers or risks.",
+    },
+    "ECON_IND": {
+        "definition": "An economic indicator referenced in disclosures.",
+        "examples": ["consumer price index", "GDP growth", "unemployment rate"],
+        "properties": {"name": "Indicator name (required)"},
+        "hint": "Specific quantitative indicators of macroeconomic state.",
+    },
+
+    # ---------- Regulation and events ----------
+    "REGULATORY_REQUIREMENT": {
+        "definition": "A specific regulation, law, or compliance framework.",
+        "examples": ["Sarbanes-Oxley", "GDPR", "CHIPS Act", "Dodd-Frank"],
+        "properties": {"name": "Regulation name (required)"},
+        "hint": "Named acts, frameworks, or requirements the filer must comply with.",
+    },
+    "EVENT": {
+        "definition": "A material event — M&A, litigation, restructuring, announcement, natural disaster.",
+        "examples": ["acquisition of mellanox", "covid-19 pandemic", "patent infringement lawsuit"],
+        "properties": {
+            "name": "Event name or description (required)",
+            "date": "Approximate date if mentioned (optional)",
+        },
+        "hint": "From Item 1A risks, Item 7 MD&A, subsequent events, or note disclosures.",
+    },
+
+    # ---------- Geography and supply ----------
+    "GPE": {
+        "definition": "Geo-Political Entity — a country, region, state, or jurisdictional area.",
+        "examples": ["United States", "China", "Taiwan", "Greater China", "European Union"],
+        "properties": {
+            "name": "Standardized geographic name (required)",
+        },
+        "hint": "Use canonical names. 'Greater China' not 'China' if filing uses that term.",
+    },
+    "RAW_MATERIAL": {
+        "definition": "A raw material or input critical to operations (especially for semiconductors).",
+        "examples": ["silicon wafers", "neon gas", "rare earth metals", "gallium"],
+        "properties": {"name": "Material name (required)"},
+        "hint": "Critical for semi domain — supply chain dependency analysis.",
+    },
+
+    # ---------- ESG ----------
+    "ESG_TOPIC": {
+        "definition": "An Environmental, Social, or Governance topic disclosed by the company.",
+        "examples": ["carbon emissions", "diversity equity inclusion", "climate risk", "human rights"],
+        "properties": {"name": "Topic name (required)"},
+        "hint": "From sustainability/ESG disclosures or related risk factors.",
+    },
+
+    # ---------- Provenance Layer (structural) ----------
+    "Document": {
+        "definition": "A 10-K filing document (one filing = one Document node).",
+        "examples": ["NVDA 10-K 2024", "AMD 10-K 2023"],
+        "properties": {
+            "id": "Stable id e.g. NVDA_10K_2024 (required)",
+            "ticker": "Filing ticker (required)",
+            "fiscal_year": "Fiscal year (required, integer)",
+            "source_file": "Original filename (required)",
+        },
+        "hint": "Provenance node. One per filing. Anchor for citation tracing.",
+    },
+    "Section": {
+        "definition": "A section within a 10-K document (e.g. Item 1, 1A, 7).",
+        "examples": ["Item 1", "Item 1A", "Item 7"],
+        "properties": {
+            "id": "Composite id e.g. NVDA_10K_2024__Item_1A (required)",
+            "name": "Section name (required)",
+        },
+        "hint": "Provenance node linking Document to Chunks.",
+    },
+    "Chunk": {
+        "definition": "A token-aware text chunk extracted from a Section. Vector index lives on this node.",
+        "examples": ["chunk_1", "chunk_42"],
+        "properties": {
+            "id": "Composite id e.g. NVDA_10K_2024__Item_1A__chunk_5 (required)",
+            "text": "The chunk text content (required)",
+            "embedding": "Vector embedding (required for retrieval)",
+            "page_id": "Source page (optional)",
+        },
+        "hint": "Provenance node + retrieval target. Domain entities link via MENTIONS.",
+    },
     "FiscalYear": {
-        "definition": "A fiscal year used as a temporal anchor node.",
-        "examples": ["2024", "2023", "2022"],
+        "definition": "A fiscal year used as a temporal anchor.",
+        "examples": ["2022", "2023", "2024"],
         "properties": {
             "name": "4-digit year string (required)",
-            "year": "Same value as integer (required)",
+            "year": "Integer year (required)",
         },
-        "hint": "Extract from 'For the fiscal year ended ...' on the document cover page.",
+        "hint": "Temporal anchor for cross-year queries.",
     },
 }
 
 
 # ---------------------------------------------------------------------------
-# Relationship catalogue
-# Each entry has: source_type, target_type, description, hint
+# Domain Layer — relationship types from FinReflectKG ontology
+# Source/target constraints follow the most common patterns in the dataset.
 # ---------------------------------------------------------------------------
 RELATIONSHIP_CATALOG: Dict[str, dict] = {
-    # --- Business structure ---
-    "HAS_SEGMENT": {
-        "source_type": "Company",
-        "target_type": "BusinessSegment",
-        "description": "Company operates this business segment.",
-        "hint": "Every named segment links back to the filing company via HAS_SEGMENT.",
-    },
-    "OFFERS": {
-        "source_type": "BusinessSegment",
-        "target_type": "Product",
-        "description": "Segment offers this product or service.",
-        "hint": "Products listed under or described as part of a segment.",
-    },
-    "BUILT_ON": {
-        "source_type": "Product",
-        "target_type": "Technology",
-        "description": "Product is powered by or built on this technology.",
-        "hint": "Look for 'powered by', 'built on', 'uses', 'based on'.",
-    },
-    "OPERATES_IN": {
-        "source_type": "Company",
-        "target_type": "GeographicMarket",
-        "description": "Company has significant operations or revenue in this market.",
-        "hint": "Geographic revenue segments or 'we operate in X' statements.",
-    },
-    "IN_INDUSTRY": {
-        "source_type": "Company",
-        "target_type": "Industry",
-        "description": "Company belongs to this industry or competes in this market sector.",
-        "hint": "Industry classification on cover page or business description.",
+    # ---------- Disclosure (most common, ~40% of triples) ----------
+    "discloses": {
+        "source_type": "ORG",
+        "target_type": "any",
+        "description": "Filer discloses information about the target entity.",
+        "hint": "Generic disclosure relationship. Use when more specific verb does not apply.",
     },
 
-    # --- Cross-company (Porter's 5 Forces) ---
-    "COMPETES_WITH": {
-        "source_type": "Company",
-        "target_type": "Company",
-        "description": "Direct competitive relationship between two companies.",
-        "hint": (
-            "Look for 'competitors include', 'we compete with', 'competitive landscape', "
-            "or any named rivals. Create a Company node for each."
-        ),
+    # ---------- Business structure ----------
+    "has_stake_in": {
+        "source_type": "ORG",
+        "target_type": "SEGMENT",
+        "description": "Company has full or partial ownership/equity interest.",
+        "hint": "Reportable segments or owned subsidiaries.",
     },
-    "SUPPLIED_BY": {
-        "source_type": "Company",
-        "target_type": "Company",
-        "description": "Filing company depends on another company as a key supplier or foundry.",
-        "hint": (
-            "Look for 'manufactured by', 'supplied by', 'third-party foundry', "
-            "'sole source supplier', 'we rely on X to manufacture'."
-        ),
+    "operates_in": {
+        "source_type": "ORG",
+        "target_type": "GPE",
+        "description": "Company has operations or revenue in this geographic area.",
+        "hint": "Geographic revenue breakdown or operational footprint.",
     },
-    "SELLS_TO": {
-        "source_type": "Company",
-        "target_type": "Company",
-        "description": "Filing company sells a significant portion of revenue to this customer company.",
-        "hint": (
-            "Look for 'major customer', 'significant customer', 'revenue concentration', "
-            "or named customers that represent >10% of revenue."
-        ),
+    "produces": {
+        "source_type": "ORG",
+        "target_type": "PRODUCT",
+        "description": "Company manufactures or develops the product.",
+        "hint": "Look for 'we produce', 'we manufacture', 'our product line includes'.",
     },
-    "SUBSTITUTED_BY": {
-        "source_type": "Product",
-        "target_type": "Product",
-        "description": "This product faces a substitute threat from another product.",
-        "hint": "Look for 'alternative to', 'could be replaced by', 'substitute'.",
+    "supplies": {
+        "source_type": "COMP",
+        "target_type": "ORG",
+        "description": "External company supplies the filer with materials/components.",
+        "hint": "Inverted: the supplier is the source, filer is the target.",
     },
-
-    # --- Risk ---
-    "HAS_RISK": {
-        "source_type": "Company",
-        "target_type": "RiskFactor",
-        "description": "Company discloses this risk factor in its filing.",
-        "hint": "Every RiskFactor extracted from Item 1A links to the filing company via HAS_RISK.",
+    "partners_with": {
+        "source_type": "ORG",
+        "target_type": "COMP",
+        "description": "Strategic partnership or collaboration.",
+        "hint": "Joint ventures, licensing deals, technology partnerships.",
     },
-    "THREATENS": {
-        "source_type": "RiskFactor",
-        "target_type": "BusinessSegment",
-        "description": "Risk factor could materially harm this specific business segment.",
-        "hint": "Only when the risk explicitly names or clearly implies impact on a specific segment.",
-    },
-    "RELATED_TO": {
-        "source_type": "RiskFactor",
-        "target_type": "GeographicMarket",
-        "description": "Risk factor is geographically specific to this market.",
-        "hint": (
-            "China export controls → RELATED_TO 'Greater China'. "
-            "Tariff risks → RELATED_TO specific country or region."
-        ),
+    "competes_with": {
+        "source_type": "ORG",
+        "target_type": "COMP",
+        "description": "Direct competitive relationship.",
+        "hint": "Look for 'competitors include', 'we compete with'.",
     },
 
-    # --- People & Strategy (Fisher's 15 Points) ---
-    "HAS_EXECUTIVE": {
-        "source_type": "Company",
-        "target_type": "Executive",
-        "description": "Company has this person in a named leadership role.",
-        "hint": "From Item 10. Every named officer/director gets this relationship.",
+    # ---------- Dependency and impact ----------
+    "depends_on": {
+        "source_type": "ORG",
+        "target_type": "any",
+        "description": "Filer depends on the target (supplier, raw material, etc).",
+        "hint": "Sole-source supplier or critical input dependency.",
     },
-    "PURSUES": {
-        "source_type": "Company",
-        "target_type": "StrategicInitiative",
-        "description": "Company is actively pursuing this strategic initiative.",
-        "hint": "From MD&A (Item 7). R&D programs, acquisitions, partnerships, growth plans.",
+    "impacts": {
+        "source_type": "any",
+        "target_type": "any",
+        "description": "Source has an effect on the target (direction unspecified).",
+        "hint": "Generic impact verb. Prefer positively_impacts/negatively_impacts when direction is clear.",
     },
-    "INVOLVES": {
-        "source_type": "StrategicInitiative",
-        "target_type": "Technology",
-        "description": "Strategic initiative focuses on or uses this technology.",
-        "hint": "R&D initiative centred on a specific technology area.",
+    "impacted_by": {
+        "source_type": "any",
+        "target_type": "any",
+        "description": "Source is affected by the target.",
+        "hint": "Inverse of impacts.",
     },
-    "TARGETS": {
-        "source_type": "StrategicInitiative",
-        "target_type": "BusinessSegment",
-        "description": "Strategic initiative aims to grow or improve this segment.",
-        "hint": "Initiative is explicitly discussed in the context of a specific segment.",
+    "positively_impacts": {
+        "source_type": "any",
+        "target_type": "any",
+        "description": "Source has a beneficial effect on the target.",
+        "hint": "ESG initiatives, R&D investments, partnerships that improve metrics.",
+    },
+    "negatively_impacts": {
+        "source_type": "any",
+        "target_type": "any",
+        "description": "Source has a harmful effect on the target.",
+        "hint": "Risk factors, macro conditions, regulatory burdens.",
+    },
+    "causes_shortage_of": {
+        "source_type": "EVENT",
+        "target_type": "RAW_MATERIAL",
+        "description": "Event causes a shortage of the named raw material.",
+        "hint": "Geopolitical events, natural disasters, export controls affecting supply.",
+    },
+
+    # ---------- Regulation ----------
+    "complies_with": {
+        "source_type": "ORG",
+        "target_type": "REGULATORY_REQUIREMENT",
+        "description": "Filer must comply with the regulation.",
+        "hint": "Look for 'we are subject to', 'we must comply with'.",
+    },
+    "subject_to": {
+        "source_type": "ORG",
+        "target_type": "any",
+        "description": "Filer is subject to a regulation, oversight, or condition.",
+        "hint": "Stronger than complies_with — implies obligation.",
+    },
+    "regulates": {
+        "source_type": "ORG_REG",
+        "target_type": "ORG",
+        "description": "Regulator oversees or regulates the filer.",
+        "hint": "Inverse perspective from complies_with.",
+    },
+
+    # ---------- Strategic actions ----------
+    "invests_in": {
+        "source_type": "ORG",
+        "target_type": "any",
+        "description": "Company invests in target (R&D area, technology, segment, ESG topic).",
+        "hint": "Capital allocation discussions in MD&A.",
+    },
+    "introduces": {
+        "source_type": "ORG",
+        "target_type": "any",
+        "description": "Company introduces a new product, policy, or initiative.",
+        "hint": "Product launches, policy changes, new programs.",
+    },
+    "announces": {
+        "source_type": "ORG",
+        "target_type": "EVENT",
+        "description": "Company makes a formal announcement of an event.",
+        "hint": "Earnings, M&A, restructuring announcements.",
+    },
+    "involved_in": {
+        "source_type": "ORG",
+        "target_type": "EVENT",
+        "description": "Company is involved in an event (litigation, M&A, etc).",
+        "hint": "Active participation, not passive impact.",
+    },
+
+    # ---------- Risk verbs ----------
+    "faces": {
+        "source_type": "ORG",
+        "target_type": "RISK_FACTOR",
+        "description": "Company faces this risk.",
+        "hint": "Often paired with risk factor disclosure.",
+    },
+    "guides_on": {
+        "source_type": "ORG",
+        "target_type": "FIN_METRIC",
+        "description": "Company provides forward guidance on the metric.",
+        "hint": "MD&A forward-looking statements.",
+    },
+
+    # ---------- Industry membership ----------
+    "listed_on": {
+        "source_type": "ORG",
+        "target_type": "FIN_MARKET",
+        "description": "Company stock is listed on the named market.",
+        "hint": "From cover page or capitalization discussion.",
+    },
+
+    # ---------- Provenance Layer edges ----------
+    "CONTAINS_SECTION": {
+        "source_type": "Document",
+        "target_type": "Section",
+        "description": "Document contains the section.",
+        "hint": "Provenance — exactly one edge per (doc, section) pair.",
+    },
+    "HAS_CHUNK": {
+        "source_type": "Section",
+        "target_type": "Chunk",
+        "description": "Section contains the chunk.",
+        "hint": "Provenance — created during chunking.",
+    },
+    "NEXT_CHUNK": {
+        "source_type": "Chunk",
+        "target_type": "Chunk",
+        "description": "Sequential link to the next chunk in the same section.",
+        "hint": "Provenance — enables 'read more' navigation.",
+    },
+    "MENTIONS": {
+        "source_type": "Chunk",
+        "target_type": "any",
+        "description": "Bridge edge — chunk text mentions a domain entity.",
+        "hint": "Provenance bridge. Created whenever an entity is extracted from a chunk.",
+    },
+    "FILED_BY": {
+        "source_type": "Document",
+        "target_type": "ORG",
+        "description": "Document was filed by the company.",
+        "hint": "Provenance — anchors document to its filer.",
+    },
+    "FOR_FISCAL_YEAR": {
+        "source_type": "Document",
+        "target_type": "FiscalYear",
+        "description": "Document covers the fiscal year.",
+        "hint": "Provenance — temporal anchor.",
     },
 }
 
 
 # ---------------------------------------------------------------------------
-# Section → nodes / relationships mapping
+# Section → recommended entity / relationship sets for extraction
+#
+# Used to focus GLiNER's label set and DeepSeek's extraction prompt per Item.
+# This is an EFFICIENCY hint; the underlying ontology is the same across all sections.
 # ---------------------------------------------------------------------------
 SECTION_CONFIG: Dict[str, dict] = {
     "Item 1": {
         "nodes": [
-            "Company", "BusinessSegment", "Product", "Technology",
-            "GeographicMarket", "Industry", "FiscalYear",
+            "ORG", "COMP", "SEGMENT", "PRODUCT",
+            "GPE", "FIN_MARKET", "RAW_MATERIAL",
         ],
         "relationships": [
-            "HAS_SEGMENT", "OFFERS", "BUILT_ON", "OPERATES_IN", "IN_INDUSTRY",
-            "COMPETES_WITH", "SUPPLIED_BY", "SELLS_TO",
+            "has_stake_in", "operates_in", "produces", "supplies",
+            "partners_with", "competes_with", "listed_on", "depends_on",
         ],
         "focus": (
-            "Extract company structure, named products, core technologies, geographic markets, "
-            "and all explicitly named competitors, suppliers, and customers."
+            "Extract company structure: segments, products, named competitors, "
+            "suppliers, customers, and geographic footprint."
         ),
     },
-
     "Item 1A": {
-        "nodes": ["Company", "RiskFactor", "GeographicMarket", "BusinessSegment"],
-        "relationships": ["HAS_RISK", "THREATENS", "RELATED_TO"],
+        "nodes": [
+            "ORG", "RISK_FACTOR", "MACRO_CONDITION", "EVENT",
+            "REGULATORY_REQUIREMENT", "GPE", "RAW_MATERIAL", "COMP",
+        ],
+        "relationships": [
+            "discloses", "faces", "negatively_impacts", "depends_on",
+            "subject_to", "causes_shortage_of", "impacted_by",
+        ],
         "focus": (
             "Extract every material risk factor as a separate node. "
-            "Link risks to geographies and segments where explicitly stated."
+            "Link risks to macro conditions, geographies, and segments where stated."
         ),
     },
-
     "Item 7": {
         "nodes": [
-            "Company", "StrategicInitiative", "Technology",
-            "BusinessSegment", "GeographicMarket",
+            "ORG", "SEGMENT", "FIN_METRIC", "ACCOUNTING_POLICY",
+            "EVENT", "MACRO_CONDITION", "ESG_TOPIC", "PRODUCT",
         ],
-        "relationships": ["PURSUES", "INVOLVES", "TARGETS"],
+        "relationships": [
+            "discloses", "guides_on", "invests_in", "introduces",
+            "announces", "positively_impacts", "negatively_impacts",
+            "involved_in",
+        ],
         "focus": (
-            "Extract strategic initiatives, R&D investments, and qualitative performance "
-            "drivers from the MD&A narrative. Avoid extracting raw financial numbers."
+            "Extract management discussion themes: financial drivers, strategic initiatives, "
+            "investments, and qualitative performance commentary."
         ),
-    },
-
-    "Item 10": {
-        "nodes": ["Company", "Executive"],
-        "relationships": ["HAS_EXECUTIVE"],
-        "focus": "Extract all named executive officers and directors with their official titles.",
     },
 }
 
 
 # ---------------------------------------------------------------------------
-# Registry class
+# Registry
 # ---------------------------------------------------------------------------
 class OntologyRegistry:
     """
@@ -357,34 +497,34 @@ class OntologyRegistry:
     # ------------------------------------------------------------------ #
 
     def get_nodes(self, section: str) -> List[str]:
-        """Return allowed node type names for a given 10-K section."""
+        """Return recommended node types for a 10-K section."""
         return SECTION_CONFIG.get(section, {}).get("nodes", [])
 
     def get_relationships(self, section: str) -> List[str]:
-        """Return allowed relationship type names for a given 10-K section."""
+        """Return recommended relationship types for a section."""
         return SECTION_CONFIG.get(section, {}).get("relationships", [])
 
     def get_all_sections(self) -> List[str]:
-        """Return all configured section names."""
         return list(SECTION_CONFIG.keys())
 
     # ------------------------------------------------------------------ #
-    # Node / relationship detail queries
+    # Catalogue lookups
     # ------------------------------------------------------------------ #
 
     def get_node_hints(self, node_type: str) -> dict:
-        """
-        Return the full catalogue entry for a node type.
-        Returns empty dict if node_type is unknown.
-        """
         return NODE_CATALOG.get(node_type, {})
 
     def get_relationship_info(self, rel_type: str) -> dict:
-        """
-        Return the catalogue entry for a relationship type.
-        Returns empty dict if rel_type is unknown.
-        """
         return RELATIONSHIP_CATALOG.get(rel_type, {})
+
+    def all_domain_node_types(self) -> List[str]:
+        """Domain-layer node types only (excludes provenance)."""
+        provenance = {"Document", "Section", "Chunk", "FiscalYear"}
+        return [t for t in NODE_CATALOG if t not in provenance]
+
+    def all_domain_relationship_types(self) -> List[str]:
+        """Domain-layer relationship types (lowercase verbs)."""
+        return [r for r in RELATIONSHIP_CATALOG if r.islower() or "_" not in r or r[0].islower()]
 
     # ------------------------------------------------------------------ #
     # Prompt building
@@ -393,7 +533,7 @@ class OntologyRegistry:
     def build_schema_prompt(self, section: str) -> str:
         """
         Build a formatted string describing nodes and relationships for a section.
-        Designed to be embedded directly in an LLM system prompt.
+        Designed to be embedded directly in an LLM extraction prompt.
         """
         node_types = self.get_nodes(section)
         rel_types = self.get_relationships(section)
@@ -404,8 +544,7 @@ class OntologyRegistry:
         if focus:
             lines.append(f"EXTRACTION FOCUS: {focus}\n")
 
-        # --- Nodes ---
-        lines.append("=== ALLOWED NODE TYPES ===")
+        lines.append("=== ALLOWED ENTITY TYPES ===")
         for nt in node_types:
             info = NODE_CATALOG.get(nt, {})
             if not info:
@@ -423,7 +562,6 @@ class OntologyRegistry:
                 f"  Hint       : {info.get('hint', '')}\n"
             )
 
-        # --- Relationships ---
         lines.append("=== ALLOWED RELATIONSHIP TYPES ===")
         for rt in rel_types:
             info = RELATIONSHIP_CATALOG.get(rt, {})

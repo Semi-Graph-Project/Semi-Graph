@@ -103,6 +103,14 @@ class Config:
         self.kg_max_workers: int = kg.get("max_workers", 16)
         self.kg_batch_size: int = kg.get("batch_size", 5)
 
+        # --- Embeddings ---
+        emb = data.get("embeddings", {})
+        self.embed_model: str = emb.get("model", "BAAI/bge-base-en-v1.5")
+        self.embed_dim: int = emb.get("dimensions", 768)
+        self.embed_batch_size: int = emb.get("batch_size", 32)
+        self.embed_device: str = emb.get("device", "cpu")
+        self.embed_normalize: bool = emb.get("normalize", True)
+
     @property
     def project_root(self) -> Path:
         return _PROJECT_ROOT
