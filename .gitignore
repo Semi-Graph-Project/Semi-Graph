@@ -18,6 +18,12 @@ data/schemas/
 data/evaluate/
 data/neo4j/
 
+# Reference datasets — large, downloadable from public source
+data/*.parquet
+data/*.csv
+data/*.json
+data/*.feather
+
 # Keep directory stubs so the folders exist after clone
 !data/.gitkeep
 !data/raw/.gitkeep
