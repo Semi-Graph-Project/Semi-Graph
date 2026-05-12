@@ -1,147 +1,239 @@
 ---
-description: Explain a Python code file using First Principles Thinking — break it down into the constraints that forced each design choice, then show how the code composes back from those axioms. 4 sections: constraints, decision tree, end-to-end flow with typed I/O, and counterfactuals. Saves to Obsidian Vault.
+description: Explain a Python code file using deep First Principles Thinking — bind every constraint to a fundamental theory (Big-O, CAP, Memory Hierarchy, Shannon, Network I/O), separate Structure vs Semantics decisions, identify the breaking point of the current code (not just alternatives), and project bottlenecks under 100× input growth. Saves output to Obsidian Vault as a PKM-friendly note with YAML frontmatter + auto-discovered related files.
 arguments:
   - file_path
-allowed-tools: Read, Write
+allowed-tools: Read, Write, Bash, Grep, Glob
 ---
 
 ## Task
 
-Read the Python file at `$0`, then generate a deep-dive explanation following the structure below, and save it to the Obsidian Vault.
+Read the Python file at `$0`, then generate a deep-dive explanation following the structure below, and **save it to the Obsidian Vault** (path below).
 
-## Output File Path
+Use `Read` for source file + `Grep`/`Glob` for discovering upstream/downstream callers, `Bash` for quick complexity probes (line counts, dependency graph, function call sites) when needed.
 
-Compute the output path as:
+## Output File Path (MANDATORY — Obsidian Vault)
+
+ใช้ `Write` tool save ไปที่ path นี้เท่านั้น:
 
 ```
 /home/kantinan/Documents/Obsidian Vault/Agentic GraphRAG/Code_Explained_<basename>.md
 ```
 
-Where `<basename>` is the source file name without `.py` extension. If the source file is in a subdirectory like `src/semigraph/offline/kg_store.py`, use just `kg_store` as the basename.
+`<basename>` = source file name without `.py` extension (e.g. `src/semigraph/offline/kg_store.py` → `kg_store`).
 
-If a file with the same name already exists, append `_v2`, `_v3` etc.
+ถ้า file มีอยู่แล้วใน path ดังกล่าว → append `_v2`, `_v3` etc. (ห้าม overwrite note เดิม)
 
-## Required Structure (ความยาวรวมประมาณ 1.5–2 หน้ากระดาษ)
+## Output Document Header — MANDATORY YAML Frontmatter
 
-The output document MUST have these 4 sections in this exact order:
+ห้ามใช้ blockquote header แบบเก่า — ต้องเป็น YAML frontmatter ที่ PKM ใช้ index ได้:
 
-### Section 1: Constraint ของปัญหา (First Principles starting point)
+```yaml
+---
+tags: [code-explained, <phase-tag>, <domain-tag>]
+target_file: <relative path from project root>
+phase: <A | B1 | B2 | B3 | C1 | ... | unknown>
+complexity_time: <Big-O, e.g. O(N) | O(N log N) | O(N²) | O(1)>
+complexity_space: <Big-O>
+core_mechanisms: [<2-5 keywords>]
+upstream_dependencies: [<file or external system>]
+downstream_consumers: [<file or external system>]
+breaking_point: <one-line stress condition + threshold>
+generated_by: explain-code skill
+generated_at: <YYYY-MM-DD>
+---
+
+# Code Explained — `<filename_with_ext>`
+
+> First Principles deep-dive of `<full_path>` — constraints → theory → decisions → flow → stress test
+>
+> Cross-link: [[CLAUDE]] | (link อื่น ๆ ที่เกี่ยวข้อง)
+```
+
+`tags` ควรครอบคลุม:
+- `code-explained` (เสมอ)
+- domain (เช่น `graphrag`, `embedding`, `retrieval`, `ingestion`, `agent`)
+- mechanism kind (เช่น `data-pipeline`, `vector-search`, `graph-traversal`, `prompt-engineering`)
+
+## Required Structure (1.5–2 หน้ากระดาษ — กระชับ)
+
+### Section 1: Constraint ของปัญหา + Theory Binding
 
 - 2-3 ประโยคบอกว่า code นี้ทำอะไร + ปัญหาอะไรที่บังคับให้ต้องมี
-- **ตาราง Constraint** ระบุข้อเท็จจริงที่ฝืนไม่ได้ที่ขับ design (อย่างน้อย 3 ข้อ — เช่น hardware limit, library spec, protocol requirement, data size, latency budget)
-  - คอลัมน์: `#`, `Constraint`, `ที่มา` (hardware/library/protocol/spec)
-- ตำแหน่งใน pipeline ใหญ่ — รับ input จากใคร ส่ง output ไปไหน, อยู่ Phase ไหน
+- **ตาราง Constraint** — อย่างน้อย 3 ข้อ คอลัมน์:
+  | `#` | `Constraint` | `ที่มา` | **`Theory binding`** |
+  - **Theory binding (บังคับ)** — ผูกข้อจำกัดกับทฤษฎี/หลักการพื้นฐาน เช่น:
+    - `Big-O complexity` (เช่น O(N²) pairwise compare)
+    - `Memory hierarchy` (L1/L2/RAM/SSD latency คนละ order)
+    - `CAP theorem` (consistency vs availability vs partition tolerance)
+    - `Shannon entropy / information theory` (encoding length minimum)
+    - `Network I/O` (round-trip latency, bandwidth ceiling)
+    - `Floating-point representation` (IEEE 754 precision, underflow)
+    - `Cache coherence` (read/write amplification)
+    - `Amdahl's law` (parallelization upper bound)
+    - `Zipfian distribution` (long-tail data shape)
+    - `JIT/AOT compilation` (warmup cost)
+- ถ้าระบุไม่ได้ว่าทฤษฎีอะไร → ห้ามตอบ "hardware limit" ลอย ๆ — ต้องเจาะลง physical/mathematical mechanism จริง
+- ตำแหน่งใน pipeline ใหญ่ + Phase
 
-**ห้ามใช้ analogy แบบ "เหมือนพนักงาน...", "นึกภาพว่า..."** — ถ้าจะใส่ analogy ต้องตรง mechanism 1:1 (ไม่ใช่แค่ feel เหมือน)
+**ห้ามใช้ analogy** ที่ไม่ตรง mechanism
 
-### Section 2: Decision Tree (ทำไมเลือกแบบนี้ ไม่เลือกแบบอื่น)
+### Section 2: Decision Tree (Structure vs Semantics)
 
-แสดง 2-4 design decisions ใหญ่ที่ code ตัดสิน — แต่ละ decision รูปแบบ:
+แสดง 2-4 design decisions — **แต่ละ decision ต้อง tag ว่าเป็น Structure หรือ Semantics:**
+
+- **[STRUCTURE]** — decision ที่จัดการ data structure / topology / capacity (เช่น ลด degree, batch size, index type)
+- **[SEMANTICS]** — decision ที่จัดการ meaning / weighting / interpretation (เช่น cosine threshold, edge type filter, prompt rule)
+
+รูปแบบ:
 
 ```markdown
-#### D<N>: <ชื่อ decision>
+#### D<N>: [STRUCTURE|SEMANTICS] <ชื่อ decision>
 
 | Option | กลไก | Verdict |
 |---|---|---|
-| Option A | อธิบาย mechanism สั้น | ✅/❌ + เหตุผลที่ผูกกับ Constraint #X |
+| Option A | mechanism สั้น | ✅/❌ + ผูกกับ Constraint #X |
 | Option B | ... | ... |
 
 **Counterfactual:** ถ้าเลือกที่ตัดทิ้ง → จะพังตอนไหน เป็นตัวเลข/หน่วยอะไร
+
+**Boundary limit ของ option ที่เลือก:** ตัวเลือกปัจจุบันจะพังที่ scale/condition ไหน
+(เช่น "O(N²) matmul ดีถึง N=10,000 — เกินนี้ RAM > 16 GB", "Cosine threshold 0.85 ตึงเกินเมื่อ corpus ข้าม 5 ภาษา")
 ```
 
-Decisions ควรครอบคลุม: library choice, data structure, IO pattern, error handling — เลือกเฉพาะที่มี alternative ชัดเจนเท่านั้น (ไม่ใช่ทุกบรรทัด)
+**กฎเหล็ก:**
+- ทุก decision **ต้องมี Counterfactual** (อะไรพังถ้าทำตรงข้าม)
+- ทุก decision **ต้องมี Boundary limit** (ตัวเลือกปัจจุบันพังที่จุดไหน)
+- ตัด decision ที่ไม่มี alternative ชัดเจนออก — focus เฉพาะ decisions ที่มี trade-off จริง
 
-### Section 3: Flow End-to-End (Pipeline)
+### Section 3: Flow End-to-End + Upstream/Downstream Contracts
 
-แสดง execution trace ตั้งแต่จุดเริ่มต้นจนสิ้นสุด — public API → internal calls → side effects
-
-**กฎเหล็ก:** ทุก step ต้องมี Input / Process / Output แบบ **typed** ชัดเจน
-
-รูปแบบของแต่ละ step:
+**ก่อนเริ่ม Step 1 ต้องมีตาราง Contract:**
 
 ```markdown
-#### Step N: <ชื่อ step> — `function_or_method_name()`
+#### Contracts (Caller ↔ This Code ↔ Callee)
 
-**Constraint ที่ enforce:** <constraint # หรือสรุปสั้น ที่บังคับให้ step นี้ทำงานแบบนี้ ไม่ใช่แบบอื่น>
+| Direction | Counterpart | Invariant ที่คาดหวัง / รับประกัน |
+|---|---|---|
+| **Upstream** (caller → this) | <caller file/system> | <what caller must guarantee — e.g. "Input list sanitized, no None"> |
+| **Upstream** (depends on) | <external state> | <what state must exist — e.g. "Neo4j must have :Entity nodes with `embedding`"> |
+| **Downstream** (this → callee) | <callee file/system> | <what this guarantees to callee — e.g. "Returns L2-normalized vectors"> |
+| **Side-effects** | <DB/file/log> | <what state changes after this runs> |
+```
+
+จากนั้น flow steps เดิม — แต่ละ step ยังมี typed I/O + เพิ่ม **Trade-off** ที่ step นั้น "แลก":
+
+```markdown
+#### Step N: <ชื่อ step> — `function_name()`
+
+**Constraint ที่ enforce:** <ref Section 1>
 
 | | |
 |---|---|
-| **Input** | `parameter_name: TypeAnnotation` พร้อมคำอธิบาย + ขนาด/range ที่ valid |
-| **Process** | 1-2 ประโยค — *ทำอะไร* + *ทำไมต้องทำขั้นนี้ก่อน/หลังขั้นอื่น* |
-| **Output** | `return_type: TypeAnnotation` พร้อมคำอธิบาย + invariant ที่ output ต้อง satisfy |
-| **Failure mode** | ถ้า input violate constraint → output เป็นอะไร (raise / return None / etc.) |
-
-ตัวอย่างการเรียก:
-\`\`\`python
-result = function_name(arg1, arg2)
-\`\`\`
+| **Input** | `param: Type` พร้อม range/size |
+| **Process** | 1-2 ประโยค — ทำอะไร + ทำไม |
+| **Output** | `Type` + invariant ที่ output ต้อง satisfy |
+| **Failure mode** | ถ้า input ผิด → raise / None / silent log |
+| **Trade-off** | <ทรัพยากรที่ใช้ — เช่น "Compute time +500ms แลก network I/O ลด 10×", "RAM +100 MB แลก disk I/O ตัด"> |
 ```
 
-ลำดับ step ต้องสะท้อน flow จริง — ถ้ามี loop หรือ branch ให้แสดงด้วย indent หรือ ASCII arrow
+จบด้วย ASCII pipeline diagram + side-effect arrows
 
-ลงท้ายด้วย ASCII pipeline diagram สรุป:
+### Section 4: Stress Test + Counterfactuals + Recap
 
-```
-input ──► [Step 1] ──► intermediate ──► [Step 2] ──► output
-              ↑                              ↓
-              └─── side-effect / log ────────┘
-```
-
-### Section 4: Counterfactuals + Recap
-
-- **ตาราง "ห้ามทำ"** อย่างน้อย 4 ข้อ — แต่ละข้อรูปแบบ:
-  - `ห้ามทำ` | `เหตุผลทาง mechanism (ไม่ใช่ "best practice")`
-- **3-5 หลักการที่ code นี้บังคับ** — สรุปเป็น axiom ที่อ่านเข้าใจใน 1 ประโยคต่อข้อ (ห้ามขึ้นด้วย "นึกภาพว่า..." / "เปรียบเทียบเป็น...")
-- **Defense-style Q&A** (optional, 2-3 ข้อ) — คำถามที่กรรมการ/code reviewer อาจถามตอนเห็น code นี้ครั้งแรก พร้อมคำตอบที่ขับด้วย mechanism
-
-## Style Requirements
-
-ตาม [CLAUDE.md](../../../CLAUDE.md) > Response Style (First Principles):
-
-1. **เริ่มจาก constraint จริง ไม่ใช่ pattern ที่คุ้นเคย** — ทุกการเลือกของ code ต้องตอบได้ว่า constraint อะไรบังคับ
-2. **Layered explanation** — fact → consequence → engineering decision (ไม่ใช่ analogy)
-3. **ทุก decision ต้องตอบได้ "อะไรพังถ้าทำตรงข้าม"** พร้อมหน่วยที่วัดได้ (เวลา, RAM, ค่า API, recall)
-4. **ภาษาไทยกึ่งทางการ + อังกฤษเฉพาะทับศัพท์ที่จำเป็น** — ใช้ได้: ชื่อ library/tool, technical term ที่แปลแล้วเสียความ. ห้าม: "implement", "process", "approach" ถ้ามีไทยเทียบเท่า
-5. **ห้ามทับศัพท์คำที่ควรอธิบาย** — ผิด: "ทำไมต้อง APOC — Cypher pure ไม่ allow parameterize relationship type" / ถูก: "ทำไมต้อง APOC? เพราะ Cypher ตัวเปล่าบังคับให้ชื่อ relationship เป็น literal ตอน parse — ใส่ตัวแปรไม่ได้ APOC ใช้ runtime call ของ procedure ข้ามข้อจำกัดนี้"
-6. **ใช้ตาราง / bullet** เมื่อเปรียบเทียบหลายมิติ ดีกว่า prose ยาว
-7. **กระชับ** — ความยาวประมาณ 1.5–2 หน้ากระดาษ ไม่ยืดเกิน
-
-## Document Header Template
-
-ใช้ header นี้ทุกครั้ง:
+**4.1 Complexity Analysis (บังคับ):**
 
 ```markdown
-# Code Explained — `<original_filename_with_ext>`
-
-> เอกสารนี้อธิบาย code file ที่ `<full_path>` แบบ First Principles — เริ่มจาก constraint, ตามด้วย decision tree, flow แบบ typed I/O, และ counterfactuals
-> Generated by `/explain-code` skill
->
-> Cross-link: [[CLAUDE]] | (เพิ่ม link อื่นๆ ที่เกี่ยวข้องถ้ามี — เช่น Pipeline_Review, Concept_Library_Wrapper, Agentic_Layer_Implementation)
-
----
+| มิติ | ค่าปัจจุบัน | ที่มา |
+|---|---|---|
+| Time complexity | O(?) | <where the dominant cost is> |
+| Space complexity | O(?) | <where memory peaks> |
+| I/O complexity | O(?) | <network round-trips, disk seeks> |
 ```
+
+**4.2 Stress projection ที่ 100× input:**
+
+```markdown
+| N ปัจจุบัน | N × 100 | คอขวดแรกที่จะเจอ | Mitigation ระยะสั้น |
+|---|---|---|---|
+| <e.g. 3,620 entities> | <362,000> | <e.g. "Cypher MATCH all + collect() → OOM ที่ ~100K rows"> | <e.g. "Process in batches of 10K via SKIP/LIMIT"> |
+```
+
+**4.3 ตาราง "ห้ามทำ"** (≥ 4 ข้อ) — ทุกข้อต้องระบุ mechanism, ไม่ใช่ "best practice"
+
+**4.4 หลักการ 3-5 ข้อที่ code นี้บังคับ** — เป็น axiom 1 ประโยค/ข้อ
+
+**4.5 Defense-style Q&A** (2-3 ข้อ) — กรรมการ/reviewer จะถามอะไร + คำตอบ mechanism-driven
+
+### Section 5 (ใหม่): Implicit Connections — Auto-discovered Related Files
+
+ใช้ `Grep` / `Glob` หา:
+1. ไฟล์ที่ **import** module นี้ (downstream consumers)
+2. ไฟล์ที่ **module นี้ import** (upstream dependencies)
+3. ไฟล์อื่น ๆ ในโปรเจกต์ที่จัดการ concept เดียวกัน (เช่น ถ้าเป็น embedding ไฟล์ → list ไฟล์ embedding อื่น)
+4. Obsidian notes ที่ tag เกี่ยวข้อง (search ใน Vault)
+
+แสดงเป็นตาราง:
+
+```markdown
+| Connection | File / Note | ทำไม link |
+|---|---|---|
+| **Caller** | `src/X.py:42` | imports `compute_specificity()` from this file |
+| **Callee** | `src/Y.py` | this file calls `Y.get_driver()` |
+| **Sibling** | `src/embed_chunks.py` | จัดการ embedding เหมือนกัน — different target node |
+| **Conceptual** | `[[PPR_explain]]` | downstream consumer ที่ใช้ specificity เป็น seed weight |
+| **Cross-link** | `[[Code_Explained_kg_store]]` | upstream — สร้าง :Entity node ก่อนหน้า |
+```
+
+**Discovery technique (บังคับ):**
+```bash
+# upstream/downstream imports
+grep -rn "from semigraph.offline.<modname>" src/ scripts/ tests/
+grep -rn "import <modname>" src/ scripts/
+
+# sibling files by concept
+ls src/semigraph/offline/  # then identify which match the same concern
+
+# Vault concept matching (ถ้าจำเป็น)
+ls /home/kantinan/Documents/Obsidian\ Vault/Agentic\ GraphRAG/ | grep -i <concept>
+```
+
+## Style Requirements (First Principles per CLAUDE.md)
+
+1. **Constraint จริง → theory binding → mechanism → decision** — ทุกการเลือกของ code ต้องไล่ห่วงโซ่นี้ครบ
+2. **Layered explanation** — fact → consequence → engineering decision
+3. **Counterfactual + Boundary** — ทุก decision ตอบได้ "อะไรพังถ้าทำตรงข้าม" + "ตัวเลือกปัจจุบันพังเมื่อไหร่"
+4. **Structure vs Semantics tag** — ทุก decision ใน Section 2 ต้อง tag ชัดเจน
+5. **Trade-off explicit** — Section 3 ทุก step ต้องบอก "แลกอะไรกับอะไร"
+6. **ภาษาไทยกึ่งทางการ + อังกฤษเฉพาะทับศัพท์ที่จำเป็น** — ห้าม "implement", "process", "approach" ถ้ามีไทยเทียบเท่า
+7. **กระชับ** — 1.5–2 หน้ากระดาษ — ห้ามยืดเกิน
 
 ## Steps to Execute
 
-1. Read the source file at `$0`
-2. Identify:
-   - **Constraints** — hardware limits, library specs, protocol requirements, data size, latency budgets ที่ขับ design
-   - **Major design decisions** ที่มี alternative ชัดเจน (model choice, library choice, IO pattern, error handling)
-   - **Public API surface** + internal flow + key types/dependencies
-3. Compute the output path (avoid overwriting existing notes — append `_v2` etc.)
-4. Write the document following the structure above — เริ่มทุก section จาก constraint ไม่ใช่จาก analogy
-5. Confirm to the user with:
-   - Output file path
-   - 1-line summary of what was explained
-   - Suggest next file to document if there's an obvious related one
+1. **Read source file** ที่ `$0` ครบทุกบรรทัด
+2. **Discover connections** (Section 5 input):
+   - `grep -rn "from <module path>"` หา downstream
+   - `grep -E "^from|^import" <source>` หา upstream
+   - `ls` directory เดียวกัน หา siblings
+3. **Identify**:
+   - Theory ที่ผูกแต่ละ constraint (Big-O, CAP, Memory Hierarchy, Shannon, ...)
+   - Decisions ใหญ่ + tag Structure vs Semantics
+   - Time/Space/I/O complexity
+   - Breaking point ของ current implementation
+4. **Compute output path** — `/home/kantinan/Documents/Obsidian Vault/Agentic GraphRAG/Code_Explained_<basename>.md` (avoid overwrite — append `_v2`)
+5. **Write YAML frontmatter ก่อน** — แล้วค่อยเขียน sections (1-5)
+6. **Save via `Write` tool** ลง path ใน step 4 (Obsidian Vault path เท่านั้น — ห้าม save ที่อื่น)
+7. **Confirm** to user with: output path + 1-line summary + 1 suggested next file
 
 ## Pitfalls to Avoid
 
-- ❌ **ห้ามใช้ analogy ที่ไม่ตรง mechanism** — "เหมือนพนักงานเสิร์ฟ", "นึกภาพว่า memory เป็นตู้เก็บของ" — ไร้ค่าสำหรับ engineer ที่ต้อง debug จริง
-- ❌ **ห้าม appeal to authority** — "เพราะเป็น best practice", "Google ทำแบบนี้" — ต้องบอกเหตุผลทาง mechanism
-- ❌ **ห้าม dump code ทั้งหมด** — ใส่เฉพาะ snippet สั้น ๆ ที่ illustrate decision เท่านั้น
-- ❌ **ห้าม skip Section 4 (Counterfactuals + Recap)** — เป็นส่วนที่บอก "อะไรพังถ้าทำตรงข้าม"
-- ❌ **ห้ามให้ Section 3 ขาด typed I/O** — ทุก step ต้องมี Input/Process/Output + Failure mode ชัดเจน
-- ❌ **ห้าม Decision ที่ไม่มี Counterfactual** — ทุก decision ต้องบอกได้ว่าทางที่ตัดทิ้งจะพังตอนไหน เป็นหน่วยอะไร
-- ❌ **ห้ามเขียนยาวเกิน 2 หน้ากระดาษ** — กระชับเป็น priority
-- ❌ **ห้ามอังกฤษพร่ำเพรื่อ** — "implement", "process", "approach" ถ้ามีคำไทยเทียบเท่า
+- ❌ **ห้าม save ผิด path** — ต้อง Obsidian Vault `/home/kantinan/Documents/Obsidian Vault/Agentic GraphRAG/` เท่านั้น
+- ❌ **ห้าม theory binding แบบลอย ๆ** — ถ้าบอก "Big-O" ต้องระบุ O(N), O(N²) ฯลฯ + ที่ไหนในโค้ดที่ dominant cost
+- ❌ **ห้าม decision ไม่มี Counterfactual + Boundary limit** — 2 อันต้องครบ
+- ❌ **ห้าม flow step ไม่มี Trade-off** — ทุก step ต้องชัดว่าแลกอะไร
+- ❌ **ห้าม skip Section 5 (Implicit Connections)** — ใช้ Grep/Glob discovery จริง ไม่ใช่เดา
+- ❌ **ห้าม YAML frontmatter ขาด field** — `complexity_time`, `breaking_point`, `core_mechanisms` ต้องมี
+- ❌ **ห้าม analogy ที่ไม่ตรง mechanism** — "เหมือนพนักงานเสิร์ฟ" ตัดทิ้ง
+- ❌ **ห้าม appeal to authority** — "best practice" / "Google ทำแบบนี้" — ต้องบอก mechanism
+- ❌ **ห้าม dump code เกิน 5 บรรทัด** — snippet + file:line reference เท่านั้น
+- ❌ **ห้ามเขียนยาวเกิน 2 หน้ากระดาษ** — concise > comprehensive
+- ❌ **ห้ามอังกฤษพร่ำเพรื่อ** — "implement", "process", "approach" ถ้ามีไทยเทียบเท่า
