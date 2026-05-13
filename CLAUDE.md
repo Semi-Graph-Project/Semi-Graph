@@ -121,11 +121,17 @@ GDS plugin is required for **Personalized PageRank** (`gds.pageRank.stream` with
 
 ## Key Reference Documents
 
-For thesis-level context (proposal, system design rationale, defense prep):
-- `/home/kantinan/Documents/Obsidian Vault/Agentic GraphRAG/Proposal_v2.md` — full thesis proposal (final)
-- `/home/kantinan/Documents/Obsidian Vault/Agentic GraphRAG/PPR_explain.md` — PPR algorithm walkthrough
-- `/home/kantinan/Documents/Obsidian Vault/Agentic GraphRAG/Present_system_mannual.md` — defense presentation manual
-- `/home/kantinan/Documents/Obsidian Vault/Agentic GraphRAG/draft_eval.md` — Phase 2 evaluation design
+**Obsidian Vault — entry point:**
+- `/home/kantinan/Documents/Obsidian Vault/Agentic GraphRAG/00_INDEX.md` — **single canonical index** ของ vault ทั้งหมด แบ่งเป็น 8 หมวด (Start Here / Architecture / Algorithms / Implementation / Evaluation / Defense / Meta / Archive). อ่านอันนี้ก่อนเสมอเมื่อหา note ใน vault — อย่า grep หา filename เอง
+
+Hot links (จาก index ที่เปิดบ่อยที่สุด):
+- `Proposal_v2.md` — thesis proposal (final, single source of truth)
+- `PPR_explain.md` — PPR algorithm walkthrough
+- `Present_system_mannual.md` — defense manual (topic view)
+- `Slide_walkthroght.md` — defense manual (slide-by-slide view)
+- `draft_eval.md` — Phase 2 evaluation design
+- `Code_Explained_*.md` — per-file code deep dives (output ของ `/explain-code`)
+- `How_to_Read_FirstPrinciple_Notes.md` — meta-guide สำหรับอ่าน Code_Explained / Coach notes
 
 For pipeline / architecture details inside the repo:
 - [docs/offline_pipeline.md](docs/offline_pipeline.md) — flow diagrams + module responsibilities
