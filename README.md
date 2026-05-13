@@ -87,13 +87,17 @@ semigraph/
 │   │   ├── embeddings.py     # BGE model wrapper (lazy load + L2-norm + singleton)
 │   │   ├── embed_chunks.py   # Phase B1 — chunk embedding pipeline
 │   │   ├── embed_nodes.py    # Phase B2 step 1 — entity embedding pipeline
-│   │   └── synonymy.py       # Phase B2 step 2-3 — composite-rule synonymy edges
-│   └── online/               # (Phase C — WIP) tools + agent
+│   │   ├── synonymy.py       # Phase B2 step 2-3 — composite-rule synonymy edges
+│   │   └── specificity.py    # Phase B3 — Node Specificity (1/log(degree+1))
+│   └── online/
+│       ├── seed.py           # Phase C1a — query → seed entities via vector index
+│       └── ppr.py            # Phase C1b — Personalized PageRank walker (GDS)
 ├── scripts/
 │   ├── run_offline_pipeline.py   # CLI for KG extraction
 │   ├── embed_chunks.py           # CLI for Phase B1
 │   ├── embed_nodes.py            # CLI for Phase B2 step 1
-│   └── build_synonymy.py         # CLI for Phase B2 step 2-3 (--dry-run, --show-pairs)
+│   ├── build_synonymy.py         # CLI for Phase B2 step 2-3 (--dry-run, --show-pairs)
+│   └── compute_specificity.py    # CLI for Phase B3 (top-hubs/top-leaves preview)
 ├── tests/
 │   └── test_ontology.py          # 61 unit tests, no external deps
 ├── config/
@@ -172,6 +176,13 @@ python scripts/embed_chunks.py
 python scripts/embed_nodes.py
 python scripts/build_synonymy.py --dry-run --show-pairs 30   # preview first
 python scripts/build_synonymy.py                              # write edges
+
+# 5. Phase B3 — Node Specificity (1/log(degree+1)) on all entities
+python scripts/compute_specificity.py
+
+# 6. Phase C1 — Online retrieval (smoke test)
+python -m semigraph.online.seed     # query → seeds (vector index lookup)
+python -m semigraph.online.ppr      # full pipeline: seeds → PPR → ranked entities
 ```
 
 The pipeline is **idempotent**: re-running skips chunks/entities that already have an embedding, and the checkpoint file (`data/processed/.checkpoint.json`) marks completed filings.
@@ -192,6 +203,7 @@ The pipeline is **idempotent**: re-running skips chunks/entities that already ha
 | Chunk embeddings | 528 × 768 | BAAI/bge-base-en-v1.5, L2-normalized |
 | Entity embeddings | 3,620 × 768 | same model |
 | Vector indexes | 2 | `chunk_embedding`, `entity_embedding` (cosine + HNSW) |
+| **Node specificity** | **3,620** | `1/log(degree+1)`, range [0.158, 1.443] |
 | **Disk footprint** | **~25 MB** | graph data + tx logs + embeddings |
 
 ### Multi-hop benchmark (5/5 pass)
@@ -238,17 +250,19 @@ The pipeline is **idempotent**: re-running skips chunks/entities that already ha
 - [x] Pronoun blacklist + ORG/COMP collision merge (graph cleanup)
 - [x] Tx log retention policy (aggressive — saves 99% disk vs default)
 
-### Phase B — Embeddings + Synonymy ✅
+### Phase B — Embeddings + Synonymy + Specificity ✅
 
 - [x] **B1** Chunk embeddings + Neo4j vector index (528 chunks, ~5 min run)
 - [x] **B2** Entity embeddings (3,620 entities, ~80s run)
 - [x] **B2** Synonymy edges via 4 composite rules (legal_suffix, acronym, plural, semantic + digit gate)
-- [ ] **B3** Node Specificity (`1/log(degree+1)`) for PPR weighting — next
+- [x] **B3** Node Specificity (`1/log(degree+1)`) — range [0.158, 1.443], single Cypher write
 
-### Phase C — Online Tools (planned)
+### Phase C — Online Tools (WIP)
 
-- [ ] **C1** `graph_search` — Personalized PageRank with synonym expansion
-- [ ] **C2** `vector_search` — top-k chunks via Neo4j vector index
+- [x] **C1a** `query_to_seeds` — vector index lookup with type filter ([seed.py](src/semigraph/online/seed.py))
+- [x] **C1b** `run_ppr` — Personalized PageRank via GDS named projection ([ppr.py](src/semigraph/online/ppr.py))
+- [ ] **C1c** entity → chunk mapping with SYNONYM_OF dedup → closes `graph_search` tool
+- [ ] **C2** `vector_search` — top-k chunks via Neo4j vector index (baseline for ablation)
 - [ ] **C3** `financial_query` — PostgreSQL + SEC XBRL ingestion
 - [ ] **C4** `news_search` — Finnhub fetch + cached embeddings
 
@@ -274,13 +288,17 @@ The pipeline is **idempotent**: re-running skips chunks/entities that already ha
 - [CLAUDE.md](CLAUDE.md) — project conventions for Claude Code (response style, architecture rules)
 
 ### Obsidian Vault (`/home/kantinan/Documents/Obsidian Vault/Agentic GraphRAG/`)
+- `00_INDEX.md` — **single canonical index** of the vault (start here)
 - `Proposal_v2.md` — full thesis proposal
 - `PPR_explain.md` — Personalized PageRank algorithm walkthrough
 - `Code_Explained_pipeline.md` — Phase A pipeline.py deep-dive
 - `Code_Explained_Phase_B1_ChunkEmbedding.md` — Phase B1 implementation notes
 - `Code_Explained_Phase_B2_Synonymy.md` — Phase B2 with iteration history
+- `Code_Explained_specificity.md` — Phase B3 deep-dive
+- `Coach_Phase_C1b_PPR_walker.md` — coaching guide used to implement C1b
 - `Graph_MultiHop_Benchmark_Report.md` — current graph quality benchmark
 - `Slide_walkthroght.md` — defense presentation guide
+- `How_to_Read_FirstPrinciple_Notes.md` — meta-guide for `Code_Explained_*` / `Coach_*` notes
 
 ### Reference papers (`/home/kantinan/Documents/book/paper/project/`)
 - `Hippo_rag.pdf` — HippoRAG (NeurIPS '24) — PPR retrieval + Node Specificity (foundation of graph_search)
@@ -295,7 +313,9 @@ The pipeline is **idempotent**: re-running skips chunks/entities that already ha
 - **ASML** files Form 20-F (foreign private issuer), not 10-K. Section patterns don't apply — requires a separate 20-F parser. Excluded from current 9-filing corpus.
 - **AMD / MU Item 10–11** use "incorporation by reference" to proxy statement (DEF 14A). Executive data is not embedded in the 10-K body — extraction yields only the reference sentence.
 - **Synonymy at scale** — composite rules tested on 977 entities (subset of 3,620 after type filter). At 28-company scale, audit `--dry-run` output before writing edges; stock-ticker style abbreviations (e.g. `qcom` ↔ `qualcomm`) may not satisfy the strict acronym rule.
-- **Phase B3 (Node Specificity)** not yet implemented — PPR walks currently weight all seeds equally, which may overweight hub entities like `china` or `revenue`.
+- **Specificity-weighted teleport** — GDS `gds.pageRank.stream` only supports uniform `sourceNodes`. The walker treats all seeds equally; specificity is used during seed selection (C1a) but not as a teleport vector. Workarounds (seed duplication, custom Cypher PPR) are deferred to ablation experiments.
+- **Alias dedup** — multiple aliases of the same entity (e.g. `amd` / `advanced micro devices` / `advanced micro devices, inc.`) can occupy adjacent top-k slots. Will be resolved in **C1c** via `SYNONYM_OF` cluster collapse before chunk mapping.
+- **GDS deprecations** — `id(n)` (use `elementId`) and `gds.graph.project.cypher` (use `gds.graph.project` aggregation form) emit warnings on Neo4j 5.26; both still functional. Migration tracked as future work.
 
 ---
 
