@@ -1,19 +1,36 @@
 """
-Query → seed entities via vector index — Phase C1a.
+Query → seed entities — Phase C1a (Query-to-Node) and C1b+ (Query-to-Triple).
 
-Embed a natural-language query with the same BGE model used in Phase B2,
-then look up nearest entities in the `entity_embedding` vector index.
-Output is the input layer for Personalized PageRank (Phase C1b): each seed
-carries its own `specificity` (from Phase B3) so the walker can weight
-initial mass without an extra round-trip.
+Two seed-selection strategies, both returning the same dict shape so they
+are drop-in interchangeable downstream (`run_ppr` consumes either):
 
-Only handles vector-based seeding. Synonym expansion via `:SYNONYM_OF`
-edges is the responsibility of the downstream PPR step, not this module.
+  • `query_to_seeds()` — Query-to-Node (HippoRAG v1 style)
+        embed query → cosine search on `entity_embedding` vector index →
+        return top-k entities whose own embedding is closest to the query.
+
+  • `query_to_triple_seeds()` — Query-to-Triple (HippoRAG v2 style, ICML '25
+        Table 4: +12.5% R@5 over Query-to-Node averaged across 3 multi-hop
+        QA benchmarks). Embed query → cosine search over precomputed
+        relationship triples ("<head> <rel> <tail>") → emit head and tail
+        of each top triple as seeds, deduplicated by (name, type).
+
+Why two paths, not a replacement:
+  v1 still wins single-hop benchmarks (NQ-style) where the answer entity
+  matches the query phrase verbatim. Keeping both lets Phase E ablation
+  measure the gain on our finance multi-hop set without touching call sites.
+
+Why in-memory cosine for triples (not a Neo4j vector index):
+  Neo4j 5.26 rejects wildcard relationship vector indexes (`FOR ()-[r]-()`
+  requires an explicit `:TYPE`). Creating 21 separate per-type indexes
+  would force UNION queries at retrieval. At 4,278 triples × 768 dims × 4B
+  ≈ 13 MB, an `@lru_cache`'d numpy matrix + dot product is sub-millisecond.
 """
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import Optional
 
+import numpy as np
 from neo4j import Driver
 
 from semigraph.config import Config, get_config
@@ -94,6 +111,143 @@ def query_to_seeds(
         driver.close()
 
 
+_CYPHER_LOAD_TRIPLES = """
+MATCH (s:Entity)-[r]->(t:Entity)
+WHERE r.triple_embedding IS NOT NULL
+RETURN s.name AS head,
+       s.type AS head_type,
+       s.specificity AS head_spec,
+       type(r) AS rel_type,
+       t.name AS tail,
+       t.type AS tail_type,
+       t.specificity AS tail_spec,
+       r.triple_embedding AS embedding
+"""
+
+
+@lru_cache(maxsize=1)
+def _load_triple_index(cfg_id: int = 0) -> tuple[np.ndarray, list[dict]]:
+    """Load all relationship triples + embeddings into memory once per process.
+
+    The `cfg_id` arg is a hack: `Config` objects aren't hashable so we can't
+    cache on `cfg` directly. In practice we always use the singleton config,
+    so a constant `0` is fine — pass a different int to bust the cache in
+    tests.
+
+    Returns:
+        (vectors, metadata) where:
+          vectors  — (N, 768) float32, L2-normalized (BGE output)
+          metadata — list[dict] aligned with vectors, no `embedding` key
+    """
+    cfg = get_config()
+    driver = get_neo4j_driver(cfg)
+    try:
+        with driver.session() as session:
+            rows = list(session.run(_CYPHER_LOAD_TRIPLES))
+        if not rows:
+            print("[triple_index] EMPTY — run `python scripts/embed_triples.py` first")
+            return np.empty((0, cfg.embed_dim), dtype=np.float32), []
+
+        vectors = np.asarray(
+            [row["embedding"] for row in rows], dtype=np.float32
+        )
+        metadata = [
+            {
+                "head": row["head"],
+                "head_type": row["head_type"],
+                "head_spec": row["head_spec"] if row["head_spec"] is not None else 1.0,
+                "rel_type": row["rel_type"],
+                "tail": row["tail"],
+                "tail_type": row["tail_type"],
+                "tail_spec": row["tail_spec"] if row["tail_spec"] is not None else 1.0,
+            }
+            for row in rows
+        ]
+        mb = vectors.nbytes / (1024 * 1024)
+        print(f"[triple_index] loaded {len(rows)} triples ({mb:.1f} MB)")
+        return vectors, metadata
+    finally:
+        driver.close()
+
+
+def query_to_triple_seeds(
+    query: str,
+    top_k_triples: int = 5,
+    min_similarity: float = 0.6,
+    cfg: Optional[Config] = None,
+) -> list[dict]:
+    """Find seeds via top-k triple cosine search (HippoRAG v2 Query-to-Triple).
+
+    For each of the top-k retrieved triples, emit BOTH head and tail entity
+    as candidate seeds. Deduplicate by `(name, type)`, keeping the highest
+    similarity across triples in which the entity appears.
+
+    Args:
+        query: Natural-language input.
+        top_k_triples: Number of nearest-triple to consider (each yields
+            up to 2 seeds → final count is 1 to 2 × top_k_triples).
+        min_similarity: Cosine threshold; triples below this are dropped.
+        cfg: Optional config override; defaults to the cached singleton.
+
+    Returns:
+        List of dicts sorted by similarity descending, each:
+        `{name, type, specificity, similarity}` — same shape as
+        `query_to_seeds()` so the result is drop-in for `run_ppr`.
+
+    Raises:
+        neo4j.exceptions.* — DB errors from the initial triple load.
+    """
+    if not query.strip():
+        return []
+
+    cfg = cfg or get_config()
+    model = get_embedding_model()
+
+    # BGE outputs L2-normalized vectors → cosine = dot product. float32 for
+    # numpy parity with the stored triple matrix.
+    q_vec = model.encode([query])[0].astype(np.float32)
+
+    vectors, metadata = _load_triple_index()
+    if vectors.shape[0] == 0:
+        return []
+
+    sims = vectors @ q_vec  # (N,) cosine similarities
+
+    # Sort all triples by similarity descending — we keep only those passing
+    # the threshold AND within top_k_triples. argsort is fine at 4k rows.
+    order = np.argsort(-sims)
+
+    # Dedup head/tail across selected triples, keeping max similarity.
+    seeds: dict[tuple[str, str], dict] = {}
+    triples_kept = 0
+    for idx in order:
+        sim = float(sims[idx])
+        if sim < min_similarity:
+            break  # sorted desc — can stop
+        if triples_kept >= top_k_triples:
+            break
+        triples_kept += 1
+        m = metadata[idx]
+        for role in ("head", "tail"):
+            name = m[role]
+            etype = m[f"{role}_type"]
+            spec = m[f"{role}_spec"]
+            key = (name, etype)
+            existing = seeds.get(key)
+            if existing is None or existing["similarity"] < sim:
+                seeds[key] = {
+                    "name": name,
+                    "type": etype,
+                    "specificity": spec,
+                    "similarity": sim,
+                }
+
+    print(f"[triple_seed] query='{query}' top_k_triples={top_k_triples} "
+          f"min_sim={min_similarity} → kept {triples_kept} triples → "
+          f"{len(seeds)} unique seeds")
+    return sorted(seeds.values(), key=lambda s: -s["similarity"])
+
+
 if __name__ == "__main__":
     def _show(label: str, seeds: list[dict]) -> None:
         print(f"\n{label} → {len(seeds)} seeds:")
@@ -101,10 +255,17 @@ if __name__ == "__main__":
             print(f"  sim={s['similarity']:.4f}  spec={s['specificity']:.3f}  "
                   f"{s['name']:30s} ({s['type']})")
 
-    _show("query='AMD' (no filter)", query_to_seeds("AMD"))
-    _show("query='AMD' types=['PRODUCT']",
-          query_to_seeds("AMD", entity_types=["PRODUCT"]))
-    _show("query='AMD' types=['ORG']",
+    _show("[node-mode] query='AMD' (no filter)", query_to_seeds("AMD"))
+    _show("[node-mode] query='AMD' types=['ORG']",
           query_to_seeds("AMD", entity_types=["ORG"]))
-    _show("query='random xyz noise' (off-topic, expect empty)",
+    _show("[node-mode] query='random xyz noise' (off-topic, expect empty)",
           query_to_seeds("random xyz noise qwerty zzz"))
+
+    print("\n" + "=" * 50)
+    _show("[triple-mode] query='AMD'", query_to_triple_seeds("AMD"))
+    _show("[triple-mode] query='TSMC supply chain'",
+          query_to_triple_seeds("TSMC supply chain"))
+    _show("[triple-mode] query='china semiconductor ban'",
+          query_to_triple_seeds("china semiconductor ban"))
+    _show("[triple-mode] query='random xyz noise' (off-topic, expect empty)",
+          query_to_triple_seeds("random xyz noise qwerty zzz"))

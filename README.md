@@ -88,16 +88,18 @@ semigraph/
 │   │   ├── embed_chunks.py   # Phase B1 — chunk embedding pipeline
 │   │   ├── embed_nodes.py    # Phase B2 step 1 — entity embedding pipeline
 │   │   ├── synonymy.py       # Phase B2 step 2-3 — composite-rule synonymy edges
-│   │   └── specificity.py    # Phase B3 — Node Specificity (1/log(degree+1))
+│   │   ├── specificity.py    # Phase B3 — Node Specificity (1/log(degree+1))
+│   │   └── embed_triples.py  # Phase C1b+ — relationship triple embedding (HippoRAG v2)
 │   └── online/
-│       ├── seed.py           # Phase C1a — query → seed entities via vector index
+│       ├── seed.py           # Phase C1a (Query-to-Node) + C1b+ (Query-to-Triple)
 │       └── ppr.py            # Phase C1b — Personalized PageRank walker (GDS)
 ├── scripts/
 │   ├── run_offline_pipeline.py   # CLI for KG extraction
 │   ├── embed_chunks.py           # CLI for Phase B1
 │   ├── embed_nodes.py            # CLI for Phase B2 step 1
 │   ├── build_synonymy.py         # CLI for Phase B2 step 2-3 (--dry-run, --show-pairs)
-│   └── compute_specificity.py    # CLI for Phase B3 (top-hubs/top-leaves preview)
+│   ├── compute_specificity.py    # CLI for Phase B3 (top-hubs/top-leaves preview)
+│   └── embed_triples.py          # CLI for Phase C1b+ (relationship triple embedding)
 ├── tests/
 │   └── test_ontology.py          # 61 unit tests, no external deps
 ├── config/
@@ -180,8 +182,12 @@ python scripts/build_synonymy.py                              # write edges
 # 5. Phase B3 — Node Specificity (1/log(degree+1)) on all entities
 python scripts/compute_specificity.py
 
-# 6. Phase C1 — Online retrieval (smoke test)
-python -m semigraph.online.seed     # query → seeds (vector index lookup)
+# 6. Phase C1b+ — Triple embeddings for Query-to-Triple linker (HippoRAG v2)
+python scripts/embed_triples.py
+#    --force re-embeds informative-relationship triples even if already set
+
+# 7. Phase C1 — Online retrieval (smoke test)
+python -m semigraph.online.seed     # both modes: query_to_seeds + query_to_triple_seeds
 python -m semigraph.online.ppr      # full pipeline: seeds → PPR → ranked entities
 ```
 
@@ -202,9 +208,10 @@ The pipeline is **idempotent**: re-running skips chunks/entities that already ha
 | **SYNONYM_OF edges** | **98** | composite rule scoring (legal_suffix, acronym, plural, semantic) |
 | Chunk embeddings | 528 × 768 | BAAI/bge-base-en-v1.5, L2-normalized |
 | Entity embeddings | 3,620 × 768 | same model |
-| Vector indexes | 2 | `chunk_embedding`, `entity_embedding` (cosine + HNSW) |
+| **Triple embeddings** | **4,278 × 768** | `"<head> <rel humanized> <tail>"` on informative rels (HippoRAG v2) |
+| Vector indexes | 2 | `chunk_embedding`, `entity_embedding` (cosine + HNSW). Triple search is in-memory numpy (Neo4j requires explicit `:TYPE` per index — 21 indexes not worth it at this scale). |
 | **Node specificity** | **3,620** | `1/log(degree+1)`, range [0.158, 1.443] |
-| **Disk footprint** | **~25 MB** | graph data + tx logs + embeddings |
+| **Disk footprint** | **~103 MB** | graph data + tx logs + 3 embedding layers + GDS metadata |
 
 ### Multi-hop benchmark (5/5 pass)
 
@@ -259,8 +266,9 @@ The pipeline is **idempotent**: re-running skips chunks/entities that already ha
 
 ### Phase C — Online Tools (WIP)
 
-- [x] **C1a** `query_to_seeds` — vector index lookup with type filter ([seed.py](src/semigraph/online/seed.py))
+- [x] **C1a** `query_to_seeds` — Query-to-Node linker via `entity_embedding` index ([seed.py](src/semigraph/online/seed.py))
 - [x] **C1b** `run_ppr` — Personalized PageRank via GDS named projection ([ppr.py](src/semigraph/online/ppr.py))
+- [x] **C1b+** `query_to_triple_seeds` — Query-to-Triple linker (HippoRAG v2 Table 4: +12.5% R@5 over Query-to-Node) via in-memory triple cosine search ([seed.py](src/semigraph/online/seed.py))
 - [ ] **C1c** entity → chunk mapping with SYNONYM_OF dedup → closes `graph_search` tool
 - [ ] **C2** `vector_search` — top-k chunks via Neo4j vector index (baseline for ablation)
 - [ ] **C3** `financial_query` — PostgreSQL + SEC XBRL ingestion
@@ -295,7 +303,7 @@ The pipeline is **idempotent**: re-running skips chunks/entities that already ha
 - `Code_Explained_Phase_B1_ChunkEmbedding.md` — Phase B1 implementation notes
 - `Code_Explained_Phase_B2_Synonymy.md` — Phase B2 with iteration history
 - `Code_Explained_specificity.md` — Phase B3 deep-dive
-- `Coach_Phase_C1b_PPR_walker.md` — coaching guide used to implement C1b
+- `Coach_Phase_C1b_PPR_walker.md` — coaching guide used to implement C1b (extended with HippoRAG v1/v2 comparison)
 - `Graph_MultiHop_Benchmark_Report.md` — current graph quality benchmark
 - `Slide_walkthroght.md` — defense presentation guide
 - `How_to_Read_FirstPrinciple_Notes.md` — meta-guide for `Code_Explained_*` / `Coach_*` notes
