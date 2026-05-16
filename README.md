@@ -92,14 +92,20 @@ semigraph/
 │   │   └── embed_triples.py  # Phase C1b+ — relationship triple embedding (HippoRAG v2)
 │   └── online/
 │       ├── seed.py           # Phase C1a (Query-to-Node) + C1b+ (Query-to-Triple)
-│       └── ppr.py            # Phase C1b — Personalized PageRank walker (GDS)
+│       ├── ppr.py            # Phase C1b — Personalized PageRank walker (GDS)
+│       └── graph_search.py   # Phase C1c — full graph_search tool (closes the loop)
 ├── scripts/
 │   ├── run_offline_pipeline.py   # CLI for KG extraction
 │   ├── embed_chunks.py           # CLI for Phase B1
 │   ├── embed_nodes.py            # CLI for Phase B2 step 1
 │   ├── build_synonymy.py         # CLI for Phase B2 step 2-3 (--dry-run, --show-pairs)
 │   ├── compute_specificity.py    # CLI for Phase B3 (top-hubs/top-leaves preview)
-│   └── embed_triples.py          # CLI for Phase C1b+ (relationship triple embedding)
+│   ├── embed_triples.py          # CLI for Phase C1b+ (relationship triple embedding)
+│   ├── compare_linkers.py        # Proxy-metric eval: Query-to-Node vs Query-to-Triple (12 queries)
+│   └── test_graph_search.py      # End-to-end validation of graph_search (17 queries)
+├── analytics/                # Reports from validation scripts (Markdown)
+│   ├── linker_comparison.md          # compare_linkers.py output
+│   └── graph_search_validation.md    # test_graph_search.py output
 ├── tests/
 │   └── test_ontology.py          # 61 unit tests, no external deps
 ├── config/
@@ -186,9 +192,14 @@ python scripts/compute_specificity.py
 python scripts/embed_triples.py
 #    --force re-embeds informative-relationship triples even if already set
 
-# 7. Phase C1 — Online retrieval (smoke test)
-python -m semigraph.online.seed     # both modes: query_to_seeds + query_to_triple_seeds
-python -m semigraph.online.ppr      # full pipeline: seeds → PPR → ranked entities
+# 7. Phase C1 — Online retrieval (smoke tests)
+python -m semigraph.online.seed          # both modes: query_to_seeds + query_to_triple_seeds
+python -m semigraph.online.ppr           # seeds → PPR → ranked entities
+python -m semigraph.online.graph_search  # full pipeline: seeds → PPR → cluster → chunks
+
+# 8. Phase C1c — Validation reports (regenerate Markdown in analytics/)
+python scripts/compare_linkers.py        # Query-to-Node vs Query-to-Triple on 12 queries
+python scripts/test_graph_search.py      # graph_search() end-to-end on 17 queries
 ```
 
 The pipeline is **idempotent**: re-running skips chunks/entities that already have an embedding, and the checkpoint file (`data/processed/.checkpoint.json`) marks completed filings.
@@ -269,7 +280,7 @@ The pipeline is **idempotent**: re-running skips chunks/entities that already ha
 - [x] **C1a** `query_to_seeds` — Query-to-Node linker via `entity_embedding` index ([seed.py](src/semigraph/online/seed.py))
 - [x] **C1b** `run_ppr` — Personalized PageRank via GDS named projection ([ppr.py](src/semigraph/online/ppr.py))
 - [x] **C1b+** `query_to_triple_seeds` — Query-to-Triple linker (HippoRAG v2 Table 4: +12.5% R@5 over Query-to-Node) via in-memory triple cosine search ([seed.py](src/semigraph/online/seed.py))
-- [ ] **C1c** entity → chunk mapping with SYNONYM_OF dedup → closes `graph_search` tool
+- [x] **C1c** `graph_search` — closes the tool: alias clustering (SYNONYM_OF *0..2) → cluster-aware chunk mapping (EXISTS dedup) → SUM(PPR mass) aggregation. Validated 17/17 (deterministic, no dup chunks, provenance intact) on diverse query set. ([graph_search.py](src/semigraph/online/graph_search.py))
 - [ ] **C2** `vector_search` — top-k chunks via Neo4j vector index (baseline for ablation)
 - [ ] **C3** `financial_query` — PostgreSQL + SEC XBRL ingestion
 - [ ] **C4** `news_search` — Finnhub fetch + cached embeddings
@@ -304,6 +315,9 @@ The pipeline is **idempotent**: re-running skips chunks/entities that already ha
 - `Code_Explained_Phase_B2_Synonymy.md` — Phase B2 with iteration history
 - `Code_Explained_specificity.md` — Phase B3 deep-dive
 - `Coach_Phase_C1b_PPR_walker.md` — coaching guide used to implement C1b (extended with HippoRAG v1/v2 comparison)
+- `Phase_C1b+_HippoRAG_v2_Alignment.md` — implementation rationale for Query-to-Triple linker
+- `Linker_Comparison_Report.md` — Query-to-Node vs Query-to-Triple proxy-metric eval (12 queries)
+- `Coach_Phase_C1c_Entities_to_Chunks.md` — coaching guide for C1c
 - `Graph_MultiHop_Benchmark_Report.md` — current graph quality benchmark
 - `Slide_walkthroght.md` — defense presentation guide
 - `How_to_Read_FirstPrinciple_Notes.md` — meta-guide for `Code_Explained_*` / `Coach_*` notes
@@ -322,7 +336,8 @@ The pipeline is **idempotent**: re-running skips chunks/entities that already ha
 - **AMD / MU Item 10–11** use "incorporation by reference" to proxy statement (DEF 14A). Executive data is not embedded in the 10-K body — extraction yields only the reference sentence.
 - **Synonymy at scale** — composite rules tested on 977 entities (subset of 3,620 after type filter). At 28-company scale, audit `--dry-run` output before writing edges; stock-ticker style abbreviations (e.g. `qcom` ↔ `qualcomm`) may not satisfy the strict acronym rule.
 - **Specificity-weighted teleport** — GDS `gds.pageRank.stream` only supports uniform `sourceNodes`. The walker treats all seeds equally; specificity is used during seed selection (C1a) but not as a teleport vector. Workarounds (seed duplication, custom Cypher PPR) are deferred to ablation experiments.
-- **Alias dedup** — multiple aliases of the same entity (e.g. `amd` / `advanced micro devices` / `advanced micro devices, inc.`) can occupy adjacent top-k slots. Will be resolved in **C1c** via `SYNONYM_OF` cluster collapse before chunk mapping.
+- **Intersection bias in `graph_search`** — chunks that mention many distinct PPR clusters (broad coverage) outrank chunks that go deep on a single entity. Query "AMD" returns all-NVDA chunks (NVDA filings mention AMD + Intel + suppliers, summing more cluster scores) instead of AMD-specific chunks. This is intentional design (multi-hop signal) but reduces single-entity recall. Mitigation deferred to Phase E ablation: re-rank top chunks with query↔chunk cosine to recover specificity.
+- **Off-corpus queries don't short-circuit** — `query_to_triple_seeds` accepts any triple with cosine ≥ 0.6. Random text like `"qwerty zzz xyz"` can still match one triple loosely → graph_search returns 5 chunks. Agent layer (Phase D) is the right place to detect this — e.g. avg seed similarity < threshold → route to `news_search` or refuse.
 - **GDS deprecations** — `id(n)` (use `elementId`) and `gds.graph.project.cypher` (use `gds.graph.project` aggregation form) emit warnings on Neo4j 5.26; both still functional. Migration tracked as future work.
 
 ---
