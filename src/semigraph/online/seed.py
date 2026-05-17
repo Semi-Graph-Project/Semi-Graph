@@ -248,6 +248,61 @@ def query_to_triple_seeds(
     return sorted(seeds.values(), key=lambda s: -s["similarity"])
 
 
+def query_to_hybrid_seeds(
+    query: str,
+    top_k_nodes: int = 5,
+    top_k_triples: int = 5,
+    min_similarity: float = 0.6,
+    cfg: Optional[Config] = None,
+) -> list[dict]:
+    """Union of Query-to-Node (Phase C1a) and Query-to-Triple (Phase C1b+) seeds.
+
+    HippoRAG v2 paper ablation (Table 4) reports Query-to-Triple alone beats
+    Query-to-Node by +12.5% R@5 on multi-hop QA, but acknowledges both paths
+    surface complementary signal: node embeddings catch entities whose
+    descriptive name matches the query verbatim, triple embeddings catch
+    entities embedded in relational context. Merging recovers both — at the
+    cost of running two index lookups per query.
+
+    For abstract queries where the answer entity has a short, undescriptive
+    name (e.g. "tsmc" vs query "leading pure-play semiconductor foundry"),
+    neither path may surface the target directly, but the union still gives
+    PPR a richer starting distribution than either path alone.
+
+    Args:
+        query: Natural-language input.
+        top_k_nodes:   Top-k entities from `query_to_seeds`.
+        top_k_triples: Top-k triples from `query_to_triple_seeds`.
+        min_similarity: Cosine threshold applied to both paths.
+        cfg: Optional config override.
+
+    Returns:
+        Deduplicated seed list `[{name, type, specificity, similarity}, ...]`,
+        sorted by similarity descending. Same shape as the two source
+        functions — drop-in for `run_ppr`.
+    """
+    if not query.strip():
+        return []
+
+    node_seeds = query_to_seeds(
+        query, top_k=top_k_nodes, min_similarity=min_similarity, cfg=cfg
+    )
+    triple_seeds = query_to_triple_seeds(
+        query, top_k_triples=top_k_triples, min_similarity=min_similarity, cfg=cfg
+    )
+
+    merged: dict[tuple[str, str], dict] = {}
+    for s in node_seeds + triple_seeds:
+        key = (s["name"], s["type"])
+        existing = merged.get(key)
+        if existing is None or existing["similarity"] < s["similarity"]:
+            merged[key] = s
+
+    print(f"[hybrid_seed] {len(node_seeds)} node + {len(triple_seeds)} triple "
+          f"→ {len(merged)} unique seeds")
+    return sorted(merged.values(), key=lambda s: -s["similarity"])
+
+
 if __name__ == "__main__":
     def _show(label: str, seeds: list[dict]) -> None:
         print(f"\n{label} → {len(seeds)} seeds:")
