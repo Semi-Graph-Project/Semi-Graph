@@ -29,6 +29,7 @@ from neo4j import Driver
 from semigraph.config import Config, get_config
 from semigraph.connections import get_neo4j_driver
 from semigraph.online.ppr import run_ppr
+from semigraph.online.query_expand import expand_query
 from semigraph.online.seed import query_to_triple_seeds
 
 
@@ -211,16 +212,19 @@ def graph_search(
     query: str,
     top_k_chunks: int = 5,
     top_k_entities: int = 20,
-    damping: float = 0.85,
+    damping: float = 0.7,
+    top_k_triples: int = 8,
+    use_expansion: bool = True,
     cfg: Optional[Config] = None,
 ) -> list[dict]:
     """Full graph_search pipeline: query → top-k chunks ranked by PPR mass.
 
-    Composes Phase C1a/C1b/C1b+ + this module's C1/C2:
+    Composes Phase C1a/C1b/C1b+ + this module's C1/C2 + Tier 1 augmentation:
 
         query
-          → query_to_triple_seeds       (HippoRAG v2 linker)
-          → run_ppr                     (Personalized PageRank top-k)
+          → expand_query                (Tier 1 A — LLM entity hints)
+          → query_to_triple_seeds       (HippoRAG v2 linker, top_k_triples=8)
+          → run_ppr                     (Personalized PageRank, damping=0.7)
           → _cluster_aliases            (collapse SYNONYM_OF cluster)
           → _collapse_clusters          (SUM PPR scores per cluster)
           → _map_chunks                 (MENTIONS → chunk + SUM cluster scores)
@@ -230,8 +234,15 @@ def graph_search(
         top_k_chunks:   Number of chunks to return for downstream LLM context.
         top_k_entities: PPR top-k cap. Pick 3-5x `top_k_chunks` so each chunk
                         receives signal from multiple entities (multi-hop).
-        damping:        PageRank damping (0.85 = HippoRAG default; lower
-                        narrows walk to seeds, higher leaks to global hubs).
+        damping:        PageRank damping. 0.7 (tuned for our sparse KG, avg
+                        degree 2.37) narrows walk closer to seeds and reduces
+                        hub leakage vs HippoRAG default 0.85.
+        top_k_triples:  Number of triples retrieved at seed step. 8 (vs 5
+                        default) widens the seed funnel after query expansion
+                        — expanded query surfaces more relevant entities and
+                        we want their triples to all reach PPR.
+        use_expansion:  Toggle LLM query expansion. Set False for ablation
+                        ("does the LLM call actually help?").
         cfg:            Optional Config; defaults to cached singleton.
 
     Returns:
@@ -242,7 +253,10 @@ def graph_search(
     print(f"[graph_search] query={query!r} "
           f"top_k_chunks={top_k_chunks} top_k_entities={top_k_entities}")
 
-    seeds = query_to_triple_seeds(query, cfg=cfg)
+    effective_query = expand_query(query, cfg=cfg) if use_expansion else query
+    seeds = query_to_triple_seeds(
+        effective_query, top_k_triples=top_k_triples, cfg=cfg
+    )
     if not seeds:
         print("[graph_search] no seeds — aborting")
         return []
