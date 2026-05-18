@@ -29,6 +29,7 @@ logging.getLogger("neo4j").setLevel("ERROR")
 from semigraph.config import get_config
 from semigraph.connections import get_neo4j_driver
 from semigraph.online.graph_search import graph_search
+from semigraph.online.hybrid_search import hybrid_search
 from semigraph.online.vector_search import vector_search
 
 
@@ -176,57 +177,83 @@ def main() -> None:
 
         vec_run = vector_search(q["question"], top_k_chunks=TOP_K)
         gph_run = graph_search(q["question"], top_k_chunks=TOP_K)
+        hyb_run = hybrid_search(q["question"], top_k_chunks=TOP_K)
 
         vec_eval = evaluate(vec_run, expected)
         gph_eval = evaluate(gph_run, expected)
+        hyb_eval = evaluate(hyb_run, expected)
 
-        winner = (
-            "graph" if gph_eval["recall"] > vec_eval["recall"]
-            else "vector" if vec_eval["recall"] > gph_eval["recall"]
-            else "tie"
-        )
+        scores = {
+            "vector": vec_eval["recall"],
+            "graph":  gph_eval["recall"],
+            "hybrid": hyb_eval["recall"],
+        }
+        max_recall = max(scores.values())
+        top = [t for t, r in scores.items() if r == max_recall]
+        winner = top[0] if len(top) == 1 else "tie"
 
         rows.append({
             "q": q, "expected": expected,
-            "vec": vec_eval, "gph": gph_eval,
-            "vec_run": vec_run, "gph_run": gph_run,
+            "vec": vec_eval, "gph": gph_eval, "hyb": hyb_eval,
+            "vec_run": vec_run, "gph_run": gph_run, "hyb_run": hyb_run,
             "winner": winner,
         })
 
         print(f"    vector: hit={vec_eval['hit']}  recall={vec_eval['recall']:.2f}  "
               f"({vec_eval['n_hits']}/{TOP_K} hits)")
         print(f"    graph:  hit={gph_eval['hit']}  recall={gph_eval['recall']:.2f}  "
-              f"({gph_eval['n_hits']}/{TOP_K} hits)  winner={winner}")
+              f"({gph_eval['n_hits']}/{TOP_K} hits)")
+        print(f"    hybrid: hit={hyb_eval['hit']}  recall={hyb_eval['recall']:.2f}  "
+              f"({hyb_eval['n_hits']}/{TOP_K} hits)  winner={winner}")
 
     # Aggregate
     vec_hits = sum(r["vec"]["hit"] for r in rows)
     gph_hits = sum(r["gph"]["hit"] for r in rows)
+    hyb_hits = sum(r["hyb"]["hit"] for r in rows)
     vec_recall_avg = sum(r["vec"]["recall"] for r in rows) / len(rows)
     gph_recall_avg = sum(r["gph"]["recall"] for r in rows) / len(rows)
+    hyb_recall_avg = sum(r["hyb"]["recall"] for r in rows) / len(rows)
     n_g = sum(1 for r in rows if r["winner"] == "graph")
     n_v = sum(1 for r in rows if r["winner"] == "vector")
+    n_h = sum(1 for r in rows if r["winner"] == "hybrid")
     n_t = sum(1 for r in rows if r["winner"] == "tie")
+    hyb_beats_vec  = sum(1 for r in rows if r["hyb"]["recall"] >  r["vec"]["recall"])
+    hyb_equals_vec = sum(1 for r in rows if r["hyb"]["recall"] == r["vec"]["recall"])
+    hyb_loses_vec  = sum(1 for r in rows if r["hyb"]["recall"] <  r["vec"]["recall"])
 
     # Report
     lines = [
-        "# Held-Out Multi-hop Evaluation — Phase C2-ter",
+        "# Held-Out Multi-hop Evaluation — 3-config (Phase C2-quater)",
         "",
         "**Held-out set authored before any tuning to bound test-set leakage.**",
         "Compare these numbers against `multihop_synthesized_eval.md` (dev set N=20)",
         "after tuning — large drop = overfit to dev set.",
         "",
         f"**N queries:** {len(rows)} · **top_k:** {TOP_K}",
+        "**Tools:** vector_search, graph_search, hybrid_search (RRF k=60)",
         "",
         "---",
         "",
-        "## Aggregate",
+        "## Aggregate — 3-config",
         "",
-        "| Metric | vector_search | graph_search | Δ |",
-        "|---|---|---|---|",
-        f"| Hit@5 (binary) | {vec_hits}/{len(rows)} | {gph_hits}/{len(rows)} | {gph_hits - vec_hits:+d} |",
-        f"| Avg Recall@5  | {vec_recall_avg:.3f} | {gph_recall_avg:.3f} | "
-        f"{gph_recall_avg - vec_recall_avg:+.3f} |",
-        f"| Per-query wins | {n_v} | {n_g} | {n_g - n_v:+d} (ties: {n_t}) |",
+        "| Metric | vector | graph | **hybrid** | hyb − vec |",
+        "|---|---|---|---|---|",
+        f"| Hit@5 | {vec_hits}/{len(rows)} | {gph_hits}/{len(rows)} | **{hyb_hits}/{len(rows)}** | "
+        f"{hyb_hits - vec_hits:+d} |",
+        f"| Avg Recall@5 | {vec_recall_avg:.3f} | {gph_recall_avg:.3f} | "
+        f"**{hyb_recall_avg:.3f}** | {hyb_recall_avg - vec_recall_avg:+.3f} |",
+        f"| Best-of-3 wins | {n_v} | {n_g} | **{n_h}** | — (ties: {n_t}) |",
+        "",
+        "### Pairwise: hybrid vs vector (primary thesis)",
+        "",
+        f"- **hybrid > vector**: {hyb_beats_vec}/{len(rows)} queries",
+        f"- hybrid = vector: {hyb_equals_vec}/{len(rows)} queries",
+        f"- hybrid < vector: {hyb_loses_vec}/{len(rows)} queries (RRF floor should give 0)",
+        "",
+        "**Verdict:** "
+        + ("✓ hybrid ≥ vector on all queries (RRF floor holds)"
+           if hyb_loses_vec == 0
+           else f"⚠ hybrid < vector on {hyb_loses_vec} queries"),
         "",
         "---",
         "",
@@ -245,10 +272,13 @@ def main() -> None:
         lines.append("|---|---|---|---|---|")
         vec_ret = ", ".join(f"`{cid[:30]}...`" for cid in r["vec"]["returned_ids"])
         gph_ret = ", ".join(f"`{cid[:30]}...`" for cid in r["gph"]["returned_ids"])
+        hyb_ret = ", ".join(f"`{cid[:30]}...`" for cid in r["hyb"]["returned_ids"])
         lines.append(f"| vector | {r['vec']['hit']} | {r['vec']['recall']:.2f} | "
                      f"{r['vec']['n_hits']}/{TOP_K} | {vec_ret} |")
         lines.append(f"| graph  | {r['gph']['hit']} | {r['gph']['recall']:.2f} | "
                      f"{r['gph']['n_hits']}/{TOP_K} | {gph_ret} |")
+        lines.append(f"| **hybrid** | **{r['hyb']['hit']}** | **{r['hyb']['recall']:.2f}** | "
+                     f"**{r['hyb']['n_hits']}/{TOP_K}** | {hyb_ret} |")
         lines.append("")
         lines.append(f"**Winner:** {r['winner']}")
         lines.append("")
@@ -258,6 +288,9 @@ def main() -> None:
         if r["gph"]["hit_ids"]:
             lines.append(f"_graph hits:_ {r['gph']['hit_ids']}")
             lines.append("")
+        if r["hyb"]["hit_ids"]:
+            lines.append(f"_hybrid hits:_ {r['hyb']['hit_ids']}")
+            lines.append("")
         lines.append("---")
         lines.append("")
 
@@ -265,9 +298,12 @@ def main() -> None:
     OUTPUT_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     print(f"\n{'='*60}")
-    print(f"HELD-OUT: vec hit={vec_hits}/{len(rows)} recall={vec_recall_avg:.3f}  "
-          f"| graph hit={gph_hits}/{len(rows)} recall={gph_recall_avg:.3f}")
-    print(f"Wins → graph={n_g}  vector={n_v}  ties={n_t}")
+    print(f"HELD-OUT: vec hit={vec_hits}/{len(rows)} recall={vec_recall_avg:.3f}")
+    print(f"        : gph hit={gph_hits}/{len(rows)} recall={gph_recall_avg:.3f}")
+    print(f"        : hyb hit={hyb_hits}/{len(rows)} recall={hyb_recall_avg:.3f}")
+    print(f"Best-of-3 wins → graph={n_g}  vector={n_v}  hybrid={n_h}  ties={n_t}")
+    print(f"Hybrid vs Vector: beats={hyb_beats_vec} equal={hyb_equals_vec} "
+          f"loses={hyb_loses_vec}")
     print(f"\n✓ Saved to {OUTPUT_PATH}")
 
 
