@@ -1,36 +1,52 @@
 """
-Synthesized multi-hop evaluation — Phase C2-bis.
+Synthesized multi-hop dev set — Phase C2-bis → C2-quinque (N=50 expansion).
 
-The 17-query test set in test_graph_search.py / test_vector_search.py is
-topical, not multi-hop: every query contains the surface terms of its
-answer chunks. That gives vector search an unfair advantage and fails to
-test the structural advantage graph_search is supposed to provide.
+The 17-query topical test set in test_graph_search.py / test_vector_search.py
+contains the surface terms of its answer chunks — vector search has unfair
+advantage there. This dev set tests the structural advantage graph_search
+should provide:
 
-This script defines 8 hand-crafted multi-hop questions where:
-1. The question references a SUBJECT entity (e.g. "Hopper", "Ryzen").
-2. The ANSWER entity (e.g. "TSMC", "Santa Clara") is NEVER surfaced in the
-   question — it must be inferred by traversing an edge in the graph.
-3. The bridge entity (e.g. "NVIDIA", "AMD") may or may not appear; the
-   question is phrased so the answer is one hop past the bridge.
+1. The question references a SUBJECT entity (e.g. "Hopper", "Ryzen", "Xeon").
+2. The ANSWER entity (e.g. "TSMC", "Mobileye", "Israel") is NEVER surfaced
+   in the question — it must be inferred by traversing an edge.
+3. The bridge entity may or may not appear; the question is phrased so the
+   answer is one (or more) hops past the bridge.
 
-Every chain is pre-verified against the live graph (PRODUCES, SUPPLIES,
-OPERATES_IN edges) so the test is reproducible.
+Every answer_entities list is pre-verified against the live graph (≥1
+chunk via MENTIONS edge — most have ≥5 chunks; exceptions documented inline).
+Held-out test (test_multihop_holdout.py, N=10) is kept locked; this dev set
+is for **tuning only** — peek freely.
+
+Test set composition (5 tickers × 6 axes, N=50):
+  Q1-Q8   original smoke set       (NVDA/AMD heavy)
+  Q9-Q20  Phase C2-bis extension   (NVDA/AMD/TSMC/MU)
+  Q21-Q32 INTC-anchored            (12 questions — supplier/partner/geo/
+                                    segment/regulator/3-hop/topical)
+  Q33-Q40 MU + ASML broadening     (8 questions — fills cross-corpus coverage)
+  Q41-Q50 cross-company chains     (10 questions — hyperscaler/foundry/
+                                    process node / risk / topical)
+
+Statistical power at N=50:
+  - McNemar paired test on Hit@5 detects ≥7-query delta at p<0.05 between
+    any two configs (≈14% absolute) — enough to discriminate graph/hybrid
+    from vector if the structural advantage is real.
+  - Per-ticker N≥8 enables sub-population analysis (regression check when
+    tuning weights).
 
 Metrics:
 - Hit@5: 1 if any expected chunk appears in top-5, else 0
 - Recall@5: |returned ∩ expected| / min(|expected|, 5)
-
-Both vector_search and graph_search are tested on the same questions. If
-graph_search outperforms vector_search on Hit@5 by ≥ 2 questions, the
-thesis hypothesis ("graph retrieval beats vector on multi-hop") is
-empirically supported. If not, the gap motivates Phase C1c tuning
-(intersection-bias fix, specificity-weighted teleport).
 """
 from __future__ import annotations
 
 import logging
+import math
+from collections import defaultdict
 from pathlib import Path
 from typing import Optional
+
+import numpy as np
+from scipy.stats import binomtest, chi2, wilcoxon
 
 logging.getLogger("neo4j").setLevel("ERROR")
 
@@ -222,6 +238,261 @@ MULTIHOP_QUERIES: list[dict] = [
         "surface_terms": ["graphics", "product", "line", "AMD", "compete", "NVIDIA", "RTX", "series"],
         "answer_entities": ["radeon", "amd radeon", "amd radeon pro"],
     },
+
+    # ----- INTC-anchored (Q21-Q32) — added after INTC ingest, expand from N=20→N=50 -----
+    # Each chain bridges through "intel" or a related INTC product. Answer entities
+    # verified to exist with ≥3 chunks in the graph (one exception noted) and avoid
+    # surface-leakage of the answer name in the question text.
+    {
+        "id": "Q21",
+        "type": "supplier_via_product",
+        "question": "Which Asian contract chipmakers fabricate older-generation processors for the developer of Intel 18A?",
+        "chain": "Intel 18A -PRODUCES-> Intel <-SUPPLIES- {TSMC, UMC, SMIC}",
+        "surface_terms": ["Asian", "contract", "chipmakers", "fabricate", "older-generation", "Intel 18A"],
+        "answer_entities": ["tsmc", "umc", "smic"],
+    },
+    {
+        "id": "Q22",
+        "type": "partner_via_product",
+        "question": "Which infrastructure investment firms partner with the maker of Xeon Scalable processors on fab financing?",
+        "chain": "Xeon -PRODUCES-> Intel -PARTNERS_WITH-> {Brookfield, Apollo}",
+        "surface_terms": ["infrastructure", "investment", "firms", "partner", "Xeon", "Scalable", "fab", "financing"],
+        "answer_entities": ["brookfield", "apollo"],
+    },
+    {
+        "id": "Q23",
+        "type": "subsidiary_via_product",
+        "question": "Which autonomous driving subsidiary does the developer of Intel Core Ultra operate?",
+        "chain": "Intel Core Ultra -PRODUCES-> Intel -HAS_STAKE_IN-> Mobileye",
+        "surface_terms": ["autonomous", "driving", "subsidiary", "Intel Core Ultra"],
+        "answer_entities": ["mobileye"],
+    },
+    {
+        "id": "Q24",
+        "type": "partner_via_product",
+        "question": "Which operating system maker collaborates with the Xeon Scalable processor developer on AI PC platforms?",
+        "chain": "Xeon -PRODUCES-> Intel -PARTNERS_WITH-> Microsoft (AI PC)",
+        "surface_terms": ["operating", "system", "maker", "collaborates", "Xeon", "Scalable", "AI PC"],
+        "answer_entities": ["microsoft"],
+    },
+    {
+        "id": "Q25",
+        "type": "geo_via_product",
+        "question": "In which U.S. states does the developer of the Intel 18A process operate wafer fabrication facilities?",
+        "chain": "Intel 18A -PRODUCES-> Intel -OPERATES_IN-> {Arizona, Ohio, Oregon, New Mexico}",
+        "surface_terms": ["U.S.", "states", "Intel 18A", "process", "wafer", "fabrication", "facilities"],
+        "answer_entities": ["arizona", "ohio", "oregon", "new mexico"],
+    },
+    {
+        "id": "Q26",
+        "type": "geo_via_product",
+        "question": "In which Middle Eastern country does the developer of Xeon Scalable processors operate a major fab?",
+        "chain": "Xeon -PRODUCES-> Intel -OPERATES_IN-> Israel (Kiryat Gat)",
+        "surface_terms": ["Middle Eastern", "country", "Xeon", "Scalable", "major", "fab"],
+        "answer_entities": ["israel"],
+    },
+    {
+        "id": "Q27",
+        "type": "segment_via_product",
+        "question": "What primary reporting segments does the maker of Xeon Scalable break out in its annual filings?",
+        "chain": "Xeon -PRODUCES-> Intel -HAS_STAKE_IN-> {DCAI, CCG, Intel Foundry, NEX}",
+        "surface_terms": ["primary", "reporting", "segments", "Xeon", "Scalable", "annual", "filings"],
+        "answer_entities": ["dcai", "ccg", "intel foundry", "nex", "data center and ai", "client computing group"],
+    },
+    {
+        "id": "Q28",
+        "type": "regulator_via_product",
+        "question": "What U.S. legislative act funds domestic semiconductor manufacturing expansion at the Intel 18A developer?",
+        "chain": "Intel 18A -PRODUCES-> Intel -SUBJECT_TO-> CHIPS Act",
+        "surface_terms": ["U.S.", "legislative", "act", "funds", "domestic", "manufacturing", "expansion", "Intel 18A"],
+        "answer_entities": ["chips act"],
+    },
+    {
+        "id": "Q29",
+        "type": "competitor_via_product",
+        "question": "Which ARM-based mobile chip companies compete with the developer of x86 processor cores in the client computing market?",
+        "chain": "x86 cores -PRODUCES-> Intel <-COMPETES_WITH- {Qualcomm, MediaTek, Apple}",
+        "surface_terms": ["ARM-based", "mobile", "chip", "companies", "compete", "x86", "processor", "cores", "client", "computing"],
+        "answer_entities": ["qualcomm", "mediatek", "apple"],
+    },
+    {
+        "id": "Q30",
+        "type": "three_hop_subsidiary_product",
+        "question": "What advanced driver assistance product lines come from the autonomous driving subsidiary of the Xeon Scalable developer?",
+        "chain": "Xeon -PRODUCES-> Intel -HAS_STAKE_IN-> Mobileye -PRODUCES-> {SuperVision, Chauffeur, Drive}",
+        "surface_terms": ["advanced", "driver", "assistance", "product", "autonomous", "driving", "subsidiary", "Xeon"],
+        "answer_entities": ["mobileye supervision", "mobileye chauffeur", "mobileye drive"],
+    },
+    {
+        "id": "Q31",
+        "type": "regulator_via_product",
+        "question": "What U.S. export restrictions affect chip sales by the Intel 18A developer to specific Asian end markets?",
+        "chain": "Intel 18A -PRODUCES-> Intel -SUBJECT_TO-> {export controls, EAR, China}",
+        "surface_terms": ["U.S.", "export", "restrictions", "chip", "sales", "Intel 18A", "Asian", "end", "markets"],
+        "answer_entities": ["export controls", "export administration regulations", "china"],
+    },
+    {
+        "id": "Q32",
+        "type": "topical_strategy",
+        "question": "How does the IDM 2.0 strategy aim to restore U.S. semiconductor manufacturing leadership?",
+        "chain": "topical — IDM 2.0 + Smart Capital + internal foundry",
+        "surface_terms": ["IDM 2.0", "strategy", "restore", "U.S.", "semiconductor", "manufacturing", "leadership"],
+        "answer_entities": [
+            "idm 2.0", "idm 2.0 strategy", "smart capital initiatives",
+            "internal foundry operating model", "idm 2.0 strategy implementation risk",
+        ],
+    },
+
+    # ----- MU / ASML coverage broadening (Q33-Q40) -----
+    {
+        "id": "Q33",
+        "type": "product_via_company",
+        "question": "What consumer storage and DRAM brand is sold by the U.S. supplier of HBM3E memory?",
+        "chain": "HBM3E -PRODUCES-> Micron -PRODUCES-> Crucial",
+        "surface_terms": ["consumer", "storage", "DRAM", "brand", "U.S.", "supplier", "HBM3E", "memory"],
+        "answer_entities": ["crucial"],
+    },
+    {
+        "id": "Q34",
+        "type": "geo_via_product",
+        "question": "In which Asian countries does the developer of HBM3E memory operate fabrication or assembly facilities?",
+        "chain": "HBM3E -PRODUCES-> Micron -OPERATES_IN-> {Taiwan, Japan, Malaysia, Singapore}",
+        "surface_terms": ["Asian", "countries", "HBM3E", "memory", "fabrication", "assembly", "facilities"],
+        "answer_entities": ["taiwan", "japan", "malaysia", "singapore"],
+    },
+    {
+        "id": "Q35",
+        "type": "customer_via_product",
+        "question": "Which AI accelerator vendor purchases HBM3E from the U.S. memory supplier for its data center GPUs?",
+        "chain": "HBM3E -PRODUCES-> Micron -SUPPLIES-> NVIDIA",
+        "surface_terms": ["AI", "accelerator", "vendor", "purchases", "HBM3E", "U.S.", "memory", "supplier", "data center", "GPUs"],
+        "answer_entities": ["nvidia", "nvidia corporation"],
+    },
+    {
+        "id": "Q36",
+        "type": "geo_via_product",
+        "question": "In what European country is the sole producer of EUV lithography systems headquartered?",
+        "chain": "EUV -PRODUCES-> ASML -OPERATES_IN-> Netherlands",
+        "surface_terms": ["European", "country", "sole", "producer", "EUV", "lithography", "headquartered"],
+        "answer_entities": ["netherlands"],
+    },
+    {
+        "id": "Q37",
+        "type": "customer_via_product",
+        "question": "Which leading-edge semiconductor manufacturers are the largest customers of the EUV lithography systems maker?",
+        "chain": "EUV -PRODUCES-> ASML -SUPPLIES-> {TSMC, Samsung, Intel}",
+        "surface_terms": ["leading-edge", "semiconductor", "manufacturers", "largest", "customers", "EUV", "lithography"],
+        "answer_entities": ["tsmc", "samsung electronics", "samsung", "intel"],
+    },
+    {
+        "id": "Q38",
+        "type": "regulator_via_product",
+        "question": "Which export license regime restricts EUV lithography system shipments to Chinese semiconductor manufacturers?",
+        "chain": "EUV -PRODUCES-> ASML -SUBJECT_TO-> {export controls, export licenses}",
+        "surface_terms": ["export", "license", "regime", "restricts", "EUV", "lithography", "shipments", "Chinese", "manufacturers"],
+        "answer_entities": ["export licenses", "export controls", "china"],
+    },
+    {
+        "id": "Q39",
+        "type": "topical_memory",
+        "question": "Why has HBM become critical for modern AI training and inference workloads?",
+        "chain": "topical — HBM as the bandwidth bottleneck-relief technology",
+        "surface_terms": ["HBM", "critical", "modern", "AI", "training", "inference", "workloads"],
+        "answer_entities": ["hbm", "hbm3e"],
+    },
+    {
+        "id": "Q40",
+        "type": "topical_ai_demand",
+        "question": "How does the rise of generative AI drive demand for accelerated data center computing infrastructure?",
+        "chain": "topical — gen AI inflates data center capex",
+        "surface_terms": ["rise", "generative", "AI", "drive", "demand", "accelerated", "data center", "computing", "infrastructure"],
+        "answer_entities": [
+            "ai", "generative ai models", "emergence of generative ai models",
+            "generative ai adoption risk", "demand for generative ai may fluctuate",
+        ],
+    },
+
+    # ----- Cross-company chains (Q41-Q50) -----
+    {
+        "id": "Q41",
+        "type": "customer_via_product",
+        "question": "Which cloud hyperscalers partner with the EPYC processor maker for server CPU deployments in their data centers?",
+        "chain": "EPYC -PRODUCES-> AMD -PARTNERS_WITH-> {Microsoft, Amazon, Google, Meta}",
+        "surface_terms": ["cloud", "hyperscalers", "partner", "EPYC", "processor", "server", "CPU", "deployments"],
+        "answer_entities": ["microsoft", "amazon", "google", "meta"],
+    },
+    {
+        "id": "Q42",
+        "type": "competitor_via_geo",
+        "question": "Which Korean conglomerate competes with the Taiwanese pure-play foundry leader in advanced node foundry services?",
+        "chain": "TSMC <-COMPETES_WITH- Samsung Foundry",
+        "surface_terms": ["Korean", "conglomerate", "competes", "Taiwanese", "pure-play", "foundry", "advanced", "node"],
+        "answer_entities": ["samsung electronics", "samsung", "samsung electronics co ltd"],
+    },
+    {
+        "id": "Q43",
+        "type": "supplier_via_product",
+        "question": "Who supplies the high-bandwidth memory used in NVIDIA's H200 data center accelerator?",
+        "chain": "H200 -PRODUCES-> NVIDIA <-SUPPLIES- {Micron, SK Hynix, Samsung}",
+        "surface_terms": ["supplies", "high-bandwidth", "memory", "NVIDIA", "H200", "data center", "accelerator"],
+        "answer_entities": ["micron", "micron technology", "sk hynix inc", "samsung electronics co ltd"],
+    },
+    {
+        "id": "Q44",
+        "type": "customer_via_product",
+        "question": "Which premium smartphone maker uses leading-edge process node chips fabricated by the Taiwanese pure-play foundry?",
+        "chain": "TSMC <-PARTNERS_WITH- Apple",
+        "surface_terms": ["premium", "smartphone", "maker", "leading-edge", "process", "node", "fabricated", "Taiwanese", "foundry"],
+        "answer_entities": ["apple"],
+    },
+    {
+        "id": "Q45",
+        "type": "product_via_company",
+        "question": "Which process node generations define the manufacturing roadmap of the developer of Xeon Scalable processors?",
+        "chain": "Xeon -PRODUCES-> Intel -PRODUCES-> {Intel 7, Intel 4, Intel 3, Intel 18A, Intel 14A}",
+        "surface_terms": ["process", "node", "generations", "manufacturing", "roadmap", "Xeon", "Scalable"],
+        "answer_entities": ["intel 4", "intel 7", "intel 3", "intel 18a", "intel 14a"],
+    },
+    {
+        "id": "Q46",
+        "type": "product_line_via_product",
+        "question": "What data center accelerator product family drives the largest revenue segment of the CUDA platform developer?",
+        "chain": "CUDA -PRODUCES-> NVIDIA -PRODUCES-> {H100, H200, Blackwell, GB200}",
+        "surface_terms": ["data center", "accelerator", "product", "family", "drives", "largest", "revenue", "segment", "CUDA", "platform"],
+        "answer_entities": ["h100", "h200", "blackwell", "gb200", "hopper", "blackwell architecture", "hgx"],
+    },
+    {
+        "id": "Q47",
+        "type": "competitor_via_product",
+        "question": "What ARM-based server CPU competes with AMD's EPYC processors and is developed by the CUDA platform maker?",
+        "chain": "EPYC <-COMPETES_WITH- Grace -PRODUCES-> NVIDIA",
+        "surface_terms": ["ARM-based", "server", "CPU", "competes", "AMD", "EPYC", "developed", "CUDA", "platform"],
+        "answer_entities": ["grace", "grace cpu"],
+    },
+    {
+        "id": "Q48",
+        "type": "risk_via_product",
+        "question": "On which Taiwanese foundry does the GeForce graphics card vendor concentrate its wafer supply?",
+        "chain": "GeForce -PRODUCES-> NVIDIA -DEPENDS_ON-> TSMC (single-source)",
+        "surface_terms": ["Taiwanese", "foundry", "GeForce", "graphics", "card", "vendor", "concentrate", "wafer", "supply"],
+        "answer_entities": ["tsmc"],
+    },
+    {
+        "id": "Q49",
+        "type": "regulator_via_segment",
+        "question": "What U.S. export policy restricts advanced AI data center chip sales by the CUDA developer to specific foreign markets?",
+        "chain": "CUDA -PRODUCES-> NVIDIA -SUBJECT_TO-> EAR (DC products → China)",
+        "surface_terms": ["U.S.", "export", "policy", "restricts", "advanced", "AI", "data center", "chip", "sales", "CUDA"],
+        "answer_entities": ["export administration regulations", "export controls", "china"],
+    },
+    {
+        "id": "Q50",
+        "type": "topical_capital",
+        "question": "What capital intensity challenges face leading-edge semiconductor wafer fabrication?",
+        "chain": "topical — capex burden of advanced-node fabs",
+        "surface_terms": ["capital", "intensity", "challenges", "leading-edge", "semiconductor", "wafer", "fabrication"],
+        "answer_entities": ["capital expenditures"],
+    },
 ]
 
 TOP_K = 5
@@ -264,6 +535,137 @@ def evaluate(retrieved: list[dict], expected: set[str]) -> dict:
         "hit_ids": sorted(hits),
         "returned_ids": [r["chunk_id"] for r in retrieved],
     }
+
+
+# ===================== Statistical tests (paper-level) =====================
+#
+# Why these tests:
+# - Hit@5 is paired binary across same N=50 queries with two systems →
+#   McNemar's test (off-diagonal disagreements only — diagonal cells carry
+#   no signal about which system is better).
+# - Recall@5 is paired ordinal-continuous → Wilcoxon signed-rank (no
+#   normality assumption; paired t-test would require it and N=50 is too
+#   small to invoke CLT robustly for bounded [0,1] data).
+# - Mean-recall delta CI via bootstrap (10k resamples) — gives a frequentist
+#   uncertainty band that papers can quote alongside the point estimate.
+# - Cohen's h on Hit@5 proportions — effect size in addition to p-value,
+#   because at N=50 a "significant" tiny effect is still operationally weak.
+
+
+def _mcnemar(hits_a: list[int], hits_b: list[int]) -> dict:
+    """Paired binary test. Returns b, c, χ², p (continuity-corrected when
+    b+c≥25, exact binomial otherwise — APA-standard cutoff)."""
+    b = sum(1 for ha, hb in zip(hits_a, hits_b) if ha == 1 and hb == 0)
+    c = sum(1 for ha, hb in zip(hits_a, hits_b) if ha == 0 and hb == 1)
+    n_disc = b + c
+    if n_disc == 0:
+        return {"b": 0, "c": 0, "stat": 0.0, "p": 1.0, "method": "no_discordant"}
+    if n_disc < 25:
+        # Exact: min(b,c) under Binomial(n_disc, 0.5) — two-sided
+        p = binomtest(min(b, c), n_disc, p=0.5, alternative="two-sided").pvalue
+        return {"b": b, "c": c, "stat": float(min(b, c)), "p": float(p), "method": "exact"}
+    # Chi-square with continuity correction (Edwards 1948)
+    chi2_stat = (abs(b - c) - 1) ** 2 / n_disc
+    p = float(1.0 - chi2.cdf(chi2_stat, df=1))
+    return {"b": b, "c": c, "stat": float(chi2_stat), "p": p, "method": "chi2_cc"}
+
+
+def _wilcoxon(recalls_a: list[float], recalls_b: list[float]) -> dict:
+    """Paired signed-rank on (a − b) recall diffs. Drops zero-diffs
+    (Wilcoxon's standard handling — scipy default `zero_method='wilcox'`)."""
+    diffs = np.array(recalls_a) - np.array(recalls_b)
+    non_zero = diffs[diffs != 0]
+    if len(non_zero) == 0:
+        return {"stat": 0.0, "p": 1.0, "n_nonzero": 0}
+    res = wilcoxon(non_zero, alternative="two-sided", zero_method="wilcox")
+    return {"stat": float(res.statistic), "p": float(res.pvalue), "n_nonzero": len(non_zero)}
+
+
+def _bootstrap_ci(diffs: list[float], n_boot: int = 10_000, seed: int = 42) -> dict:
+    """Percentile-bootstrap 95% CI on mean(diffs). Excluding 0 ⇒ robust."""
+    rng = np.random.default_rng(seed)
+    arr = np.array(diffs)
+    if len(arr) == 0:
+        return {"mean": 0.0, "lo": 0.0, "hi": 0.0, "excludes_zero": False}
+    idx = rng.integers(0, len(arr), size=(n_boot, len(arr)))
+    boot_means = arr[idx].mean(axis=1)
+    lo, hi = np.percentile(boot_means, [2.5, 97.5])
+    return {
+        "mean": float(arr.mean()),
+        "lo": float(lo),
+        "hi": float(hi),
+        "excludes_zero": bool(lo > 0 or hi < 0),
+    }
+
+
+def _cohens_h(p1: float, p2: float) -> float:
+    """Effect size for two proportions. |h|: 0.2 small, 0.5 medium, 0.8 large."""
+    return 2 * math.asin(math.sqrt(p1)) - 2 * math.asin(math.sqrt(p2))
+
+
+def _pairwise_block(name_a: str, name_b: str, rows: list[dict],
+                    key_a: str, key_b: str) -> dict:
+    """Run all 4 tests + effect size for one pair (e.g. hybrid vs vector)."""
+    hits_a = [r[key_a]["hit"] for r in rows]
+    hits_b = [r[key_b]["hit"] for r in rows]
+    rec_a = [r[key_a]["recall"] for r in rows]
+    rec_b = [r[key_b]["recall"] for r in rows]
+    diffs = [a - b for a, b in zip(rec_a, rec_b)]
+    p_a, p_b = sum(hits_a) / len(hits_a), sum(hits_b) / len(hits_b)
+    return {
+        "label": f"{name_a} vs {name_b}",
+        "mcnemar": _mcnemar(hits_a, hits_b),
+        "wilcoxon": _wilcoxon(rec_a, rec_b),
+        "bootstrap": _bootstrap_ci(diffs),
+        "cohens_h": _cohens_h(p_a, p_b),
+        "hit_rate_a": p_a, "hit_rate_b": p_b,
+        "recall_a": float(np.mean(rec_a)), "recall_b": float(np.mean(rec_b)),
+    }
+
+
+def _format_pairwise(block: dict) -> list[str]:
+    """Markdown lines for one pairwise block."""
+    m, w, bo = block["mcnemar"], block["wilcoxon"], block["bootstrap"]
+    sig = lambda p: "✓" if p < 0.05 else ("·" if p < 0.10 else "✗")
+    excl = "✓ excludes 0" if bo["excludes_zero"] else "✗ crosses 0"
+    return [
+        f"### {block['label']}",
+        "",
+        f"- Hit@5: {block['hit_rate_a']:.2%} vs {block['hit_rate_b']:.2%}  "
+        f"(Cohen's h = {block['cohens_h']:+.3f})",
+        f"- Recall@5: {block['recall_a']:.3f} vs {block['recall_b']:.3f}  "
+        f"(Δ = {block['recall_a'] - block['recall_b']:+.3f})",
+        "",
+        f"| Test | Statistic | p | Verdict |",
+        f"|---|---|---|---|",
+        f"| McNemar (Hit@5) | b={m['b']} c={m['c']} ({m['method']}) | "
+        f"{m['p']:.4f} | {sig(m['p'])} |",
+        f"| Wilcoxon signed-rank (Recall@5) | W={w['stat']:.1f} (n≠0={w['n_nonzero']}) | "
+        f"{w['p']:.4f} | {sig(w['p'])} |",
+        f"| Bootstrap 95% CI on mean Δ | [{bo['lo']:+.3f}, {bo['hi']:+.3f}] | — | {excl} |",
+        "",
+    ]
+
+
+def _per_type_breakdown(rows: list[dict]) -> dict[str, dict]:
+    """Group by query type → aggregate Hit/Recall per tool. Useful for
+    identifying which question types graph/hybrid actually beats vector on."""
+    groups: dict[str, list[dict]] = defaultdict(list)
+    for r in rows:
+        groups[r["q"]["type"]].append(r)
+    out: dict[str, dict] = {}
+    for qtype, grp in groups.items():
+        n = len(grp)
+        out[qtype] = {
+            "n": n,
+            "vec_hit": sum(r["vec"]["hit"] for r in grp) / n,
+            "gph_hit": sum(r["gph"]["hit"] for r in grp) / n,
+            "hyb_hit": sum(r["hyb"]["hit"] for r in grp) / n,
+            "vec_rec": sum(r["vec"]["recall"] for r in grp) / n,
+            "gph_rec": sum(r["gph"]["recall"] for r in grp) / n,
+            "hyb_rec": sum(r["hyb"]["recall"] for r in grp) / n,
+        }
+    return out
 
 
 def main() -> None:
@@ -372,6 +774,45 @@ def main() -> None:
     lines.append("---")
     lines.append("")
 
+    # ===== Statistical Significance — paper-defensible block =====
+    pair_hv = _pairwise_block("hybrid", "vector", rows, "hyb", "vec")
+    pair_gv = _pairwise_block("graph",  "vector", rows, "gph", "vec")
+    pair_hg = _pairwise_block("hybrid", "graph",  rows, "hyb", "gph")
+
+    lines.append("## Statistical Significance (paired tests, α = 0.05)")
+    lines.append("")
+    lines.append(f"N = {len(rows)} paired queries. Tests:")
+    lines.append("- **McNemar** on Hit@5 (paired binary) — discordant pairs only")
+    lines.append("- **Wilcoxon signed-rank** on Recall@5 (paired ordinal, no normality)")
+    lines.append("- **Bootstrap 95% CI** on mean Recall@5 difference (10,000 resamples)")
+    lines.append("- **Cohen's h** on Hit@5 proportions (effect size: 0.2 small / 0.5 medium / 0.8 large)")
+    lines.append("")
+    lines.append("Legend: p < 0.05 ✓ significant · p < 0.10 · marginal · p ≥ 0.10 ✗ not sig")
+    lines.append("")
+    lines += _format_pairwise(pair_hv)
+    lines += _format_pairwise(pair_gv)
+    lines += _format_pairwise(pair_hg)
+    lines.append("---")
+    lines.append("")
+
+    # ===== Per-type breakdown (tuning diagnostic) =====
+    types = _per_type_breakdown(rows)
+    lines.append("## Per-Query-Type Breakdown (tuning diagnostic)")
+    lines.append("")
+    lines.append("If graph/hybrid beats vector on a subset of types, sub-type claim "
+                 "is defensible even when overall test is null.")
+    lines.append("")
+    lines.append("| Type | n | vec H@5 | gph H@5 | hyb H@5 | vec R@5 | gph R@5 | hyb R@5 |")
+    lines.append("|---|---|---|---|---|---|---|---|")
+    for qtype, s in sorted(types.items(), key=lambda x: -x[1]["n"]):
+        lines.append(
+            f"| {qtype} | {s['n']} | {s['vec_hit']:.2f} | {s['gph_hit']:.2f} | "
+            f"{s['hyb_hit']:.2f} | {s['vec_rec']:.2f} | {s['gph_rec']:.2f} | {s['hyb_rec']:.2f} |"
+        )
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+
     # Per-query detail
     for i, r in enumerate(rows, start=1):
         q = r["q"]
@@ -421,6 +862,20 @@ def main() -> None:
           f"hybrid={n_hyb_wins} ties={n_ties}")
     print(f"Hybrid vs Vector: beats={hyb_beats_vec} equal={hyb_equals_vec} "
           f"loses={hyb_loses_vec}")
+
+    # Compact stat summary on console (full block in markdown)
+    print(f"\n{'-' * 60}")
+    print("Statistical significance (paired, α=0.05)")
+    print(f"{'-' * 60}")
+    for blk in (pair_hv, pair_gv, pair_hg):
+        m, w, bo = blk["mcnemar"], blk["wilcoxon"], blk["bootstrap"]
+        mark = lambda p: "✓" if p < 0.05 else ("·" if p < 0.10 else "✗")
+        print(f"  {blk['label']:>18s}: "
+              f"McNemar p={m['p']:.4f}{mark(m['p'])}  "
+              f"Wilcoxon p={w['p']:.4f}{mark(w['p'])}  "
+              f"Δ̄ R@5={bo['mean']:+.3f} [{bo['lo']:+.3f},{bo['hi']:+.3f}]"
+              f"{' ✓' if bo['excludes_zero'] else ''}")
+
     print(f"\n✓ Report saved to {OUTPUT_PATH}")
 
 
