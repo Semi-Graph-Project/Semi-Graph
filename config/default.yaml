@@ -12,6 +12,7 @@ tickers:
   - ASML
   - MU
   - AMD
+  - INTC
 
 # Data paths
 paths:
