@@ -46,7 +46,7 @@ ORDER BY cnt DESC
 _CYPHER_MAP_ID = """
 MATCH (e:Entity)
 WHERE e.name IN $names
-RETURN id(e) AS id, e.name AS name
+RETURN id(e) AS id, e.name AS name, e.specificity AS specificity
 """
 
 _CYPHER_MAP_NAME = """
@@ -131,15 +131,39 @@ def run_ppr(
     top_k: int = 20,
     damping: float = 0.85,
     max_iterations: int = 20,
+    use_specificity_teleport: bool = False,
     cfg: Optional[Config] = None,
 ) -> list[dict]:
     """Run Personalized PageRank from `seeds` and return top-k entities.
 
+    Teleport distribution — two modes:
+      * `use_specificity_teleport=False` (default): uniform 1/k per seed.
+        Empirically best on this corpus — see ablation below.
+      * `use_specificity_teleport=True` (HippoRAG v1 paper recipe): teleport
+        probability ∝ entity specificity. Low-spec hubs (`intel`, `china`)
+        get small weight; specific leaves get large weight. Implemented via
+        multi-set seed list (cap=2) since GDS 2.x `sourceNodes` accepts
+        only flat lists.
+
+    Ablation result on dev N=50 (logged in analytics/):
+      | Mode               | Graph R@5 | Gph vs Vec p (Wilcoxon)        |
+      |--------------------|-----------|--------------------------------|
+      | uniform (default)  | 0.492     | 0.028 ✓ significant            |
+      | spec-weighted cap=2| 0.448     | 0.185 ✗ not sig                |
+      | spec-weighted cap=10|0.448     | 0.206 ✗ not sig                |
+    Why uniform wins: ticker hubs (`intel`/`nvidia`/`united_states`) in our
+    KG act as routing *bridges* in multi-hop chains — de-weighting them
+    breaks 1-2 hop traversal (e.g. Q25 "US states of Intel 18A maker"
+    crashed 1.00→0.00 because walker stops starting at the intel hub).
+
     Args:
-        seeds: Output of `query_to_seeds()` — each dict has at least `name`.
+        seeds: Output of `query_to_seeds()` / `query_to_triple_seeds()`.
+               Each dict requires `name`; `specificity` is read when
+               `use_specificity_teleport=True` (fallback 1.0 if absent).
         top_k: Number of top-scoring entities to return.
         damping: PageRank damping factor (0.85 = HippoRAG default).
         max_iterations: Power-iteration cap.
+        use_specificity_teleport: see "Teleport distribution" above.
         cfg: Optional Config; defaults to cached singleton.
 
     Returns:
@@ -162,9 +186,13 @@ def run_ppr(
 
     try:
         with driver.session() as session:
-            # Map Seed to ID => Prepare Qry
+            # Map Seed to ID + pull specificity for teleport weighting
             id_rows = list(session.run(_CYPHER_MAP_ID, names=seed_names))
             seed_ids: list[int] = [row["id"] for row in id_rows]
+            id_to_spec: dict[int, float] = {
+                row["id"]: (row["specificity"] if row["specificity"] is not None else 1.0)
+                for row in id_rows
+            }
             found_names = {row["name"] for row in id_rows}
             missing = sorted(set(seed_names) - found_names)
             if missing:
@@ -173,6 +201,48 @@ def run_ppr(
             if not seed_ids:
                 print("[run_ppr] No valid seed IDs — aborting walk.")
                 return []
+
+            # Build source-node ID list for GDS PageRank.
+            # GDS 2.x `sourceNodes` accepts ONLY a flat list of node IDs
+            # (no `{nodeId,weight}` map form). Weighted-teleport workaround:
+            # repeat each seed ID proportional to its specificity, then GDS's
+            # uniform teleport over the multi-set yields the weighted
+            # distribution we want.
+            #
+            # Multiplicity = round(spec_i / min_spec), capped at MULT_CAP=2
+            # — *intentionally mild*. A previous run at cap=10 (full 10:1
+            # leaf:hub spread) crashed Graph Recall@5 from 0.49 → 0.45 on
+            # this corpus because de-weighting hub seeds (intel, nvidia,
+            # united_states) broke their role as routing bridges in 1-2 hop
+            # queries (e.g. Q25 "US states of Intel 18A maker" needs to walk
+            # through intel-hub to reach Arizona/Ohio/Oregon). cap=2 keeps
+            # the de-emphasis subtle: leaf gets at most 2× the teleport
+            # weight of a hub, not 10×, preserving bridge functionality.
+            #
+            # min_spec floor of 0.05 guards against any zero/None spec.
+            MULT_CAP = 2
+            if use_specificity_teleport:
+                weights = [max(0.05, id_to_spec[nid]) for nid in seed_ids]
+                min_w = min(weights)
+                multiplicities = [
+                    min(MULT_CAP, max(1, round(w / min_w))) for w in weights
+                ]
+                source_ids: list[int] = []
+                for nid, mult in zip(seed_ids, multiplicities):
+                    source_ids.extend([nid] * mult)
+                weights_preview = ", ".join(
+                    f"{id_to_spec[nid]:.2f}×{mult}"
+                    for nid, mult in zip(seed_ids[:5], multiplicities[:5])
+                )
+                mode_str = (
+                    f"specificity-weighted "
+                    f"(unique={len(seed_ids)}, repeated={len(source_ids)}, "
+                    f"sample: {weights_preview}...)"
+                )
+            else:
+                # Uniform ablation path — each seed exactly once.
+                source_ids = list(seed_ids)
+                mode_str = f"uniform ({len(seed_ids)} seeds)"
 
             try:
                 proj = session.run(
@@ -185,11 +255,11 @@ def run_ppr(
                       f"{proj['relationshipCount']} relationships")
 
                 print(f"[run_ppr] PPR over {len(seed_ids)} seeds "
-                      f"(damping={damping}, max_iter={max_iterations})")
+                      f"(damping={damping}, max_iter={max_iterations}, teleport={mode_str})")
                 ppr_rows = list(session.run(
                     _CYPHER_PPR,
                     graph_name=graph_name,
-                    source_ids=seed_ids,
+                    source_ids=source_ids,
                     damping=damping,
                     max_iter=max_iterations,
                 ))
