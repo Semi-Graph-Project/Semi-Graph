@@ -1,0 +1,16 @@
+# SemiGraph RAG — Streamlit theme (enterprise dark)
+# Palette: GitHub-dark-inspired slate + deep-blue accent.
+
+[theme]
+base = "dark"
+primaryColor = "#3B82F6"              # deep blue accent (was default red)
+backgroundColor = "#0D1117"           # near-black slate
+secondaryBackgroundColor = "#161B22"  # card / sidebar surface
+textColor = "#C9D1D9"                 # slate-200 body text
+
+[client]
+toolbarMode = "minimal"               # trims the dev toolbar
+showErrorDetails = true
+
+[browser]
+gatherUsageStats = false
