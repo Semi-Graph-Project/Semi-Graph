@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SemiGraph — Progress Update</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/black.css">
+<style>
+  :root {
+    --bg: #0D1117; --surface: #161B22; --border: #30363D; --soft: #21262D;
+    --text: #C9D1D9; --strong: #F0F6FC; --muted: #7D8590;
+    --accent: #3B82F6; --accent2: #58A6FF;
+    --green: #3FB950; --amber: #D29922;
+  }
+  .reveal { font-family: 'Inter','Segoe UI',system-ui,sans-serif;
+            font-size: 30px; color: var(--text); }
+  .reveal .slides section { text-align: left; }
+  .reveal h1,.reveal h2,.reveal h3 { color: var(--strong);
+            text-transform: none; letter-spacing: -0.01em; font-weight: 700; }
+  .reveal h1 { font-size: 1.9em; }
+  .reveal h2 { font-size: 1.25em; border-left: 4px solid var(--accent);
+            padding-left: 16px; margin-bottom: 0.5em; }
+  .reveal section { background: var(--bg); }
+  .reveal .slide-number { background: transparent; color: var(--muted); }
+  .reveal a { color: var(--accent2); }
+  .reveal strong { color: var(--strong); }
+  .reveal em { color: var(--accent2); font-style: normal; }
+
+  .sub { color: var(--muted); font-size: 0.62em; text-transform: uppercase;
+         letter-spacing: 0.12em; }
+  .accent-mark { display:inline-block; width: 22px; height: 22px;
+         background: var(--accent); border-radius: 4px;
+         transform: rotate(45deg); margin-right: 14px; }
+
+  .reveal table { font-size: 0.66em; border-collapse: collapse; width: 100%;
+         margin: 0.4em 0; }
+  .reveal table th { background: var(--surface); color: var(--accent2);
+         border: 1px solid var(--border); padding: 8px 12px;
+         text-transform: uppercase; font-size: 0.82em; letter-spacing: 0.05em; }
+  .reveal table td { border: 1px solid var(--soft); padding: 7px 12px;
+         color: var(--text); }
+  .reveal table tr:nth-child(even) td { background: #11161D; }
+
+  .card { background: var(--surface); border: 1px solid var(--border);
+          border-radius: 8px; padding: 14px 20px; margin: 8px 0; }
+  .card-accent { border-left: 3px solid var(--accent); }
+
+  .kpi-row { display: flex; gap: 16px; margin: 16px 0; }
+  .kpi { flex: 1; background: var(--surface); border: 1px solid var(--border);
+         border-radius: 8px; padding: 14px 16px; }
+  .kpi .v { font-size: 1.5em; font-weight: 700; color: var(--accent2); }
+  .kpi .l { font-size: 0.5em; color: var(--muted); text-transform: uppercase;
+            letter-spacing: 0.08em; }
+
+  .reveal ul { font-size: 0.78em; }
+  .reveal li { margin: 0.32em 0; }
+  .small { font-size: 0.68em; }
+  .muted { color: var(--muted); }
+  .pill { display:inline-block; padding: 3px 11px; border-radius: 11px;
+          font-size: 0.5em; font-weight: 700; letter-spacing: 0.04em; }
+  .pill-ok { background:#1B3A2A; color:var(--green); border:1px solid #3FB95066; }
+  .pill-warn { background:#3A3115; color:var(--amber); border:1px solid #D2992266; }
+  .footer-note { position: absolute; bottom: 12px; left: 0; right: 0;
+          text-align: center; font-size: 0.5em; color: var(--muted); }
+  .reveal code { color: var(--accent2); background: #11161D;
+          padding: 1px 6px; border-radius: 4px; font-size: 0.85em; }
+</style>
+</head>
+<body>
+<div class="reveal"><div class="slides">
+
+<!-- ============ 1. TITLE ============ -->
+<section data-background-color="#0D1117">
+  <div style="margin-top: 0.4em;">
+    <span class="accent-mark"></span>
+    <span style="font-size: 2.4em; font-weight: 800; color: #F0F6FC;
+          letter-spacing: -0.03em;">SemiGraph</span>
+  </div>
+  <h3 style="margin-top: 0.6em; font-weight: 500; color: #C9D1D9;">
+    Agentic GraphRAG for Semiconductor 10-K Fundamental Analysis</h3>
+  <p class="sub" style="margin-top: 1.4em;">Senior Project · Progress Update · 21 May 2026</p>
+  <p class="small muted" style="margin-top: 2em;">
+    KMUTNB · Computer Science<br>
+    Scope: NVDA · AMD · MU · ASML · INTC</p>
+</section>
+
+<!-- ============ 2. GOAL + POSITIONING ============ -->
+<section>
+  <h2>เป้าหมาย &amp; การวางตำแหน่ง</h2>
+  <p class="small">โจทย์: ระบบ retrieval ที่ตอบคำถาม <em>multi-hop</em> เกี่ยวกับ
+     งบการวิเคราะห์ปัจจัยพื้นฐานหุ้นเซมิคอนดักเตอร์จากเอกสาร 10-K</p>
+  <div class="card card-accent">
+    <strong>Thesis position</strong> — Agentic <em>Heterogeneous</em> RAG
+    เทียบกับ Homogeneous Vector RAG<br>
+    <span class="small muted">contribution = วิศวกรรม: รวม knowledge graph +
+    structured data + news เข้าเป็น agentic pipeline เดียว</span>
+  </div>
+  <table>
+    <tr><th>Config</th><th>องค์ประกอบ</th><th>สถานะ</th></tr>
+    <tr><td>Vanilla Vector RAG</td><td>vector retrieval อย่างเดียว</td>
+        <td><span class="pill pill-ok">baseline พร้อม</span></td></tr>
+    <tr><td>Agentic Vector RAG</td><td>agent + vector tool เดียว</td>
+        <td>Phase D</td></tr>
+    <tr><td><strong>Agentic Heterogeneous RAG</strong></td>
+        <td>agent + graph + structured + news</td><td>Phase D–E</td></tr>
+  </table>
+</section>
+
+<!-- ============ 3. ARCHITECTURE ============ -->
+<section>
+  <h2>สถาปัตยกรรมระบบ</h2>
+  <div class="card">
+    <strong class="muted small">OFFLINE — batch</strong><br>
+    <span class="small">SEC EDGAR → <code>ingest</code> → <code>preprocess</code>
+    → <code>chunker</code> → <code>kg_extract</code> (DeepSeek) → Neo4j</span>
+  </div>
+  <div class="card">
+    <strong class="muted small">ONLINE — retrieval (เสร็จแล้ว)</strong><br>
+    <span class="small"><code>vector_search</code> · <code>graph_search</code>
+    (PPR + triple linker) · <code>hybrid_search</code> (RRF fusion)</span>
+  </div>
+  <div class="card card-accent">
+    <strong class="muted small">ONLINE — agent layer (Phase D — ถัดไป)</strong><br>
+    <span class="small">LangGraph agent routing →
+    <code>financial_query</code> · <code>hybrid_search</code> · <code>news_search</code></span>
+  </div>
+  <p class="small muted">Neo4j 5.26 + GDS · BGE-base-en-v1.5 (768-dim) ·
+     DeepSeek-V4-flash</p>
+</section>
+
+<!-- ============ 4. CORPUS STATUS ============ -->
+<section>
+  <h2>สถานะ Corpus</h2>
+  <div class="kpi-row">
+    <div class="kpi"><div class="v">5</div><div class="l">Companies</div></div>
+    <div class="kpi"><div class="v">15</div><div class="l">10-K filings</div></div>
+    <div class="kpi"><div class="v">742</div><div class="l">Chunks</div></div>
+  </div>
+  <div class="kpi-row">
+    <div class="kpi"><div class="v">4,856</div><div class="l">Entities</div></div>
+    <div class="kpi"><div class="v">6,607</div><div class="l">Relationships</div></div>
+    <div class="kpi"><div class="v">100%</div><div class="l">Embeddings ครบ</div></div>
+  </div>
+  <p class="small"><span class="pill pill-ok">ใหม่รอบนี้</span>
+    เพิ่ม <strong>INTC</strong> เข้า corpus — 3 filings, 214 chunks,
+    1,236 entities ใหม่. รวม chunk + entity + triple embeddings ครบทุกชั้น</p>
+  <p class="small muted">INTC ใช้ 10-K layout ไม่มาตรฐาน → เขียน parser เฉพาะ
+    (<code>preprocess_intc_sections.py</code>)</p>
+</section>
+
+<!-- ============ 5. EVAL METHODOLOGY ============ -->
+<section>
+  <h2>วิธีประเมินผล Retrieval</h2>
+  <ul>
+    <li><strong>Dev set N=50</strong> — คำถาม multi-hop สังเคราะห์
+        ทุกข้อ verified ground truth จาก graph (ใช้ปรับจูน)</li>
+    <li><strong>Held-out N=10</strong> — ล็อกไว้ ยังไม่เปิดดู (วัด final ที่ unbiased)</li>
+    <li><strong>Metrics</strong> — Hit@5, Recall@5</li>
+    <li><strong>Statistical tests</strong> (paired, α=0.05):</li>
+  </ul>
+  <table>
+    <tr><th>Test</th><th>วัดอะไร</th></tr>
+    <tr><td>McNemar</td><td>Hit@5 — ความต่างของผล ใช่/ไม่ใช่</td></tr>
+    <tr><td>Wilcoxon signed-rank</td><td>Recall@5 — ความต่างของคะแนน (ไม่ assume normal)</td></tr>
+    <tr><td>Bootstrap 95% CI</td><td>ช่วงเชื่อมั่นของค่าเฉลี่ยความต่าง</td></tr>
+    <tr><td>Cohen's h</td><td>effect size — ขนาดของผล</td></tr>
+  </table>
+  <aside class="notes">เน้นว่า held-out ยังไม่เปิด = ตั้งใจกัน overfit.
+    stat test ทำให้ claim ไม่ใช่แค่ "ตัวเลขดูดีขึ้น"</aside>
+</section>
+
+<!-- ============ 6. MAIN RESULTS ============ -->
+<section>
+  <h2>ผลลัพธ์หลัก — 3-config (N=50)</h2>
+  <table>
+    <tr><th>Config</th><th>Hit@5</th><th>Recall@5</th><th>vs Vector</th></tr>
+    <tr><td>Vanilla Vector</td><td>33/50 (66%)</td><td>0.369</td><td>—</td></tr>
+    <tr><td>Graph (PPR)</td><td>38/50 (76%)</td><td>0.492</td>
+        <td><strong>+33%</strong> relative</td></tr>
+    <tr><td><strong>Hybrid (RRF)</strong></td><td><strong>39/50 (78%)</strong></td>
+        <td><strong>0.485</strong></td><td>+0.116 absolute</td></tr>
+  </table>
+  <div class="card card-accent small">
+    <strong>Hybrid &gt; Vector</strong> — Wilcoxon <em>p = 0.0015</em> ·
+    McNemar <em>p = 0.031</em> · bootstrap CI <em>[+4.8, +18.4] pp</em>
+    <span class="pill pill-ok">significant</span><br>
+    <strong>Graph &gt; Vector</strong> — Wilcoxon <em>p = 0.028</em>
+    <span class="pill pill-ok">significant</span> ·
+    McNemar p = 0.27 <span class="pill pill-warn">Hit@5 ไม่ผ่าน</span>
+  </div>
+  <p class="small muted">ข้อสรุป: KG retrieval ให้กำไรจริงอย่างมีนัยสำคัญทางสถิติ —
+    ไม่ใช่ noise</p>
+  <aside class="notes">headline number = +33% relative recall.
+    Hybrid ผ่าน stat test ทั้ง 2 ตัว = claim หลักที่แน่นที่สุด</aside>
+</section>
+
+<!-- ============ 7. PER-TYPE BREAKDOWN ============ -->
+<section>
+  <h2>Graph ชนะตรงไหน — กลไก</h2>
+  <p class="small">Graph เก่งคำถามที่ต้อง <em>เดินตาม relationship</em>
+     — vector เก่งคำถาม topical ที่คำตอบมีคำใกล้เคียงในข้อความ</p>
+  <table>
+    <tr><th>ชนิดคำถาม</th><th>Vector R@5</th><th>Graph R@5</th><th>Δ</th></tr>
+    <tr><td>supplier chain (ใครส่งของให้ใคร)</td><td>0.30</td>
+        <td><strong>0.85</strong></td><td>+0.55</td></tr>
+    <tr><td>subsidiary lookup (บริษัทลูก)</td><td>0.00</td>
+        <td><strong>1.00</strong></td><td>+1.00</td></tr>
+    <tr><td>product-in-segment</td><td>0.40</td>
+        <td><strong>1.00</strong></td><td>+0.60</td></tr>
+    <tr><td>regulator / topical</td><td><strong>0.87</strong></td>
+        <td>0.27</td><td>−0.60</td></tr>
+  </table>
+  <div class="card small">
+    <strong>เหตุผลเชิงกลไก</strong> — คำตอบ multi-hop อยู่ใน chunk ที่
+    <em>ไม่มีคำในคำถาม</em> (เช่น chunk ที่พูด SK Hynix ไม่มีคำว่า Hopper).
+    Vector หาด้วยความคล้ายข้อความ → พลาด. Graph เดินตาม edge → เจอ
+  </div>
+</section>
+
+<!-- ============ 8. DEMO ============ -->
+<section>
+  <h2>Demo — End-to-End RAG</h2>
+  <p class="small">Interactive app — รับคำถาม <em>ไทย/อังกฤษ</em> →
+     hybrid retrieval → DeepSeek generation พร้อม citation</p>
+  <div class="card">
+    <span class="muted small">QUERY (Thai)</span><br>
+    <span class="small">"บริษัทลูกด้าน autonomous driving ของ Intel คือบริษัทอะไร"</span>
+  </div>
+  <div class="card card-accent">
+    <span class="muted small">ANSWER</span>
+    <span class="pill pill-ok">DIRECT</span><br>
+    <span class="small">Intel ดำเนินงาน <strong>Mobileye</strong> เป็นบริษัทลูก
+    ด้าน autonomous driving — ผลิตภัณฑ์ EyeQ และ Mobileye SuperVision
+    <span class="muted">(INTC FY2024 Item_7)</span></span>
+  </div>
+  <p class="small">ระบบจัดเกรดคำตอบ 3 ระดับ:
+    <span class="pill pill-ok">A · ตอบตรง</span>
+    <span class="pill pill-warn">B · อนุมาน (mark ▸)</span>
+    <span class="pill" style="background:#2A2F38;color:#8B949E;">C · ปฏิเสธ</span></p>
+  <p class="footer-note">[ แทรก screenshot ของ Streamlit UI ตรงนี้ ]</p>
+</section>
+
+<!-- ============ 9. FAILURE ANALYSIS ============ -->
+<section>
+  <h2>ข้อจำกัดที่พบ — วิเคราะห์ตรงไปตรงมา</h2>
+  <p class="small">คำถามเปรียบเทียบ 2 บริษัท (เช่น "เทียบ GPU ของ NVDA กับ AMD")
+     ยังตอบได้ไม่สมดุล</p>
+  <div class="card small">
+    <strong>อาการ</strong> — retrieval ดึง chunk เอียงไปบริษัทเดียว<br>
+    ตัวอย่าง: "เทียบ GPU NVDA vs AMD" → ได้ <em>4 AMD chunks : 1 NVDA chunk</em>
+    → คำตอบเอียงข้าง AMD
+  </div>
+  <div class="card small">
+    <strong>สาเหตุ</strong> — top-k มีจำกัด, chunk 2 บริษัทแย่ง slot กัน
+    + hub-drift (entity ที่ frequency สูงดูดการ retrieve)
+  </div>
+  <div class="card card-accent small">
+    <strong>ทางแก้ — Phase D</strong> · query decomposition: แตกคำถามเป็น
+    "NVDA GPU" + "AMD GPU" → retrieve แยก → การันตี chunk ทั้ง 2 ฝั่ง
+  </div>
+  <aside class="notes">การโชว์ failure ที่อธิบายได้ + มีทางแก้ออกแบบไว้แล้ว
+    ดีกว่า demo ที่ดูสมบูรณ์แบบ</aside>
+</section>
+
+<!-- ============ 10. ROADMAP ============ -->
+<section>
+  <h2>แผนงานถัดไป</h2>
+  <table>
+    <tr><th>Phase</th><th>งาน</th><th>ผลลัพธ์</th></tr>
+    <tr><td><strong>C3</strong></td><td>financial_query</td>
+        <td>PostgreSQL + SEC XBRL — ตอบคำถามตัวเลขงบการเงิน</td></tr>
+    <tr><td><strong>C4</strong></td><td>news_search</td>
+        <td>Finnhub — ข่าว/เหตุการณ์ล่าสุด</td></tr>
+    <tr><td><strong>D</strong></td><td>LangGraph agent</td>
+        <td>routing 3 tool + query decomposition</td></tr>
+    <tr><td><strong>E</strong></td><td>Evaluation</td>
+        <td>Multi-Judge eval + เปิด held-out N=10 วัด final</td></tr>
+  </table>
+  <div class="card card-accent small">
+    Retrieval layer (Phase B–C) เสร็จและผ่าน statistical validation แล้ว →
+    เดินหน้าสู่ <strong>agent layer</strong> ซึ่งเป็นหัวใจของคำว่า "Agentic"
+  </div>
+</section>
+
+<!-- ============ 11. SUMMARY ============ -->
+<section data-background-color="#0D1117">
+  <h2>สรุป</h2>
+  <ul>
+    <li><strong>Corpus</strong> — 5 บริษัท · 742 chunks · KG + embeddings ครบ
+        (INTC เพิ่งเพิ่ม)</li>
+    <li><strong>ผลหลัก</strong> — Hybrid retrieval ชนะ Vector baseline
+        <em>p = 0.0015</em> · Graph ให้ <em>+33%</em> recall บน multi-hop</li>
+    <li><strong>Demo</strong> — end-to-end RAG ใช้งานได้ ไทย/อังกฤษ +
+        3-case graded answer</li>
+    <li><strong>ถัดไป</strong> — agent layer (financial / news / decomposition)</li>
+  </ul>
+  <div class="card card-accent" style="margin-top: 1em;">
+    <span class="small">Retrieval ผ่าน statistical validation — พร้อมต่อยอด
+    Phase D เพื่อทำให้ระบบเป็น "agentic" เต็มรูปแบบ</span>
+  </div>
+  <p style="margin-top: 1.2em; font-size: 1.1em; color: #F0F6FC;">
+    <span class="accent-mark" style="width:16px;height:16px;"></span>
+    <strong>Q &amp; A</strong></p>
+</section>
+
+</div></div>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true, slideNumber: 'c/t', transition: 'fade',
+    width: 1280, height: 760, margin: 0.06,
+  });
+</script>
+</body>
+</html>
