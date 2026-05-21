@@ -268,6 +268,18 @@ CASE_DESC = {
     "C": "Categorically absent from the corpus — system declined to answer.",
 }
 
+# ---- retrieval-engine metadata (sidebar selector + result label) ----
+ENGINE_LABEL = {
+    "vector": "Vector Search",
+    "graph": "Graph Search (PPR)",
+    "hybrid": "Hybrid Search (RRF)",
+}
+ENGINE_DESC = {
+    "vector": "Cosine similarity over BGE-base-en-v1.5 chunk embeddings.",
+    "graph": "Personalized PageRank traversal of the knowledge graph.",
+    "hybrid": "RRF (k=60) fusion of Vector + Graph — most robust.",
+}
+
 
 # ══════════════════════════ header ══════════════════════════
 st.markdown(
@@ -307,14 +319,20 @@ with st.sidebar:
     r3c1.metric("Relationships", "6,607")
     r3c2.metric("Fiscal years", "3")
 
+    st.markdown('<div class="sg-label">Search tool</div>', unsafe_allow_html=True)
+    search_mode = st.radio(
+        "Search tool", ["Vector", "Graph", "Hybrid"],
+        index=2, horizontal=True, label_visibility="collapsed",
+    )
+    retrieval_mode = search_mode.lower()
+    st.markdown(
+        f'<div class="sg-muted">{ENGINE_DESC[retrieval_mode]}</div>',
+        unsafe_allow_html=True,
+    )
+
     st.markdown('<div class="sg-label">Retrieval</div>', unsafe_allow_html=True)
     top_k = st.slider("Chunks retrieved (top_k)", 3, 12, 8,
                       help="Higher = more context, but risk of 'lost in the middle'.")
-    st.markdown(
-        '<div class="sg-muted">hybrid_search — RRF (k=60) fusion of vector + '
-        'graph PPR · DeepSeek-V4-flash generation.</div>',
-        unsafe_allow_html=True,
-    )
 
     st.markdown('<div class="sg-label">Suggested queries</div>', unsafe_allow_html=True)
     for i, q in enumerate(SUGGESTED_QUERIES):
@@ -340,7 +358,7 @@ run = st.button("Ask SemiGraph", type="primary") or st.session_state.pop("auto_r
 # ══════════════════════════ run + render ═════════════════════
 if run and query.strip():
     with st.spinner("Retrieving + generating…  (first query loads the embedding model ≈25s)"):
-        result = rag_answer(query, top_k=top_k, cfg=cfg, llm=llm)
+        result = rag_answer(query, top_k=top_k, cfg=cfg, llm=llm, mode=retrieval_mode)
 
     if result.get("is_thai"):
         st.markdown(
@@ -362,6 +380,12 @@ if run and query.strip():
         st.markdown(case_badge(case), unsafe_allow_html=True)
         st.markdown(f'<div class="sg-muted">{CASE_DESC[case]}</div>',
                     unsafe_allow_html=True)
+
+    st.markdown(
+        f'<div class="sg-muted"><b>SEARCH ENGINE</b> &nbsp;—&nbsp; '
+        f'{ENGINE_LABEL.get(result.get("mode", "hybrid"), "Hybrid Search")}</div>',
+        unsafe_allow_html=True,
+    )
 
     t_parts = []
     if result.get("t_translate_s"):

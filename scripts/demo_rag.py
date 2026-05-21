@@ -38,7 +38,19 @@ logging.getLogger("httpx").setLevel("WARNING")
 
 from semigraph.config import get_config
 from semigraph.connections import get_llm
+from semigraph.online.vector_search import vector_search
+from semigraph.online.graph_search import graph_search
 from semigraph.online.hybrid_search import hybrid_search
+
+
+# Retrieval-engine dispatch. All three return the same chunk-dict shape
+# ({chunk_id, text, ticker, fiscal_year, section, score}), so they are
+# interchangeable behind rag_answer() with no downstream change.
+RETRIEVERS = {
+    "vector": vector_search,
+    "graph": graph_search,
+    "hybrid": hybrid_search,
+}
 
 
 SYSTEM_PROMPT = """You are a financial analyst answering questions about semiconductor companies based strictly on their 10-K filings.
@@ -154,6 +166,21 @@ SUGGESTED_QUERIES = [
         "query": "ใครเป็นผู้ผลิตหน่วยความจำ HBM ให้กับ NVIDIA H200 บ้าง",
         "dev_note": "Thai entry point — tests technical-term translation (HBM, H200)",
     },
+    {
+        "label": "Thai input — subsidiary's products (Graph wins)",
+        "query": "บริษัทลูกด้านการขับขี่อัตโนมัติของ Intel มีผลิตภัณฑ์ระบบช่วยเหลือผู้ขับขี่ (ADAS) อะไรบ้าง",
+        "dev_note": "Dev-set Q30 · verified live: vector refuses, graph answers (Mobileye EyeQ / SuperVision)",
+    },
+    {
+        "label": "Thai input — consumer brand lookup (Graph wins)",
+        "query": "บริษัทผู้ผลิตชิปหน่วยความจำสัญชาติอเมริกันที่ผลิต HBM3E ขายผลิตภัณฑ์หน่วยความจำและสตอเรจสำหรับผู้บริโภคทั่วไปภายใต้แบรนด์ชื่ออะไร",
+        "dev_note": "Dev-set Q33 · verified live: vector refuses, graph answers (Crucial)",
+    },
+    {
+        "label": "Thai input — fab locations (Graph more complete)",
+        "query": "Intel มีโรงงานผลิตเวเฟอร์ (wafer fab) ตั้งอยู่ในรัฐใดบ้างของสหรัฐอเมริกา",
+        "dev_note": "Dev-set Q25 · verified live: vector finds 2 states, graph finds all 4",
+    },
 ]
 
 
@@ -195,8 +222,12 @@ def format_context(chunks: list[dict], max_chars_per_chunk: int = 1200) -> str:
     return "\n\n---\n\n".join(parts)
 
 
-def rag_answer(query: str, top_k: int, cfg, llm) -> dict:
+def rag_answer(query: str, top_k: int, cfg, llm, mode: str = "hybrid") -> dict:
     """One end-to-end RAG call. Returns retrieval + answer + timings.
+
+    `mode` picks the retrieval engine — "vector", "graph", or "hybrid"
+    (default). All three return the same chunk-dict shape, so generation
+    downstream is identical regardless of which engine ran.
 
     If `query` contains Thai script, an extra translation step converts it
     to English for retrieval (BGE-en cannot embed Thai). The ORIGINAL
@@ -214,13 +245,15 @@ def rag_answer(query: str, top_k: int, cfg, llm) -> dict:
     else:
         query_for_retrieval = query
 
+    retriever = RETRIEVERS.get(mode, hybrid_search)
     t0 = time.time()
-    chunks = hybrid_search(query_for_retrieval, top_k_chunks=top_k, cfg=cfg)
+    chunks = retriever(query_for_retrieval, top_k_chunks=top_k, cfg=cfg)
     t_retrieve = time.time() - t0
 
     if not chunks:
         return {
             "is_thai": is_thai,
+            "mode": mode,
             "query_original": query,
             "query_translated": query_for_retrieval if is_thai else None,
             "chunks": [],
@@ -247,6 +280,7 @@ def rag_answer(query: str, top_k: int, cfg, llm) -> dict:
 
     return {
         "is_thai": is_thai,
+        "mode": mode,
         "query_original": query,
         "query_translated": query_for_retrieval if is_thai else None,
         "chunks": chunks,
