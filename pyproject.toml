@@ -35,6 +35,8 @@ dependencies = [
     "GoogleNews",
     "yfinance",
     "newspaper3k",
+    # Financial data
+    "finnhub-python",
     # Config
     "PyYAML",
     "python-dotenv",

@@ -92,6 +92,7 @@ class Config:
         self.deepseek_api_key: str = os.environ.get("DEEPSEEK_API_KEY", "")
         self.openai_api_key: str = os.environ.get("OPENAI_API_KEY", "")
         self.google_api_key: str = os.environ.get("GOOGLE_API_KEY", "")
+        self.finnhub_api_key: str = os.environ.get("FINNHUB_API_KEY", "")
 
         # --- Neo4j (from env only) ---
         self.neo4j_uri: str = os.environ.get("NEO4J_URI", "")

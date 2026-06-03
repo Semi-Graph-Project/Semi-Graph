@@ -26,25 +26,52 @@ from semigraph.connections import get_llm
 
 _SYSTEM_PROMPT = """You are a semiconductor industry expert helping a retrieval system.
 
-Given a user query, identify specific named entities (companies, products, places, regulations) that are IMPLICITLY referenced but not stated by name. Use only entities likely to appear in 10-K filings of NVDA, AMD, MU.
+Given a user query, identify specific named entities (companies, products, places, regulations) that are IMPLICITLY referenced but not stated by name. Use only entities likely to appear in 10-K filings of the semiconductor corpus.
 
-Output ONLY the entity names as a space-separated list. No explanations, no preamble, no quotes.
+Corpus companies — when ANY of these is mentioned by full name, common name, product, or implicit description, ALWAYS emit its STOCK TICKER as one of the hint tokens (in addition to readable names):
+
+  NVDA = NVIDIA  (GeForce / RTX / Hopper / Blackwell / data center GPUs)
+  AMD  = Advanced Micro Devices  (Ryzen / EPYC / Radeon / Instinct MI)
+  MU   = Micron Technology  (HBM / DRAM / NAND / Crucial)
+  INTC = Intel  (Xeon / Core / Mobileye / Intel Foundry / Altera)
+  AVGO = Broadcom  (custom ASIC / VMware / networking switches)
+  QCOM = Qualcomm  (Snapdragon / 5G modems / mobile SoC)
+  AMAT = Applied Materials  (deposition / etch equipment)
+  LRCX = Lam Research  (etch / strip / clean equipment)
+  KLAC = KLA  (inspection / metrology equipment)
+  TXN  = Texas Instruments  (analog / embedded processors)
+
+External entities (TSMC, ASML, Samsung, SK Hynix, Apple, Microsoft, customers, regulators, geographies) — emit the readable name as-is, not as a ticker.
+
+Output ONLY a space-separated list of hint tokens. No explanations, no preamble, no quotes, no newlines.
 
 Examples:
 Query: What political risks affect the home country of the leading pure-play semiconductor foundry?
 Output: TSMC Taiwan pure-play foundry geopolitical
 
 Query: Which AI lab partners with the EPYC processor maker?
-Output: AMD OpenAI Microsoft Sony
+Output: AMD OpenAI Microsoft Sony EPYC
 
 Query: Where is the developer of Ryzen processors headquartered?
-Output: AMD Santa Clara California Sunnyvale
+Output: AMD Santa Clara California Ryzen
 
-Query: What graphics product line does AMD offer to compete with NVIDIA RTX?
-Output: AMD Radeon RDNA NVIDIA RTX GeForce
+Query: What graphics product line does NVIDIA offer to compete with AMD's Radeon?
+Output: NVDA AMD GeForce RTX Radeon RDNA
+
+Query: Compare Intel's and Broadcom's R&D spending.
+Output: INTC AVGO research development semiconductor
+
+Query: What is Nvidia's current stock price?
+Output: NVDA stock price quote
 
 Query: Which memory supplier provides HBM to data center GPUs?
-Output: Micron SK Hynix Samsung HBM NVIDIA"""
+Output: MU Micron SK Hynix Samsung HBM NVDA
+
+Query: ราคาหุ้น Qualcomm ตอนนี้
+Output: QCOM Qualcomm stock price quote
+
+Query: บริษัทผลิตเครื่อง EUV lithography
+Output: ASML EUV lithography equipment"""
 
 
 def expand_query(query: str, cfg: Optional[Config] = None) -> str:

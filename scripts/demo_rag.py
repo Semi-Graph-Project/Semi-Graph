@@ -41,24 +41,38 @@ from semigraph.connections import get_llm
 from semigraph.online.vector_search import vector_search
 from semigraph.online.graph_search import graph_search
 from semigraph.online.hybrid_search import hybrid_search
+from semigraph.online.financial_search import financial_search
 
 
-# Retrieval-engine dispatch. All three return the same chunk-dict shape
+# Retrieval-engine dispatch. All four return the same chunk-dict shape
 # ({chunk_id, text, ticker, fiscal_year, section, score}), so they are
 # interchangeable behind rag_answer() with no downstream change.
+# Financial is Phase F.v1 — Finnhub direct API. Section names of its chunks use
+# "Financial_*" prefix so the LLM can distinguish API snapshots from 10-K text.
 RETRIEVERS = {
     "vector": vector_search,
     "graph": graph_search,
     "hybrid": hybrid_search,
+    "financial": financial_search,
 }
 
 
-SYSTEM_PROMPT = """You are a financial analyst answering questions about semiconductor companies based strictly on their 10-K filings.
+SYSTEM_PROMPT = """You are a financial analyst answering questions about semiconductor companies.
 
 You must use ONLY the CONTEXT provided. Never use prior knowledge or outside
-facts. Then classify the question into ONE of three cases and respond
-accordingly. When unsure between cases, PREFER A over B, and B over C — only
-fall to C as a last resort.
+facts. The CONTEXT may come from two source kinds, distinguishable by the
+chunk's `section` tag:
+  • SEC 10-K filings — sections "Item_1" (Business), "Item_1A" (Risk Factors),
+    "Item_7" (MD&A). Narrative + qualitative.
+  • Finnhub API snapshots — sections starting with "Financial_" (e.g.
+    "Financial_financials_annual", "Financial_key_metrics", "Financial_quote").
+    Real-time / latest-period numeric snapshots. These ARE authoritative for
+    revenue figures, margins, P/E, current price, etc. — treat them with the
+    same trust as 10-K text.
+
+Classify the question into ONE of three cases and respond accordingly. When
+unsure between cases, PREFER A over B, and B over C — only fall to C as a
+last resort.
 
 ── CASE A — the answer is stated EXPLICITLY in the context ──
 One or more chunks state the answer in words. Give it directly, grounded,
@@ -88,17 +102,20 @@ Respond in TWO parts:
 
 ── CASE C — the answer is categorically absent ──
 Use ONLY when (a) the question asks for a concrete fact that no reasoning over
-the context could produce — a real-time stock price, an exact figure never
-mentioned, a specific name/date absent from every chunk — OR (b) every chunk
-is about entirely unrelated companies/topics. If the context describes the
-entities in the question at all, it is Case B, NOT Case C.
+the context could produce — an exact figure never mentioned, a specific
+name/date absent from every chunk — OR (b) every chunk is about entirely
+unrelated companies/topics. If the context describes the entities in the
+question at all, it is Case B, NOT Case C. Note: real-time stock prices and
+recent financial metrics MAY appear in "Financial_*" chunks — check those
+before declaring Case C for numeric questions.
 Reply with ONLY this line (no inference section):
-  English:  "The provided 10-K context does not contain information to answer this question."
-  Thai:     "บริบทจากเอกสาร 10-K ที่ให้มาไม่มีข้อมูลเพียงพอสำหรับตอบคำถามนี้"
+  English:  "The provided context does not contain information to answer this question."
+  Thai:     "บริบทที่ให้มาไม่มีข้อมูลเพียงพอสำหรับตอบคำถามนี้"
 
 GENERAL RULES (all cases):
-- Cite ticker + fiscal year for every claim (e.g. "Intel FY2024 reports..." /
-  "Intel FY2024 ระบุว่า...").
+- Cite ticker + fiscal year / data source for every claim. For 10-K chunks use
+  "Intel FY2024 10-K reports...". For Financial_* chunks use "AMD Finnhub
+  snapshot shows..." or "NVDA latest quarter (Finnhub) reports...".
 - Match the question's language: Thai question → Thai answer; English → English.
 - Keep ticker symbols, product names, and technical terms in English even in a
   Thai answer (e.g. "Mobileye", "Intel 18A", "EPYC" — do NOT transliterate).
@@ -132,11 +149,6 @@ SUGGESTED_QUERIES = [
         "dev_note": "Dev-set Q23 · Hybrid R@5=0.40, Graph R@5=1.00",
     },
     {
-        "label": "Supplier chain across companies",
-        "query": "Who supplies the high-bandwidth memory used in NVIDIA's H200 data center accelerator?",
-        "dev_note": "Dev-set Q43 · Hybrid R@5=0.60, Graph R@5=0.60",
-    },
-    {
         "label": "Vector-favoring topical (geo + macro risk)",
         "query": "What political risks affect the home country of the leading pure-play semiconductor foundry?",
         "dev_note": "Dev-set Q4 · Hybrid R@5=0.80, Vector R@5=1.00",
@@ -162,24 +174,35 @@ SUGGESTED_QUERIES = [
         "dev_note": "Thai entry point — auto-translated to English for retrieval, LLM answers in Thai",
     },
     {
-        "label": "Thai input — supplier chain (cross-company)",
-        "query": "ใครเป็นผู้ผลิตหน่วยความจำ HBM ให้กับ NVIDIA H200 บ้าง",
-        "dev_note": "Thai entry point — tests technical-term translation (HBM, H200)",
-    },
-    {
-        "label": "Thai input — subsidiary's products (Graph wins)",
+        "label": "Thai input — subsidiary's products",
         "query": "บริษัทลูกด้านการขับขี่อัตโนมัติของ Intel มีผลิตภัณฑ์ระบบช่วยเหลือผู้ขับขี่ (ADAS) อะไรบ้าง",
-        "dev_note": "Dev-set Q30 · verified live: vector refuses, graph answers (Mobileye EyeQ / SuperVision)",
+        "dev_note": "Dev-set Q30 · stability-tested: graph answers 3/3; vector inconsistent — contrast not guaranteed",
     },
     {
         "label": "Thai input — consumer brand lookup (Graph wins)",
         "query": "บริษัทผู้ผลิตชิปหน่วยความจำสัญชาติอเมริกันที่ผลิต HBM3E ขายผลิตภัณฑ์หน่วยความจำและสตอเรจสำหรับผู้บริโภคทั่วไปภายใต้แบรนด์ชื่ออะไร",
-        "dev_note": "Dev-set Q33 · verified live: vector refuses, graph answers (Crucial)",
+        "dev_note": "Dev-set Q33 · stability-tested: vector refuses, graph answers 3/3 (Crucial)",
     },
     {
         "label": "Thai input — fab locations (Graph more complete)",
         "query": "Intel มีโรงงานผลิตเวเฟอร์ (wafer fab) ตั้งอยู่ในรัฐใดบ้างของสหรัฐอเมริกา",
-        "dev_note": "Dev-set Q25 · verified live: vector finds 2 states, graph finds all 4",
+        "dev_note": "Dev-set Q25 · stability-tested: graph answers 3/3 (3-4 states), vector ~2 — completeness contrast",
+    },
+    # ── Financial mode (Phase F.v1 — Finnhub direct API) ────────────────────
+    {
+        "label": "Financial — NVDA latest revenue + margins",
+        "query": "What is NVDA's latest annual revenue and gross/operating margins?",
+        "dev_note": "Financial v1 · Finnhub financials_annual snapshot",
+    },
+    {
+        "label": "Financial — AMD current price + P/E",
+        "query": "What is AMD's current stock price and P/E ratio?",
+        "dev_note": "Financial v1 · Finnhub quote + key_metrics",
+    },
+    {
+        "label": "Financial — INTC operating margin",
+        "query": "Show INTC operating margin and net income for the latest fiscal year.",
+        "dev_note": "Financial v1 · single-year only (v2 will support multi-year via SQL)",
     },
 ]
 

@@ -273,11 +273,13 @@ ENGINE_LABEL = {
     "vector": "Vector Search",
     "graph": "Graph Search (PPR)",
     "hybrid": "Hybrid Search (RRF)",
+    "financial": "Financial Data (Finnhub)",
 }
 ENGINE_DESC = {
     "vector": "Cosine similarity over BGE-base-en-v1.5 chunk embeddings.",
     "graph": "Personalized PageRank traversal of the knowledge graph.",
     "hybrid": "RRF (k=60) fusion of Vector + Graph — most robust.",
+    "financial": "Numeric snapshots (revenue, margin, P/E, quote) via Finnhub API.",
 }
 
 
@@ -321,7 +323,7 @@ with st.sidebar:
 
     st.markdown('<div class="sg-label">Search tool</div>', unsafe_allow_html=True)
     search_mode = st.radio(
-        "Search tool", ["Vector", "Graph", "Hybrid"],
+        "Search tool", ["Vector", "Graph", "Hybrid", "Financial"],
         index=2, horizontal=True, label_visibility="collapsed",
     )
     retrieval_mode = search_mode.lower()
