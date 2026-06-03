@@ -13,6 +13,8 @@ tickers:
   - MU
   - AMD
   - INTC
+  - AVGO
+  - QCOM
 
 # Data paths
 paths:

@@ -17,7 +17,8 @@ from __future__ import annotations
 
 import json
 import re
-from typing import List
+import time
+from typing import List, Optional
 
 from pydantic import ValidationError
 
@@ -268,14 +269,19 @@ def extract_chunk(
     text: str,
     section: str,
     llm=None,
+    metrics_sink: Optional[list] = None,
 ) -> GraphExtractionResult:
     """
     Extract nodes and relationships from a single chunk via one LLM call.
 
     Args:
-        text:    Chunk text.
-        section: Section key e.g. "Item_1A" or "Item 1A" — drives schema selection.
-        llm:     Optional LangChain ChatOpenAI client. If None, uses get_llm().
+        text:         Chunk text.
+        section:      Section key e.g. "Item_1A" or "Item 1A" — drives schema selection.
+        llm:          Optional LangChain ChatOpenAI client. If None, uses get_llm().
+        metrics_sink: Optional list. If provided, one dict per call is appended with
+                      {prompt_tokens, completion_tokens, total_tokens, latency_sec}.
+                      Caller is responsible for thread-safety; list.append is atomic
+                      under CPython GIL so safe for ThreadPoolExecutor use.
 
     Returns:
         GraphExtractionResult with ontology-valid nodes and relationships.
@@ -290,11 +296,22 @@ def extract_chunk(
     system_prompt = _EXTRACTION_PROMPT.format(schema_block=schema_block)
     user_prompt = f"# Text chunk\n{text}\n\nNow extract nodes and relationships."
 
+    t0 = time.time()
     response = llm.invoke([
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
     ])
+    latency_sec = time.time() - t0
     raw = response.content if hasattr(response, "content") else str(response)
+
+    if metrics_sink is not None:
+        usage = getattr(response, "usage_metadata", None) or {}
+        metrics_sink.append({
+            "prompt_tokens": int(usage.get("input_tokens", 0) or 0),
+            "completion_tokens": int(usage.get("output_tokens", 0) or 0),
+            "total_tokens": int(usage.get("total_tokens", 0) or 0),
+            "latency_sec": round(latency_sec, 3),
+        })
 
     parsed = _extract_json_object(raw)
     if not isinstance(parsed, dict):

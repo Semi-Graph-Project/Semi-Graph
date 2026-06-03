@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SemiGraph — Progress Update 21 May 2026</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ffffff; --ink:#16202b; --muted:#67727e; --accent:#1f6feb;
+  --accent-soft:#eaf1fd; --line:#e4e9f0; --good:#1a7f4b; --bad:#b3471a;
+}
+*{ box-sizing:border-box; }
+.reveal{ font-family:'IBM Plex Sans Thai','Segoe UI',sans-serif;
+  font-size:30px; color:var(--ink); font-weight:400; }
+.reveal .slides{ text-align:left; }
+.reveal h1,.reveal h2,.reveal h3{ font-family:inherit; color:var(--ink);
+  font-weight:700; line-height:1.25; margin:0; text-transform:none;
+  letter-spacing:-0.01em; }
+.reveal h2{ font-size:1.32em; margin-bottom:0.5em; }
+.reveal p{ line-height:1.5; margin:0.4em 0; }
+.reveal strong{ color:var(--accent); font-weight:600; }
+.reveal ul{ margin:0.3em 0 0.3em 1em; }
+.reveal li{ margin:0.42em 0; line-height:1.45; }
+.reveal section:focus{ outline:none; }
+
+.eyebrow{ font-size:0.62em; font-weight:600; letter-spacing:0.13em;
+  text-transform:uppercase; color:var(--accent); margin-bottom:0.7em; }
+.eyebrow::before{ content:''; display:inline-block; width:22px; height:2px;
+  background:var(--accent); vertical-align:middle; margin-right:9px;
+  margin-bottom:5px; }
+
+.lead{ font-size:1.04em; color:var(--ink); margin-bottom:0.6em; }
+.caption{ font-size:0.62em; color:var(--muted); margin-top:0.7em;
+  line-height:1.5; }
+
+/* title */
+section.title{ text-align:center; }
+.brand-mark{ width:46px; height:46px; background:var(--accent);
+  border-radius:9px; transform:rotate(45deg); margin:0 auto 0.8em; }
+.reveal section.title h1{ font-size:3.1em; letter-spacing:-0.03em; }
+.title-sub{ font-size:0.98em; color:var(--ink); margin-top:0.55em; }
+.title-meta{ font-size:0.62em; color:var(--muted); margin-top:1.2em;
+  letter-spacing:0.05em; }
+
+/* divider */
+section.divider{ text-align:center; }
+.divider-num{ font-size:5.4em; font-weight:700; color:var(--accent-soft);
+  line-height:1; letter-spacing:-0.02em; }
+.reveal section.divider h2{ font-size:1.9em; margin-top:-0.12em; }
+section.divider p{ color:var(--muted); font-size:0.74em; margin-top:0.35em; }
+
+/* images */
+img.diagram{ display:block; margin:0.15em auto 0; max-width:100%;
+  max-height:535px; border:1px solid var(--line); border-radius:8px;
+  background:#fff; padding:10px; }
+.img-placeholder{ display:flex; align-items:center; justify-content:center;
+  text-align:center; margin:0.15em auto 0; height:430px; max-width:100%;
+  border:2px dashed var(--accent); border-radius:8px;
+  background:var(--accent-soft); color:var(--accent);
+  font-size:0.66em; font-weight:600; padding:30px; }
+
+/* done / todo */
+.two-col{ display:flex; gap:30px; margin-top:0.5em; }
+.two-col .col{ flex:1; border:1px solid var(--line); border-radius:10px;
+  padding:20px 24px; }
+.col.done{ background:#f3faf6; border-color:#cfe9da; }
+.col.todo{ background:#f6f8fb; }
+.col-head{ font-size:0.66em; font-weight:600; text-transform:uppercase;
+  letter-spacing:0.09em; margin-bottom:0.5em; }
+.col.done .col-head{ color:var(--good); }
+.col.todo .col-head{ color:var(--muted); }
+.two-col ul{ list-style:none; padding:0; margin:0; }
+.two-col li{ font-size:0.78em; padding-left:20px; position:relative;
+  margin:0.5em 0; }
+.two-col li::before{ content:''; position:absolute; left:0; top:0.5em;
+  width:7px; height:7px; border-radius:50%; }
+.col.done li::before{ background:var(--good); }
+.col.todo li::before{ background:var(--muted); }
+
+/* cards */
+.card-row{ display:flex; gap:22px; margin-top:0.6em; }
+.card{ flex:1; border:1px solid var(--line); border-radius:10px;
+  padding:24px 22px; border-top:3px solid var(--accent); }
+.card-title{ font-size:0.9em; font-weight:700; margin-bottom:0.45em; }
+.card p{ font-size:0.7em; color:var(--muted); line-height:1.55; margin:0; }
+
+/* stats */
+.stat-row{ display:flex; gap:14px; margin:0.7em 0 0; }
+.stat{ flex:1; text-align:center; border:1px solid var(--line);
+  border-radius:10px; padding:26px 6px; }
+.stat-num{ font-size:1.9em; font-weight:700; color:var(--accent);
+  line-height:1; }
+.stat-label{ font-size:0.56em; color:var(--muted); margin-top:0.7em;
+  text-transform:uppercase; letter-spacing:0.06em; }
+
+/* tables */
+table.result{ width:100%; border-collapse:collapse; margin:0.5em 0 0;
+  font-size:0.82em; }
+table.result th{ text-align:left; background:var(--accent-soft);
+  color:var(--ink); font-weight:600; padding:13px 18px; }
+table.result td{ padding:12px 18px; border-bottom:1px solid var(--line); }
+table.result tr.hl td{ background:#f3faf6; font-weight:600; }
+table.result td.pos{ color:var(--good); font-weight:600; }
+table.result td.neg{ color:var(--bad); font-weight:600; }
+.finding{ margin-top:0.8em; font-size:0.8em; font-weight:600;
+  color:var(--accent); padding-left:15px; border-left:3px solid var(--accent); }
+
+/* example box */
+.example{ border:1px solid var(--line); border-radius:10px;
+  padding:22px 26px; margin-top:0.6em; background:#fafbfc; }
+.ex-q{ font-size:0.85em; font-weight:600; margin-bottom:0.7em; }
+.ex-row{ font-size:0.74em; margin:0.5em 0; color:var(--muted); }
+.ex-tag{ display:inline-block; font-size:0.82em; font-weight:600;
+  padding:2px 10px; border-radius:5px; margin-right:10px; }
+.ex-tag.bad{ background:#fdece4; color:var(--bad); }
+.ex-tag.good{ background:#e6f4ec; color:var(--good); }
+
+/* tuning list */
+ul.tune-list{ list-style:none; padding:0; margin:0.4em 0 0; }
+ul.tune-list li{ font-size:0.8em; padding-left:22px; position:relative;
+  margin:0.6em 0; }
+ul.tune-list li::before{ content:''; position:absolute; left:0; top:0.45em;
+  width:9px; height:9px; background:var(--accent); border-radius:2px; }
+
+/* next */
+ul.next{ list-style:none; padding:0; margin:0.4em 0 0; }
+ul.next li{ font-size:0.8em; display:flex; align-items:baseline; gap:15px;
+  margin:0.55em 0; }
+.ph{ display:inline-block; min-width:44px; text-align:center;
+  background:var(--accent-soft); color:var(--accent); font-weight:700;
+  font-size:0.82em; padding:4px 0; border-radius:6px; }
+
+/* closing */
+section.closing{ text-align:center; }
+.closing-line{ font-size:1.12em; line-height:1.65; margin-top:0.7em; }
+.closing-meta{ font-size:0.6em; color:var(--muted); margin-top:1.5em;
+  letter-spacing:0.06em; }
+
+.reveal .slides section ul:not(.tune-list):not(.next) li::marker{
+  color:var(--accent); }
+.reveal .progress{ color:var(--accent); }
+.reveal .slide-number{ background:transparent; color:var(--muted);
+  font-size:13px; }
+</style>
+<script>
+function imgFallback(img){
+  var d=document.createElement('div');
+  d.className='img-placeholder';
+  d.textContent='วางไฟล์รูปที่นี่ → '+img.getAttribute('src');
+  img.parentNode.replaceChild(d,img);
+}
+</script>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- 1 — Title -->
+<section class="title">
+  <div class="brand-mark"></div>
+  <h1>Agentic GraphRAG for Semiconductor Stocks</h1>
+  <p class="title-sub">SemiGraph — วิเคราะห์ปัจจัยพื้นฐานหุ้นเซมิคอนดักเตอร์</p>
+  <p class="title-meta">PROGRESS UPDATE · 22 พฤษภาคม 2026 · KMUTNB ENET-C SENIOR PROJECT</p>
+</section>
+
+<!-- 2 — Architecture -->
+<section>
+  <div class="eyebrow">ภาพรวม</div>
+  <h2>ระบบที่กำลังพัฒนา</h2>
+  <img class="diagram" src="images/architecture.png" alt="System architecture" onerror="imgFallback(this)">
+  <p class="caption">รับคำถาม → Agent เลือกเครื่องมือ → ค้นข้อมูลจาก 3 ฐานข้อมูล → เรียบเรียงคำตอบพร้อมอ้างอิง</p>
+</section>
+
+<!-- 3 — Status -->
+<section>
+  <div class="eyebrow">สถานะปัจจุบัน</div>
+  <h2>ความคืบหน้า</h2>
+  <div class="two-col">
+    <div class="col done">
+      <div class="col-head">เสร็จแล้ว</div>
+      <ul>
+        <li>Ingestion — เอกสาร 10-K สู่ Knowledge Graph</li>
+        <li>Retrieval layer — Vector / Graph / Hybrid</li>
+        <li>Benchmark — วัดผล + ทดสอบทางสถิติ</li>
+      </ul>
+    </div>
+    <div class="col todo">
+      <div class="col-head">ขั้นถัดไป</div>
+      <ul>
+        <li>Finance · News tools</li>
+        <li>Agentic Layer (routing)</li>
+        <li>การประเมินผลขั้นสุดท้าย</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 4 — Divider 01 -->
+<section class="divider">
+  <div class="divider-num">01</div>
+  <h2>Ingestion</h2>
+  <p>นำเอกสาร 10-K เข้าสู่ Knowledge Graph</p>
+</section>
+
+<!-- 5 — Offline pipeline -->
+<section>
+  <div class="eyebrow">01 · Ingestion</div>
+  <h2>Pipeline นำเข้าข้อมูล</h2>
+  <img class="diagram" src="images/offline_pipeline.png" alt="Offline ingestion pipeline" onerror="imgFallback(this)">
+  <p class="caption">SEC EDGAR → ทำความสะอาด → ตัด chunk → สกัด entity + relation → จัดเก็บลง Neo4j</p>
+</section>
+
+<!-- 6 — Corpus result -->
+<section>
+  <div class="eyebrow">01 · Ingestion</div>
+  <h2>Knowledge Graph ที่ได้</h2>
+  <div class="stat-row">
+    <div class="stat"><div class="stat-num">4</div><div class="stat-label">บริษัท</div></div>
+    <div class="stat"><div class="stat-num">12</div><div class="stat-label">เอกสาร 10-K</div></div>
+    <div class="stat"><div class="stat-num">742</div><div class="stat-label">chunks</div></div>
+    <div class="stat"><div class="stat-num">4,856</div><div class="stat-label">entities</div></div>
+    <div class="stat"><div class="stat-num">6,607</div><div class="stat-label">relationships</div></div>
+  </div>
+  <p class="caption">บริษัทในขอบเขต: NVDA · AMD · MU · INTC (ย้อนหลัง 3 ปีงบประมาณ) — โครงสร้าง ontology อ้างอิง FinReflectKG: 24 ชนิด entity · 29 ชนิดความสัมพันธ์</p>
+</section>
+
+<!-- 7 — Divider 02 -->
+<section class="divider">
+  <div class="divider-num">02</div>
+  <h2>Search Tools</h2>
+  <p>เครื่องมือค้นข้อมูล 3 รูปแบบ</p>
+</section>
+
+<!-- 8 — Three tools -->
+<section>
+  <div class="eyebrow">02 · Search Tools</div>
+  <h2>เครื่องมือค้นข้อมูล 3 แบบ</h2>
+  <div class="card-row">
+    <div class="card">
+      <div class="card-title">Vector Search</div>
+      <p>ค้นด้วย<strong>ความหมาย</strong>ของข้อความ — เปรียบเทียบความใกล้ของ embedding</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Graph Search</div>
+      <p>ค้นด้วย<strong>ความสัมพันธ์</strong>ใน knowledge graph — Personalized PageRank</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Hybrid Search</div>
+      <p><strong>รวมสองแบบ</strong>ด้วยสูตร RRF — ครอบคลุมและเสถียรที่สุด</p>
+    </div>
+  </div>
+</section>
+
+<!-- 9 — Divider 03 -->
+<section class="divider">
+  <div class="divider-num">03</div>
+  <h2>PPR</h2>
+  <p>Personalized PageRank — หัวใจของ Graph Search</p>
+</section>
+
+<!-- 10 — Graph retrieval engine -->
+<section>
+  <div class="eyebrow">03 · PPR</div>
+  <h2>Graph Search — Personalized PageRank</h2>
+  <img class="diagram" src="images/graph_ppr.png" alt="Graph retrieval engine" onerror="imgFallback(this)">
+  <p class="caption">หา entity ตั้งต้นจากคำถาม → กระจายคะแนนความเกี่ยวข้องตามเส้นความสัมพันธ์ → จัดอันดับ → แปลงกลับเป็น chunk</p>
+</section>
+
+<!-- 11 — Why PPR -->
+<section>
+  <div class="eyebrow">03 · PPR</div>
+  <h2>ทำไม PPR เก่งคำถาม multi-hop</h2>
+  <p class="lead">คำตอบของคำถามที่ต้องโยงหลายชั้น มักอยู่ใน chunk ที่<strong>ไม่มีคำในคำถามปรากฏอยู่เลย</strong></p>
+  <div class="example">
+    <div class="ex-q">"ใครเป็นผู้ผลิตหน่วยความจำให้ชิป Hopper ของ NVIDIA?"</div>
+    <div class="ex-row"><span class="ex-tag bad">Vector</span> chunk ที่พูดถึง SK Hynix ไม่มีคำว่า "Hopper" — ค้นด้วยความคล้ายข้อความจึงพลาด</div>
+    <div class="ex-row"><span class="ex-tag good">Graph</span> เดินตามเส้น NVIDIA → ผู้จัดส่งหน่วยความจำ — เข้าถึงคำตอบได้</div>
+  </div>
+</section>
+
+<!-- 12 — Tuning -->
+<section>
+  <div class="eyebrow">03 · PPR</div>
+  <h2>การปรับจูน Graph Search</h2>
+  <ul class="tune-list">
+    <li><strong>Query-to-Triple linker</strong> — จับคู่คำถามกับความสัมพันธ์ (triple) ในกราฟ เพื่อหา entity ตั้งต้นที่แม่นขึ้น</li>
+    <li><strong>Damping 0.85 → 0.7</strong> — จำกัดการกระจายคะแนนให้อยู่ใกล้คำถาม เหมาะกับกราฟที่เบาบาง</li>
+    <!-- <li><strong>Specificity-weighted teleport</strong> — ทดลองแล้ว Recall ไม่ดีขึ้น (0.492 → 0.448) จึงคงค่า uniform ไว้</li> -->
+  </ul>
+  <p class="caption">การทดลองที่ผล "ไม่ดีขึ้น" ก็เป็นผลลัพธ์ที่บันทึกไว้ — เป็น ablation finding ที่อธิบายการตัดสินใจเชิงออกแบบ</p>
+</section>
+
+<!-- 13 — Divider 04 -->
+<section class="divider">
+  <div class="divider-num">04</div>
+  <h2>Benchmark</h2>
+  <p>วัดผลด้วยชุดคำถามสังเคราะห์</p>
+</section>
+
+<!-- 14 — Benchmark method -->
+<section>
+  <div class="eyebrow">04 · Benchmark</div>
+  <h2>วัดผลอย่างไร</h2>
+  <ul>
+    <li><strong>50 คำถาม multi-hop</strong> สังเคราะห์ด้วย LLM — เฉลยทุกข้อตรวจสอบกับ graph จริงด้วยมือ</li>
+    <li><strong>Hit@5</strong> — ใน 5 อันดับแรกเจอคำตอบไหม · <strong>Recall@5</strong> — เจอคำตอบครบแค่ไหน</li>
+    <li><strong>ทดสอบทางสถิติ</strong> — ยืนยันว่าผลต่างเป็นของจริง ไม่ใช่ความบังเอิญ (50 ข้อยังถือว่าน้อย)</li>
+  </ul>
+  <p class="caption">มีชุด held-out อีก 10 ข้อ ล็อกไว้ ยังไม่เปิดดู — สำหรับวัดผลขั้นสุดท้ายแบบไม่ลำเอียง</p>
+</section>
+
+<!-- 15 — Benchmark results -->
+<section>
+  <div class="eyebrow">04 · Benchmark</div>
+  <h2>ผลการวัดผล — 3 รูปแบบ</h2>
+  <table class="result">
+    <thead><tr><th>รูปแบบการค้น</th><th>Hit@5</th><th>Recall@5</th></tr></thead>
+    <tbody>
+      <tr><td>Vector Search</td><td>66%</td><td>0.369</td></tr>
+      <tr><td>Graph Search (PPR)</td><td>76%</td><td>0.492</td></tr>
+      <tr class="hl"><td>Hybrid Search (RRF)</td><td>78%</td><td>0.485</td></tr>
+    </tbody>
+  </table>
+  <!-- <p class="finding">Graph/Hybrid Search Beat Vector ~= 33%</p> -->
+  <p class="finding">Hybrid/Graph Search ชนะ Vector Search อย่างมีนัยสำคัญทางสถิติ — Wilcoxon p = 0.0015</p>
+  <p class="finding">Recall Beat ~= 33%</p>
+</section>
+
+<!-- 16 — Per-type -->
+<section>
+  <div class="eyebrow">04 · Benchmark</div>
+  <h2>Graph เก่งคำถามแบบไหน</h2>
+  <table class="result">
+    <thead><tr><th>ชนิดคำถาม</th><th>Vector R@5</th><th>Graph R@5</th><th>ผลต่าง</th></tr></thead>
+    <tbody>
+      <tr><td>ห่วงโซ่ผู้จัดส่ง</td><td>0.30</td><td>0.85</td><td class="pos">+0.55</td></tr>
+      <tr><td>การค้นหาบริษัทลูก</td><td>0.00</td><td>1.00</td><td class="pos">+1.00</td></tr>
+      <tr><td>ผลิตภัณฑ์ในกลุ่มธุรกิจ</td><td>0.40</td><td>1.00</td><td class="pos">+0.60</td></tr>
+      <tr><td>คำถามเชิงหัวข้อ</td><td>0.87</td><td>0.27</td><td class="neg">−0.60</td></tr>
+    </tbody>
+  </table>
+  <p class="caption">Graph ชนะคำถามที่ต้องไล่ความสัมพันธ์ · Vector ยังเก่งคำถามเชิงหัวข้อตรงๆ — จึงต้องมี Hybrid รวมจุดแข็งทั้งสอง</p>
+</section>
+
+<!-- 17 — Next -->
+<section>
+  <div class="eyebrow">ขั้นถัดไป</div>
+  <h2>แผนงานต่อไป</h2>
+  <ul class="next">
+    <li><span class="ph">C3</span> Finance tool — ตอบคำถามตัวเลขงบการเงิน (PostgreSQL)</li>
+    <li><span class="ph">C4</span> News tool — ข่าวและเหตุการณ์ล่าสุด (Finnhub)</li>
+    <li><span class="ph">D</span> Agentic Layer — routing + แตกคำถาม คือหัวใจของคำว่า "Agentic"</li>
+    <li><span class="ph">E</span> Evaluation — วัดผลระบบเต็มรูปแบบ + เปิดชุด held-out</li>
+  </ul>
+</section>
+
+<!-- 18 — Closing -->
+<section class="closing">
+  <h2>สรุป</h2>
+  <p class="closing-line">ชั้น retrieval พัฒนาเสร็จและผ่านการวัดผลทางสถิติแล้ว<br>พร้อมทำ Agentic Layer</p>
+  <p class="closing-meta">SEMIGRAPH · PROGRESS UPDATE · 21 พ.ค. 2026</p>
+</section>
+
+</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script>
+Reveal.initialize({
+  width: 1180, height: 740, margin: 0.055,
+  center: true, hash: true, controls: true, progress: true,
+  slideNumber: 'c/t', transition: 'fade', transitionSpeed: 'fast'
+});
+</script>
+</body>
+</html>

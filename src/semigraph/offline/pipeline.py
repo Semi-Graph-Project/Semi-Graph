@@ -106,18 +106,53 @@ def _process_one_chunk(
     store: KGStore,
     llm,
     error_log_path: Path,
+    metrics_sink: Optional[list] = None,
 ) -> tuple[bool, dict]:
     """
     Worker called per chunk. Catches all exceptions and logs them so one bad
     chunk does not kill the whole filing.
     Returns (success, counts).
+
+    If metrics_sink is provided, appends one row per chunk with token usage,
+    latency, and yield counts. list.append is atomic under the CPython GIL so
+    this is safe for ThreadPoolExecutor.
     """
     try:
-        result = extract_chunk(chunk.text, section=chunk.section, llm=llm)
+        chunk_metrics: list = []
+        result = extract_chunk(
+            chunk.text,
+            section=chunk.section,
+            llm=llm,
+            metrics_sink=chunk_metrics if metrics_sink is not None else None,
+        )
         counts = store.store_extraction(chunk, result)
+        if metrics_sink is not None and chunk_metrics:
+            row = chunk_metrics[0]
+            row["chunk_id"] = chunk.chunk_id
+            row["ticker"] = chunk.ticker
+            row["fiscal_year"] = chunk.fiscal_year
+            row["section"] = chunk.section
+            row["n_nodes"] = len(result.nodes)
+            row["n_relationships"] = len(result.relationships)
+            row["status"] = "ok"
+            metrics_sink.append(row)
         return True, counts
     except Exception as e:
         _log_chunk_error(error_log_path, chunk, e)
+        if metrics_sink is not None:
+            metrics_sink.append({
+                "chunk_id": chunk.chunk_id,
+                "ticker": chunk.ticker,
+                "fiscal_year": chunk.fiscal_year,
+                "section": chunk.section,
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "latency_sec": 0.0,
+                "n_nodes": 0,
+                "n_relationships": 0,
+                "status": f"error:{type(e).__name__}",
+            })
         return False, {"nodes": 0, "relationships": 0}
 
 
@@ -132,6 +167,7 @@ def process_filing(
     filing_type: str = "10-K",
     workers: int = 8,
     cfg: Optional[Config] = None,
+    metrics_sink: Optional[list] = None,
 ) -> FilingResult:
     """
     Process a single filing end-to-end. Parallel at chunk level.
@@ -193,7 +229,7 @@ def process_filing(
 
         with ThreadPoolExecutor(max_workers=workers) as executor:
             futures = {
-                executor.submit(_process_one_chunk, c, store, llm, error_log): c
+                executor.submit(_process_one_chunk, c, store, llm, error_log, metrics_sink): c
                 for c in all_chunks
             }
 
