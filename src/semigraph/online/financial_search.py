@@ -20,20 +20,15 @@ No DB hits; no embeddings; no Neo4j. Only Finnhub HTTP calls.
 """
 from __future__ import annotations
 
-import re
 from typing import Optional, Protocol
 
 from semigraph.config import Config, get_config
-from semigraph.online.query_expand import expand_query
+from semigraph.online._ticker import CORPUS_TICKERS, resolve_tickers
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Constants
 # ─────────────────────────────────────────────────────────────────────────────
-
-CORPUS_TICKERS: frozenset[str] = frozenset({
-    "NVDA", "AMD", "MU", "INTC", "AVGO", "QCOM", "AMAT", "LRCX", "KLAC", "TXN",
-})
 
 # Lowercase keywords that signal a financial / numeric intent. Used to gate
 # ticker extraction so phrases like "we use INTC platform" don't trigger an
@@ -51,53 +46,10 @@ FINANCIAL_KEYWORDS: frozenset[str] = frozenset({
 
 SNAPSHOT_KINDS: tuple[str, ...] = ("financials_annual", "key_metrics", "quote")
 
-_TICKER_RE = re.compile(r"\b[A-Z]{2,5}\b")
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers (pure functions — used by tests directly)
 # ─────────────────────────────────────────────────────────────────────────────
-
-
-def _extract_tickers(query: str) -> list[str]:
-    """Return corpus tickers mentioned in query, preserving first-seen order.
-
-    Pure regex match — only catches uppercase ticker tokens already in the
-    query. For natural-language company names ("Nvidia", "Ryzen maker",
-    "ราคาหุ้น Qualcomm") use `_resolve_tickers()` which adds an LLM expansion
-    fallback.
-    """
-    seen: dict[str, None] = {}
-    for tok in _TICKER_RE.findall(query):
-        if tok in CORPUS_TICKERS:
-            seen.setdefault(tok, None)
-    return list(seen.keys())
-
-
-def _resolve_tickers(
-    query: str,
-    cfg: Optional[Config] = None,
-    use_expansion: bool = True,
-) -> list[str]:
-    """Two-stage ticker resolution: regex first, LLM expansion as fallback.
-
-    Stage 1 (always): regex over the original query. ~10 µs, $0 — catches the
-    hot path "What is NVDA revenue?" before any LLM cost.
-
-    Stage 2 (only if Stage 1 returned empty AND `use_expansion`): call
-    `expand_query()` which adds entity hints from LLM world knowledge
-    (e.g. "Nvidia revenue" → "Nvidia revenue NVDA stock price quote"). Run
-    regex again on the expanded string. ~1-2 s, ~$0.0005.
-
-    """
-    tickers = _extract_tickers(query)
-    if tickers or not use_expansion:
-        return tickers
-    expanded = expand_query(query, cfg=cfg)
-    if expanded == query:
-        # expand_query() failed or LLM hint shape was invalid — already logged
-        return []
-    return _extract_tickers(expanded)
 
 
 def _has_financial_intent(query: str) -> bool:
@@ -370,7 +322,7 @@ def financial_search(
         return []
     if not _has_financial_intent(query):
         return []
-    tickers = _resolve_tickers(query, cfg=cfg, use_expansion=use_expansion)
+    tickers = resolve_tickers(query, cfg=cfg, use_expansion=use_expansion)
     if not tickers:
         return []
     try:

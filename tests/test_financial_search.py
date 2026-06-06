@@ -7,15 +7,13 @@ from __future__ import annotations
 
 import pytest
 
+from semigraph.online._ticker import CORPUS_TICKERS, extract_tickers, resolve_tickers
 from semigraph.online.financial_search import (
-    CORPUS_TICKERS,
     FINANCIAL_KEYWORDS,
     SNAPSHOT_KINDS,
     FinancialBackend,
-    _extract_tickers,
     _has_financial_intent,
     _make_chunk,
-    _resolve_tickers,
     financial_search,
 )
 
@@ -27,28 +25,28 @@ from semigraph.online.financial_search import (
 
 class TestExtractTickers:
     def test_single_ticker(self):
-        assert _extract_tickers("What is NVDA revenue?") == ["NVDA"]
+        assert extract_tickers("What is NVDA revenue?") == ["NVDA"]
 
     def test_two_tickers_in_order(self):
-        assert _extract_tickers("Compare AMD and NVDA") == ["AMD", "NVDA"]
+        assert extract_tickers("Compare AMD and NVDA") == ["AMD", "NVDA"]
 
     def test_dedup_preserves_first_seen_order(self):
-        assert _extract_tickers("NVDA vs AMD vs NVDA again") == ["NVDA", "AMD"]
+        assert extract_tickers("NVDA vs AMD vs NVDA again") == ["NVDA", "AMD"]
 
     def test_no_ticker_returns_empty(self):
-        assert _extract_tickers("What is the market doing?") == []
+        assert extract_tickers("What is the market doing?") == []
 
     def test_ignores_unknown_uppercase_tokens(self):
         # "USA" / "GAAP" / "PDF" are uppercase but not in corpus
-        assert _extract_tickers("USA GAAP PDF report") == []
+        assert extract_tickers("USA GAAP PDF report") == []
 
     def test_lowercase_tickers_ignored(self):
         # ticker regex is uppercase-only — Finnhub expects uppercase symbols
-        assert _extract_tickers("what is nvda doing") == []
+        assert extract_tickers("what is nvda doing") == []
 
     def test_all_ten_corpus_tickers_detected(self):
         q = " ".join(sorted(CORPUS_TICKERS))
-        out = _extract_tickers(q)
+        out = extract_tickers(q)
         assert set(out) == CORPUS_TICKERS
 
 
@@ -120,7 +118,7 @@ class TestMakeChunk:
 
 
 class TestResolveTickers:
-    """`_resolve_tickers` is the orchestrator's ticker entry point.
+    """`resolve_tickers` is the orchestrator's ticker entry point.
 
     Stage 1 (regex) should hit on hot-path queries. Stage 2 (LLM expansion)
     should fire only when regex is empty AND use_expansion is True.
@@ -135,10 +133,10 @@ class TestResolveTickers:
             return q
 
         monkeypatch.setattr(
-            "semigraph.online.financial_search.expand_query",
+            "semigraph.online._ticker.expand_query",
             fake_expand,
         )
-        tickers = _resolve_tickers("What is NVDA revenue?")
+        tickers = resolve_tickers("What is NVDA revenue?")
         assert tickers == ["NVDA"]
         assert called["flag"] is False  # hot path → no LLM call
 
@@ -149,10 +147,10 @@ class TestResolveTickers:
             return f"{q} NVDA NVIDIA stock price"
 
         monkeypatch.setattr(
-            "semigraph.online.financial_search.expand_query",
+            "semigraph.online._ticker.expand_query",
             fake_expand,
         )
-        tickers = _resolve_tickers("What is Nvidia's current stock price?")
+        tickers = resolve_tickers("What is Nvidia's current stock price?")
         assert tickers == ["NVDA"]
 
     def test_use_expansion_false_skips_llm(self, monkeypatch):
@@ -164,10 +162,10 @@ class TestResolveTickers:
             return f"{q} NVDA"
 
         monkeypatch.setattr(
-            "semigraph.online.financial_search.expand_query",
+            "semigraph.online._ticker.expand_query",
             fake_expand,
         )
-        tickers = _resolve_tickers("Nvidia revenue", use_expansion=False)
+        tickers = resolve_tickers("Nvidia revenue", use_expansion=False)
         assert tickers == []
         assert called["flag"] is False
 
@@ -177,10 +175,10 @@ class TestResolveTickers:
             return q  # expand_query() fallback behaviour
 
         monkeypatch.setattr(
-            "semigraph.online.financial_search.expand_query",
+            "semigraph.online._ticker.expand_query",
             fake_expand,
         )
-        tickers = _resolve_tickers("Nvidia stock price")
+        tickers = resolve_tickers("Nvidia stock price")
         assert tickers == []
 
     def test_expanded_hints_filtered_through_corpus(self, monkeypatch):
@@ -190,10 +188,10 @@ class TestResolveTickers:
             return f"{q} AAPL NVDA TSLA"
 
         monkeypatch.setattr(
-            "semigraph.online.financial_search.expand_query",
+            "semigraph.online._ticker.expand_query",
             fake_expand,
         )
-        tickers = _resolve_tickers("Nvidia P/E")
+        tickers = resolve_tickers("Nvidia P/E")
         assert tickers == ["NVDA"]  # only corpus tickers survive
 
 
@@ -243,7 +241,7 @@ class TestOrchestrator:
         # Has keyword but no corpus ticker → expand fails → backend never invoked
         # Patch expand_query to return original (simulating LLM finding nothing relevant)
         monkeypatch.setattr(
-            "semigraph.online.financial_search.expand_query",
+            "semigraph.online._ticker.expand_query",
             lambda q, cfg=None: q,
         )
         assert financial_search("What is the market revenue trend?") == []
@@ -252,7 +250,7 @@ class TestOrchestrator:
     def test_natural_language_ticker_via_expansion(self, patch_backend, monkeypatch):
         """End-to-end: "Nvidia revenue" → LLM expand → backend.search(["NVDA"])."""
         monkeypatch.setattr(
-            "semigraph.online.financial_search.expand_query",
+            "semigraph.online._ticker.expand_query",
             lambda q, cfg=None: f"{q} NVDA",
         )
         out = financial_search("What is Nvidia's revenue?", top_k_chunks=5)
@@ -269,7 +267,7 @@ class TestOrchestrator:
             return f"{q} NVDA"
 
         monkeypatch.setattr(
-            "semigraph.online.financial_search.expand_query",
+            "semigraph.online._ticker.expand_query",
             fake_expand,
         )
         out = financial_search("Nvidia revenue", use_expansion=False)
