@@ -37,6 +37,9 @@ dependencies = [
     "newspaper3k",
     # Financial data
     "finnhub-python",
+    # Agent (Phase D)
+    "langgraph>=0.2.0",
+    "pyvis>=0.3.2",
     # Config
     "PyYAML",
     "python-dotenv",
