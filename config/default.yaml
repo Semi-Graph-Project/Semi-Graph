@@ -55,6 +55,12 @@ kg:
   max_workers: 16
   batch_size: 5
 
+# News tool (Phase E.v1 — Finnhub News API)
+news:
+  days_back: 90              # default date window (caller can override via param)
+  cache_dir: "data/news/cache"
+  default_depth: "headline"  # "headline" or "full" (newspaper3k scrape)
+
 # Embeddings (Phase B — local HuggingFace model, no API)
 embeddings:
   model: "BAAI/bge-base-en-v1.5"   # 768 dim, ~1.5 GB RAM, MTEB 63.5

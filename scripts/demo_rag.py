@@ -42,25 +42,28 @@ from semigraph.online.vector_search import vector_search
 from semigraph.online.graph_search import graph_search
 from semigraph.online.hybrid_search import hybrid_search
 from semigraph.online.financial_search import financial_search
+from semigraph.online.news_search import news_search
 
 
-# Retrieval-engine dispatch. All four return the same chunk-dict shape
+# Retrieval-engine dispatch. All five return the same chunk-dict shape
 # ({chunk_id, text, ticker, fiscal_year, section, score}), so they are
 # interchangeable behind rag_answer() with no downstream change.
-# Financial is Phase F.v1 — Finnhub direct API. Section names of its chunks use
-# "Financial_*" prefix so the LLM can distinguish API snapshots from 10-K text.
+# Financial is Phase F.v1 (Finnhub financials/quotes); News is Phase E.v1
+# (Finnhub real-time company news). Each emits a distinct `section` prefix
+# so the LLM can attribute the source.
 RETRIEVERS = {
     "vector": vector_search,
     "graph": graph_search,
     "hybrid": hybrid_search,
     "financial": financial_search,
+    "news": news_search,
 }
 
 
 SYSTEM_PROMPT = """You are a financial analyst answering questions about semiconductor companies.
 
 You must use ONLY the CONTEXT provided. Never use prior knowledge or outside
-facts. The CONTEXT may come from two source kinds, distinguishable by the
+facts. The CONTEXT may come from three source kinds, distinguishable by the
 chunk's `section` tag:
   • SEC 10-K filings — sections "Item_1" (Business), "Item_1A" (Risk Factors),
     "Item_7" (MD&A). Narrative + qualitative.
@@ -69,6 +72,10 @@ chunk's `section` tag:
     Real-time / latest-period numeric snapshots. These ARE authoritative for
     revenue figures, margins, P/E, current price, etc. — treat them with the
     same trust as 10-K text.
+  • Finnhub real-time news — section "News_finnhub". Company news headlines +
+    summaries from the last 90 days (or full article body when depth=full).
+    These ARE authoritative for recent events, announcements, and market
+    reactions that 10-K filings cannot contain because of their annual cadence.
 
 Classify the question into ONE of three cases and respond accordingly. When
 unsure between cases, PREFER A over B, and B over C — only fall to C as a
@@ -115,7 +122,9 @@ Reply with ONLY this line (no inference section):
 GENERAL RULES (all cases):
 - Cite ticker + fiscal year / data source for every claim. For 10-K chunks use
   "Intel FY2024 10-K reports...". For Financial_* chunks use "AMD Finnhub
-  snapshot shows..." or "NVDA latest quarter (Finnhub) reports...".
+  snapshot shows..." or "NVDA latest quarter (Finnhub) reports...". For
+  News_finnhub chunks use "AMD recent news (Finnhub, <year>) reports..." and
+  prefer the most recent article when multiple chunks address the same topic.
 - Match the question's language: Thai question → Thai answer; English → English.
 - Keep ticker symbols, product names, and technical terms in English even in a
   Thai answer (e.g. "Mobileye", "Intel 18A", "EPYC" — do NOT transliterate).
@@ -203,6 +212,22 @@ SUGGESTED_QUERIES = [
         "label": "Financial — INTC operating margin",
         "query": "Show INTC operating margin and net income for the latest fiscal year.",
         "dev_note": "Financial v1 · single-year only (v2 will support multi-year via SQL)",
+    },
+    # ── News mode (Phase E.v1 — Finnhub News API) ───────────────────────────
+    {
+        "label": "News — latest NVDA news",
+        "query": "What is the latest news about NVDA this week?",
+        "dev_note": "News v1 · Finnhub company_news (90-day window, headline depth)",
+    },
+    {
+        "label": "News — AMD recent announcements",
+        "query": "What has AMD announced recently?",
+        "dev_note": "News v1 · headline+summary; switch depth='full' for body text",
+    },
+    {
+        "label": "News — Thai query (LLM expansion → QCOM)",
+        "query": "ข่าวล่าสุดของ Qualcomm มีอะไรบ้าง",
+        "dev_note": "News v1 · Thai intent gate + LLM ticker resolution",
     },
 ]
 

@@ -81,6 +81,12 @@ class Config:
         self.chunk_size: int = chunker.get("chunk_size", 4500)
         self.chunk_overlap: int = chunker.get("chunk_overlap", 600)
 
+        # --- News tool (Phase E.v1) ---
+        news_cfg = data.get("news", {})
+        self.news_days_back: int = news_cfg.get("days_back", 90)
+        self.news_cache_dir: Path = _PROJECT_ROOT / news_cfg.get("cache_dir", "data/news/cache")
+        self.news_default_depth: str = news_cfg.get("default_depth", "headline")
+
         # --- LLM ---
         llm = data.get("llm", {})
         self.llm_provider: str = llm.get("provider", "deepseek")
