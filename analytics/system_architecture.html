@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SemiGraph — System Architecture</title>
+<style>
+  :root {
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --surface-2: #f1f5f9;
+    --text: #0f172a;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --border-strong: #cbd5e1;
+    --user: #3b82f6;
+    --user-bg: rgba(59, 130, 246, 0.08);
+    --agent: #8b5cf6;
+    --agent-bg: rgba(139, 92, 246, 0.08);
+    --tools: #10b981;
+    --tools-bg: rgba(16, 185, 129, 0.08);
+    --storage: #f59e0b;
+    --storage-bg: rgba(245, 158, 11, 0.08);
+    --offline: #64748b;
+    --offline-bg: rgba(100, 116, 139, 0.08);
+    --done: #059669;
+    --done-bg: rgba(16, 185, 129, 0.12);
+    --planned: #d97706;
+    --planned-bg: rgba(245, 158, 11, 0.14);
+    --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+    --shadow: 0 2px 4px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.06);
+    --shadow-lg: 0 10px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  [data-theme="dark"] {
+    --bg: #0b1220;
+    --surface: #111a2e;
+    --surface-2: #0f1729;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --border: #1e293b;
+    --border-strong: #334155;
+    --done: #34d399;
+    --planned: #fbbf24;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+    --shadow: 0 2px 6px rgba(0,0,0,0.35);
+    --shadow-lg: 0 10px 30px rgba(0,0,0,0.4);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 10% 0%, var(--agent-bg) 0%, transparent 30%),
+      radial-gradient(circle at 90% 100%, var(--tools-bg) 0%, transparent 30%);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter',
+                 'Sukhumvit Set', 'Noto Sans Thai', 'Sarabun', sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
+    transition: background 0.25s, color 0.25s;
+    min-height: 100vh;
+  }
+  .container {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 40px 24px 64px;
+  }
+
+  /* === Header === */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 40px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    background: linear-gradient(135deg, var(--user), var(--agent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header .subtitle {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-top: 6px;
+    font-weight: 500;
+  }
+  .theme-toggle {
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 8px 14px;
+    cursor: pointer;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .theme-toggle:hover {
+    border-color: var(--agent);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+  }
+
+  /* === Layer cards === */
+  .layer {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+  }
+  .layer:hover { box-shadow: var(--shadow-lg); }
+  .layer::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+  .layer.user::before    { background: linear-gradient(90deg, var(--user), #60a5fa); }
+  .layer.agent::before   { background: linear-gradient(90deg, var(--agent), #a78bfa); }
+  .layer.tools::before   { background: linear-gradient(90deg, var(--tools), #34d399); }
+  .layer.storage::before { background: linear-gradient(90deg, var(--storage), #fbbf24); }
+  .layer.offline::before { background: linear-gradient(90deg, var(--offline), #94a3b8); }
+
+  .layer-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .layer-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: grid; place-items: center;
+    font-size: 18px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .layer.user    .layer-icon { background: var(--user-bg);    color: var(--user); }
+  .layer.agent   .layer-icon { background: var(--agent-bg);   color: var(--agent); }
+  .layer.tools   .layer-icon { background: var(--tools-bg);   color: var(--tools); }
+  .layer.storage .layer-icon { background: var(--storage-bg); color: var(--storage); }
+  .layer.offline .layer-icon { background: var(--offline-bg); color: var(--offline); }
+  .layer-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .layer-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 2px 0 0;
+    letter-spacing: -0.01em;
+  }
+  .layer-status {
+    margin-left: auto;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  /* === Card === */
+  .card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+  }
+  .card + .card { margin-top: 12px; }
+  .card-title {
+    font-weight: 600;
+    margin: 0 0 6px;
+    font-size: 14px;
+  }
+  .card-desc {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin: 0;
+  }
+  .card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  /* === Badges === */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  .badge.done    { background: var(--done-bg);    color: var(--done); }
+  .badge.planned { background: var(--planned-bg); color: var(--planned); }
+  .badge.tech {
+    background: var(--surface-2);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    font-weight: 500;
+    font-family: 'SF Mono', 'JetBrains Mono', Menlo, Monaco, Consolas, monospace;
+    font-size: 10.5px;
+  }
+
+  /* === Arrow connector === */
+  .arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    margin: 14px 0;
+    user-select: none;
+  }
+  .arrow-line {
+    width: 2px;
+    height: 24px;
+    background: linear-gradient(180deg, var(--border-strong), var(--text-muted));
+    border-radius: 1px;
+  }
+  .arrow-head {
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1;
+    margin-top: -8px;
+  }
+  .arrow-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'SF Mono', Menlo, monospace;
+    margin-top: 4px;
+  }
+
+  /* === Agent state machine === */
+  .state-machine {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+    margin-top: 16px;
+    position: relative;
+  }
+  @media (max-width: 900px) {
+    .state-machine { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 540px) {
+    .state-machine { grid-template-columns: repeat(2, 1fr); }
+  }
+  .state-node {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 10px;
+    text-align: center;
+    transition: border-color 0.15s, transform 0.15s;
+    position: relative;
+  }
+  .state-node:hover {
+    border-color: var(--agent);
+    transform: translateY(-2px);
+  }
+  .state-node .num {
+    display: inline-block;
+    width: 20px; height: 20px;
+    line-height: 20px;
+    border-radius: 50%;
+    background: var(--agent-bg);
+    color: var(--agent);
+    font-size: 10px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .state-node .label {
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: -0.01em;
+  }
+  .state-node .hint {
+    font-size: 10.5px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    line-height: 1.35;
+  }
+  .reflection-loop {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: var(--agent-bg);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    color: var(--agent);
+    text-align: center;
+    font-weight: 500;
+    border: 1px dashed var(--agent);
+  }
+
+  /* === Tools grid === */
+  .tools-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  @media (max-width: 768px) {
+    .tools-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  .tool-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+    cursor: default;
+  }
+  .tool-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--tools);
+    box-shadow: var(--shadow);
+  }
+  .tool-card .name {
+    font-family: 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .tool-card .backend {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-top: 5px;
+    line-height: 1.4;
+  }
+  .tool-card .status {
+    margin-top: 10px;
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  /* === Storage row === */
+  .storage-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  @media (max-width: 768px) {
+    .storage-row { grid-template-columns: 1fr; }
+  }
+
+  /* === Eval-only divider === */
+  .eval-only {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--border-strong);
+  }
+  .eval-only-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+  }
+
+  /* === Offline pipeline === */
+  .offline-stages {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .stage {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 11px;
+    font-size: 11.5px;
+    font-family: 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+    color: var(--text);
+  }
+  .stage.terminal {
+    background: var(--done-bg);
+    color: var(--done);
+    border-color: transparent;
+    font-weight: 600;
+  }
+  .stage-arrow {
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  /* === Layer between margin === */
+  .layer + .layer { margin-top: 0; }
+
+  /* === Footer === */
+  .footer {
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+    text-align: center;
+    line-height: 1.7;
+  }
+  .footer strong { color: var(--text); font-weight: 600; }
+
+  /* === Sections gap === */
+  .section + .section { margin-top: 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ═══ HEADER ═══ -->
+  <header class="header">
+    <div>
+      <h1>SemiGraph — System Architecture</h1>
+      <div class="subtitle">
+        Agentic Heterogeneous GraphRAG · KMUTNB CS Senior Project · Updated 2026-06-04
+      </div>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()">
+      <span id="theme-icon">🌙</span> <span id="theme-label">Dark</span>
+    </button>
+  </header>
+
+  <!-- ═══ USER LAYER ═══ -->
+  <section class="layer user">
+    <div class="layer-header">
+      <div class="layer-icon">U</div>
+      <div>
+        <div class="layer-label">User Layer</div>
+        <h2 class="layer-title">Streamlit UI</h2>
+      </div>
+      <div class="layer-status">
+        <span class="badge done">✓ Manual mode</span>
+        <span class="badge planned">⏳ Agent toggle</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">app.py</div>
+      <p class="card-desc">
+        รับคำถาม (Thai / English) + Mode toggle: <strong>Agent</strong> (default) หรือ
+        <strong>Manual</strong> (radio 5 tools). Output: answer + inline
+        <code>[1][2]</code> citations + Pyvis subgraph viewer สำหรับ reasoning path
+      </p>
+      <div class="card-meta">
+        <span class="badge tech">streamlit</span>
+        <span class="badge tech">pyvis (planned)</span>
+        <span class="badge tech">thai · english</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="arrow">
+    <div class="arrow-line"></div>
+    <div class="arrow-head">▼</div>
+    <div class="arrow-label">query (str)</div>
+  </div>
+
+  <!-- ═══ AGENT LAYER ═══ -->
+  <section class="layer agent">
+    <div class="layer-header">
+      <div class="layer-icon">A</div>
+      <div>
+        <div class="layer-label">Agent Layer</div>
+        <h2 class="layer-title">LangGraph State Machine</h2>
+      </div>
+      <div class="layer-status">
+        <span class="badge planned">⏳ Phase D</span>
+      </div>
+    </div>
+    <div class="card">
+      <p class="card-desc">
+        <strong>Plan-then-ReAct + Reflection</strong> · max 3 rounds (hard limit) ·
+        OpenAI function calling format ผ่าน DeepSeek
+      </p>
+      <div class="state-machine">
+        <div class="state-node">
+          <div class="num">1</div>
+          <div class="label">Plan</div>
+          <div class="hint">แตก subqueries</div>
+        </div>
+        <div class="state-node">
+          <div class="num">2</div>
+          <div class="label">Tool Select</div>
+          <div class="hint">LLM function calling</div>
+        </div>
+        <div class="state-node">
+          <div class="num">3</div>
+          <div class="label">Execute</div>
+          <div class="hint">dispatch retriever</div>
+        </div>
+        <div class="state-node">
+          <div class="num">4</div>
+          <div class="label">Observe</div>
+          <div class="hint">สรุป chunks</div>
+        </div>
+        <div class="state-node">
+          <div class="num">5</div>
+          <div class="label">Reflection</div>
+          <div class="hint">LLM judge + hard limit</div>
+        </div>
+        <div class="state-node">
+          <div class="num">6</div>
+          <div class="label">Synthesize</div>
+          <div class="hint">answer + cite [1][2]</div>
+        </div>
+      </div>
+      <div class="reflection-loop">
+        ⟲ ถ้า not sufficient AND round &lt; 3 → loop back to Plan (node 1)
+      </div>
+      <div class="card-meta" style="margin-top: 16px;">
+        <span class="badge tech">langgraph</span>
+        <span class="badge tech">deepseek</span>
+        <span class="badge tech">openai function calling</span>
+        <span class="badge tech">~4-10 LLM calls/query</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="arrow">
+    <div class="arrow-line"></div>
+    <div class="arrow-head">▼</div>
+    <div class="arrow-label">tool call { name, args }</div>
+  </div>
+
+  <!-- ═══ TOOLS LAYER ═══ -->
+  <section class="layer tools">
+    <div class="layer-header">
+      <div class="layer-icon">T</div>
+      <div>
+        <div class="layer-label">Tools Layer</div>
+        <h2 class="layer-title">RETRIEVERS dispatch</h2>
+      </div>
+      <div class="layer-status">
+        <span class="badge done">✓ 5/5 done</span>
+      </div>
+    </div>
+
+    <div class="tools-grid">
+      <div class="tool-card">
+        <div class="name">graph_search</div>
+        <div class="backend">→ Neo4j · PPR + specificity</div>
+        <div class="status"><span class="badge done">✓ done</span></div>
+      </div>
+      <div class="tool-card">
+        <div class="name">vector_search</div>
+        <div class="backend">→ Neo4j · BGE-M3 cosine</div>
+        <div class="status"><span class="badge done">✓ done</span></div>
+      </div>
+      <div class="tool-card">
+        <div class="name">financial_search</div>
+        <div class="backend">→ Finnhub API direct</div>
+        <div class="status">
+          <span class="badge done">✓ v1</span>
+          <span class="badge planned">⏳ v2 → PG</span>
+        </div>
+      </div>
+      <div class="tool-card">
+        <div class="name">news_search</div>
+        <div class="backend">→ Finnhub News · 90d window</div>
+        <div class="status"><span class="badge done">✓ done</span></div>
+      </div>
+    </div>
+
+    <div class="eval-only">
+      <div class="eval-only-label">Eval-only (ไม่อยู่ใน agent)</div>
+      <div class="tool-card" style="max-width: 360px;">
+        <div class="name">hybrid_search</div>
+        <div class="backend">→ Neo4j · RRF fusion ของ vec + graph</div>
+        <div class="status"><span class="badge done">✓ done</span></div>
+      </div>
+    </div>
+
+    <div class="card-meta" style="margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--border);">
+      <span class="badge tech">
+        6-key chunk contract: chunk_id · text · ticker · fiscal_year · section · score
+      </span>
+    </div>
+  </section>
+
+  <div class="arrow">
+    <div class="arrow-line"></div>
+    <div class="arrow-head">▼</div>
+    <div class="arrow-label">backend query</div>
+  </div>
+
+  <!-- ═══ STORAGE LAYER ═══ -->
+  <section class="layer storage">
+    <div class="layer-header">
+      <div class="layer-icon">S</div>
+      <div>
+        <div class="layer-label">Storage Layer</div>
+        <h2 class="layer-title">Heterogeneous Backends</h2>
+      </div>
+      <div class="layer-status">
+        <span class="badge done">✓ 2/3 ready</span>
+        <span class="badge planned">⏳ PostgreSQL</span>
+      </div>
+    </div>
+    <div class="storage-row">
+      <div class="card">
+        <div class="card-title">Neo4j 5.26 Community</div>
+        <p class="card-desc">
+          Docker local · KG + Vector index + GDS + APOC<br>
+          3,620 entities · 4,856 chunks · 24 entity types · 29 rel types
+        </p>
+        <div class="card-meta">
+          <span class="badge done">✓ done</span>
+          <span class="badge tech">docker</span>
+          <span class="badge tech">gds.pageRank</span>
+          <span class="badge tech">bge-m3 768d</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Finnhub Cloud</div>
+        <p class="card-desc">
+          REST API · rate limit 60 calls/min<br>
+          company_news · financials_reported · quote · company_basic_financials
+        </p>
+        <div class="card-meta">
+          <span class="badge done">✓ done</span>
+          <span class="badge tech">finnhub-python</span>
+          <span class="badge tech">https</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">PostgreSQL</div>
+        <p class="card-desc">
+          Docker local (เพิ่มข้าง Neo4j) · ETL จาก Finnhub<br>
+          schema: companies, financials_annual, key_metrics, ratios · text-to-SQL via LLM
+        </p>
+        <div class="card-meta">
+          <span class="badge planned">⏳ Phase F.v2</span>
+          <span class="badge tech">docker-compose</span>
+          <span class="badge tech">text-to-sql</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ OFFLINE PIPELINE ═══ -->
+  <div style="margin-top: 40px;">
+    <section class="layer offline">
+      <div class="layer-header">
+        <div class="layer-icon">O</div>
+        <div>
+          <div class="layer-label">Offline Pipeline · build-time</div>
+          <h2 class="layer-title">Ingest → KG + Embeddings (รันครั้งเดียวตอน setup)</h2>
+        </div>
+        <div class="layer-status">
+          <span class="badge done">✓ Phase A + B</span>
+        </div>
+      </div>
+      <div class="offline-stages">
+        <div class="stage">SEC EDGAR</div>
+        <span class="stage-arrow">→</span>
+        <div class="stage">ingest.py</div>
+        <span class="stage-arrow">→</span>
+        <div class="stage">preprocess.py</div>
+        <span class="stage-arrow">→</span>
+        <div class="stage">chunker · 4500/600</div>
+        <span class="stage-arrow">→</span>
+        <div class="stage">kg_extract.py · DeepSeek</div>
+        <span class="stage-arrow">→</span>
+        <div class="stage">KGStore → Neo4j</div>
+        <span class="stage-arrow">→</span>
+        <div class="stage">embed_*.py · BGE-M3 768d</div>
+        <span class="stage-arrow">→</span>
+        <div class="stage">synonymy.py</div>
+        <span class="stage-arrow">→</span>
+        <div class="stage">specificity.py</div>
+        <span class="stage-arrow">→</span>
+        <div class="stage terminal">✓ Neo4j ready</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ═══ FOOTER ═══ -->
+  <footer class="footer">
+    <strong>SemiGraph</strong> · Phudit Huangjing & Kantinan Kongnuam · KMUTNB CS Senior Project<br>
+    Agent paradigm: Plan-then-ReAct (HuggingGPT 2023) + Reflection (ReAct, Yao 2023)<br>
+    Heterogeneous Storage: Neo4j (KG + Vector) + Finnhub (News + Financial v1) + PostgreSQL (Financial v2)
+  </footer>
+
+</div>
+
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  document.getElementById('theme-icon').textContent = next === 'dark' ? '☀️' : '🌙';
+  document.getElementById('theme-label').textContent = next === 'dark' ? 'Light' : 'Dark';
+  localStorage.setItem('theme', next);
+}
+// Restore theme preference
+const saved = localStorage.getItem('theme');
+if (saved) {
+  document.documentElement.setAttribute('data-theme', saved);
+  document.getElementById('theme-icon').textContent = saved === 'dark' ? '☀️' : '🌙';
+  document.getElementById('theme-label').textContent = saved === 'dark' ? 'Light' : 'Dark';
+}
+</script>
+
+</body>
+</html>
