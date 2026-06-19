@@ -173,7 +173,12 @@ _SECTION_PATTERNS = {
 
 
 def _clean_markdown_artifacts(text: str) -> str:
-    text = re.sub(r"[\*_#]", " ", text)
+    # Strip markdown emphasis (*_#) AND table-cell pipes (|). html2text renders
+    # some filings' section headers as table rows — e.g. "Item 1A.| Risk Factors"
+    # — where the pipe between the item number and the title blocks the
+    # `item\s*1a ... risk` patterns. Normalising | -> space lets them match.
+    # (TOC detection runs on the raw line *before* this, so it is unaffected.)
+    text = re.sub(r"[\*_#|]", " ", text)
     return re.sub(r"\s+", " ", text).strip()
 
 
