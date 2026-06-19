@@ -56,9 +56,10 @@ generated_at: <YYYY-MM-DD>
 
 ## Required Structure (1.5–2 หน้ากระดาษ — กระชับ)
 
-### Section 1: Constraint ของปัญหา + Theory Binding
+### Section 1: ภาพรวม (Feynman) + Constraint + Theory Binding
 
-- 2-3 ประโยคบอกว่า code นี้ทำอะไร + ปัญหาอะไรที่บังคับให้ต้องมี
+- **ชั้น 1 — ภาพรวม Feynman (2-3 ประโยค):** สวมบทรุ่นพี่ CE สอนเก่งระดับเทพ ใช้ analogy พาเห็นภาพว่า code นี้ทำอะไร + ปัญหาอะไรบังคับให้ต้องมี ให้รุ่นน้อง "อ๋อ" ก่อนลงเทคนิค
+- **ชั้น 2 — ตั้งแต่ตาราง Constraint ลงไป: ทิ้ง analogy ใช้ข้อเท็จจริงล้วน** (ถ้าจำเป็น บอกจุดที่ analogy ชั้น 1 รั่ว)
 - **ตาราง Constraint** — อย่างน้อย 3 ข้อ คอลัมน์:
   | `#` | `Constraint` | `ที่มา` | **`Theory binding`** |
   - **Theory binding (บังคับ)** — ผูกข้อจำกัดกับทฤษฎี/หลักการพื้นฐาน เช่น:
@@ -75,7 +76,7 @@ generated_at: <YYYY-MM-DD>
 - ถ้าระบุไม่ได้ว่าทฤษฎีอะไร → ห้ามตอบ "hardware limit" ลอย ๆ — ต้องเจาะลง physical/mathematical mechanism จริง
 - ตำแหน่งใน pipeline ใหญ่ + Phase
 
-**ห้ามใช้ analogy** ที่ไม่ตรง mechanism
+**analogy ใช้ได้เฉพาะชั้น 1 (ภาพรวม Feynman)** — ตั้งแต่ตาราง Constraint ลงไปคือชั้น 2: ห้าม analogy ใช้ mechanism จริงล้วน
 
 ### Section 2: Decision Tree (Structure vs Semantics)
 
@@ -197,7 +198,9 @@ ls src/semigraph/offline/  # then identify which match the same concern
 ls /home/kantinan/Documents/Obsidian\ Vault/Agentic\ GraphRAG/ | grep -i <concept>
 ```
 
-## Style Requirements (First Principles per CLAUDE.md)
+## Style Requirements (per CLAUDE.md — รุ่นพี่ CE สอนรุ่นน้อง, ภาษาพูดไทย)
+
+**โทน 2 ชั้น:** Section 1 เปิดด้วยภาพรวม Feynman (analogy) ก่อน → จากนั้นทั้งโน้ตเป็นชั้นเจาะลึก First Principles (ทิ้ง analogy, คงความถูกต้องของทฤษฎีครบ). **ชั้นเจาะลึกยังต้องภาษาพูด — กางทุก term ที่ไม่คุ้น (1 term/1 ประโยค) ห้าม stack ศัพท์เทคนิคโดยไม่กาง** (เช่น "stationary distribution ของ random walk" ต้องอธิบายว่าคืออะไร ไม่ใช่แปะเฉยๆ).
 
 1. **Constraint จริง → theory binding → mechanism → decision** — ทุกการเลือกของ code ต้องไล่ห่วงโซ่นี้ครบ
 2. **Layered explanation** — fact → consequence → engineering decision
@@ -232,7 +235,7 @@ ls /home/kantinan/Documents/Obsidian\ Vault/Agentic\ GraphRAG/ | grep -i <concep
 - ❌ **ห้าม flow step ไม่มี Trade-off** — ทุก step ต้องชัดว่าแลกอะไร
 - ❌ **ห้าม skip Section 5 (Implicit Connections)** — ใช้ Grep/Glob discovery จริง ไม่ใช่เดา
 - ❌ **ห้าม YAML frontmatter ขาด field** — `complexity_time`, `breaking_point`, `core_mechanisms` ต้องมี
-- ❌ **ห้าม analogy ที่ไม่ตรง mechanism** — "เหมือนพนักงานเสิร์ฟ" ตัดทิ้ง
+- ❌ **ห้าม analogy ในชั้นเจาะลึก** — analogy ใช้ได้เฉพาะภาพรวม Feynman (Section 1) แล้วทิ้ง; ห้าม analogy ลอย ๆ ที่ไม่ map mechanism เช่น "เหมือนพนักงานเสิร์ฟ"
 - ❌ **ห้าม appeal to authority** — "best practice" / "Google ทำแบบนี้" — ต้องบอก mechanism
 - ❌ **ห้าม dump code เกิน 5 บรรทัด** — snippet + file:line reference เท่านั้น
 - ❌ **ห้ามเขียนยาวเกิน 2 หน้ากระดาษ** — concise > comprehensive

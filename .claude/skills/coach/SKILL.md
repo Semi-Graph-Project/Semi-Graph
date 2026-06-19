@@ -193,7 +193,11 @@ Top-level checklist:
 
 ---
 
-## Style Requirements (First Principles per CLAUDE.md)
+## Style Requirements (per CLAUDE.md — รุ่นพี่ CE สอนรุ่นน้อง, ภาษาพูดไทย)
+
+**โทนการอธิบาย 2 ชั้น** — เมื่ออธิบาย concept/แนวคิด/ทฤษฎี/เครื่องมือ ในโน้ต (เช่น "ทำไมต้องทำขั้นนี้"):
+- **ชั้น 1 ภาพรวม:** Feynman + analogy พาเห็นภาพก่อน (รุ่นพี่สอนเก่งระดับเทพ ให้ "อ๋อ" เร็ว)
+- **ชั้น 2 เจาะลึก:** ทิ้ง analogy → First Principles ล้วน + บอกจุดที่ analogy ชั้น 1 รั่ว. **แต่ยังภาษาพูด — กางทุก term ที่ไม่คุ้น (1 term/1 ประโยค) ห้าม stack ศัพท์**
 
 1. **เริ่มจาก constraint จริง** — ทุก sub-step ต้องตอบได้ว่า "ทำไมต้องทำขั้นนี้ ก่อน/หลังขั้นอื่น"
 2. **Layered explanation** — fact → consequence → engineering decision
@@ -222,7 +226,7 @@ Top-level checklist:
 - ❌ **ห้ามใส่ implementation body** ที่ user paste แล้วรันได้
 - ❌ **ห้าม dump code จาก codebase** เกิน 5 บรรทัด — file:line reference เท่านั้น
 - ❌ **ห้าม recap ยาวเกิน 5 บรรทัด** — Section A ต้องสั้น
-- ❌ **ห้าม analogy ที่ไม่ตรง mechanism** — "เหมือนพนักงานเสิร์ฟ" ตัดทิ้ง
+- ❌ **ห้าม analogy ในชั้นเจาะลึก (ชั้น 2)** — analogy ใช้ได้เฉพาะชั้นภาพรวม (Feynman) แล้วต้องตามด้วย First Principles ที่ปิดช่องรั่ว; ห้าม analogy ลอย ๆ ที่ไม่ map mechanism เช่น "เหมือนพนักงานเสิร์ฟ"
 - ❌ **ห้ามแนะนำ next step ที่ใหญ่เกิน 1-3 ชั่วโมง** — แตกเป็น sub-step ที่ทำจบใน session เดียว
 - ❌ **ห้าม overwrite Coach_*.md เดิม** — versioning ผ่าน `_v2`, `_v3` แทน
 - ❌ **ห้าม skip Markdown checkbox `- [ ]` ใน Section C / E / F** — เป็นจุดเด่นของ note นี้ที่ user ต้องเช็คได้
