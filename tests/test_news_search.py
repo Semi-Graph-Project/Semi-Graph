@@ -481,7 +481,8 @@ def test_news_keywords_include_core_terms():
 
 
 def test_corpus_tickers_shared_with_financial():
-    """News tool uses the same CORPUS_TICKERS as financial — single source of truth."""
-    assert len(CORPUS_TICKERS) == 10
+    """News tool uses the same CORPUS_TICKERS as financial — single source of truth,
+    now derived from config `tickers:` (synced to Neo4j by pilot.py)."""
+    from semigraph.config import get_config
+    assert CORPUS_TICKERS == frozenset(t.upper() for t in get_config().tickers)
     assert "NVDA" in CORPUS_TICKERS
-    assert "QCOM" in CORPUS_TICKERS

@@ -6,15 +6,20 @@ edgar:
     - "10-K"
   limit: 3
 
-# Tickers (focus set for current phase)
+# Tickers in corpus — auto-synced from Neo4j by `scripts/pilot.py` (DB = source
+# of truth). _ticker.py CORPUS_TICKERS derives from this list. Do not edit by hand.
 tickers:
-  - NVDA
-  - ASML
-  - MU
+  - AMAT
   - AMD
-  - INTC
   - AVGO
+  - INTC
+  - KLAC
+  - LRCX
+  - MU
+  - NVDA
   - QCOM
+  - RMBS
+  - TXN
 
 # Data paths
 paths:

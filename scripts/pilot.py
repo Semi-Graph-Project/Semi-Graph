@@ -20,8 +20,12 @@ Usage:
     # Tune parallelism
     python scripts/pilot.py --ticker QCOM --workers 4
 
+    # Sync config tickers from Neo4j without onboarding (reconcile config <- DB)
+    python scripts/pilot.py --sync-only
+
 Outputs:
     analytics/{ticker_lower}_pilot_metrics.csv    — per-chunk row
+    config/default.yaml `tickers:`                — synced to Neo4j (Phase 9)
 
 Idempotent: existing chunks/embeddings are skipped automatically (Neo4j MERGE +
 embed scripts check IS NULL). Safe to re-run.
@@ -31,6 +35,7 @@ from __future__ import annotations
 import argparse
 import csv
 import os
+import re
 import subprocess
 import sys
 import time
@@ -327,6 +332,85 @@ def phase8_report(ticker: str, metrics: list[dict], remaining_docs: int = 18) ->
     print(f"    Projected wall (8 workers)    : {proj_wall_8w/3600:>10.2f} h")
 
 
+# ── Phase 9: sync config tickers ← Neo4j (DB is source of truth) ──────────────
+
+def get_db_tickers() -> list[str]:
+    """Return DISTINCT Chunk.ticker present in Neo4j, sorted. This is the ground
+    truth for 'what's in the corpus' — config and CORPUS_TICKERS derive from it."""
+    d = get_neo4j_driver()
+    try:
+        with d.session() as s:
+            r = s.run(
+                "MATCH (c:Chunk) WHERE c.ticker IS NOT NULL "
+                "RETURN DISTINCT c.ticker AS t ORDER BY t"
+            )
+            return [rec["t"] for rec in r]
+    finally:
+        d.close()
+
+
+def _sync_tickers_to_config(tickers: list[str]) -> Path:
+    """Rewrite the `tickers:` block in config/default.yaml to match `tickers`.
+
+    Text-level edit (not a PyYAML round-trip) so comments and ${ENV} placeholders
+    elsewhere in the file survive. Matches `tickers:` plus the contiguous `  - X`
+    items under it; everything above/below is untouched.
+    """
+    cfg_path = PROJECT_ROOT / "config" / "default.yaml"
+    text = cfg_path.read_text(encoding="utf-8")
+    block = "tickers:\n" + "".join(f"  - {t}\n" for t in sorted(tickers))
+    new_text, n = re.subn(
+        r"^tickers:\n(?:[ \t]*-[ \t].*\n)*",
+        block,
+        text,
+        count=1,
+        flags=re.MULTILINE,
+    )
+    if n == 0:
+        raise RuntimeError("could not find a `tickers:` block in config/default.yaml")
+    cfg_path.write_text(new_text, encoding="utf-8")
+    return cfg_path
+
+
+def phase9_sync_config() -> None:
+    print(f"\n{DIVIDER}\nPHASE 9 — Sync config tickers <- Neo4j (DB = source of truth)\n{DIVIDER}")
+    db_tickers = get_db_tickers()
+    if not db_tickers:
+        print("  No tickers in Neo4j — skipping config sync")
+        return
+    path = _sync_tickers_to_config(db_tickers)
+    print(f"  Synced {len(db_tickers)} tickers: {', '.join(db_tickers)}")
+    print(f"  -> {path}  (CORPUS_TICKERS now derives from this)")
+
+
+# ── Coverage guard: catch silently-dropped filings ───────────────────────────
+
+def check_filing_coverage(
+    filings: list[tuple[str, str, str]], metrics: list[dict]
+) -> list[str]:
+    """Discovered filings that produced ZERO chunks — a silent section-extraction
+    failure (e.g. unrecognised header format means 0 sections -> 0 chunks, with no
+    exception raised). Returns the sorted fiscal years that vanished.
+
+    Without this, the run prints 'fail: 0' even when whole years never made it
+    into the graph (they had no chunks to fail on)."""
+    discovered = {str(fy) for _, fy, _ in filings}
+    produced = {str(m.get("fiscal_year")) for m in metrics}
+    return sorted(discovered - produced)
+
+
+def warn_missing_filings(ticker: str, missing_fy: list[str]) -> None:
+    if not missing_fy:
+        return
+    print(f"\n{'!' * 70}")
+    print(f"  WARNING — {len(missing_fy)} discovered filing(s) produced ZERO chunks")
+    print(f"  (section extraction found nothing — these years are NOT in the graph):")
+    for fy in missing_fy:
+        print(f"    {ticker} FY{fy}  ->  inspect data/processed/{ticker}/FY{fy}-10K/")
+    print(f"  Likely an unrecognised header format in preprocess._SECTION_PATTERNS.")
+    print(f"{'!' * 70}")
+
+
 # ── main ──────────────────────────────────────────────────────────────────────
 
 def main() -> int:
@@ -334,7 +418,9 @@ def main() -> int:
         description="Pilot pipeline runner — onboard ANY ticker end-to-end with metrics",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    ap.add_argument("--ticker", required=True, help="Stock ticker (e.g. QCOM, AVGO, AMD)")
+    ap.add_argument("--ticker", help="Stock ticker (e.g. QCOM, AVGO, AMD). Required unless --sync-only")
+    ap.add_argument("--sync-only", action="store_true",
+                    help="Skip onboarding — just sync config tickers from Neo4j (Phase 9) and exit")
     ap.add_argument("--workers", type=int, default=8, help="Chunk-level parallelism (default 8)")
     ap.add_argument("--skip-download", action="store_true", help="Skip Phase 1 (use existing data/raw)")
     ap.add_argument("--skip-preprocess", action="store_true", help="Skip Phase 2 (use existing data/processed)")
@@ -344,6 +430,12 @@ def main() -> int:
     ap.add_argument("--projection-docs", type=int, default=18,
                     help="Project cost/wall for N more docs (default 18 = 6 new companies × 3 years)")
     args = ap.parse_args()
+
+    if args.sync_only:
+        phase9_sync_config()
+        return 0
+    if not args.ticker:
+        ap.error("--ticker is required unless --sync-only is set")
 
     ticker = args.ticker.upper()
     cfg = get_config()
@@ -362,18 +454,25 @@ def main() -> int:
     if not metrics:
         print("\n  No metrics collected — abort")
         return 1
+    missing_fy = check_filing_coverage(filings, metrics)
+    warn_missing_filings(ticker, missing_fy)
     phase5_write_csv(ticker, metrics)
     phase6_embed(args.skip_embed)
     phase6_5_specificity(args.skip_specificity)
     if not args.skip_verify:
         phase7_verify(ticker)
     phase8_report(ticker, metrics, remaining_docs=args.projection_docs)
+    phase9_sync_config()   # config tickers <- Neo4j reality (includes the new ticker)
 
     wall = time.time() - t0
     print(f"\n{'#' * 70}")
-    print(f"  Pilot complete — {ticker} | total wall: {wall/60:.1f} min")
+    status = "COMPLETE" if not missing_fy else f"INCOMPLETE ({len(missing_fy)} year(s) dropped)"
+    print(f"  Pilot {status} — {ticker} | total wall: {wall/60:.1f} min")
+    if missing_fy:
+        print(f"  ⚠ missing: {', '.join('FY' + fy for fy in missing_fy)} "
+              f"— re-run after fixing preprocess to recover them")
     print(f"{'#' * 70}\n")
-    return 0
+    return 0 if not missing_fy else 2
 
 
 if __name__ == "__main__":

@@ -323,8 +323,12 @@ class TestProtocolContract:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_corpus_has_ten_tickers():
-    assert len(CORPUS_TICKERS) == 10
+def test_corpus_tickers_derive_from_config():
+    # CORPUS_TICKERS is no longer hard-coded — it derives from config `tickers:`
+    # (which pilot.py keeps synced to Neo4j). Assert the derivation, not a count.
+    from semigraph.config import get_config
+    assert CORPUS_TICKERS == frozenset(t.upper() for t in get_config().tickers)
+    assert CORPUS_TICKERS, "corpus tickers must be non-empty"
 
 
 def test_snapshot_kinds_are_three():

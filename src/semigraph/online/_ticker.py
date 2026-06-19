@@ -1,8 +1,12 @@
 """Shared ticker resolution for online retrieval tools.
 
 Extracted from `financial_search.py` so multiple consumers (financial_search,
-news_search, future agent router) share one implementation. Single source of
-truth for CORPUS_TICKERS — every tool that filters by ticker reads from here.
+news_search, future agent router) share one implementation.
+
+`CORPUS_TICKERS` is **derived from config** (`tickers:` in default.yaml), which
+`scripts/pilot.py` keeps synced to Neo4j reality. Source-of-truth chain:
+Neo4j DB → config/default.yaml → here. Never hard-code the ticker set again —
+onboard via pilot.py and it flows through automatically.
 
 Two-stage resolution:
   1. Regex match against CORPUS_TICKERS (~10 µs, $0) — hot path
@@ -18,9 +22,9 @@ from semigraph.config import Config, get_config
 from semigraph.online.query_expand import expand_query
 
 
-CORPUS_TICKERS: frozenset[str] = frozenset({
-    "NVDA", "AMD", "MU", "INTC", "AVGO", "QCOM", "AMAT", "LRCX", "KLAC", "TXN",
-})
+CORPUS_TICKERS: frozenset[str] = frozenset(
+    t.upper() for t in get_config().tickers
+)
 
 TICKER_RE = re.compile(r"\b[A-Z]{2,5}\b")
 
