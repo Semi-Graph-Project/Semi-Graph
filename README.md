@@ -23,12 +23,12 @@ SemiGraph supports fundamental analysis of semiconductor stocks (NVDA / AMD / MU
         ▼                  ▼                  ▼                 ▼
   ┌──────────┐     ┌──────────────┐    ┌─────────────┐   ┌────────────┐
   │ graph_   │     │ vector_      │    │ financial_  │   │ news_      │
-  │ search   │     │ search       │    │ query       │   │ search     │
-  │ (PPR)    │     │ (cosine)     │    │ (SQL)       │   │ (Finnhub)  │
+  │ search   │     │ search       │    │ search      │   │ search     │
+  │ (PPR)    │     │ (cosine)     │    │ (Finnhub)   │   │ (Finnhub)  │
   └────┬─────┘     └──────┬───────┘    └──────┬──────┘   └─────┬──────┘
        ▼                  ▼                   ▼                ▼
-   Neo4j KG          Neo4j vector         PostgreSQL       Finnhub API
-   (Entity rels)     index (chunks)       (financials)     (news cache)
+   Neo4j KG          Neo4j vector         Finnhub API      Finnhub API
+   (Entity rels)     index (chunks)       (financials)     (company news)
 ```
 
 The 3-config ablation (Phase E):
@@ -90,10 +90,22 @@ semigraph/
 │   │   ├── synonymy.py       # Phase B2 step 2-3 — composite-rule synonymy edges
 │   │   ├── specificity.py    # Phase B3 — Node Specificity (1/log(degree+1))
 │   │   └── embed_triples.py  # Phase C1b+ — relationship triple embedding (HippoRAG v2)
-│   └── online/
-│       ├── seed.py           # Phase C1a (Query-to-Node) + C1b+ (Query-to-Triple)
-│       ├── ppr.py            # Phase C1b — Personalized PageRank walker (GDS)
-│       └── graph_search.py   # Phase C1c — full graph_search tool (closes the loop)
+│   ├── online/
+│   │   ├── seed.py           # Phase C1a (Query-to-Node) + C1b+ (Query-to-Triple)
+│   │   ├── ppr.py            # Phase C1b — Personalized PageRank walker (GDS)
+│   │   ├── graph_search.py   # Phase C1c — full graph_search tool (closes the loop)
+│   │   ├── vector_search.py  # Phase C2 — top-k cosine over chunk_embedding index
+│   │   ├── hybrid_search.py  # Phase C2+ — RRF (k=60) fusion of vector + graph
+│   │   ├── financial_search.py # Phase C3 — Finnhub financials/quote (Protocol pattern)
+│   │   ├── news_search.py    # Phase C4 — Finnhub company news (90-day window)
+│   │   ├── _ticker.py        # Shared ticker resolution (regex + LLM expansion)
+│   │   └── query_expand.py   # LLM query expansion for ticker/entity hints
+│   └── agent/                # Phase D — LangGraph agent (Plan-then-ReAct)
+│       ├── state.py          # AgentState TypedDict (total=False)
+│       ├── graph.py          # StateGraph builder (6-node wiring)
+│       ├── nodes.py          # plan_node, tool_select_node (done) + 4 stubs
+│       ├── tools.py          # TOOL_SCHEMAS (OpenAI function-calling, 4 tools)
+│       └── prompts.py        # PLANNER + TOOL_SELECT system prompts
 ├── scripts/
 │   ├── run_offline_pipeline.py   # CLI for KG extraction
 │   ├── embed_chunks.py           # CLI for Phase B1
@@ -243,9 +255,9 @@ The pipeline is **idempotent**: re-running skips chunks/entities that already ha
 | Embedding model | `BAAI/bge-base-en-v1.5` (768-dim, MTEB 63.5, ~1.5 GB RAM) |
 | Knowledge graph | Neo4j 5.26 Community + APOC + GDS (local Docker) |
 | Vector retrieval | Neo4j vector index (HNSW + cosine) |
-| Agent orchestration | LangChain + LangGraph (Phase D — planned) |
-| Numeric data | PostgreSQL + SEC XBRL Frames API (Phase C3 — planned) |
-| News | Finnhub API + cached embeddings (Phase C4 — planned) |
+| Agent orchestration | LangChain + LangGraph (Phase D — plan + tool-select nodes done) |
+| Numeric data | Finnhub API (financials/quote) — Phase C3/F.v1 done; PostgreSQL + XBRL migration deferred (F.v2) |
+| News | Finnhub company-news API + LLM ticker resolution (Phase C4 — done) |
 | Data models | Pydantic v2 |
 | String matching | rapidfuzz (synonymy hybrid scoring) |
 | Concurrency | ThreadPoolExecutor with tenacity retry |
@@ -281,15 +293,20 @@ The pipeline is **idempotent**: re-running skips chunks/entities that already ha
 - [x] **C1b** `run_ppr` — Personalized PageRank via GDS named projection ([ppr.py](src/semigraph/online/ppr.py))
 - [x] **C1b+** `query_to_triple_seeds` — Query-to-Triple linker (HippoRAG v2 Table 4: +12.5% R@5 over Query-to-Node) via in-memory triple cosine search ([seed.py](src/semigraph/online/seed.py))
 - [x] **C1c** `graph_search` — closes the tool: alias clustering (SYNONYM_OF *0..2) → cluster-aware chunk mapping (EXISTS dedup) → SUM(PPR mass) aggregation. Validated 17/17 (deterministic, no dup chunks, provenance intact) on diverse query set. ([graph_search.py](src/semigraph/online/graph_search.py))
-- [ ] **C2** `vector_search` — top-k chunks via Neo4j vector index (baseline for ablation)
-- [ ] **C3** `financial_query` — PostgreSQL + SEC XBRL ingestion
-- [ ] **C4** `news_search` — Finnhub fetch + cached embeddings
+- [x] **C2** `vector_search` — top-k chunks via Neo4j vector index (baseline for ablation) ([vector_search.py](src/semigraph/online/vector_search.py))
+- [x] **C2+** `hybrid_search` — RRF (k=60) fusion of vector + graph ([hybrid_search.py](src/semigraph/online/hybrid_search.py))
+- [x] **C3** `financial_search` — Finnhub direct API (financials/quote), Protocol-backed; PostgreSQL+XBRL migration deferred to **F.v2** ([financial_search.py](src/semigraph/online/financial_search.py))
+- [x] **C4** `news_search` — Finnhub company-news (90-day window, headline/full depth) + LLM ticker resolution via shared `_ticker` module ([news_search.py](src/semigraph/online/news_search.py))
 
-### Phase D — Agent Core (planned)
+### Phase D — Agent Core (WIP)
 
-- [ ] LangGraph state machine + ReAct loop
-- [ ] Tool routing logic (query → which of the 4 tools)
-- [ ] Reflection layer (verify answer against retrieved evidence)
+LangGraph **Plan-then-ReAct** state machine — 6 nodes (plan → tool_select → execute → observe → reflect → synthesize).
+
+- [x] **D.1** State machine skeleton + `AgentState` TypedDict ([state.py](src/semigraph/agent/state.py), [graph.py](src/semigraph/agent/graph.py))
+- [x] **D.2** `plan_node` — decompose query into ≤3 atomic subqueries (JSON, fallback-guarded)
+- [x] **D.3** `tool_select_node` — OpenAI function-calling router over 4 tools (`ChatOpenAI.bind_tools`, auto mode — DeepSeek thinking mode rejects forced `tool_choice`); routing probe 5/5
+- [ ] **D.4–D.8** execute → observe → reflect → synthesize + conditional edges (ReAct loop + reflection, hard-limit 3 rounds)
+- [ ] **D.9–D.13** `run_agent()` API, Streamlit agent mode, router-accuracy probe, unit tests
 
 ### Phase E — Evaluation (planned)
 
