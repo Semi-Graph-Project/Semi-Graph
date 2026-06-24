@@ -168,13 +168,16 @@ def process_filing(
     workers: int = 8,
     cfg: Optional[Config] = None,
     metrics_sink: Optional[list] = None,
+    overwrite: bool = True,
 ) -> FilingResult:
     """
     Process a single filing end-to-end. Parallel at chunk level.
 
     Reads sections from data/processed/<ticker>/FY<year>-<type>/Item_*.md ,
     chunks them, runs extract_chunk concurrently in `workers` threads, and
-    pushes each result into Neo4j via KGStore.
+    pushes each result into Neo4j via KGStore. When `overwrite=True`, any
+    previous graph state for the same filing is removed first so reruns stay
+    idempotent at the filing level.
     """
     cfg = cfg or get_config()
     filing_key = _filing_key(ticker, fiscal_year, filing_type)
@@ -219,6 +222,8 @@ def process_filing(
     llm = get_llm()
 
     try:
+        if overwrite:
+            store.reset_filing(ticker, fiscal_year, filing_type)
         store.ensure_filing(ticker, fiscal_year, filing_type)
 
         t0 = time.time()

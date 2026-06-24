@@ -130,6 +130,7 @@ def main():
         t0 = time.time()
 
         store = KGStore(driver=driver)
+        store.reset_filing(args.ticker, args.fiscal_year, "10-K")
         store.ensure_filing(args.ticker, args.fiscal_year, "10-K")
 
         totals = {"nodes": 0, "relationships": 0}

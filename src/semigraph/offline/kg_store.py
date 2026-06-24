@@ -104,6 +104,73 @@ class KGStore:
         if self._owns_driver:
             self.driver.close()
 
+    def reset_filing(
+        self, ticker: str, fiscal_year: str, filing_type: str = "10-K"
+    ) -> None:
+        """Remove every graph element previously written for one filing.
+
+        This makes reruns idempotent at the filing level: old chunks, section
+        nodes, provenance edges, and chunk-scoped domain relationships are
+        cleared before the filing is written again. Shared Entity nodes are
+        pruned only when they no longer have any MENTIONS provenance left.
+        """
+        doc_key = _doc_key(ticker, fiscal_year, filing_type)
+
+        with self.driver.session() as session:
+            def _tx(tx):
+                row = tx.run(
+                    """
+                    MATCH (s:Section {doc_key: $doc_key})-[:HAS_CHUNK]->(c:Chunk)
+                    RETURN collect(DISTINCT c.chunk_id) AS chunk_ids
+                    """,
+                    doc_key=doc_key,
+                ).single()
+
+                chunk_ids = [cid for cid in (row["chunk_ids"] or []) if cid]
+
+                if chunk_ids:
+                    tx.run(
+                        """
+                        MATCH ()-[r]->()
+                        WHERE r.source_chunk IN $chunk_ids
+                        DELETE r
+                        """,
+                        chunk_ids=chunk_ids,
+                    )
+                    tx.run(
+                        """
+                        MATCH (c:Chunk)
+                        WHERE c.chunk_id IN $chunk_ids
+                        DETACH DELETE c
+                        """,
+                        chunk_ids=chunk_ids,
+                    )
+
+                tx.run(
+                    """
+                    MATCH (s:Section {doc_key: $doc_key})
+                    DETACH DELETE s
+                    """,
+                    doc_key=doc_key,
+                )
+                tx.run(
+                    """
+                    MATCH (d:Document {doc_key: $doc_key})
+                    DETACH DELETE d
+                    """,
+                    doc_key=doc_key,
+                )
+
+                tx.run(
+                    """
+                    MATCH (e:Entity)
+                    WHERE NOT (e)<-[:MENTIONS]-(:Chunk)
+                    DETACH DELETE e
+                    """
+                )
+
+            session.execute_write(_tx)
+
     # ------------------------------------------------------------------
     # Provenance hierarchy: Document → Section → Chunk
     # ------------------------------------------------------------------
@@ -152,7 +219,9 @@ class KGStore:
                 c.token_estimate = $token_estimate,
                 c.section = $section_name,
                 c.ticker = $ticker,
-                c.fiscal_year = $fiscal_year
+                c.fiscal_year = $fiscal_year,
+                c.filing_type = $filing_type
+            SET c.filing_type = coalesce(c.filing_type, $filing_type)
             MERGE (s)-[:HAS_CHUNK]->(c)
             """,
             doc_key=doc_key,
@@ -163,6 +232,7 @@ class KGStore:
             token_estimate=chunk.token_estimate,
             ticker=chunk.ticker,
             fiscal_year=chunk.fiscal_year,
+            filing_type=chunk.filing_type,
         )
 
     # ------------------------------------------------------------------

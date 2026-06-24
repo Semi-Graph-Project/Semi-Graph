@@ -252,15 +252,18 @@ def phase7_verify(ticker: str) -> None:
                  "RETURN count(c) AS n, count(c.embedding) AS e"),
                 ("entities (mentioned)",
                  f"MATCH (e:Entity)-[:MENTIONS]-(c:Chunk {{ticker:'{ticker}'}}) "
-                 "RETURN count(DISTINCT e) AS n, count(e.embedding) AS e"),
+                 "WITH DISTINCT e "
+                 "RETURN count(e) AS n, count(e.embedding) AS e"),
                 ("entities w/ specificity",
                  f"MATCH (e:Entity)-[:MENTIONS]-(c:Chunk {{ticker:'{ticker}'}}) "
                  "WITH DISTINCT e "
                  "RETURN count(e) AS n, count(e.specificity) AS e"),
                 ("rels (informative w/ triple_embedding)",
-                 f"MATCH (s:Entity)-[r]->(t:Entity) "
+                 f"MATCH (c:Chunk {{ticker:'{ticker}'}}) "
+                 "WITH collect(c.chunk_id) AS chunk_ids "
+                 "MATCH (s:Entity)-[r]->(t:Entity) "
                  f"WHERE r.triple_embedding IS NOT NULL "
-                 f"  AND EXISTS {{ MATCH (s)-[:MENTIONS]-(c:Chunk {{ticker:'{ticker}'}}) }} "
+                 "  AND r.source_chunk IN chunk_ids "
                  "RETURN count(r) AS n, count(r.triple_embedding) AS e"),
             ]
             for label, q in checks:
