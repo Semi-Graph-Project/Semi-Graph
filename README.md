@@ -106,11 +106,11 @@ semigraph/
 │   │   └── query_expand.py   # LLM query expansion for ticker/entity hints
 │   └── agent/                # Phase D — LangGraph agent (Plan-then-ReAct)
 │       ├── state.py          # AgentState TypedDict (total=False)
-│       ├── graph.py          # StateGraph builder (6-node wiring)
-│       ├── nodes.py          # plan_node, tool_select_node, execute_node done; observe/reflect/synthesize pending
+│       ├── graph.py          # StateGraph builder (7-node conditional graph)
+│       ├── nodes.py          # plan/tool_select/execute/observe/reflect/advance_subquery/synthesize
 │       ├── tools.py          # TOOL_SCHEMAS + shared RETRIEVERS dispatch
 │       ├── ws.py             # LangGraph dev entrypoint
-│       └── prompts.py        # PLANNER + TOOL_SELECT system prompts
+│       └── prompts.py        # planner/router/observe/reflect/synthesize prompts
 ├── scripts/
 │   ├── pilot.py                  # End-to-end ticker onboarding + metrics + config sync
 │   ├── run_offline_pipeline.py   # CLI for KG extraction
@@ -127,7 +127,9 @@ semigraph/
 │   └── *_pilot_metrics.csv           # per-chunk pilot extraction metrics
 ├── tests/
 │   ├── test_ontology.py          # 61 unit tests, no external deps
-│   └── test_agent_nodes.py       # execute_node regression tests
+│   ├── test_agent_nodes.py       # node-level regression tests
+│   ├── test_agent_graph_phase_d.py # graph-level Phase D integration tests
+│   └── test_kg_store_reset.py    # KGStore filing reset regression tests
 ├── config/
 │   └── default.yaml              # Operational config (chunker, llm, embeddings)
 ├── docker-compose.yml            # Neo4j 5.26 + APOC + GDS local
@@ -277,14 +279,14 @@ The exact Neo4j graph counts depend on the live local database and repeated pilo
 | Embedding model | `BAAI/bge-base-en-v1.5` (768-dim, MTEB 63.5, ~1.5 GB RAM) |
 | Knowledge graph | Neo4j 5.26 Community + APOC + GDS (local Docker) |
 | Vector retrieval | Neo4j vector index (HNSW + cosine) |
-| Agent orchestration | LangChain + LangGraph (Phase D — plan + tool-select + execute nodes done) |
+| Agent orchestration | LangChain + LangGraph (Phase D — 7-node conditional loop with reflection + multi-subquery traversal) |
 | Numeric data | Finnhub API (financials/quote) — Phase C3/F.v1 done; PostgreSQL + XBRL migration deferred (F.v2) |
 | News | Finnhub company-news API + LLM ticker resolution (Phase C4 — done) |
 | Data models | Pydantic v2 |
 | String matching | rapidfuzz (synonymy hybrid scoring) |
 | Concurrency | ThreadPoolExecutor with tenacity retry |
 | Config | YAML + python-dotenv |
-| Testing | pytest unit tests (ontology + agent node regression) |
+| Testing | pytest (`tests/`) + Neo4j smoke script; 187 tests passed locally on 2026-06-25 |
 
 ---
 
@@ -321,17 +323,31 @@ The exact Neo4j graph counts depend on the live local database and repeated pilo
 - [x] **C4** `news_search` — Finnhub company-news (90-day window, headline/full depth) + LLM ticker resolution via shared `_ticker` module ([news_search.py](src/semigraph/online/news_search.py))
 - [x] **Pilot runner** — ticker onboarding wrapper with per-chunk metrics, coverage guard, specificity recompute, Neo4j verification, and config ticker sync ([pilot.py](scripts/pilot.py))
 
-### Phase D — Agent Core (WIP)
+### Phase D — Agent Core ✅ (MVP loop complete)
 
-LangGraph **Plan-then-ReAct** state machine — 6 nodes (plan → tool_select → execute → observe → reflect → synthesize).
+LangGraph **Plan-then-ReAct** state machine — 7 nodes:
 
-- [x] **D.1** State machine skeleton + `AgentState` TypedDict ([state.py](src/semigraph/agent/state.py), [graph.py](src/semigraph/agent/graph.py))
+`plan → tool_select → execute → observe → reflect`
+
+then conditionally:
+
+`reflect → tool_select` (need more evidence)
+
+`reflect → advance_subquery → tool_select` (current subquery done, more remain)
+
+`reflect → synthesize` (all subqueries done or hard cap reached)
+
+- [x] **D.1** State machine skeleton + `AgentState` TypedDict with planning / retrieval / reflection / synthesis fields ([state.py](src/semigraph/agent/state.py), [graph.py](src/semigraph/agent/graph.py))
 - [x] **D.2** `plan_node` — decompose query into ≤3 atomic subqueries (JSON, fallback-guarded)
-- [x] **D.3** `tool_select_node` — OpenAI function-calling router over 4 tools (`ChatOpenAI.bind_tools`, auto mode — DeepSeek thinking mode rejects forced `tool_choice`); routing probe 5/5
+- [x] **D.3** `tool_select_node` — OpenAI function-calling router over 4 tools, consumes `retry_query` + `reflection_feedback`
 - [x] **D.4** `execute_node` — shared retriever dispatch, flat `chunks_history`, `latest_chunks`, append-only `tool_call_log`, error-safe fallback
-- [x] **D.4 tests** — isolated execute-node regression tests for dispatch, query fallback, missing retriever, and retriever exception
-- [ ] **D.5–D.8** observe → reflect → synthesize + conditional edges (ReAct loop + reflection, hard-limit 3 rounds)
-- [ ] **D.9–D.13** `run_agent()` API, Streamlit agent mode, router-accuracy probe, end-to-end tests
+- [x] **D.5** `observe_node` — summarize latest evidence only, no-evidence fallback, append `observation_history`
+- [x] **D.6** `reflect_node` — sufficiency check for current subquery, emits `retry_query` / `reflection_feedback`, hard cap via `MAX_REFLECTION_ROUNDS = 5`
+- [x] **D.7** `advance_subquery_node` — mark current subquery complete, reset round-local fields, continue until all subqueries are processed
+- [x] **D.8** `synthesize_node` — dedupe evidence, build grounded final answer, remove invalid citations, emit `citation_map`
+- [x] **D.9** Tests — node-level regression + graph-level integration for retry loop, max-round exit, and multi-subquery traversal ([test_agent_nodes.py](tests/test_agent_nodes.py), [test_agent_graph_phase_d.py](tests/test_agent_graph_phase_d.py))
+- [x] **D.10** Live smoke — local Neo4j connectivity verified end-to-end (`scripts/test_neo4j_connection.py`)
+- [ ] **D.next** Router-quality tuning, evidence packing for synthesis, `run_agent()` API / UI integration
 
 ### Phase E — Evaluation (planned)
 
@@ -361,6 +377,7 @@ LangGraph **Plan-then-ReAct** state machine — 6 nodes (plan → tool_select �
 - `Linker_Comparison_Report.md` — Query-to-Node vs Query-to-Triple proxy-metric eval (12 queries)
 - `Coach_Phase_C1c_Entities_to_Chunks.md` — coaching guide for C1c
 - `Graph_MultiHop_Benchmark_Report.md` — current graph quality benchmark
+- `Code_Explained_Phase_D_Agent_State.md` — Phase D state / node / graph walkthrough with algorithmic example
 - `Slide_walkthroght.md` — defense presentation guide
 - `How_to_Read_FirstPrinciple_Notes.md` — meta-guide for `Code_Explained_*` / `Coach_*` notes
 
@@ -380,6 +397,8 @@ LangGraph **Plan-then-ReAct** state machine — 6 nodes (plan → tool_select �
 - **Specificity-weighted teleport** — GDS `gds.pageRank.stream` only supports uniform `sourceNodes`. The walker treats all seeds equally; specificity is used during seed selection (C1a) but not as a teleport vector. Workarounds (seed duplication, custom Cypher PPR) are deferred to ablation experiments.
 - **Intersection bias in `graph_search`** — chunks that mention many distinct PPR clusters (broad coverage) outrank chunks that go deep on a single entity. Query "AMD" returns all-NVDA chunks (NVDA filings mention AMD + Intel + suppliers, summing more cluster scores) instead of AMD-specific chunks. This is intentional design (multi-hop signal) but reduces single-entity recall. Mitigation deferred to Phase E ablation: re-rank top chunks with query↔chunk cosine to recover specificity.
 - **Off-corpus queries don't short-circuit** — `query_to_triple_seeds` accepts any triple with cosine ≥ 0.6. Random text like `"qwerty zzz xyz"` can still match one triple loosely → graph_search returns 5 chunks. Agent layer (Phase D) is the right place to detect this — e.g. avg seed similarity < threshold → route to `news_search` or refuse.
+- **Tool-router bias on `latest` financial queries** — current router prompt prioritizes time markers like `"latest"` before numeric intent, so queries such as `"latest annual revenue and gross margin"` can route to `news` first even though the better source is `financial_search`. Reflection often recovers in later rounds, but it costs latency and can add irrelevant chunks.
+- **Synthesis context cap** — `_format_chunks_for_synthesis()` currently keeps the first 8 deduped chunks from `chunks_history`. If irrelevant chunks arrive early and financial/news evidence arrives later, the final answer can omit facts that were actually retrieved. A later fix should rank or bucket evidence per subquery before packing context.
 - **GDS deprecations** — `id(n)` (use `elementId`) and `gds.graph.project.cypher` (use `gds.graph.project` aggregation form) emit warnings on Neo4j 5.26; both still functional. Migration tracked as future work.
 
 ---
@@ -389,6 +408,9 @@ LangGraph **Plan-then-ReAct** state machine — 6 nodes (plan → tool_select �
 ```bash
 # Tests (no external deps)
 pytest tests/ -v
+
+# Agent-only regression/integration
+pytest tests/test_agent_nodes.py tests/test_agent_graph_phase_d.py -v
 
 # Run a specific test
 pytest tests/test_ontology.py::TestGraphNode -v
@@ -401,6 +423,9 @@ docker compose logs -f neo4j # tail logs
 
 # Connectivity smoke test
 python scripts/test_neo4j_connection.py
+
+# Draw current LangGraph wiring
+python -c "from semigraph.agent.graph import build_agent; print(build_agent().get_graph().draw_ascii())"
 
 # Inspect graph
 docker exec semigraph-neo4j cypher-shell -u neo4j -p $NEO4J_PASSWORD \
