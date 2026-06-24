@@ -8,7 +8,11 @@ Senior thesis project — King Mongkut's University of Technology North Bangkok 
 
 ## Overview
 
-SemiGraph supports fundamental analysis of semiconductor stocks (NVDA / AMD / MU / ASML) by routing queries to four heterogeneous data sources through an agent. Each source plays to its strength:
+SemiGraph supports fundamental analysis of semiconductor stocks by routing queries to heterogeneous data sources through an agent. The thesis core remains NVDA / AMD / MU / ASML, while the current pilot corpus has expanded through the reusable onboarding runner in `scripts/pilot.py`.
+
+Current config corpus tickers: AMAT, AMD, AMKR, AVGO, COHR, INTC, KLAC, LRCX, MU, NVDA, QCOM, RMBS, TXN.
+
+Each source plays to its strength:
 
 ```
                        User Query
@@ -16,7 +20,7 @@ SemiGraph supports fundamental analysis of semiconductor stocks (NVDA / AMD / MU
                            ▼
                     ┌──────────────┐
                     │  Agent       │  (LangGraph + ReAct + Reflection)
-                    │  DeepSeek-V3 │
+                    │  DeepSeek    │
                     └──────┬───────┘
                            │ routes via tool selection
         ┌──────────────────┼──────────────────┬─────────────────┐
@@ -103,10 +107,12 @@ semigraph/
 │   └── agent/                # Phase D — LangGraph agent (Plan-then-ReAct)
 │       ├── state.py          # AgentState TypedDict (total=False)
 │       ├── graph.py          # StateGraph builder (6-node wiring)
-│       ├── nodes.py          # plan_node, tool_select_node (done) + 4 stubs
-│       ├── tools.py          # TOOL_SCHEMAS (OpenAI function-calling, 4 tools)
+│       ├── nodes.py          # plan_node, tool_select_node, execute_node done; observe/reflect/synthesize pending
+│       ├── tools.py          # TOOL_SCHEMAS + shared RETRIEVERS dispatch
+│       ├── ws.py             # LangGraph dev entrypoint
 │       └── prompts.py        # PLANNER + TOOL_SELECT system prompts
 ├── scripts/
+│   ├── pilot.py                  # End-to-end ticker onboarding + metrics + config sync
 │   ├── run_offline_pipeline.py   # CLI for KG extraction
 │   ├── embed_chunks.py           # CLI for Phase B1
 │   ├── embed_nodes.py            # CLI for Phase B2 step 1
@@ -117,9 +123,11 @@ semigraph/
 │   └── test_graph_search.py      # End-to-end validation of graph_search (17 queries)
 ├── analytics/                # Reports from validation scripts (Markdown)
 │   ├── linker_comparison.md          # compare_linkers.py output
-│   └── graph_search_validation.md    # test_graph_search.py output
+│   ├── graph_search_validation.md    # test_graph_search.py output
+│   └── *_pilot_metrics.csv           # per-chunk pilot extraction metrics
 ├── tests/
-│   └── test_ontology.py          # 61 unit tests, no external deps
+│   ├── test_ontology.py          # 61 unit tests, no external deps
+│   └── test_agent_nodes.py       # execute_node regression tests
 ├── config/
 │   └── default.yaml              # Operational config (chunker, llm, embeddings)
 ├── docker-compose.yml            # Neo4j 5.26 + APOC + GDS local
@@ -168,7 +176,7 @@ Tx log policy is set aggressive in `docker-compose.yml` — logs cap at ~50 MB i
 ### 4. Verify
 
 ```bash
-pytest tests/ -v               # 61 unit tests, ~0.1s
+pytest tests/ -v               # unit tests, no external services
 python scripts/test_neo4j_connection.py   # smoke test connectivity
 ```
 
@@ -177,6 +185,13 @@ python scripts/test_neo4j_connection.py   # smoke test connectivity
 ## Running the Offline Pipeline
 
 ```bash
+# 0. Pilot runner (recommended for onboarding a new ticker end-to-end)
+python scripts/pilot.py --ticker KLAC --workers 8
+#    Use existing raw/processed files but re-run extraction + embeddings
+python scripts/pilot.py --ticker KLAC --skip-download --skip-preprocess
+#    Sync config/default.yaml tickers from Neo4j only
+python scripts/pilot.py --sync-only
+
 # 1. Ingest + preprocess (downloads from SEC EDGAR)
 python scripts/test_e2e_ingest_preprocess.py
 
@@ -214,36 +229,43 @@ python scripts/compare_linkers.py        # Query-to-Node vs Query-to-Triple on 1
 python scripts/test_graph_search.py      # graph_search() end-to-end on 17 queries
 ```
 
-The pipeline is **idempotent**: re-running skips chunks/entities that already have an embedding, and the checkpoint file (`data/processed/.checkpoint.json`) marks completed filings.
+The embedding/checkpoint steps are **rerun-safe**: re-running skips chunks/entities that already have embeddings, and `data/processed/.checkpoint.json` marks completed filings. If extraction logic, chunk IDs, or ontology output changes, clear the intended ticker/filing scope before re-ingesting so stale graph evidence does not remain beside the new run.
+
+`scripts/pilot.py` is the preferred onboarding wrapper for new tickers: it downloads the latest three 10-K filings, preprocesses sections, runs KG extraction, embeds chunks/entities/triples, recomputes specificity, verifies Neo4j counts, writes `analytics/{ticker}_pilot_metrics.csv`, then syncs `config/default.yaml` tickers from the graph.
 
 ---
 
-## Current Graph Snapshot (9 filings)
+## Current Corpus Snapshot
 
 | Asset | Count | Notes |
 |---|---|---|
-| Documents | 9 | NVDA × 3, AMD × 3, MU × 3 (FY2023–2026) |
-| Sections | 27 | Item 1, 1A, 7 per filing |
-| Chunks | 528 | 4,500 chars / 600 overlap |
-| **Entities** | **3,620** | post-MERGE, after pronoun cleanup |
-| **Domain rels** | **4,290** | 22 distinct types |
-| Provenance rels | ~7,700 | MENTIONS, HAS_CHUNK, HAS_SECTION |
-| **SYNONYM_OF edges** | **98** | composite rule scoring (legal_suffix, acronym, plural, semantic) |
-| Chunk embeddings | 528 × 768 | BAAI/bge-base-en-v1.5, L2-normalized |
-| Entity embeddings | 3,620 × 768 | same model |
-| **Triple embeddings** | **4,278 × 768** | `"<head> <rel humanized> <tail>"` on informative rels (HippoRAG v2) |
-| Vector indexes | 2 | `chunk_embedding`, `entity_embedding` (cosine + HNSW). Triple search is in-memory numpy (Neo4j requires explicit `:TYPE` per index — 21 indexes not worth it at this scale). |
-| **Node specificity** | **3,620** | `1/log(degree+1)`, range [0.158, 1.443] |
-| **Disk footprint** | **~103 MB** | graph data + tx logs + 3 embedding layers + GDS metadata |
+| Config corpus | 13 tickers | AMAT, AMD, AMKR, AVGO, COHR, INTC, KLAC, LRCX, MU, NVDA, QCOM, RMBS, TXN |
+| Pilot metric files | 9 tickers | AMAT, AMKR, AVGO, COHR, KLAC, LRCX, QCOM, RMBS, TXN |
+| Pilot ticker-year runs | 27 | latest 3 filings per pilot ticker |
+| Pilot chunks extracted | 1,429 | all rows in `analytics/*_pilot_metrics.csv` are `status=ok` |
+| KLAC pilot | 202 chunks | FY2023, FY2024, FY2025; latest downloaded KLAC filing in this run is not FY2026 |
+| Original baseline snapshot | 9 filings | NVDA × 3, AMD × 3, MU × 3; previous measured graph baseline before pilot expansion |
 
-### Multi-hop benchmark (5/5 pass)
+The exact Neo4j graph counts depend on the live local database and repeated pilot runs. Treat the CSV counts above as extraction-run metrics, not de-duplicated graph totals.
+
+### Last Measured Graph Baseline (9 filings)
+
+| Asset | Count | Notes |
+|---|---|---|
+| Documents | 9 | NVDA × 3, AMD × 3, MU × 3 |
+| Chunks | 528 | 4,500 chars / 600 overlap |
+| Entities | 3,620 | post-MERGE, after pronoun cleanup |
+| Domain rels | 4,290 | 22 distinct types |
+| SYNONYM_OF edges | 98 | composite rule scoring |
+| Triple embeddings | 4,278 × 768 | informative relationships only |
+
+### Retrieval Benchmarks
 
 | Metric | Result |
 |---|---|
-| Avg shortest path | 3.16 hops (cross-type) |
-| Cross-filing bridges | 13 universal + 91 strong (≥6 filings) |
-| Defense queries (slides 19-21) | 4/4 pass with ≥3 results each |
-| Synonym expansion impact | AMD reach +34%, NVIDIA +15% |
+| Synthesized dev set | Graph Hit@5 38/50 vs Vector Hit@5 33/50; Graph Avg Recall@5 0.492 vs Vector 0.369 |
+| Holdout set | Hybrid Avg Recall@5 0.450, Graph 0.420, Vector 0.390 |
+| Linker comparison | Query-to-Triple improves seed coverage but can increase hub leakage; Query-to-Node is often cleaner |
 
 ---
 
@@ -251,18 +273,18 @@ The pipeline is **idempotent**: re-running skips chunks/entities that already ha
 
 | Layer | Technology |
 |---|---|
-| LLM (extraction + agent) | DeepSeek-V3 (`deepseek-chat`) via OpenAI-compatible API |
+| LLM (extraction + agent) | DeepSeek (`deepseek-v4-flash` in `config/default.yaml`) via OpenAI-compatible API |
 | Embedding model | `BAAI/bge-base-en-v1.5` (768-dim, MTEB 63.5, ~1.5 GB RAM) |
 | Knowledge graph | Neo4j 5.26 Community + APOC + GDS (local Docker) |
 | Vector retrieval | Neo4j vector index (HNSW + cosine) |
-| Agent orchestration | LangChain + LangGraph (Phase D — plan + tool-select nodes done) |
+| Agent orchestration | LangChain + LangGraph (Phase D — plan + tool-select + execute nodes done) |
 | Numeric data | Finnhub API (financials/quote) — Phase C3/F.v1 done; PostgreSQL + XBRL migration deferred (F.v2) |
 | News | Finnhub company-news API + LLM ticker resolution (Phase C4 — done) |
 | Data models | Pydantic v2 |
 | String matching | rapidfuzz (synonymy hybrid scoring) |
 | Concurrency | ThreadPoolExecutor with tenacity retry |
 | Config | YAML + python-dotenv |
-| Testing | pytest (61 tests, 0 external deps) |
+| Testing | pytest unit tests (ontology + agent node regression) |
 
 ---
 
@@ -272,7 +294,7 @@ The pipeline is **idempotent**: re-running skips chunks/entities that already ha
 
 - [x] Config system + Neo4j/LLM/embedding factories
 - [x] Ontology (FinReflectKG: 24 entity types, 29 rel types)
-- [x] SEC EDGAR ingest + preprocess (9 filings)
+- [x] SEC EDGAR ingest + preprocess (9-filing baseline + pilot onboarding path)
 - [x] Chunker (token-aware, 4,500/600)
 - [x] **KG extraction** — single-call DeepSeek (entities + relationships in one call)
 - [x] **KG store** — idempotent MERGE with APOC dynamic relationship type
@@ -282,12 +304,12 @@ The pipeline is **idempotent**: re-running skips chunks/entities that already ha
 
 ### Phase B — Embeddings + Synonymy + Specificity ✅
 
-- [x] **B1** Chunk embeddings + Neo4j vector index (528 chunks, ~5 min run)
-- [x] **B2** Entity embeddings (3,620 entities, ~80s run)
+- [x] **B1** Chunk embeddings + Neo4j vector index (528-chunk baseline, ~5 min run)
+- [x] **B2** Entity embeddings (3,620-entity baseline, ~80s run)
 - [x] **B2** Synonymy edges via 4 composite rules (legal_suffix, acronym, plural, semantic + digit gate)
 - [x] **B3** Node Specificity (`1/log(degree+1)`) — range [0.158, 1.443], single Cypher write
 
-### Phase C — Online Tools (WIP)
+### Phase C — Online Tools ✅
 
 - [x] **C1a** `query_to_seeds` — Query-to-Node linker via `entity_embedding` index ([seed.py](src/semigraph/online/seed.py))
 - [x] **C1b** `run_ppr` — Personalized PageRank via GDS named projection ([ppr.py](src/semigraph/online/ppr.py))
@@ -297,6 +319,7 @@ The pipeline is **idempotent**: re-running skips chunks/entities that already ha
 - [x] **C2+** `hybrid_search` — RRF (k=60) fusion of vector + graph ([hybrid_search.py](src/semigraph/online/hybrid_search.py))
 - [x] **C3** `financial_search` — Finnhub direct API (financials/quote), Protocol-backed; PostgreSQL+XBRL migration deferred to **F.v2** ([financial_search.py](src/semigraph/online/financial_search.py))
 - [x] **C4** `news_search` — Finnhub company-news (90-day window, headline/full depth) + LLM ticker resolution via shared `_ticker` module ([news_search.py](src/semigraph/online/news_search.py))
+- [x] **Pilot runner** — ticker onboarding wrapper with per-chunk metrics, coverage guard, specificity recompute, Neo4j verification, and config ticker sync ([pilot.py](scripts/pilot.py))
 
 ### Phase D — Agent Core (WIP)
 
@@ -305,8 +328,10 @@ LangGraph **Plan-then-ReAct** state machine — 6 nodes (plan → tool_select �
 - [x] **D.1** State machine skeleton + `AgentState` TypedDict ([state.py](src/semigraph/agent/state.py), [graph.py](src/semigraph/agent/graph.py))
 - [x] **D.2** `plan_node` — decompose query into ≤3 atomic subqueries (JSON, fallback-guarded)
 - [x] **D.3** `tool_select_node` — OpenAI function-calling router over 4 tools (`ChatOpenAI.bind_tools`, auto mode — DeepSeek thinking mode rejects forced `tool_choice`); routing probe 5/5
-- [ ] **D.4–D.8** execute → observe → reflect → synthesize + conditional edges (ReAct loop + reflection, hard-limit 3 rounds)
-- [ ] **D.9–D.13** `run_agent()` API, Streamlit agent mode, router-accuracy probe, unit tests
+- [x] **D.4** `execute_node` — shared retriever dispatch, flat `chunks_history`, `latest_chunks`, append-only `tool_call_log`, error-safe fallback
+- [x] **D.4 tests** — isolated execute-node regression tests for dispatch, query fallback, missing retriever, and retriever exception
+- [ ] **D.5–D.8** observe → reflect → synthesize + conditional edges (ReAct loop + reflection, hard-limit 3 rounds)
+- [ ] **D.9–D.13** `run_agent()` API, Streamlit agent mode, router-accuracy probe, end-to-end tests
 
 ### Phase E — Evaluation (planned)
 
@@ -349,7 +374,7 @@ LangGraph **Plan-then-ReAct** state machine — 6 nodes (plan → tool_select �
 
 ## Known Limitations
 
-- **ASML** files Form 20-F (foreign private issuer), not 10-K. Section patterns don't apply — requires a separate 20-F parser. Excluded from current 9-filing corpus.
+- **ASML** files Form 20-F (foreign private issuer), not 10-K. Section patterns don't apply — requires a separate 20-F parser before it can join the 10-K-only pilot corpus.
 - **AMD / MU Item 10–11** use "incorporation by reference" to proxy statement (DEF 14A). Executive data is not embedded in the 10-K body — extraction yields only the reference sentence.
 - **Synonymy at scale** — composite rules tested on 977 entities (subset of 3,620 after type filter). At 28-company scale, audit `--dry-run` output before writing edges; stock-ticker style abbreviations (e.g. `qcom` ↔ `qualcomm`) may not satisfy the strict acronym rule.
 - **Specificity-weighted teleport** — GDS `gds.pageRank.stream` only supports uniform `sourceNodes`. The walker treats all seeds equally; specificity is used during seed selection (C1a) but not as a teleport vector. Workarounds (seed duplication, custom Cypher PPR) are deferred to ablation experiments.
