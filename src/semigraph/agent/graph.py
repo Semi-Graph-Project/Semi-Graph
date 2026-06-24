@@ -1,7 +1,16 @@
 from langgraph.graph import StateGraph, END, START
 
 from semigraph.agent.state import AgentState
-from semigraph.agent.nodes import plan_node, tool_select_node, execute_node, observe_node, reflect_node, synthesize_node
+from semigraph.agent.nodes import (
+    _route_after_reflect,
+    advance_subquery_node,
+    execute_node,
+    observe_node,
+    plan_node,
+    reflect_node,
+    synthesize_node,
+    tool_select_node,
+)
 
 
 
@@ -18,6 +27,7 @@ def build_agent():
     workflow.add_node("execute", execute_node)
     workflow.add_node("observe", observe_node)
     workflow.add_node("reflect", reflect_node)
+    workflow.add_node("advance_subquery", advance_subquery_node)
     workflow.add_node("synthesize", synthesize_node)
 
     workflow.add_edge(START, "plan")
@@ -25,7 +35,16 @@ def build_agent():
     workflow.add_edge("tool_select", "execute")
     workflow.add_edge("execute", "observe")
     workflow.add_edge("observe", "reflect")
-    workflow.add_edge("reflect", "synthesize")
+    workflow.add_conditional_edges(
+        "reflect",
+        _route_after_reflect,
+        {
+            "advance_subquery": "advance_subquery",
+            "tool_select": "tool_select",
+            "synthesize": "synthesize",
+        },
+    )
+    workflow.add_edge("advance_subquery", "tool_select")
     workflow.add_edge("synthesize", END)
 
     graph = workflow.compile()

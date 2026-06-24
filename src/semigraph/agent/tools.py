@@ -1,22 +1,25 @@
-"""
-Sub-step C2: เขียน TOOL_SCHEMAS ใน tools.py
-ไฟล์ที่จะสร้าง: src/semigraph/agent/tools.py (ใหม่)
+from __future__ import annotations
 
-สิ่งที่ต้องเขียน:
+from typing import Callable
 
-ตัวแปร module-level TOOL_SCHEMAS: list[dict] — 4 schemas (vector / graph / financial / news)
-แต่ละ schema มี shape OpenAI function calling: {"type": "function", "function": {"name", "description", "parameters"}}
-name ต้องตรง RETRIEVERS key เป๊ะ → ใช้ "vector", "graph", "financial", "news" (ดู Constraint #2) — อย่า ใช้ vector_search
-description = เอามาจาก plan §Tool Select (เขียนละเอียดไว้แล้ว) — นี่คือสิ่งที่ LLM ใช้ตัดสินใจ ยิ่งคม router accuracy ยิ่งสูง
-parameters = {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]} — แค่ query พอ (Constraint #3)
-ทำไมแบบนี้: name คือสะพานเชื่อม D.3 → D.4. ถ้า name ≠ RETRIEVERS key, D.4 ต้องมี mapping table มาแปลอีกชั้น = จุดพังเพิ่ม. ตั้งชื่อให้ตรงตั้งแต่ต้น = zero mapping
-
-Counterfactual: ถ้าใส่ top_k_chunks ใน required → LLM ต้องเดาตัวเลข chunk ทุกครั้ง (มันไม่รู้ context ว่าควร 5 หรือ 10) → คุณจะได้ค่ามั่วๆ. ปล่อยให้ D.4 ใส่ default=5 เองดีกว่า
+from semigraph.online.financial_search import financial_search
+from semigraph.online.graph_search import graph_search
+from semigraph.online.hybrid_search import hybrid_search
+from semigraph.online.news_search import news_search
+from semigraph.online.vector_search import vector_search
 
 
+DEFAULT_TOP_K = 5
 
-
-"""
+# Shared retrieval dispatch for the agent layer. All retrievers return the
+# same 6-key chunk contract, so execute_node can call them uniformly.
+RETRIEVERS: dict[str, Callable[..., list[dict]]] = {
+    "vector": vector_search,
+    "graph": graph_search,
+    "hybrid": hybrid_search,
+    "financial": financial_search,
+    "news": news_search,
+}
 
 
 TOOL_SCHEMAS: list[dict] = [
