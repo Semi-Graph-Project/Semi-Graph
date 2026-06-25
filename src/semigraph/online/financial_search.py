@@ -300,7 +300,7 @@ def financial_search(
     Three early-exit guards keep API calls cheap and false-positive-free:
       1. Empty / intent-less query → []
       2. No corpus ticker resolved (regex + optional LLM expansion both empty)
-         → [] (Finnhub free tier is US-only and the financial tool is scoped
+         [] (Finnhub free tier is US-only and the financial tool is scoped
          to the 10-company semiconductor corpus)
       3. Missing API key → single error chunk (graceful, not exception)
 

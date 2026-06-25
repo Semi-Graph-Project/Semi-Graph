@@ -78,3 +78,5 @@ if __name__ == "__main__":
             print(f"  #{i}  score={ch['score']:.3f}  "
                   f"[{ch['ticker']} FY{ch['fiscal_year']} {ch['section']}]")
             print(f"      └─ {preview}...")
+
+        print("RAW:", vector_search(q, top_k_chunks=5))

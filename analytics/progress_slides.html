@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SemiGraph — Progress Update 21 May 2026</title>
+<title>SemiGraph — Progress Update 22 June 2026</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -164,15 +164,15 @@ function imgFallback(img){
   <div class="brand-mark"></div>
   <h1>Agentic GraphRAG for Semiconductor Stocks</h1>
   <p class="title-sub">SemiGraph — วิเคราะห์ปัจจัยพื้นฐานหุ้นเซมิคอนดักเตอร์</p>
-  <p class="title-meta">PROGRESS UPDATE · 22 พฤษภาคม 2026 · KMUTNB ENET-C SENIOR PROJECT</p>
+  <p class="title-meta">PROGRESS UPDATE · 22 มิถุนายน 2026 · KMUTNB ENET-C SENIOR PROJECT</p>
 </section>
 
 <!-- 2 — Architecture -->
 <section>
   <div class="eyebrow">ภาพรวม</div>
-  <h2>ระบบที่กำลังพัฒนา</h2>
+  <h2>ระบบปัจจุบันใน repo</h2>
   <img class="diagram" src="images/architecture.png" alt="System architecture" onerror="imgFallback(this)">
-  <p class="caption">รับคำถาม → Agent เลือกเครื่องมือ → ค้นข้อมูลจาก 3 ฐานข้อมูล → เรียบเรียงคำตอบพร้อมอ้างอิง</p>
+  <p class="caption">รับคำถาม → route ไปยัง vector / graph / hybrid / financial / news → LLM สรุปคำตอบพร้อม citation; agent loop ถูกวางโครงไว้แล้วด้วย LangGraph</p>
 </section>
 
 <!-- 3 — Status -->
@@ -181,19 +181,19 @@ function imgFallback(img){
   <h2>ความคืบหน้า</h2>
   <div class="two-col">
     <div class="col done">
-      <div class="col-head">เสร็จแล้ว</div>
+      <div class="col-head">พร้อมแล้ว</div>
       <ul>
-        <li>Ingestion — เอกสาร 10-K สู่ Knowledge Graph</li>
-        <li>Retrieval layer — Vector / Graph / Hybrid</li>
-        <li>Benchmark — วัดผล + ทดสอบทางสถิติ</li>
+        <li>Corpus 12 ticker · 36 เอกสาร 10-K · offline pipeline + chunking ครบ</li>
+        <li>Retrieval stack 5 tools — vector / graph / hybrid / financial / news</li>
+        <li>Benchmark, held-out script, demo CLI และ Streamlit UI</li>
       </ul>
     </div>
     <div class="col todo">
-      <div class="col-head">ขั้นถัดไป</div>
+      <div class="col-head">ยังไม่ complete</div>
       <ul>
-        <li>Finance · News tools</li>
-        <li>Agentic Layer (routing)</li>
-        <li>การประเมินผลขั้นสุดท้าย</li>
+        <li>LangGraph agent loop ทำงานจริงครบปลายทางยังไม่เสร็จ</li>
+        <li>`execute` / `observe` / `reflect` / `synthesize` ยังเป็น stub</li>
+        <li>End-to-end evaluation ของระบบ agent เต็มรูปแบบ</li>
       </ul>
     </div>
   </div>
@@ -202,121 +202,102 @@ function imgFallback(img){
 <!-- 4 — Divider 01 -->
 <section class="divider">
   <div class="divider-num">01</div>
-  <h2>Ingestion</h2>
-  <p>นำเอกสาร 10-K เข้าสู่ Knowledge Graph</p>
+  <h2>Corpus &amp; Offline</h2>
+  <p>จาก SEC EDGAR สู่ chunk และ knowledge graph</p>
 </section>
 
 <!-- 5 — Offline pipeline -->
 <section>
-  <div class="eyebrow">01 · Ingestion</div>
+  <div class="eyebrow">01 · Corpus &amp; Offline</div>
   <h2>Pipeline นำเข้าข้อมูล</h2>
   <img class="diagram" src="images/offline_pipeline.png" alt="Offline ingestion pipeline" onerror="imgFallback(this)">
-  <p class="caption">SEC EDGAR → ทำความสะอาด → ตัด chunk → สกัด entity + relation → จัดเก็บลง Neo4j</p>
+  <p class="caption">download → preprocess → extract section → chunk → สกัด entity/relation → เก็บลง Neo4j; pipeline รองรับ checkpoint และ re-run แบบไม่ทำซ้ำ</p>
 </section>
 
 <!-- 6 — Corpus result -->
 <section>
-  <div class="eyebrow">01 · Ingestion</div>
-  <h2>Knowledge Graph ที่ได้</h2>
+  <div class="eyebrow">01 · Corpus &amp; Offline</div>
+  <h2>สถานะ corpus ปัจจุบัน</h2>
   <div class="stat-row">
-    <div class="stat"><div class="stat-num">4</div><div class="stat-label">บริษัท</div></div>
-    <div class="stat"><div class="stat-num">12</div><div class="stat-label">เอกสาร 10-K</div></div>
-    <div class="stat"><div class="stat-num">742</div><div class="stat-label">chunks</div></div>
-    <div class="stat"><div class="stat-num">4,856</div><div class="stat-label">entities</div></div>
-    <div class="stat"><div class="stat-num">6,607</div><div class="stat-label">relationships</div></div>
+    <div class="stat"><div class="stat-num">12</div><div class="stat-label">tickers</div></div>
+    <div class="stat"><div class="stat-num">36</div><div class="stat-label">10-K filings</div></div>
+    <div class="stat"><div class="stat-num">1,982</div><div class="stat-label">chunks</div></div>
+    <div class="stat"><div class="stat-num">3</div><div class="stat-label">target sections</div></div>
+    <div class="stat"><div class="stat-num">5</div><div class="stat-label">retrievers</div></div>
   </div>
-  <p class="caption">บริษัทในขอบเขต: NVDA · AMD · MU · INTC (ย้อนหลัง 3 ปีงบประมาณ) — โครงสร้าง ontology อ้างอิง FinReflectKG: 24 ชนิด entity · 29 ชนิดความสัมพันธ์</p>
+  <p class="caption">ticker ใน `config/default.yaml`: AMAT · AMD · AMKR · AVGO · INTC · KLAC · LRCX · MU · NVDA · QCOM · RMBS · TXN — ใช้ Item 1 / 1A / 7 เป็น narrative sections หลัก</p>
 </section>
 
 <!-- 7 — Divider 02 -->
 <section class="divider">
   <div class="divider-num">02</div>
-  <h2>Search Tools</h2>
-  <p>เครื่องมือค้นข้อมูล 3 รูปแบบ</p>
+  <h2>Retrieval Stack</h2>
+  <p>จาก static 10-K ไปสู่คำถามเชิงตัวเลขและข่าวล่าสุด</p>
 </section>
 
-<!-- 8 — Three tools -->
+<!-- 8 — Tool stack -->
 <section>
-  <div class="eyebrow">02 · Search Tools</div>
-  <h2>เครื่องมือค้นข้อมูล 3 แบบ</h2>
+  <div class="eyebrow">02 · Retrieval Stack</div>
+  <h2>เครื่องมือค้นข้อมูลที่มีในโค้ดตอนนี้</h2>
   <div class="card-row">
     <div class="card">
       <div class="card-title">Vector Search</div>
-      <p>ค้นด้วย<strong>ความหมาย</strong>ของข้อความ — เปรียบเทียบความใกล้ของ embedding</p>
+      <p>ค้นด้วย<strong>semantic similarity</strong> จาก embedding ของ chunk — baseline สำหรับคำถามเชิงหัวข้อใน 10-K</p>
     </div>
     <div class="card">
       <div class="card-title">Graph Search</div>
-      <p>ค้นด้วย<strong>ความสัมพันธ์</strong>ใน knowledge graph — Personalized PageRank</p>
+      <p>ใช้<strong>โครงสร้างความสัมพันธ์</strong>ใน KG ผ่าน Personalized PageRank เหมาะกับคำถาม multi-hop</p>
     </div>
     <div class="card">
       <div class="card-title">Hybrid Search</div>
-      <p><strong>รวมสองแบบ</strong>ด้วยสูตร RRF — ครอบคลุมและเสถียรที่สุด</p>
+      <p><strong>รวม vector + graph</strong> ด้วย RRF เพื่อเก็บทั้ง topical match และ relational signal</p>
     </div>
   </div>
+  <div class="card-row">
+    <div class="card">
+      <div class="card-title">Financial Tool</div>
+      <p>ดึง snapshot ตัวเลขจาก<strong>Finnhub</strong> เช่น revenue, margin, P/E, quote ล่าสุด ใน schema เดียวกับ retriever อื่น</p>
+    </div>
+    <div class="card">
+      <div class="card-title">News Tool</div>
+      <p>ดึง<strong>ข่าวล่าสุด</strong>ของบริษัทใน corpus พร้อม recency score, cache option และโหมด headline / full body</p>
+    </div>
+  </div>
+  <p class="caption">ทุก tool คืนผลในรูป `{chunk_id, text, ticker, fiscal_year, section, score}` เพื่อให้สลับใช้หรือ route ผ่าน agent ได้ง่าย</p>
 </section>
 
-<!-- 9 — Divider 03 -->
-<section class="divider">
-  <div class="divider-num">03</div>
-  <h2>PPR</h2>
-  <p>Personalized PageRank — หัวใจของ Graph Search</p>
-</section>
-
-<!-- 10 — Graph retrieval engine -->
+<!-- 9 — Graph retrieval engine -->
 <section>
-  <div class="eyebrow">03 · PPR</div>
+  <div class="eyebrow">02 · Retrieval Stack</div>
   <h2>Graph Search — Personalized PageRank</h2>
   <img class="diagram" src="images/graph_ppr.png" alt="Graph retrieval engine" onerror="imgFallback(this)">
-  <p class="caption">หา entity ตั้งต้นจากคำถาม → กระจายคะแนนความเกี่ยวข้องตามเส้นความสัมพันธ์ → จัดอันดับ → แปลงกลับเป็น chunk</p>
+  <p class="caption">query → seed entities → PPR บน graph → collapse aliases → map กลับเป็น chunk; จุดแข็งคือเชื่อมคำถามไปหาหลักฐานที่ไม่ได้ใช้คำเดียวกัน</p>
 </section>
 
-<!-- 11 — Why PPR -->
+<!-- 10 — Retrieval upgrades -->
 <section>
-  <div class="eyebrow">03 · PPR</div>
-  <h2>ทำไม PPR เก่งคำถาม multi-hop</h2>
-  <p class="lead">คำตอบของคำถามที่ต้องโยงหลายชั้น มักอยู่ใน chunk ที่<strong>ไม่มีคำในคำถามปรากฏอยู่เลย</strong></p>
-  <div class="example">
-    <div class="ex-q">"ใครเป็นผู้ผลิตหน่วยความจำให้ชิป Hopper ของ NVIDIA?"</div>
-    <div class="ex-row"><span class="ex-tag bad">Vector</span> chunk ที่พูดถึง SK Hynix ไม่มีคำว่า "Hopper" — ค้นด้วยความคล้ายข้อความจึงพลาด</div>
-    <div class="ex-row"><span class="ex-tag good">Graph</span> เดินตามเส้น NVIDIA → ผู้จัดส่งหน่วยความจำ — เข้าถึงคำตอบได้</div>
-  </div>
-</section>
-
-<!-- 12 — Tuning -->
-<section>
-  <div class="eyebrow">03 · PPR</div>
-  <h2>การปรับจูน Graph Search</h2>
+  <div class="eyebrow">02 · Retrieval Stack</div>
+  <h2>สิ่งที่เพิ่มเข้ามาใน graph pipeline</h2>
   <ul class="tune-list">
-    <li><strong>Query-to-Triple linker</strong> — จับคู่คำถามกับความสัมพันธ์ (triple) ในกราฟ เพื่อหา entity ตั้งต้นที่แม่นขึ้น</li>
-    <li><strong>Damping 0.85 → 0.7</strong> — จำกัดการกระจายคะแนนให้อยู่ใกล้คำถาม เหมาะกับกราฟที่เบาบาง</li>
-    <!-- <li><strong>Specificity-weighted teleport</strong> — ทดลองแล้ว Recall ไม่ดีขึ้น (0.492 → 0.448) จึงคงค่า uniform ไว้</li> -->
+    <li><strong>Query Expansion</strong> — ให้ LLM เติม entity / ticker ที่แฝงอยู่ในคำถามก่อน embed</li>
+    <li><strong>Query-to-Triple seeds</strong> — หา triple ที่ใกล้กับคำถาม แล้วใช้ทั้ง head และ tail เป็นจุดตั้งต้น</li>
+    <li><strong>Damping 0.7</strong> — ปรับให้เหมาะกับ sparse KG และลด hub leakage</li>
+    <li><strong>SYNONYM collapse</strong> — รวม alias ของ entity ก่อนสะสมคะแนนกลับมาที่ chunk</li>
   </ul>
-  <p class="caption">การทดลองที่ผล "ไม่ดีขึ้น" ก็เป็นผลลัพธ์ที่บันทึกไว้ — เป็น ablation finding ที่อธิบายการตัดสินใจเชิงออกแบบ</p>
+  <p class="caption">`graph_search()` ตอนนี้ไม่ใช่ PPR ตรงๆ อย่างเดียว แต่เป็น pipeline เต็ม query → expansion → triple seeds → PPR → alias collapse → chunk ranking</p>
 </section>
 
-<!-- 13 — Divider 04 -->
+<!-- 11 — Divider 03 -->
 <section class="divider">
-  <div class="divider-num">04</div>
-  <h2>Benchmark</h2>
-  <p>วัดผลด้วยชุดคำถามสังเคราะห์</p>
+  <div class="divider-num">03</div>
+  <h2>Evaluation</h2>
+  <p>retrieval layer ถูกวัดผลแล้วทั้ง dev set และ held-out</p>
 </section>
 
-<!-- 14 — Benchmark method -->
+<!-- 12 — Benchmark results -->
 <section>
-  <div class="eyebrow">04 · Benchmark</div>
-  <h2>วัดผลอย่างไร</h2>
-  <ul>
-    <li><strong>50 คำถาม multi-hop</strong> สังเคราะห์ด้วย LLM — เฉลยทุกข้อตรวจสอบกับ graph จริงด้วยมือ</li>
-    <li><strong>Hit@5</strong> — ใน 5 อันดับแรกเจอคำตอบไหม · <strong>Recall@5</strong> — เจอคำตอบครบแค่ไหน</li>
-    <li><strong>ทดสอบทางสถิติ</strong> — ยืนยันว่าผลต่างเป็นของจริง ไม่ใช่ความบังเอิญ (50 ข้อยังถือว่าน้อย)</li>
-  </ul>
-  <p class="caption">มีชุด held-out อีก 10 ข้อ ล็อกไว้ ยังไม่เปิดดู — สำหรับวัดผลขั้นสุดท้ายแบบไม่ลำเอียง</p>
-</section>
-
-<!-- 15 — Benchmark results -->
-<section>
-  <div class="eyebrow">04 · Benchmark</div>
-  <h2>ผลการวัดผล — 3 รูปแบบ</h2>
+  <div class="eyebrow">03 · Evaluation</div>
+  <h2>ผลบน dev set N=50</h2>
   <table class="result">
     <thead><tr><th>รูปแบบการค้น</th><th>Hit@5</th><th>Recall@5</th></tr></thead>
     <tbody>
@@ -325,44 +306,93 @@ function imgFallback(img){
       <tr class="hl"><td>Hybrid Search (RRF)</td><td>78%</td><td>0.485</td></tr>
     </tbody>
   </table>
-  <!-- <p class="finding">Graph/Hybrid Search Beat Vector ~= 33%</p> -->
-  <p class="finding">Hybrid/Graph Search ชนะ Vector Search อย่างมีนัยสำคัญทางสถิติ — Wilcoxon p = 0.0015</p>
-  <p class="finding">Recall Beat ~= 33%</p>
+  <p class="finding">Hybrid &gt; Vector บน Recall@5 อย่างมีนัยสำคัญทางสถิติ — Wilcoxon p = 0.0015</p>
+  <p class="finding">Graph &gt; Vector บน Recall@5 เช่นกัน — Wilcoxon p = 0.028</p>
 </section>
 
-<!-- 16 — Per-type -->
+<!-- 13 — Held-out -->
 <section>
-  <div class="eyebrow">04 · Benchmark</div>
-  <h2>Graph เก่งคำถามแบบไหน</h2>
+  <div class="eyebrow">03 · Evaluation</div>
+  <h2>Held-out sanity check N=10</h2>
   <table class="result">
-    <thead><tr><th>ชนิดคำถาม</th><th>Vector R@5</th><th>Graph R@5</th><th>ผลต่าง</th></tr></thead>
+    <thead><tr><th>รูปแบบการค้น</th><th>Hit@5</th><th>Recall@5</th></tr></thead>
     <tbody>
-      <tr><td>ห่วงโซ่ผู้จัดส่ง</td><td>0.30</td><td>0.85</td><td class="pos">+0.55</td></tr>
-      <tr><td>การค้นหาบริษัทลูก</td><td>0.00</td><td>1.00</td><td class="pos">+1.00</td></tr>
-      <tr><td>ผลิตภัณฑ์ในกลุ่มธุรกิจ</td><td>0.40</td><td>1.00</td><td class="pos">+0.60</td></tr>
-      <tr><td>คำถามเชิงหัวข้อ</td><td>0.87</td><td>0.27</td><td class="neg">−0.60</td></tr>
+      <tr><td>Vector Search</td><td>7/10</td><td>0.390</td></tr>
+      <tr><td>Graph Search (PPR)</td><td>7/10</td><td>0.420</td></tr>
+      <tr class="hl"><td>Hybrid Search (RRF)</td><td>8/10</td><td>0.450</td></tr>
     </tbody>
   </table>
-  <p class="caption">Graph ชนะคำถามที่ต้องไล่ความสัมพันธ์ · Vector ยังเก่งคำถามเชิงหัวข้อตรงๆ — จึงต้องมี Hybrid รวมจุดแข็งทั้งสอง</p>
+  <p class="caption">sample ยังเล็กมาก จึงใช้เป็น sanity check มากกว่าข้อสรุปสุดท้าย แต่ทิศทางยังสอดคล้องกับ dev set ว่า hybrid ครอบคลุมที่สุด</p>
+</section>
+
+<!-- 14 — Divider 04 -->
+<section class="divider">
+  <div class="divider-num">04</div>
+  <h2>Agent &amp; Demo</h2>
+  <p>มีทั้งส่วนขยาย real-time และ skeleton ของ agent แล้ว</p>
+</section>
+
+<!-- 15 — Extensions -->
+<section>
+  <div class="eyebrow">04 · Agent &amp; Demo</div>
+  <h2>ส่วนขยายที่ใช้งานได้แล้ว</h2>
+  <div class="card-row">
+    <div class="card">
+      <div class="card-title">Financial Search</div>
+      <p>ตอบคำถามตัวเลขล่าสุด เช่น revenue, margin, ROE, market cap และ stock quote ของ ticker ใน corpus</p>
+    </div>
+    <div class="card">
+      <div class="card-title">News Search</div>
+      <p>ตอบคำถามข่าวล่าสุดด้วย Finnhub company news พร้อม recency ranking และ optional article scraping</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Demo Interfaces</div>
+      <p>มีทั้ง `scripts/demo_rag.py` และ `app.py` รองรับคำถามไทย/อังกฤษ พร้อม citation ในคำตอบ</p>
+    </div>
+  </div>
+</section>
+
+<!-- 16 — Agent status -->
+<section>
+  <div class="eyebrow">04 · Agent &amp; Demo</div>
+  <h2>LangGraph agent ตอนนี้อยู่จุดไหน</h2>
+  <div class="two-col">
+    <div class="col done">
+      <div class="col-head">มีแล้ว</div>
+      <ul>
+        <li>`plan_node` แตกคำถามเป็น 1-3 subqueries</li>
+        <li>`tool_select_node` ใช้ tool calling route ไปยัง `vector / graph / financial / news` (ยังไม่ expose `hybrid`)</li>
+        <li>`build_agent()` ประกอบ workflow `plan → tool_select → execute → observe → reflect → synthesize`</li>
+      </ul>
+    </div>
+    <div class="col todo">
+      <div class="col-head">ต้องต่อเพิ่ม</div>
+      <ul>
+        <li>`execute_node`, `observe_node`, `reflect_node`, `synthesize_node` ยังคืนค่าเปล่า</li>
+        <li>ยังไม่มี multi-round loop, memory accumulation และ citation merge</li>
+        <li>ยังไม่ใช่ end-to-end agent ที่ใช้งานจริงใน production flow</li>
+      </ul>
+    </div>
+  </div>
 </section>
 
 <!-- 17 — Next -->
 <section>
   <div class="eyebrow">ขั้นถัดไป</div>
-  <h2>แผนงานต่อไป</h2>
+  <h2>งานที่เหลือเพื่อให้คำว่า "Agentic" สมบูรณ์</h2>
   <ul class="next">
-    <li><span class="ph">C3</span> Finance tool — ตอบคำถามตัวเลขงบการเงิน (PostgreSQL)</li>
-    <li><span class="ph">C4</span> News tool — ข่าวและเหตุการณ์ล่าสุด (Finnhub)</li>
-    <li><span class="ph">D</span> Agentic Layer — routing + แตกคำถาม คือหัวใจของคำว่า "Agentic"</li>
-    <li><span class="ph">E</span> Evaluation — วัดผลระบบเต็มรูปแบบ + เปิดชุด held-out</li>
+    <li><span class="ph">D1</span> ต่อ `execute → synthesize` ให้ agent เรียก tool แล้วสรุปคำตอบหลายแหล่งได้จริง</li>
+    <li><span class="ph">D2</span> เพิ่ม loop สะท้อนผล retrieval เมื่อหลักฐานยังไม่พอ</li>
+    <li><span class="ph">E</span> ประเมิน answer quality ของ agent เต็มรูปแบบทั้งไทยและอังกฤษ</li>
+    <li><span class="ph">F2</span> ถ้าต้องรองรับหลายปีเชิงตัวเลข ค่อยแยก financial backend ไป SQL / XBRL</li>
   </ul>
 </section>
 
 <!-- 18 — Closing -->
 <section class="closing">
   <h2>สรุป</h2>
-  <p class="closing-line">ชั้น retrieval พัฒนาเสร็จและผ่านการวัดผลทางสถิติแล้ว<br>พร้อมทำ Agentic Layer</p>
-  <p class="closing-meta">SEMIGRAPH · PROGRESS UPDATE · 21 พ.ค. 2026</p>
+  <p class="closing-line">Corpus, retrieval และ real-time tools พร้อมแล้ว<br>งานหลักที่เหลือคือเชื่อม agent loop ให้ครบ end-to-end</p>
+  <p class="closing-meta">SEMIGRAPH · PROGRESS UPDATE · 22 มิ.ย. 2026</p>
 </section>
 
 </div>
