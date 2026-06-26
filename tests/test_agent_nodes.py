@@ -324,6 +324,37 @@ class TestToolSelectNode:
             in captured["messages"][1]["content"]
         )
 
+    def test_tool_select_prefers_financial_for_latest_metric_queries(
+        self, monkeypatch
+    ):
+        class FakeLLM:
+            def bind_tools(self, _schemas):
+                return self
+
+            def invoke(self, _messages):
+                return _FakeToolResponse(
+                    "news",
+                    {"query": "AMD latest FY2025 revenue and EPS"},
+                )
+
+        monkeypatch.setattr(nodes, "get_config", lambda: "cfg-sentinel")
+        monkeypatch.setattr(nodes, "get_llm", lambda cfg: FakeLLM())
+
+        state = {
+            "subqueries": ["What is AMD latest FY2025 revenue and EPS?"],
+            "current_subquery_idx": 0,
+        }
+
+        result = nodes.tool_select_node(state)
+
+        assert result["next_tool"] == {
+            "name": "financial",
+            "args": {
+                "query": "What is AMD latest FY2025 revenue and EPS?",
+                "top_k_chunks": nodes.DEFAULT_TOP_K,
+            },
+        }
+
 
 class TestReflectNode:
 
@@ -584,6 +615,7 @@ class TestSynthesizeNode:
         assert "TSMC supply risk" in result["final_answer"]
         assert result["citation_map"] == [
             {
+                "citation_index": 1,
                 "chunk_id": "c1",
                 "ticker": "AMD",
                 "fiscal_year": "2025",
@@ -591,6 +623,7 @@ class TestSynthesizeNode:
                 "text": "AMD depends on external manufacturing partners such as TSMC.",
             },
             {
+                "citation_index": 2,
                 "chunk_id": "c2",
                 "ticker": "AMD",
                 "fiscal_year": "2025",

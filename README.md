@@ -120,6 +120,8 @@ semigraph/
 │   ├── compute_specificity.py    # CLI for Phase B3 (top-hubs/top-leaves preview)
 │   ├── embed_triples.py          # CLI for Phase C1b+ (relationship triple embedding)
 │   ├── compare_linkers.py        # Proxy-metric eval: Query-to-Node vs Query-to-Triple (12 queries)
+│   ├── run_agent_e2e_probe.py    # Multi-query agent smoke test against real graph
+│   ├── run_agent_trace.py        # Colored Phase D trace runner with real LLM + CLI query
 │   └── test_graph_search.py      # End-to-end validation of graph_search (17 queries)
 ├── analytics/                # Reports from validation scripts (Markdown)
 │   ├── linker_comparison.md          # compare_linkers.py output
@@ -347,6 +349,7 @@ then conditionally:
 - [x] **D.8** `synthesize_node` — dedupe evidence, build grounded final answer, remove invalid citations, emit `citation_map`
 - [x] **D.9** Tests — node-level regression + graph-level integration for retry loop, max-round exit, and multi-subquery traversal ([test_agent_nodes.py](tests/test_agent_nodes.py), [test_agent_graph_phase_d.py](tests/test_agent_graph_phase_d.py))
 - [x] **D.10** Live smoke — local Neo4j connectivity verified end-to-end (`scripts/test_neo4j_connection.py`)
+- [x] **D.11** Trace runner — colored CLI harness for real-LLM end-to-end tracing (`scripts/run_agent_trace.py`)
 - [ ] **D.next** Router-quality tuning, evidence packing for synthesis, `run_agent()` API / UI integration
 
 ### Phase E — Evaluation (planned)
@@ -397,8 +400,6 @@ then conditionally:
 - **Specificity-weighted teleport** — GDS `gds.pageRank.stream` only supports uniform `sourceNodes`. The walker treats all seeds equally; specificity is used during seed selection (C1a) but not as a teleport vector. Workarounds (seed duplication, custom Cypher PPR) are deferred to ablation experiments.
 - **Intersection bias in `graph_search`** — chunks that mention many distinct PPR clusters (broad coverage) outrank chunks that go deep on a single entity. Query "AMD" returns all-NVDA chunks (NVDA filings mention AMD + Intel + suppliers, summing more cluster scores) instead of AMD-specific chunks. This is intentional design (multi-hop signal) but reduces single-entity recall. Mitigation deferred to Phase E ablation: re-rank top chunks with query↔chunk cosine to recover specificity.
 - **Off-corpus queries don't short-circuit** — `query_to_triple_seeds` accepts any triple with cosine ≥ 0.6. Random text like `"qwerty zzz xyz"` can still match one triple loosely → graph_search returns 5 chunks. Agent layer (Phase D) is the right place to detect this — e.g. avg seed similarity < threshold → route to `news_search` or refuse.
-- **Tool-router bias on `latest` financial queries** — current router prompt prioritizes time markers like `"latest"` before numeric intent, so queries such as `"latest annual revenue and gross margin"` can route to `news` first even though the better source is `financial_search`. Reflection often recovers in later rounds, but it costs latency and can add irrelevant chunks.
-- **Synthesis context cap** — `_format_chunks_for_synthesis()` currently keeps the first 8 deduped chunks from `chunks_history`. If irrelevant chunks arrive early and financial/news evidence arrives later, the final answer can omit facts that were actually retrieved. A later fix should rank or bucket evidence per subquery before packing context.
 - **GDS deprecations** — `id(n)` (use `elementId`) and `gds.graph.project.cypher` (use `gds.graph.project` aggregation form) emit warnings on Neo4j 5.26; both still functional. Migration tracked as future work.
 
 ---
@@ -414,6 +415,9 @@ pytest tests/test_agent_nodes.py tests/test_agent_graph_phase_d.py -v
 
 # Run a specific test
 pytest tests/test_ontology.py::TestGraphNode -v
+
+# Agent trace runner
+python scripts/run_agent_trace.py "How do KLA yield improvements at TSMC affect AMD gross margin?" --show-citations
 
 # Neo4j control
 docker compose up -d         # start

@@ -16,6 +16,50 @@ from semigraph.agent.prompts import (
 
 MAX_REFLECTION_ROUNDS = 5
 
+FINANCIAL_METRIC_PATTERNS = (
+    r"\brevenue\b",
+    r"\bgross margin\b",
+    r"\beps\b",
+    r"\bearnings per share\b",
+    r"\bnet income\b",
+    r"\boperating margin\b",
+    r"\bcash flow\b",
+    r"\bmarket cap\b",
+    r"\bdebt\b",
+    r"\bstock price\b",
+    r"\bp/e\b",
+    r"\broe\b",
+)
+
+FINANCIAL_PERIOD_PATTERNS = (
+    r"\bannual\b",
+    r"\bfiscal year\b",
+    r"\bfy\s*20\d{2}\b",
+    r"\bq[1-4]\b",
+    r"\bquarter(?:ly)?\b",
+)
+
+RECENCY_PATTERNS = (
+    r"\blatest\b",
+    r"\brecent\b",
+    r"\btoday\b",
+    r"\bthis week\b",
+    r"ข่าวล่าสุด",
+    r"เมื่อเร็ว ๆ นี้",
+)
+
+EXPLICIT_NEWS_PATTERNS = (
+    r"\bnews\b",
+    r"\bannouncement(?:s)?\b",
+    r"\bpress release(?:s)?\b",
+    r"\barticle(?:s)?\b",
+    r"\bcoverage\b",
+    r"ข่าว",
+    r"พาดหัว",
+    r"ประกาศ",
+    r"บทความ",
+)
+
 
 def plan_node(state: AgentState) -> dict:
     """
@@ -87,12 +131,17 @@ def tool_select_node(state: AgentState) -> dict:
     subquery = _get_current_subquery(state)
     retry_query = state.get("retry_query") or subquery
     reflection_feedback = state.get("reflection_feedback", "")
+    fallback_tool = (
+        "financial"
+        if _should_force_financial_tool(subquery, retry_query, reflection_feedback)
+        else "vector"
+    )
 
     fallback = {"next_tool": {
-        "name": "vector", 
+        "name": fallback_tool,
         "args": {
             "query": retry_query, 
-            "top_k_chunks": 5
+            "top_k_chunks": DEFAULT_TOP_K
             }
         }
     }
@@ -115,10 +164,21 @@ def tool_select_node(state: AgentState) -> dict:
         if not response.tool_calls or not response.tool_calls[0]["args"] or "query" not in response.tool_calls[0]["args"]:
             return fallback
 
+        selected_tool_name = response.tool_calls[0]["name"]
+        selected_tool_args = dict(response.tool_calls[0]["args"])
+
+        if (
+            _should_force_financial_tool(subquery, retry_query, reflection_feedback)
+            and selected_tool_name != "financial"
+        ):
+            selected_tool_name = "financial"
+            selected_tool_args["query"] = retry_query
+            selected_tool_args.setdefault("top_k_chunks", DEFAULT_TOP_K)
+
         return {
             "next_tool": {
-                "name": response.tool_calls[0]["name"], 
-                "args": response.tool_calls[0]["args"]
+                "name": selected_tool_name,
+                "args": selected_tool_args,
             }
         }
     except Exception as e:
@@ -388,7 +448,8 @@ def synthesize_node(state: AgentState) -> dict:
     stop_reason = _derive_overall_stop_reason(subquery_progress)
     reflection_reason = state.get("reflection_reason", "")
 
-    deduped_chunks = _dedupe_chunks_for_synthesis(chunks_history)
+    selected_chunks = _select_chunks_for_synthesis(state)
+    deduped_chunks = _dedupe_chunks_for_synthesis(selected_chunks or chunks_history)
     if not deduped_chunks:
         return {
             "final_answer": "I do not have enough evidence to answer the question.",
@@ -417,7 +478,9 @@ def synthesize_node(state: AgentState) -> dict:
         answer = _remove_invalid_citations(answer, set(citation_lookup))
         cited_indices = _extract_citation_indices(answer)
         citation_map = [
-            citation_lookup[i] for i in cited_indices if i in citation_lookup
+            {"citation_index": i, **citation_lookup[i]}
+            for i in cited_indices
+            if i in citation_lookup
         ]
         return {
             "final_answer": answer,
@@ -441,6 +504,39 @@ def _get_current_subquery(state: AgentState) -> str:
     if 0 <= current_idx < len(subqueries):
         return subqueries[current_idx]
     return state.get("original_query", "")
+
+
+def _normalize_router_text(*parts: str) -> str:
+    return re.sub(r"\s+", " ", " ".join(part for part in parts if part)).strip().lower()
+
+
+def _matches_any_pattern(text: str, patterns: tuple[str, ...]) -> bool:
+    return any(re.search(pattern, text) for pattern in patterns)
+
+
+def _has_financial_metric_intent(text: str) -> bool:
+    return _matches_any_pattern(text, FINANCIAL_METRIC_PATTERNS)
+
+
+def _has_financial_period_intent(text: str) -> bool:
+    return _matches_any_pattern(text, FINANCIAL_PERIOD_PATTERNS)
+
+
+def _has_recency_marker(text: str) -> bool:
+    return _matches_any_pattern(text, RECENCY_PATTERNS)
+
+
+def _has_explicit_news_intent(text: str) -> bool:
+    return _matches_any_pattern(text, EXPLICIT_NEWS_PATTERNS)
+
+
+def _should_force_financial_tool(*parts: str) -> bool:
+    text = _normalize_router_text(*parts)
+    if not text or _has_explicit_news_intent(text):
+        return False
+    return _has_financial_metric_intent(text) or (
+        _has_recency_marker(text) and _has_financial_period_intent(text)
+    )
 
 
 def _format_chunks_for_observation(
@@ -582,6 +678,21 @@ def _fallback_observation(
         f"Top evidence is {ticker} FY{fiscal_year} {section}: {snippet}"
     ).strip()
 
+
+def _chunk_identity_key(chunk: dict) -> tuple[str, ...]:
+    chunk_id = str(chunk.get("chunk_id") or "").strip()
+    if chunk_id:
+        return ("chunk_id", chunk_id)
+
+    return (
+        "fingerprint",
+        str(chunk.get("ticker") or ""),
+        str(chunk.get("fiscal_year") or ""),
+        str(chunk.get("section") or ""),
+        str(chunk.get("text") or ""),
+    )
+
+
 def _dedupe_chunks_for_synthesis(chunk_history: list[dict]) -> list[dict]:
     """Return chunk history with duplicate evidence removed, preserving order.
 
@@ -597,17 +708,7 @@ def _dedupe_chunks_for_synthesis(chunk_history: list[dict]) -> list[dict]:
         if not isinstance(chunk, dict):
             continue
 
-        chunk_id = str(chunk.get("chunk_id") or "").strip()
-        if chunk_id:
-            key = ("chunk_id", chunk_id)
-        else:
-            key = (
-                "fingerprint",
-                str(chunk.get("ticker") or ""),
-                str(chunk.get("fiscal_year") or ""),
-                str(chunk.get("section") or ""),
-                str(chunk.get("text") or ""),
-            )
+        key = _chunk_identity_key(chunk)
 
         if key in seen:
             continue
@@ -617,29 +718,211 @@ def _dedupe_chunks_for_synthesis(chunk_history: list[dict]) -> list[dict]:
 
     return deduped
 
+
+def _safe_int(value, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _annotate_chunk_for_synthesis(chunk: dict, batch: dict) -> dict:
+    annotated = dict(chunk)
+    annotated["_retrieval_tool"] = batch.get("tool", "")
+    annotated["_retrieval_round"] = batch.get("round")
+    annotated["_retrieval_subquery"] = batch.get("subquery", "")
+    return annotated
+
+
+def _strip_internal_chunk_keys(chunk: dict) -> dict:
+    return {
+        key: value
+        for key, value in chunk.items()
+        if not str(key).startswith("_")
+    }
+
+
+def _build_retrieval_batches(state: AgentState) -> list[dict]:
+    tool_call_log = list(state.get("tool_call_log") or [])
+    chunks_history = [
+        chunk for chunk in list(state.get("chunks_history") or [])
+        if isinstance(chunk, dict)
+    ]
+
+    if not tool_call_log:
+        if not chunks_history:
+            return []
+        return [{
+            "round": state.get("round", 0),
+            "subquery": _get_current_subquery(state),
+            "tool": (state.get("next_tool") or {}).get("name", ""),
+            "query": "",
+            "top_k_chunks": len(chunks_history),
+            "n_chunks": len(chunks_history),
+            "status": "ok",
+            "chunks": chunks_history,
+        }]
+
+    batches: list[dict] = []
+    cursor = 0
+
+    for entry in tool_call_log:
+        batch = dict(entry)
+        n_chunks = max(_safe_int(entry.get("n_chunks"), 0), 0)
+        batch_chunks: list[dict] = []
+
+        if entry.get("status") == "ok" and n_chunks:
+            next_cursor = min(cursor + n_chunks, len(chunks_history))
+            batch_chunks = chunks_history[cursor:next_cursor]
+            cursor = next_cursor
+
+        batch["chunks"] = batch_chunks
+        batches.append(batch)
+
+    if cursor < len(chunks_history):
+        batches.append({
+            "round": state.get("round", 0),
+            "subquery": _get_current_subquery(state),
+            "tool": "unknown",
+            "query": "",
+            "top_k_chunks": len(chunks_history) - cursor,
+            "n_chunks": len(chunks_history) - cursor,
+            "status": "ok",
+            "chunks": chunks_history[cursor:],
+        })
+
+    return batches
+
+
+def _get_preferred_round_for_subquery(
+    reflection_history: list[dict],
+    subquery: str,
+) -> int | None:
+    for entry in reversed(reflection_history):
+        if entry.get("subquery") != subquery:
+            continue
+        if entry.get("stop_reason") in {"sufficient", "max_rounds"}:
+            return _safe_int(entry.get("round"), 0) - 1
+
+    for entry in reversed(reflection_history):
+        if entry.get("subquery") == subquery:
+            return _safe_int(entry.get("round"), 0) - 1
+
+    return None
+
+
+def _select_chunks_for_synthesis(
+    state: AgentState,
+    max_chunks_per_subquery: int = 3,
+    min_total_chunks: int = 8,
+) -> list[dict]:
+    batches = _build_retrieval_batches(state)
+    if not batches:
+        return []
+
+    subquery_progress = _collect_subquery_progress(state)
+    ordered_subqueries = [
+        item.get("subquery", "")
+        for item in subquery_progress
+        if item.get("subquery")
+    ]
+    if not ordered_subqueries:
+        ordered_subqueries = state.get("subqueries") or [state.get("original_query", "")]
+
+    target_total = max(min_total_chunks, len(ordered_subqueries) * max_chunks_per_subquery)
+    reflection_history = list(state.get("reflection_history") or [])
+    subquery_order = {
+        subquery: idx for idx, subquery in enumerate(ordered_subqueries)
+    }
+    preferred_rounds = {
+        subquery: _get_preferred_round_for_subquery(reflection_history, subquery)
+        for subquery in ordered_subqueries
+    }
+
+    selected: list[dict] = []
+    seen_keys: set[tuple[str, ...]] = set()
+
+    def add_chunk(chunk: dict, batch: dict) -> bool:
+        key = _chunk_identity_key(chunk)
+        if key in seen_keys:
+            return False
+        seen_keys.add(key)
+        selected.append(_annotate_chunk_for_synthesis(chunk, batch))
+        return True
+
+    for subquery in ordered_subqueries:
+        candidate_batches = [
+            batch for batch in batches
+            if batch.get("subquery") == subquery and batch.get("chunks")
+        ]
+        preferred_round = preferred_rounds.get(subquery)
+        candidate_batches.sort(
+            key=lambda batch: (
+                0 if batch.get("round") == preferred_round else 1,
+                -_safe_int(batch.get("round"), -1),
+            )
+        )
+
+        picked = 0
+        for batch in candidate_batches:
+            for chunk in batch.get("chunks", []):
+                if add_chunk(chunk, batch):
+                    picked += 1
+                if picked >= max_chunks_per_subquery:
+                    break
+            if picked >= max_chunks_per_subquery:
+                break
+
+    if len(selected) >= target_total:
+        return selected[:target_total]
+
+    remaining_batches = sorted(
+        [batch for batch in batches if batch.get("chunks")],
+        key=lambda batch: (
+            0 if batch.get("round") == preferred_rounds.get(batch.get("subquery", "")) else 1,
+            subquery_order.get(batch.get("subquery", ""), len(subquery_order)),
+            -_safe_int(batch.get("round"), -1),
+        ),
+    )
+
+    for batch in remaining_batches:
+        for chunk in batch.get("chunks", []):
+            if add_chunk(chunk, batch) and len(selected) >= target_total:
+                return selected
+
+    return selected
+
+
 def _format_chunks_for_synthesis(
     chunks: list[dict],
-    max_chunks: int = 8,
+    max_chunks: int | None = None,
     max_chars: int = 2000,
 ) -> tuple[str, dict[int, dict]]:
     formatted: list[str] = []
     citation_lookup: dict[int, dict] = {}
+    selected_chunks = chunks if max_chunks is None else chunks[:max_chunks]
 
-    for i, chunk in enumerate(chunks[:max_chunks], start=1):
+    for i, chunk in enumerate(selected_chunks, start=1):
         text = str(chunk.get("text") or "").strip()
         if len(text) > max_chars:
             text = f"{text[:max_chars]}..."
 
-        formatted.append(
-            (
-                f"[{i}] chunk_id={chunk.get('chunk_id', 'UNKNOWN')}\n"
-                f"ticker={chunk.get('ticker', '')}\n"
-                f"fiscal_year={chunk.get('fiscal_year', '')}\n"
-                f"section={chunk.get('section', '')}\n"
-                f"text={text}"
-            )
-        )
-        citation_lookup[i] = chunk
+        lines = [f"[{i}] chunk_id={chunk.get('chunk_id', 'UNKNOWN')}"]
+        if chunk.get("_retrieval_subquery"):
+            lines.append(f"retrieval_subquery={chunk.get('_retrieval_subquery', '')}")
+        if chunk.get("_retrieval_tool"):
+            lines.append(f"retrieval_tool={chunk.get('_retrieval_tool', '')}")
+        if chunk.get("_retrieval_round") is not None:
+            lines.append(f"retrieval_round={chunk.get('_retrieval_round')}")
+        lines.extend([
+            f"ticker={chunk.get('ticker', '')}",
+            f"fiscal_year={chunk.get('fiscal_year', '')}",
+            f"section={chunk.get('section', '')}",
+            f"text={text}",
+        ])
+
+        formatted.append("\n".join(lines))
+        citation_lookup[i] = _strip_internal_chunk_keys(chunk)
 
     return "\n\n".join(formatted), citation_lookup
 
@@ -667,28 +950,3 @@ def _remove_invalid_citations(answer: str, valid_indices: set[int]) -> str:
     sanitized = re.sub(r"\s+([.,;:])", r"\1", sanitized)
     sanitized = re.sub(r"[ \t]{2,}", " ", sanitized)
     return sanitized.strip()
-
-
-
-
-if __name__ == "__main__":
-    # Example usage
-    state = AgentState(original_query="What are the NVDA?")
-    plan_result = plan_node(state)
-    print("Plan Result:", plan_result)
-
-    state.update(plan_result)
-    tool_select_result = tool_select_node(state)
-    print("Tool Select Result:", tool_select_result)
-
-    state.update(tool_select_result)
-    execute_result = execute_node(state)
-    print("Execute Result:", execute_result)
-    
-    state.update(execute_result)
-    observe_result = observe_node(state)
-    print("Observe Result:", observe_result)
-
-    state.update(observe_result)
-    
-    

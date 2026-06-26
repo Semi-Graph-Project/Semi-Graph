@@ -54,10 +54,11 @@ You must ALWAYS call a tool. Never reply with plain text. Never answer the quest
 Pick the single tool whose purpose best matches what the subquery needs. The tool definitions describe what each one retrieves.
 When more than one tool could apply, resolve the tie in this priority order:
 
-1. If the subquery has a time marker ("latest", "recent", "today", "this week", "ข่าวล่าสุด", "เมื่อเร็ว ๆ นี้") → news
-2. Else if it asks for a specific number (revenue, gross margin, EPS, P/E, ROE, stock price, market cap, debt, cash flow) → financial
-3. Else if it asks how named entities relate (supplier, customer, subsidiary, competitor, dependency; X → Y → Z paths) → graph
-4. Else (descriptive or narrative content: business strategy, product description, risk factors, management commentary) → vector
+1. If the subquery asks for a financial metric or filing-period fact (revenue, gross margin, EPS, annual, FY2025, fiscal year, quarter, stock price, market cap, debt, cash flow) → financial
+2. If both a financial metric/fiscal-period signal and a recency marker ("latest", "recent", "today", "this week", "ข่าวล่าสุด", "เมื่อเร็ว ๆ นี้") appear together, financial STILL wins over news unless the subquery explicitly asks for news, headlines, or announcements.
+3. Else if it explicitly asks for current events or news coverage (news, headlines, announcements, press release, ข่าว) → news
+4. Else if it asks how named entities relate (supplier, customer, subsidiary, competitor, dependency; X → Y → Z paths) → graph
+5. Else (descriptive or narrative content: business strategy, product description, risk factors, management commentary) → vector
 
 ## The query argument
 
