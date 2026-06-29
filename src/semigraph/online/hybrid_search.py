@@ -37,6 +37,7 @@ def hybrid_search(
     k_rrf: int = 60,
     w_vector: float = 1.0,
     w_graph: float = 1.0,
+    graph_use_expansion: bool = True,
     cfg: Optional[Config] = None,
 ) -> list[dict]:
     """Reciprocal Rank Fusion of vector_search and graph_search.
@@ -73,7 +74,12 @@ def hybrid_search(
         return []
 
     vec_results = vector_search(query, top_k_chunks=top_k_each, cfg=cfg)
-    gph_results = graph_search(query, top_k_chunks=top_k_each, cfg=cfg)
+    gph_results = graph_search(
+        query,
+        top_k_chunks=top_k_each,
+        use_expansion=graph_use_expansion,
+        cfg=cfg,
+    )
 
     # Accumulate per-chunk weighted RRF score.
     fused: dict[str, dict] = {}

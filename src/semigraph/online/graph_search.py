@@ -22,6 +22,7 @@ entities — the multi-hop reasoning signal we want PPR to surface.
 """
 from __future__ import annotations
 
+import re
 from typing import Optional
 
 from neo4j import Driver
@@ -31,6 +32,218 @@ from semigraph.connections import get_neo4j_driver
 from semigraph.online.ppr import run_ppr
 from semigraph.online.query_expand import expand_query
 from semigraph.online.seed import query_to_triple_seeds
+
+
+_RISK_TERMS = {
+    "affect",
+    "constraint",
+    "constraints",
+    "control",
+    "controls",
+    "depend",
+    "dependency",
+    "dependencies",
+    "dependent",
+    "exposed",
+    "exposure",
+    "geopolitical",
+    "impact",
+    "political",
+    "risk",
+    "risks",
+    "shortage",
+    "supply",
+    "taiwan",
+    "tariff",
+    "uncertainty",
+    "yield",
+}
+_BUSINESS_TERMS = {
+    "architecture",
+    "business",
+    "compete",
+    "competitor",
+    "customer",
+    "foundry",
+    "manufacture",
+    "manufactures",
+    "partner",
+    "partners",
+    "product",
+    "products",
+    "segment",
+    "segments",
+    "supplier",
+    "supplies",
+    "wafer",
+    "wafers",
+}
+_FINANCIAL_TERMS = {
+    "annual",
+    "depreciation",
+    "eps",
+    "fy",
+    "fy2023",
+    "fy2024",
+    "fy2025",
+    "gross",
+    "margin",
+    "revenue",
+    "sales",
+}
+_CONTENT_STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "between",
+    "by",
+    "did",
+    "does",
+    "do",
+    "from",
+    "has",
+    "have",
+    "how",
+    "in",
+    "is",
+    "it",
+    "its",
+    "main",
+    "of",
+    "on",
+    "offer",
+    "offers",
+    "or",
+    "product",
+    "products",
+    "that",
+    "the",
+    "their",
+    "to",
+    "what",
+    "when",
+    "where",
+    "which",
+    "who",
+    "with",
+}
+
+
+def _query_terms(query: str) -> set[str]:
+    """Lowercase token set used by lightweight retrieval intent heuristics."""
+    return set(re.findall(r"[a-z0-9]+", query.lower()))
+
+
+def _section_boosts_for_query(query: str) -> dict[str, float]:
+    """Infer section preference from the user's wording.
+
+    First-principle version: graph/PPR ranks *entities*. A chunk still needs a
+    second decision: which filing section is the right evidence container?
+    Risk wording should prefer Item_1A, business/product wording should prefer
+    Item_1, and exact financial wording should prefer Item_7 when graph is
+    called directly.
+    """
+    terms = _query_terms(query)
+    boosts: dict[str, float] = {}
+
+    if terms & _RISK_TERMS:
+        boosts["Item_1A"] = 1.35
+    if terms & _BUSINESS_TERMS:
+        boosts["Item_1"] = 1.18
+    if terms & _FINANCIAL_TERMS:
+        boosts["Item_7"] = 1.28
+
+    return boosts
+
+
+def _ticker_boosts_for_query(query: str, cfg: Optional[Config] = None) -> set[str]:
+    """Return explicit ticker mentions in the query for provenance-aware rerank."""
+    cfg = cfg or get_config()
+    known_tickers = {ticker.upper() for ticker in cfg.tickers if ticker}
+    terms = {t.upper() for t in _query_terms(query)}
+    return terms & known_tickers
+
+
+def _content_terms_for_query(query: str) -> set[str]:
+    """Query terms worth checking literally inside candidate chunk text."""
+    terms = _query_terms(query)
+    return {
+        term
+        for term in terms
+        if term not in _CONTENT_STOPWORDS and len(term) >= 3
+    }
+
+
+def _lexical_boost_for_chunk(query_terms: set[str], chunk: dict) -> float:
+    """Small boost when graph candidates contain answer-bearing query terms."""
+    if not query_terms:
+        return 1.0
+
+    haystack = " ".join(
+        str(chunk.get(key) or "")
+        for key in ("chunk_id", "ticker", "section", "text")
+    ).lower()
+    matches = sum(1 for term in query_terms if term in haystack)
+
+    return 1.0 + min(0.40, matches * 0.08)
+
+
+def _rerank_chunks_by_query_intent(
+    query: str,
+    chunks: list[dict],
+    cfg: Optional[Config] = None,
+) -> list[dict]:
+    """Apply lightweight provenance intent reranking to graph chunk candidates.
+
+    The original PPR-derived score remains the base signal. We only multiply it
+    by small, explainable boosts from query intent:
+      - section match, e.g. risk wording → Item_1A
+      - explicit ticker match, e.g. "AMD" → AMD chunks
+
+    """
+    if not chunks:
+        return []
+
+    section_boosts = _section_boosts_for_query(query)
+    ticker_boosts = _ticker_boosts_for_query(query, cfg=cfg)
+    content_terms = _content_terms_for_query(query)
+
+    reranked: list[dict] = []
+    for idx, chunk in enumerate(chunks):
+        base_score = float(chunk.get("score") or 0.0)
+        boost = 1.0
+
+        section = str(chunk.get("section") or "")
+        boost *= section_boosts.get(section, 1.0)
+
+        ticker = str(chunk.get("ticker") or "").upper()
+        if ticker in ticker_boosts:
+            boost *= 1.25
+
+        boost *= _lexical_boost_for_chunk(content_terms, chunk)
+
+        enriched = dict(chunk)
+        enriched["score"] = base_score * boost
+        enriched["_graph_base_score"] = base_score
+        enriched["_intent_boost"] = boost
+        enriched["_original_rank"] = idx
+        reranked.append(enriched)
+
+    reranked.sort(
+        key=lambda d: (
+            -float(d.get("score") or 0.0),
+            int(d.get("_original_rank") or 0),
+            str(d.get("chunk_id") or ""),
+        )
+    )
+
+    return [
+        {k: v for k, v in chunk.items() if not k.startswith("_")}
+        for chunk in reranked
+    ]
 
 
 # UNWIND iterates one row per requested name. MATCH binds `e` to that name's
@@ -280,7 +493,13 @@ def graph_search(
     print(f"[graph_search] {len(ppr_entities)} PPR entities → "
           f"{len(cluster_entries)} unique clusters")
 
-    chunks = _map_chunks(cluster_entries, top_k=top_k_chunks, cfg=cfg)
+    candidate_k = max(top_k_chunks, min(top_k_chunks * 4, 40))
+    chunk_candidates = _map_chunks(cluster_entries, top_k=candidate_k, cfg=cfg)
+    chunks = _rerank_chunks_by_query_intent(
+        effective_query,
+        chunk_candidates,
+        cfg=cfg,
+    )[:top_k_chunks]
     print(f"[graph_search] returning {len(chunks)} chunks")
     return chunks
 

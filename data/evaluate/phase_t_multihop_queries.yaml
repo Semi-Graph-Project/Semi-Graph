@@ -1,0 +1,357 @@
+metadata:
+  name: phase_t_multihop_queries
+  version: 0.1
+  created: 2026-06-29
+  purpose: >
+    Phase T starter benchmark for diagnosing whether retrieval failures come
+    from vector search, graph/PPR search, hybrid fusion, or later agent layers.
+  notes: >
+    gold_chunks is intentionally sparse in v0.1. Treat it as verified evidence
+    anchors, not a complete gold set. Queries without gold_chunks are
+    discovery-only and excluded from aggregate retrieval metrics.
+
+queries:
+  - id: T001
+    query: "How exposed is AMD to TSMC supply risk?"
+    type: graph_multihop
+    gold_tools: ["graph", "hybrid"]
+    gold_entities: ["amd", "tsmc"]
+    gold_chunks:
+      - AMD_2026_Item_1A_0008_e84e4130
+    answer_points:
+      - AMD depends on third-party manufacturing partners such as TSMC.
+      - Capacity, wafer supply, or yield issues at these partners can materially affect AMD.
+    notes: "Known from Phase D E2E probe as strong AMD Item 1A risk evidence."
+
+  - id: T002
+    query: "Which foundry partner manufactures the Hopper architecture chips?"
+    type: supplier_via_product
+    gold_tools: ["graph", "hybrid"]
+    gold_entities: ["hopper", "nvidia", "tsmc"]
+    gold_chunks:
+      - NVDA_2024_Item_1_0007_bae70036
+      - NVDA_2025_Item_1_0008_a4407f7e
+      - AMD_2025_Item_1_0009_c842eea0
+      - AMD_2026_Item_1_0010_460dfa17
+      - INTC_2026_Item_1_0008_c74f560f
+    answer_points:
+      - Hopper is associated with NVIDIA.
+      - TSMC appears as an important foundry/manufacturing partner in the supply chain.
+
+  - id: T003
+    query: "Who produces the dense memory chips that power modern AI training accelerators?"
+    type: supplier_via_product
+    gold_tools: ["graph", "hybrid"]
+    gold_entities: ["micron", "hbm", "ai accelerators"]
+    gold_chunks:
+      - MU_2023_Item_1A_0003_92be33e3
+      - MU_2025_Item_1A_0004_836bee10
+      - NVDA_2024_Item_1_0007_bae70036
+      - NVDA_2025_Item_1_0008_a4407f7e
+    answer_points:
+      - High-bandwidth memory is important for AI accelerators.
+      - Micron is one producer/supplier of these memory products.
+
+  - id: T004
+    query: "What AI accelerator product line does the main x86 desktop CPU rival of Intel offer?"
+    type: competitor_product
+    gold_tools: ["graph", "hybrid"]
+    gold_entities: ["intel", "amd", "instinct"]
+    gold_chunks:
+      - AMD_2026_Item_1_0003_ea53a6a5
+    answer_points:
+      - AMD is Intel's x86 CPU rival.
+      - AMD offers Instinct AI accelerator products.
+
+  - id: T005
+    query: "What political risks affect the home country of the leading pure-play semiconductor foundry?"
+    type: geo_via_supplier
+    gold_tools: ["graph", "hybrid"]
+    gold_entities: ["tsmc", "taiwan", "political risk"]
+    gold_chunks: []
+    answer_points:
+      - TSMC is linked to Taiwan.
+      - Taiwan-related geopolitical or regional instability risks are relevant.
+    notes: "Discovery-only until verified gold chunks are pinned."
+
+  - id: T006
+    query: "Which Asian semiconductor manufacturer supplies wafers to NVIDIA's GPU production?"
+    type: supplier_via_company
+    gold_tools: ["graph", "hybrid"]
+    gold_entities: ["nvidia", "tsmc", "samsung", "sk hynix"]
+    gold_chunks: []
+    answer_points:
+      - NVIDIA relies on external manufacturing/supply partners.
+      - TSMC/Samsung/SK Hynix may appear as relevant Asian supply-chain entities.
+
+  - id: T007
+    query: "What graphics product line does AMD offer to compete with NVIDIA's RTX series?"
+    type: competitor_product
+    gold_tools: ["graph", "hybrid"]
+    gold_entities: ["amd", "nvidia", "radeon", "rtx"]
+    gold_chunks: []
+    answer_points:
+      - AMD's graphics product line is Radeon.
+      - The question requires a competitor-to-product hop.
+
+  - id: T008
+    query: "Who supplies the high-bandwidth memory used in NVIDIA's H200 data center accelerator?"
+    type: supplier_via_product
+    gold_tools: ["graph", "hybrid"]
+    gold_entities: ["h200", "nvidia", "hbm", "micron", "sk hynix", "samsung"]
+    gold_chunks: []
+    answer_points:
+      - H200 relates to NVIDIA data center accelerators.
+      - High-bandwidth memory suppliers include memory manufacturers.
+
+  - id: T009
+    query: "How do export controls affect NVIDIA's data center business?"
+    type: risk_via_product
+    gold_tools: ["graph", "hybrid", "vector"]
+    gold_entities: ["nvidia", "export controls", "data center", "china"]
+    gold_chunks: []
+    answer_points:
+      - Export controls can restrict sales or shipments of advanced chips.
+      - NVIDIA data center products are exposed to China/export-control risk.
+
+  - id: T010
+    query: "Which materials and purity solutions does Entegris provide to semiconductor manufacturers?"
+    type: vector_friendly
+    gold_tools: ["vector"]
+    gold_entities: ["entegris", "materials solutions", "advanced purity solutions"]
+    gold_chunks:
+      - ENTG_2026_Item_1_0000_a9f06bac
+    answer_points:
+      - Entegris provides advanced materials and process solutions.
+      - Materials Solutions and Advanced Purity Solutions are relevant segments.
+
+  - id: T011
+    query: "What gross margin impact did Entegris expect from its useful-life accounting estimate change?"
+    type: vector_friendly
+    gold_tools: ["vector"]
+    gold_entities: ["entegris", "gross margin", "depreciation"]
+    gold_chunks:
+      - ENTG_2026_Item_7_0000_6c99ba90
+    answer_points:
+      - Entegris expected reduced depreciation expense.
+      - The change was expected to increase gross margin by about $52.4 million.
+
+  - id: T012
+    query: "What are Entegris's main business segments?"
+    type: vector_friendly
+    gold_tools: ["vector"]
+    gold_entities: ["entegris", "materials solutions", "advanced purity solutions"]
+    gold_chunks:
+      - ENTG_2026_Item_1_0000_a9f06bac
+    answer_points:
+      - Materials Solutions.
+      - Advanced Purity Solutions.
+
+  - id: T013
+    query: "What is AMD's latest FY2025 revenue and gross margin?"
+    type: financial_exact_metric
+    gold_tools: ["financial"]
+    gold_entities: ["amd", "revenue", "gross margin"]
+    gold_chunks: []
+    answer_points:
+      - Use the financial tool rather than 10-K text retrieval.
+      - Return FY2025 revenue and gross margin with citation.
+
+  - id: T014
+    query: "What has AMD announced recently?"
+    type: news_recent_event
+    gold_tools: ["news"]
+    gold_entities: ["amd"]
+    gold_chunks: []
+    answer_points:
+      - Use news only if relevant recent AMD announcement evidence exists.
+      - Refuse or hedge if retrieved articles are not AMD announcements.
+
+  - id: T015
+    query: "What is the relationship between KLA yield improvement tools and downstream AMD gross margin risk?"
+    type: graph_multihop
+    gold_tools: ["graph", "hybrid"]
+    gold_entities: ["kla", "tsmc", "amd", "yield", "gross margin"]
+    gold_chunks: []
+    answer_points:
+      - KLA tools support process control/yield improvement.
+      - AMD can be affected by foundry yield/cost/margin risks.
+    notes: "Discovery query for newly expanded supplier corpus."
+
+  - id: T016
+    query: "qwerty zzz random semiconductor nonsense"
+    type: off_corpus
+    gold_tools: []
+    gold_entities: []
+    gold_chunks: []
+    answer_points:
+      - Retrieval should return low-confidence/no useful evidence.
+      - Agent should not hallucinate a factual answer.
+
+  - id: T017
+    query: "Which Taiwanese contract chipmaker fabricates AMD's processors?"
+    type: supplier_via_company
+    gold_tools: ["graph", "hybrid"]
+    gold_entities: ["amd", "tsmc", "umc"]
+    gold_chunks:
+      - AMD_2025_Item_1_0009_c842eea0
+      - AMD_2026_Item_1A_0008_e84e4130
+    answer_points:
+      - AMD relies on third-party foundries and manufacturing suppliers.
+      - TSMC and UMC are relevant Taiwanese contract manufacturing entities in the graph.
+
+  - id: T018
+    query: "Which gaming console makers partner with the Ryzen processor company?"
+    type: partner_via_product
+    gold_tools: ["graph", "hybrid"]
+    gold_entities: ["ryzen", "amd", "sony", "microsoft", "valve"]
+    gold_chunks:
+      - AMD_2024_Item_1_0006_e41aed21
+      - AMD_2026_Item_1_0004_b5e66359
+    answer_points:
+      - Ryzen points to AMD.
+      - AMD semi-custom or gaming products are linked to console or gaming ecosystem partners.
+
+  - id: T019
+    query: "What revenue segments does the developer of EPYC processors disclose?"
+    type: segment_via_product
+    gold_tools: ["graph", "hybrid"]
+    gold_entities: ["epyc", "amd", "data center", "client segment", "gaming segment", "embedded"]
+    gold_chunks:
+      - AMD_2024_Item_1_0003_ee436d61
+      - AMD_2024_Item_7_0002_d4114c99
+    answer_points:
+      - EPYC is an AMD server CPU product family.
+      - AMD discloses reportable segments such as Data Center, Client, Gaming, and Embedded.
+
+  - id: T020
+    query: "What export controls affect AI chip sales from the maker of Blackwell architecture?"
+    type: regulation_via_product
+    gold_tools: ["graph", "hybrid"]
+    gold_entities: ["blackwell", "nvidia", "export controls", "china", "export administration regulations"]
+    gold_chunks:
+      - NVDA_2024_Item_1A_0020_ac4ad7b4
+      - NVDA_2024_Item_1A_0022_b1d57eb9
+    answer_points:
+      - Blackwell points to NVIDIA.
+      - Export controls can restrict NVIDIA AI/data-center product sales and operations in China or related markets.
+
+  - id: T021
+    query: "Which Asian contract chipmakers fabricate older-generation processors for the developer of Intel 18A?"
+    type: supplier_via_product
+    gold_tools: ["graph", "hybrid"]
+    gold_entities: ["intel 18a", "intel", "tsmc", "umc", "smic"]
+    gold_chunks:
+      - INTC_2024_Item_1A_0001_f0f6c35c
+      - INTC_2025_Item_1A_0001_65932be2
+    answer_points:
+      - Intel 18A points to Intel.
+      - Intel filings discuss competition and foundry relationships involving Asian foundries such as TSMC.
+
+  - id: T022
+    query: "Which infrastructure investment firms partner with the maker of Xeon Scalable processors on fab financing?"
+    type: partner_via_product
+    gold_tools: ["graph", "hybrid"]
+    gold_entities: ["xeon scalable", "intel", "brookfield", "apollo", "smart capital"]
+    gold_chunks:
+      - INTC_2025_Item_1_0011_b8759c99
+      - INTC_2024_Item_1A_0007_6560bf56
+    answer_points:
+      - Xeon Scalable points to Intel.
+      - Intel's Smart Capital/fab financing context includes infrastructure investment partners such as Brookfield or Apollo.
+
+  - id: T023
+    query: "Which autonomous driving subsidiary does the developer of Intel Core Ultra operate?"
+    type: subsidiary_via_product
+    gold_tools: ["graph", "hybrid"]
+    gold_entities: ["intel core ultra", "intel", "mobileye"]
+    gold_chunks:
+      - INTC_2024_Item_1_0010_4835f632
+      - INTC_2024_Item_7_0010_3742bdd2
+    answer_points:
+      - Intel Core Ultra points to Intel.
+      - Intel is linked to Mobileye in automotive/autonomous driving context.
+
+  - id: T024
+    query: "Which operating system maker collaborates with the Xeon Scalable processor developer on AI PC platforms?"
+    type: partner_via_product
+    gold_tools: ["graph", "hybrid"]
+    gold_entities: ["xeon scalable", "intel", "microsoft", "ai pc"]
+    gold_chunks:
+      - INTC_2024_Item_7_0002_7c82ed88
+      - INTC_2026_Item_1_0008_c74f560f
+    answer_points:
+      - Xeon Scalable points to Intel.
+      - Microsoft is the operating-system ecosystem partner relevant to AI PC/platform collaboration.
+
+  - id: T025
+    query: "In which U.S. states does the developer of the Intel 18A process operate wafer fabrication facilities?"
+    type: geo_via_product
+    gold_tools: ["graph", "hybrid"]
+    gold_entities: ["intel 18a", "intel", "arizona", "ohio", "oregon", "new mexico"]
+    gold_chunks:
+      - INTC_2025_Item_1_0004_c5a12b11
+      - INTC_2024_Item_1_0014_32e0816b
+    answer_points:
+      - Intel 18A points to Intel.
+      - Intel manufacturing footprint evidence should mention U.S. fab locations such as Arizona, Ohio, Oregon, or New Mexico.
+
+  - id: T026
+    query: "What U.S. legislative act funds domestic semiconductor manufacturing expansion at the Intel 18A developer?"
+    type: regulator_via_product
+    gold_tools: ["graph", "hybrid"]
+    gold_entities: ["intel 18a", "intel", "chips act"]
+    gold_chunks:
+      - INTC_2025_Item_1A_0008_80e72e45
+      - INTC_2026_Item_1A_0008_662b7d4d
+    answer_points:
+      - Intel 18A points to Intel.
+      - The CHIPS Act is relevant to U.S. domestic semiconductor manufacturing incentives.
+
+  - id: T027
+    query: "What advanced driver assistance product lines come from the autonomous driving subsidiary of the Xeon Scalable developer?"
+    type: three_hop_subsidiary_product
+    gold_tools: ["graph", "hybrid"]
+    gold_entities: ["xeon scalable", "intel", "mobileye", "mobileye supervision", "mobileye chauffeur", "mobileye drive"]
+    gold_chunks:
+      - INTC_2024_Item_7_0010_3742bdd2
+      - INTC_2024_Item_7_0014_e766ac95
+    answer_points:
+      - Xeon Scalable points to Intel.
+      - Intel links to Mobileye, and Mobileye links to product lines such as SuperVision, Chauffeur, or Drive.
+
+  - id: T028
+    query: "What consumer storage and DRAM brand is sold by the U.S. supplier of HBM3E memory?"
+    type: product_via_company
+    gold_tools: ["graph", "hybrid"]
+    gold_entities: ["hbm3e", "micron", "crucial"]
+    gold_chunks:
+      - MU_2025_Item_1_0000_6418b9d4
+      - MU_2024_Item_1_0000_82417507
+    answer_points:
+      - HBM3E points to Micron as a memory supplier.
+      - Crucial is Micron's consumer storage and memory brand.
+
+  - id: T029
+    query: "Why has HBM become critical for modern AI training and inference workloads?"
+    type: topical_memory
+    gold_tools: ["graph", "hybrid", "vector"]
+    gold_entities: ["hbm", "hbm3e", "ai", "data center"]
+    gold_chunks:
+      - MU_2025_Item_1_0001_b64486b7
+      - MU_2024_Item_1_0003_acd8d0ff
+    answer_points:
+      - HBM provides high-bandwidth memory needed by AI accelerators.
+      - AI training and inference workloads increase demand for high-performance memory.
+
+  - id: T030
+    query: "Which cloud hyperscalers partner with the EPYC processor maker for server CPU deployments in their data centers?"
+    type: customer_via_product
+    gold_tools: ["graph", "hybrid"]
+    gold_entities: ["epyc", "amd", "microsoft", "amazon", "google", "meta"]
+    gold_chunks:
+      - AMD_2024_Item_1_0006_e41aed21
+      - AMD_2026_Item_1_0004_b5e66359
+    answer_points:
+      - EPYC points to AMD.
+      - AMD's server CPU ecosystem should retrieve cloud/data-center customer or partner evidence.

@@ -10,7 +10,7 @@ Senior thesis project — King Mongkut's University of Technology North Bangkok 
 
 SemiGraph supports fundamental analysis of semiconductor stocks by routing queries to heterogeneous data sources through an agent. The thesis core remains NVDA / AMD / MU / ASML, while the current pilot corpus has expanded through the reusable onboarding runner in `scripts/pilot.py`.
 
-Current config corpus tickers: AMAT, AMD, AMKR, AVGO, COHR, INTC, KLAC, LRCX, MU, NVDA, QCOM, RMBS, TXN.
+Current config corpus tickers: AMAT, AMD, AMKR, AVGO, COHR, ENTG, INTC, KLAC, LRCX, MU, NVDA, QCOM, RMBS, TXN.
 
 Each source plays to its strength:
 
@@ -103,7 +103,7 @@ semigraph/
 │   │   ├── financial_search.py # Phase C3 — Finnhub financials/quote (Protocol pattern)
 │   │   ├── news_search.py    # Phase C4 — Finnhub company news (90-day window)
 │   │   ├── _ticker.py        # Shared ticker resolution (regex + LLM expansion)
-│   │   └── query_expand.py   # LLM query expansion for ticker/entity hints
+│   │   └── query_expand.py   # Phase T — optional LLM query expansion for entity hints
 │   └── agent/                # Phase D — LangGraph agent (Plan-then-ReAct)
 │       ├── state.py          # AgentState TypedDict (total=False)
 │       ├── graph.py          # StateGraph builder (7-node conditional graph)
@@ -122,6 +122,8 @@ semigraph/
 │   ├── compare_linkers.py        # Proxy-metric eval: Query-to-Node vs Query-to-Triple (12 queries)
 │   ├── run_agent_e2e_probe.py    # Multi-query agent smoke test against real graph
 │   ├── run_agent_trace.py        # Colored Phase D trace runner with real LLM + CLI query
+│   ├── evaluate_retrieval_quality.py # Phase T benchmark: vector vs graph vs hybrid
+│   ├── trace_retrieval_bottlenecks.py # Phase T seed/PPR/chunk trace helper
 │   └── test_graph_search.py      # End-to-end validation of graph_search (17 queries)
 ├── analytics/                # Reports from validation scripts (Markdown)
 │   ├── linker_comparison.md          # compare_linkers.py output
@@ -243,10 +245,10 @@ The embedding/checkpoint steps are **rerun-safe**: re-running skips chunks/entit
 
 | Asset | Count | Notes |
 |---|---|---|
-| Config corpus | 13 tickers | AMAT, AMD, AMKR, AVGO, COHR, INTC, KLAC, LRCX, MU, NVDA, QCOM, RMBS, TXN |
-| Pilot metric files | 9 tickers | AMAT, AMKR, AVGO, COHR, KLAC, LRCX, QCOM, RMBS, TXN |
-| Pilot ticker-year runs | 27 | latest 3 filings per pilot ticker |
-| Pilot chunks extracted | 1,429 | all rows in `analytics/*_pilot_metrics.csv` are `status=ok` |
+| Config corpus | 14 tickers | AMAT, AMD, AMKR, AVGO, COHR, ENTG, INTC, KLAC, LRCX, MU, NVDA, QCOM, RMBS, TXN |
+| Pilot metric files | 10 tickers | AMAT, AMKR, AVGO, COHR, ENTG, KLAC, LRCX, QCOM, RMBS, TXN |
+| Pilot ticker-year runs | 30 | latest 3 filings per pilot ticker |
+| Pilot chunks extracted | 1,605 | all rows in `analytics/*_pilot_metrics.csv` are `status=ok` |
 | KLAC pilot | 202 chunks | FY2023, FY2024, FY2025; latest downloaded KLAC filing in this run is not FY2026 |
 | Original baseline snapshot | 9 filings | NVDA × 3, AMD × 3, MU × 3; previous measured graph baseline before pilot expansion |
 
@@ -270,6 +272,19 @@ The exact Neo4j graph counts depend on the live local database and repeated pilo
 | Synthesized dev set | Graph Hit@5 38/50 vs Vector Hit@5 33/50; Graph Avg Recall@5 0.492 vs Vector 0.369 |
 | Holdout set | Hybrid Avg Recall@5 0.450, Graph 0.420, Vector 0.390 |
 | Linker comparison | Query-to-Triple improves seed coverage but can increase hub leakage; Query-to-Node is often cleaner |
+
+### Phase T Quality Tuning Snapshot (2026-06-29)
+
+Phase T focuses on making Graph/PPR retrieval beat vanilla vector retrieval on multi-hop questions before relying on LLM query expansion.
+
+| Run | Scope | Main Result |
+|---|---|---|
+| Baseline, no expansion | 21 scored Phase T queries | vector Hit@5 0.333, graph 0.190, hybrid 0.381 |
+| Baseline, with expansion | 21 scored Phase T queries | graph Hit@5 improves to 0.524; hybrid Hit@5 0.524 and Oracle@10 0.619 |
+| Random baseline | 2,347 chunks, 21 scored queries | random Hit@5 ~= 0.004, so graph/hybrid hits are not chance |
+| T2.1 rerank, small 7-query slice | wider graph candidates + section/ticker/lexical intent boosts | graph no-expansion Hit@5 improved from 0.143 to 0.429; hybrid no-expansion from 0.286 to 0.571 |
+
+Current diagnosis: no-expansion graph retrieval usually fails because query-to-seed captures only the first hop, and entity-to-chunk mapping/reranking can bury correct evidence below top-5. Next tuning target is deterministic no-expansion seed improvement plus coverage-aware chunk ranking.
 
 ---
 
@@ -318,7 +333,7 @@ The exact Neo4j graph counts depend on the live local database and repeated pilo
 - [x] **C1a** `query_to_seeds` — Query-to-Node linker via `entity_embedding` index ([seed.py](src/semigraph/online/seed.py))
 - [x] **C1b** `run_ppr` — Personalized PageRank via GDS named projection ([ppr.py](src/semigraph/online/ppr.py))
 - [x] **C1b+** `query_to_triple_seeds` — Query-to-Triple linker (HippoRAG v2 Table 4: +12.5% R@5 over Query-to-Node) via in-memory triple cosine search ([seed.py](src/semigraph/online/seed.py))
-- [x] **C1c** `graph_search` — closes the tool: alias clustering (SYNONYM_OF *0..2) → cluster-aware chunk mapping (EXISTS dedup) → SUM(PPR mass) aggregation. Validated 17/17 (deterministic, no dup chunks, provenance intact) on diverse query set. ([graph_search.py](src/semigraph/online/graph_search.py))
+- [x] **C1c** `graph_search` — closes the tool: alias clustering (SYNONYM_OF *0..2) → cluster-aware chunk mapping (EXISTS dedup) → SUM(PPR mass) aggregation → Phase T intent rerank over wider candidates (section/ticker/lexical boosts). Validated 17/17 (deterministic, no dup chunks, provenance intact) on diverse query set. ([graph_search.py](src/semigraph/online/graph_search.py))
 - [x] **C2** `vector_search` — top-k chunks via Neo4j vector index (baseline for ablation) ([vector_search.py](src/semigraph/online/vector_search.py))
 - [x] **C2+** `hybrid_search` — RRF (k=60) fusion of vector + graph ([hybrid_search.py](src/semigraph/online/hybrid_search.py))
 - [x] **C3** `financial_search` — Finnhub direct API (financials/quote), Protocol-backed; PostgreSQL+XBRL migration deferred to **F.v2** ([financial_search.py](src/semigraph/online/financial_search.py))
@@ -351,6 +366,16 @@ then conditionally:
 - [x] **D.10** Live smoke — local Neo4j connectivity verified end-to-end (`scripts/test_neo4j_connection.py`)
 - [x] **D.11** Trace runner — colored CLI harness for real-LLM end-to-end tracing (`scripts/run_agent_trace.py`)
 - [ ] **D.next** Router-quality tuning, evidence packing for synthesis, `run_agent()` API / UI integration
+
+### Phase T — Quality Tuning 🔄
+
+- [x] Phase T benchmark file expanded to 30 queries, with 21 scored gold-chunk anchors and discovery-only questions excluded from aggregate metrics
+- [x] Retrieval evaluator reports Hit@5, Recall@5, MRR@5, Oracle@10, random chance baseline, and per-query returned chunk IDs
+- [x] Query expansion comparison shows expansion is useful but should remain optional while no-expansion graph quality is tuned
+- [x] T2.1 graph rerank adds wider candidate retrieval plus section/ticker/lexical intent boosts
+- [x] No-expansion trace identifies the main failures: seed captures only first-hop entities, PPR drifts to hubs, or correct chunks are buried after entity-to-chunk mapping
+- [ ] T2.2 next: deterministic no-expansion seed improvement (`query_to_seeds + query_to_triple_seeds`, ticker/product aliases, seed weighting)
+- [ ] T2.3 next: coverage-aware chunk ranking to reduce broad-chunk bias
 
 ### Phase E — Evaluation (planned)
 
@@ -418,6 +443,13 @@ pytest tests/test_ontology.py::TestGraphNode -v
 
 # Agent trace runner
 python scripts/run_agent_trace.py "How do KLA yield improvements at TSMC affect AMD gross margin?" --show-citations
+
+# Phase T retrieval benchmark
+python scripts/evaluate_retrieval_quality.py --tools vector graph hybrid --top-k 5 --oracle-k 10 --no-llm-expansion
+python scripts/evaluate_retrieval_quality.py --tools vector graph hybrid --top-k 5 --oracle-k 10
+
+# Phase T graph bottleneck trace
+python scripts/trace_retrieval_bottlenecks.py --no-query-expand-cache "How exposed is AMD to TSMC supply risk?"
 
 # Neo4j control
 docker compose up -d         # start
