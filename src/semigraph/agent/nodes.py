@@ -14,7 +14,7 @@ from semigraph.agent.prompts import (
 )
 
 
-MAX_REFLECTION_ROUNDS = 5
+MAX_REFLECTION_ROUNDS = 3
 
 FINANCIAL_METRIC_PATTERNS = (
     r"\brevenue\b",
@@ -163,6 +163,12 @@ def tool_select_node(state: AgentState) -> dict:
         
         if not response.tool_calls or not response.tool_calls[0]["args"] or "query" not in response.tool_calls[0]["args"]:
             return fallback
+
+        print("responds : ")
+        print(response)
+
+        print("Tools Calls : ")
+        print(response.tool_calls)
 
         selected_tool_name = response.tool_calls[0]["name"]
         selected_tool_args = dict(response.tool_calls[0]["args"])
@@ -542,7 +548,7 @@ def _should_force_financial_tool(*parts: str) -> bool:
 def _format_chunks_for_observation(
     chunks: list[dict],
     max_chunks: int = 5,
-    max_chars: int = 800,
+    max_chars: int = 2000,
 ) -> str:
     formatted = []
     half = max_chars // 2
@@ -555,10 +561,10 @@ def _format_chunks_for_observation(
         formatted.append(
             (
                 f"[{chunk.get('chunk_id', 'unknown_chunk')}] "
-                f"{chunk.get('ticker', 'UNKNOWN')} "
-                f"FY{chunk.get('fiscal_year', 'unknown')} "
-                f"{chunk.get('section', 'unknown_section')}\n"
-                f"{text}"
+                f"ticker: {chunk.get('ticker', 'UNKNOWN')} "
+                f"FY: {chunk.get('fiscal_year', 'unknown')} "
+                f"section: {chunk.get('section', 'unknown_section')}\n"
+                f"text: {text}"
             )
         )
 
@@ -950,3 +956,40 @@ def _remove_invalid_citations(answer: str, valid_indices: set[int]) -> str:
     sanitized = re.sub(r"\s+([.,;:])", r"\1", sanitized)
     sanitized = re.sub(r"[ \t]{2,}", " ", sanitized)
     return sanitized.strip()
+
+
+if __name__ == "__main__":
+    s = AgentState(original_query="What is The real Moat of Nvidia that it's make they win in AI Era?")
+
+    plan_node_res = plan_node(s)
+    s.update(plan_node_res)
+    
+    print("== PLAN RES ==")
+    print(plan_node_res)
+
+    print("\n Current State ======")
+    print(s)
+
+    print("-----------\n\n")
+
+    tool_select_node_res = tool_select_node(s)
+    s.update(tool_select_node_res)
+    
+    print("== TOOL SELECT RES ==")
+    print(tool_select_node_res)
+
+    print("\n Current State ======")
+    print(s)
+
+    execute_node_res = execute_node(s)
+    s.update(execute_node_res)
+    
+    print("== EXECUTE NODE RES ==")
+    print(s["latest_chunks"])
+
+
+    print("-----------\n\n")
+
+
+
+
