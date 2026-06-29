@@ -1,4 +1,6 @@
-# SemiGraph — GraphRAG-Enhanced Multi-Agent System for Semiconductor Stock Analysis
+# SemiGraph — Agentic Heterogenuos RAG in Semiconductor Domain
+
+<img width="1672" height="941" alt="SemiGraphCover" src="https://github.com/user-attachments/assets/957f5c4e-26b9-4691-9a56-a9f0518ec245" />
 
 Senior thesis project — King Mongkut's University of Technology North Bangkok (KMUTNB)
 
