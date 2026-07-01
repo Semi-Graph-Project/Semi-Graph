@@ -185,7 +185,7 @@ def query_to_triple_seeds(
     Args:
         query: Natural-language input.
         top_k_triples: Number of nearest-triple to consider (each yields
-            up to 2 seeds → final count is 1 to 2 × top_k_triples).
+            up to 2 seeds → final count is 1 to 2 x top_k_triples).
         min_similarity: Cosine threshold; triples below this are dropped.
         cfg: Optional config override; defaults to the cached singleton.
 
@@ -203,11 +203,13 @@ def query_to_triple_seeds(
     cfg = cfg or get_config()
     model = get_embedding_model()
 
-    # BGE outputs L2-normalized vectors → cosine = dot product. float32 for
+    # BGE outputs L2-normalized vectors -> cosine = dot product. float32 for
     # numpy parity with the stored triple matrix.
     q_vec = model.encode([query])[0].astype(np.float32)
 
-    vectors, metadata = _load_triple_index()
+    vectors, metadata = _load_triple_index() 
+    # metadata = set of dicts with head, tail, rel_type, etc. 
+    
     if vectors.shape[0] == 0:
         return []
 
@@ -299,7 +301,7 @@ def query_to_hybrid_seeds(
             merged[key] = s
 
     print(f"[hybrid_seed] {len(node_seeds)} node + {len(triple_seeds)} triple "
-          f"→ {len(merged)} unique seeds")
+          f"-> {len(merged)} unique seeds")
     return sorted(merged.values(), key=lambda s: -s["similarity"])
 
 

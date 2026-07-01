@@ -440,11 +440,12 @@ SECTION_CONFIG: Dict[str, dict] = {
     "Item 1": {
         "nodes": [
             "ORG", "COMP", "SEGMENT", "PRODUCT",
-            "GPE", "FIN_MARKET", "RAW_MATERIAL",
+            "GPE", "FIN_MARKET", "RAW_MATERIAL","REGULATORY_REQUIREMENT","EVENT"
         ],
         "relationships": [
             "has_stake_in", "operates_in", "produces", "supplies",
-            "partners_with", "competes_with", "listed_on", "depends_on",
+            "partners_with", "competes_with", "listed_on", "depends_on","subject_to",
+            "introduces","invests_in","announces","involved_in"
         ],
         "focus": (
             "Extract company structure: segments, products, named competitors, "
@@ -454,11 +455,13 @@ SECTION_CONFIG: Dict[str, dict] = {
     "Item 1A": {
         "nodes": [
             "ORG", "RISK_FACTOR", "MACRO_CONDITION", "EVENT",
-            "REGULATORY_REQUIREMENT", "GPE", "RAW_MATERIAL", "COMP",
+            "REGULATORY_REQUIREMENT", "GPE", "RAW_MATERIAL", "COMP", "PRODUCT",
+            "SEGMENT", "FIN_METRIC"
         ],
         "relationships": [
             "discloses", "faces", "negatively_impacts", "depends_on",
             "subject_to", "causes_shortage_of", "impacted_by",
+            "has_stake_in", "produces" , "competes_with" , "supplies"
         ],
         "focus": (
             "Extract every material risk factor as a separate node. "
@@ -469,11 +472,13 @@ SECTION_CONFIG: Dict[str, dict] = {
         "nodes": [
             "ORG", "SEGMENT", "FIN_METRIC", "ACCOUNTING_POLICY",
             "EVENT", "MACRO_CONDITION", "ESG_TOPIC", "PRODUCT",
+            "COMP", "GPE" , "REGULATORY_REQUIREMENT"
         ],
         "relationships": [
             "discloses", "guides_on", "invests_in", "introduces",
             "announces", "positively_impacts", "negatively_impacts",
-            "involved_in",
+            "involved_in", "has_stake_in" , "produces" , "depends_on",
+            "subject_to", "operates_in"
         ],
         "focus": (
             "Extract management discussion themes: financial drivers, strategic initiatives, "

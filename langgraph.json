@@ -1,0 +1,7 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "agent": "./src/semigraph/agent/ws.py:graph"
+  },
+  "env": ".env"
+}

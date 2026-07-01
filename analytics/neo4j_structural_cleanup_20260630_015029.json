@@ -1,0 +1,152 @@
+{
+  "cleanup_source": "structural_cleanup_20260630_015029",
+  "before": {
+    "chunks": 2347,
+    "orphan_chunks": 46,
+    "broad_chunks": 22,
+    "max_mentions": 106
+  },
+  "orphan_mentions_added": 46,
+  "broad_trimmed": [
+    {
+      "chunk_id": "KLAC_2024_Item_1A_0000_fe1b81fd",
+      "before": 106,
+      "endpoint_count": 37,
+      "deleted_mentions": 66,
+      "after_target": 40
+    },
+    {
+      "chunk_id": "KLAC_2025_Item_1A_0000_c112c626",
+      "before": 102,
+      "endpoint_count": 35,
+      "deleted_mentions": 62,
+      "after_target": 40
+    },
+    {
+      "chunk_id": "KLAC_2023_Item_1A_0000_4ec1f31e",
+      "before": 77,
+      "endpoint_count": 23,
+      "deleted_mentions": 37,
+      "after_target": 40
+    },
+    {
+      "chunk_id": "KLAC_2025_Item_1A_0002_6d29768d",
+      "before": 77,
+      "endpoint_count": 41,
+      "deleted_mentions": 36,
+      "after_target": 41
+    },
+    {
+      "chunk_id": "KLAC_2024_Item_1A_0002_f46cc9dc",
+      "before": 67,
+      "endpoint_count": 35,
+      "deleted_mentions": 27,
+      "after_target": 40
+    },
+    {
+      "chunk_id": "KLAC_2023_Item_1A_0001_ce65eb6f",
+      "before": 62,
+      "endpoint_count": 39,
+      "deleted_mentions": 22,
+      "after_target": 40
+    },
+    {
+      "chunk_id": "KLAC_2023_Item_1A_0002_349ce6e3",
+      "before": 60,
+      "endpoint_count": 34,
+      "deleted_mentions": 20,
+      "after_target": 40
+    },
+    {
+      "chunk_id": "AVGO_2023_Item_1_0010_68f5ffd4",
+      "before": 53,
+      "endpoint_count": 0,
+      "deleted_mentions": 13,
+      "after_target": 40
+    },
+    {
+      "chunk_id": "KLAC_2025_Item_1A_0001_1d5ddf3c",
+      "before": 52,
+      "endpoint_count": 15,
+      "deleted_mentions": 12,
+      "after_target": 40
+    },
+    {
+      "chunk_id": "ENTG_2025_Item_1A_0000_b352fc26",
+      "before": 51,
+      "endpoint_count": 28,
+      "deleted_mentions": 11,
+      "after_target": 40
+    },
+    {
+      "chunk_id": "RMBS_2026_Item_7_0001_544e4d1d",
+      "before": 46,
+      "endpoint_count": 32,
+      "deleted_mentions": 6,
+      "after_target": 40
+    },
+    {
+      "chunk_id": "KLAC_2024_Item_7_0015_cec8f5c7",
+      "before": 44,
+      "endpoint_count": 18,
+      "deleted_mentions": 4,
+      "after_target": 40
+    },
+    {
+      "chunk_id": "KLAC_2023_Item_7_0016_a39e6fe6",
+      "before": 43,
+      "endpoint_count": 32,
+      "deleted_mentions": 3,
+      "after_target": 40
+    },
+    {
+      "chunk_id": "KLAC_2024_Item_1_0005_f2fc0653",
+      "before": 43,
+      "endpoint_count": 42,
+      "deleted_mentions": 1,
+      "after_target": 42
+    },
+    {
+      "chunk_id": "MU_2023_Item_1A_0000_426cfeaa",
+      "before": 42,
+      "endpoint_count": 2,
+      "deleted_mentions": 2,
+      "after_target": 40
+    },
+    {
+      "chunk_id": "KLAC_2023_Item_1_0005_ec4a6eeb",
+      "before": 42,
+      "endpoint_count": 0,
+      "deleted_mentions": 2,
+      "after_target": 40
+    },
+    {
+      "chunk_id": "KLAC_2025_Item_1A_0006_7aa995a7",
+      "before": 42,
+      "endpoint_count": 36,
+      "deleted_mentions": 2,
+      "after_target": 40
+    },
+    {
+      "chunk_id": "MU_2023_Item_7_0007_812b0ead",
+      "before": 41,
+      "endpoint_count": 34,
+      "deleted_mentions": 1,
+      "after_target": 40
+    },
+    {
+      "chunk_id": "RMBS_2026_Item_1A_0000_4ada9712",
+      "before": 41,
+      "endpoint_count": 8,
+      "deleted_mentions": 1,
+      "after_target": 40
+    }
+  ],
+  "unmentioned_entities_pruned": 205,
+  "after": {
+    "chunks": 2347,
+    "orphan_chunks": 0,
+    "broad_chunks": 5,
+    "max_mentions": 48
+  }
+}

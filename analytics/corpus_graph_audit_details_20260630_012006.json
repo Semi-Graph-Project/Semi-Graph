@@ -1,0 +1,6552 @@
+{
+  "generated_at": "2026-06-30T01:20:11",
+  "query_file": "/home/kantinan/programming/project/data/evaluate/phase_t_multihop_queries.yaml",
+  "informative_rel_types": [
+    "ANNOUNCES",
+    "CAUSES_SHORTAGE_OF",
+    "COMPETES_WITH",
+    "DEPENDS_ON",
+    "DISCLOSES",
+    "FACES",
+    "GUIDES_ON",
+    "HAS_STAKE_IN",
+    "IMPACTED_BY",
+    "IMPACTS",
+    "INTRODUCES",
+    "INVESTS_IN",
+    "INVOLVED_IN",
+    "LISTED_ON",
+    "NEGATIVELY_IMPACTS",
+    "OPERATES_IN",
+    "PARTNERS_WITH",
+    "POSITIVELY_IMPACTS",
+    "PRODUCES",
+    "SUBJECT_TO",
+    "SUPPLIES"
+  ],
+  "health": {
+    "core_counts": {
+      "nodes_total": 16064,
+      "entities": 13549,
+      "chunks": 2347,
+      "sections": 126,
+      "relationships_total": 50190,
+      "mentions": 30060,
+      "informative_relationships": 17559,
+      "synonym_relationships": 196
+    },
+    "label_distribution": [
+      {
+        "label": "Entity",
+        "n": 13549
+      },
+      {
+        "label": "Chunk",
+        "n": 2347
+      },
+      {
+        "label": "Section",
+        "n": 126
+      },
+      {
+        "label": "Document",
+        "n": 42
+      }
+    ],
+    "relationship_distribution": [
+      {
+        "rel_type": "MENTIONS",
+        "n": 30060
+      },
+      {
+        "rel_type": "NEGATIVELY_IMPACTS",
+        "n": 4349
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "n": 2461
+      },
+      {
+        "rel_type": "HAS_CHUNK",
+        "n": 2347
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "n": 2127
+      },
+      {
+        "rel_type": "PRODUCES",
+        "n": 2044
+      },
+      {
+        "rel_type": "FACES",
+        "n": 1842
+      },
+      {
+        "rel_type": "POSITIVELY_IMPACTS",
+        "n": 1499
+      },
+      {
+        "rel_type": "OPERATES_IN",
+        "n": 721
+      },
+      {
+        "rel_type": "INVOLVED_IN",
+        "n": 585
+      },
+      {
+        "rel_type": "HAS_STAKE_IN",
+        "n": 515
+      },
+      {
+        "rel_type": "SUBJECT_TO",
+        "n": 343
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "n": 311
+      },
+      {
+        "rel_type": "INTRODUCES",
+        "n": 194
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "n": 141
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "n": 129
+      },
+      {
+        "rel_type": "HAS_SECTION",
+        "n": 126
+      },
+      {
+        "rel_type": "INVESTS_IN",
+        "n": 117
+      },
+      {
+        "rel_type": "SYNONYM_OF",
+        "n": 98
+      },
+      {
+        "rel_type": "PARTNERS_WITH",
+        "n": 65
+      },
+      {
+        "rel_type": "CAUSES_SHORTAGE_OF",
+        "n": 39
+      },
+      {
+        "rel_type": "SUPPLIES",
+        "n": 35
+      },
+      {
+        "rel_type": "GUIDES_ON",
+        "n": 34
+      },
+      {
+        "rel_type": "LISTED_ON",
+        "n": 7
+      },
+      {
+        "rel_type": "IMPACTS",
+        "n": 1
+      }
+    ],
+    "orphan_chunks": {
+      "count": 46,
+      "samples": [
+        {
+          "chunk_id": "AMD_2024_Item_1_0016_7bf94bdf",
+          "ticker": "AMD",
+          "section": "Item_1"
+        },
+        {
+          "chunk_id": "AMD_2024_Item_1A_0035_4c7b6fd2",
+          "ticker": "AMD",
+          "section": "Item_1A"
+        },
+        {
+          "chunk_id": "AMD_2025_Item_7_0009_c85e2a1c",
+          "ticker": "AMD",
+          "section": "Item_7"
+        },
+        {
+          "chunk_id": "AMD_2026_Item_1_0015_638deb57",
+          "ticker": "AMD",
+          "section": "Item_1"
+        },
+        {
+          "chunk_id": "MU_2023_Item_1_0014_0e83b49e",
+          "ticker": "MU",
+          "section": "Item_1"
+        },
+        {
+          "chunk_id": "MU_2024_Item_1_0013_b2761ffd",
+          "ticker": "MU",
+          "section": "Item_1"
+        },
+        {
+          "chunk_id": "MU_2024_Item_1A_0026_002b2c2b",
+          "ticker": "MU",
+          "section": "Item_1A"
+        },
+        {
+          "chunk_id": "MU_2025_Item_1_0009_5c09f588",
+          "ticker": "MU",
+          "section": "Item_1"
+        },
+        {
+          "chunk_id": "INTC_2024_Item_1_0009_be29e501",
+          "ticker": "INTC",
+          "section": "Item_1"
+        },
+        {
+          "chunk_id": "AVGO_2023_Item_1_0004_75d0dcd1",
+          "ticker": "AVGO",
+          "section": "Item_1"
+        },
+        {
+          "chunk_id": "AVGO_2023_Item_1_0013_ad46ec2f",
+          "ticker": "AVGO",
+          "section": "Item_1"
+        },
+        {
+          "chunk_id": "AVGO_2023_Item_1A_0014_058b6b4c",
+          "ticker": "AVGO",
+          "section": "Item_1A"
+        },
+        {
+          "chunk_id": "AVGO_2024_Item_1_0015_48f94e12",
+          "ticker": "AVGO",
+          "section": "Item_1"
+        },
+        {
+          "chunk_id": "AVGO_2025_Item_1_0006_ff62cb94",
+          "ticker": "AVGO",
+          "section": "Item_1"
+        },
+        {
+          "chunk_id": "AVGO_2025_Item_1A_0024_8b8d40dc",
+          "ticker": "AVGO",
+          "section": "Item_1A"
+        },
+        {
+          "chunk_id": "QCOM_2023_Item_1_0003_998a5af4",
+          "ticker": "QCOM",
+          "section": "Item_1"
+        },
+        {
+          "chunk_id": "QCOM_2023_Item_1_0004_7e1ae211",
+          "ticker": "QCOM",
+          "section": "Item_1"
+        },
+        {
+          "chunk_id": "QCOM_2023_Item_1_0005_0a8b620e",
+          "ticker": "QCOM",
+          "section": "Item_1"
+        },
+        {
+          "chunk_id": "QCOM_2023_Item_1A_0011_b48062a8",
+          "ticker": "QCOM",
+          "section": "Item_1A"
+        },
+        {
+          "chunk_id": "QCOM_2024_Item_1_0004_bf697fee",
+          "ticker": "QCOM",
+          "section": "Item_1"
+        }
+      ]
+    },
+    "entities_without_chunk_mentions": {
+      "count": 0,
+      "by_type": []
+    },
+    "isolated_entities": {
+      "count": 4252,
+      "by_type": [
+        {
+          "type": "RISK_FACTOR",
+          "n": 2393
+        },
+        {
+          "type": "FIN_METRIC",
+          "n": 403
+        },
+        {
+          "type": "PRODUCT",
+          "n": 337
+        },
+        {
+          "type": "ORG",
+          "n": 190
+        },
+        {
+          "type": "EVENT",
+          "n": 173
+        },
+        {
+          "type": "ACCOUNTING_POLICY",
+          "n": 172
+        },
+        {
+          "type": "MACRO_CONDITION",
+          "n": 140
+        },
+        {
+          "type": "COMP",
+          "n": 139
+        },
+        {
+          "type": "GPE",
+          "n": 86
+        },
+        {
+          "type": "SEGMENT",
+          "n": 84
+        },
+        {
+          "type": "RAW_MATERIAL",
+          "n": 67
+        },
+        {
+          "type": "REGULATORY_REQUIREMENT",
+          "n": 58
+        },
+        {
+          "type": "ESG_TOPIC",
+          "n": 10
+        }
+      ]
+    },
+    "missing_properties": [
+      {
+        "scope": "Entity",
+        "property": "name",
+        "n": 0
+      },
+      {
+        "scope": "Entity",
+        "property": "type",
+        "n": 0
+      },
+      {
+        "scope": "Entity",
+        "property": "specificity",
+        "n": 0
+      },
+      {
+        "scope": "Entity",
+        "property": "embedding",
+        "n": 0
+      },
+      {
+        "scope": "Chunk",
+        "property": "chunk_id",
+        "n": 0
+      },
+      {
+        "scope": "Chunk",
+        "property": "text",
+        "n": 0
+      },
+      {
+        "scope": "Chunk",
+        "property": "embedding",
+        "n": 0
+      }
+    ],
+    "missing_triple_embeddings": 0,
+    "chunk_mention_stats": {
+      "avg": 12.807839795483574,
+      "p50": 11,
+      "p90": 25.0,
+      "p99": 40.0,
+      "max": 106
+    },
+    "broad_chunks": [
+      {
+        "chunk_id": "KLAC_2024_Item_1A_0000_fe1b81fd",
+        "ticker": "KLAC",
+        "section": "Item_1A",
+        "n_entities": 106
+      },
+      {
+        "chunk_id": "KLAC_2025_Item_1A_0000_c112c626",
+        "ticker": "KLAC",
+        "section": "Item_1A",
+        "n_entities": 102
+      },
+      {
+        "chunk_id": "KLAC_2023_Item_1A_0000_4ec1f31e",
+        "ticker": "KLAC",
+        "section": "Item_1A",
+        "n_entities": 77
+      },
+      {
+        "chunk_id": "KLAC_2025_Item_1A_0002_6d29768d",
+        "ticker": "KLAC",
+        "section": "Item_1A",
+        "n_entities": 77
+      },
+      {
+        "chunk_id": "KLAC_2024_Item_1A_0002_f46cc9dc",
+        "ticker": "KLAC",
+        "section": "Item_1A",
+        "n_entities": 67
+      },
+      {
+        "chunk_id": "KLAC_2023_Item_1A_0001_ce65eb6f",
+        "ticker": "KLAC",
+        "section": "Item_1A",
+        "n_entities": 62
+      },
+      {
+        "chunk_id": "KLAC_2023_Item_1A_0002_349ce6e3",
+        "ticker": "KLAC",
+        "section": "Item_1A",
+        "n_entities": 60
+      },
+      {
+        "chunk_id": "AVGO_2023_Item_1_0010_68f5ffd4",
+        "ticker": "AVGO",
+        "section": "Item_1",
+        "n_entities": 53
+      },
+      {
+        "chunk_id": "KLAC_2025_Item_1A_0001_1d5ddf3c",
+        "ticker": "KLAC",
+        "section": "Item_1A",
+        "n_entities": 52
+      },
+      {
+        "chunk_id": "ENTG_2025_Item_1A_0000_b352fc26",
+        "ticker": "ENTG",
+        "section": "Item_1A",
+        "n_entities": 51
+      },
+      {
+        "chunk_id": "KLAC_2023_Item_1_0006_11054457",
+        "ticker": "KLAC",
+        "section": "Item_1",
+        "n_entities": 48
+      },
+      {
+        "chunk_id": "KLAC_2024_Item_1_0006_58dbeef6",
+        "ticker": "KLAC",
+        "section": "Item_1",
+        "n_entities": 48
+      },
+      {
+        "chunk_id": "RMBS_2026_Item_7_0001_544e4d1d",
+        "ticker": "RMBS",
+        "section": "Item_7",
+        "n_entities": 46
+      },
+      {
+        "chunk_id": "KLAC_2024_Item_7_0015_cec8f5c7",
+        "ticker": "KLAC",
+        "section": "Item_7",
+        "n_entities": 44
+      },
+      {
+        "chunk_id": "KLAC_2023_Item_7_0016_a39e6fe6",
+        "ticker": "KLAC",
+        "section": "Item_7",
+        "n_entities": 43
+      },
+      {
+        "chunk_id": "KLAC_2024_Item_1_0005_f2fc0653",
+        "ticker": "KLAC",
+        "section": "Item_1",
+        "n_entities": 43
+      },
+      {
+        "chunk_id": "RMBS_2026_Item_1_0001_bc3d8a01",
+        "ticker": "RMBS",
+        "section": "Item_1",
+        "n_entities": 43
+      },
+      {
+        "chunk_id": "KLAC_2023_Item_1_0005_ec4a6eeb",
+        "ticker": "KLAC",
+        "section": "Item_1",
+        "n_entities": 42
+      },
+      {
+        "chunk_id": "KLAC_2025_Item_1A_0006_7aa995a7",
+        "ticker": "KLAC",
+        "section": "Item_1A",
+        "n_entities": 42
+      },
+      {
+        "chunk_id": "MU_2023_Item_1A_0000_426cfeaa",
+        "ticker": "MU",
+        "section": "Item_1A",
+        "n_entities": 42
+      },
+      {
+        "chunk_id": "MU_2023_Item_7_0007_812b0ead",
+        "ticker": "MU",
+        "section": "Item_7",
+        "n_entities": 41
+      },
+      {
+        "chunk_id": "RMBS_2026_Item_1A_0000_4ada9712",
+        "ticker": "RMBS",
+        "section": "Item_1A",
+        "n_entities": 41
+      },
+      {
+        "chunk_id": "AMD_2024_Item_1_0009_01379c5a",
+        "ticker": "AMD",
+        "section": "Item_1",
+        "n_entities": 40
+      },
+      {
+        "chunk_id": "AMKR_2025_Item_1A_0003_a68b7182",
+        "ticker": "AMKR",
+        "section": "Item_1A",
+        "n_entities": 40
+      },
+      {
+        "chunk_id": "AVGO_2024_Item_1A_0001_2912e409",
+        "ticker": "AVGO",
+        "section": "Item_1A",
+        "n_entities": 40
+      },
+      {
+        "chunk_id": "AVGO_2024_Item_1_0012_88739b41",
+        "ticker": "AVGO",
+        "section": "Item_1",
+        "n_entities": 40
+      },
+      {
+        "chunk_id": "COHR_2023_Item_1_0014_7a4d6843",
+        "ticker": "COHR",
+        "section": "Item_1",
+        "n_entities": 40
+      },
+      {
+        "chunk_id": "COHR_2024_Item_1_0002_29277790",
+        "ticker": "COHR",
+        "section": "Item_1",
+        "n_entities": 40
+      },
+      {
+        "chunk_id": "LRCX_2024_Item_1A_0005_11e69e9e",
+        "ticker": "LRCX",
+        "section": "Item_1A",
+        "n_entities": 40
+      },
+      {
+        "chunk_id": "AMD_2026_Item_1A_0032_c870df0c",
+        "ticker": "AMD",
+        "section": "Item_1A",
+        "n_entities": 39
+      }
+    ],
+    "entity_mention_stats": {
+      "avg": 2.218613919846476,
+      "p50": 1,
+      "p90": 3.0,
+      "p99": 18.0,
+      "max": 611
+    },
+    "informative_degree_stats": {
+      "avg_degree": 2.591925603365563,
+      "p50": 1,
+      "p90": 3.0,
+      "p99": 20.0,
+      "max_degree": 1538,
+      "degree_0": 4252,
+      "degree_1": 5076
+    },
+    "top_hubs": [
+      {
+        "name": "intel",
+        "type": "ORG",
+        "degree": 1538,
+        "specificity": 0.13626042280016507
+      },
+      {
+        "name": "nvidia",
+        "type": "ORG",
+        "degree": 1207,
+        "specificity": 0.14091013957942697
+      },
+      {
+        "name": "coherent",
+        "type": "ORG",
+        "degree": 790,
+        "specificity": 0.14985094399051974
+      },
+      {
+        "name": "lam research",
+        "type": "ORG",
+        "degree": 761,
+        "specificity": 0.15069440231447528
+      },
+      {
+        "name": "qualcomm",
+        "type": "ORG",
+        "degree": 613,
+        "specificity": 0.15576336292972856
+      },
+      {
+        "name": "advanced micro devices",
+        "type": "ORG",
+        "degree": 599,
+        "specificity": 0.15632499556792623
+      },
+      {
+        "name": "kla",
+        "type": "ORG",
+        "degree": 570,
+        "specificity": 0.1575450893225112
+      },
+      {
+        "name": "nvidia corporation",
+        "type": "ORG",
+        "degree": 455,
+        "specificity": 0.16333216405677026
+      },
+      {
+        "name": "amd",
+        "type": "ORG",
+        "degree": 450,
+        "specificity": 0.16362682551476665
+      },
+      {
+        "name": "amkor",
+        "type": "ORG",
+        "degree": 442,
+        "specificity": 0.16410741777599977
+      },
+      {
+        "name": "broadcom",
+        "type": "ORG",
+        "degree": 399,
+        "specificity": 0.16690410034766703
+      },
+      {
+        "name": "applied materials",
+        "type": "ORG",
+        "degree": 338,
+        "specificity": 0.17164434973717002
+      },
+      {
+        "name": "united states",
+        "type": "GPE",
+        "degree": 317,
+        "specificity": 0.17354930276888683
+      },
+      {
+        "name": "micron technology",
+        "type": "ORG",
+        "degree": 307,
+        "specificity": 0.17451703074550312
+      },
+      {
+        "name": "rambus",
+        "type": "ORG",
+        "degree": 305,
+        "specificity": 0.1747156689709896
+      },
+      {
+        "name": "china",
+        "type": "GPE",
+        "degree": 281,
+        "specificity": 0.17724503211885126
+      },
+      {
+        "name": "entegris",
+        "type": "ORG",
+        "degree": 273,
+        "specificity": 0.17815378182121677
+      },
+      {
+        "name": "revenue",
+        "type": "FIN_METRIC",
+        "degree": 229,
+        "specificity": 0.18388845457974975
+      },
+      {
+        "name": "texas instruments",
+        "type": "ORG",
+        "degree": 200,
+        "specificity": 0.18856166434639035
+      },
+      {
+        "name": "gross margin",
+        "type": "FIN_METRIC",
+        "degree": 191,
+        "specificity": 0.190204637234765
+      },
+      {
+        "name": "amkor technology",
+        "type": "ORG",
+        "degree": 162,
+        "specificity": 0.19631901066558333
+      },
+      {
+        "name": "micron",
+        "type": "ORG",
+        "degree": 157,
+        "specificity": 0.19752715622645642
+      },
+      {
+        "name": "lam research corporation",
+        "type": "ORG",
+        "degree": 147,
+        "specificity": 0.20011157125545861
+      },
+      {
+        "name": "inflation",
+        "type": "MACRO_CONDITION",
+        "degree": 123,
+        "specificity": 0.2074567608530314
+      },
+      {
+        "name": "net cash provided by operating activities",
+        "type": "FIN_METRIC",
+        "degree": 108,
+        "specificity": 0.21315835557367352
+      },
+      {
+        "name": "climate change",
+        "type": "MACRO_CONDITION",
+        "degree": 107,
+        "specificity": 0.21357795232369067
+      },
+      {
+        "name": "stock price volatility",
+        "type": "RISK_FACTOR",
+        "degree": 99,
+        "specificity": 0.21714724095162588
+      },
+      {
+        "name": "operating income",
+        "type": "FIN_METRIC",
+        "degree": 89,
+        "specificity": 0.2222316216158104
+      },
+      {
+        "name": "taiwan",
+        "type": "GPE",
+        "degree": 83,
+        "specificity": 0.22569202144874392
+      },
+      {
+        "name": "net sales",
+        "type": "FIN_METRIC",
+        "degree": 82,
+        "specificity": 0.22630370469475658
+      },
+      {
+        "name": "europe",
+        "type": "GPE",
+        "degree": 76,
+        "specificity": 0.2302128900546512
+      },
+      {
+        "name": "covid-19 pandemic",
+        "type": "EVENT",
+        "degree": 73,
+        "specificity": 0.23233849357411737
+      },
+      {
+        "name": "net income",
+        "type": "FIN_METRIC",
+        "degree": 73,
+        "specificity": 0.23233849357411737
+      },
+      {
+        "name": "israel",
+        "type": "GPE",
+        "degree": 72,
+        "specificity": 0.23307527170850925
+      },
+      {
+        "name": "asia",
+        "type": "GPE",
+        "degree": 70,
+        "specificity": 0.23459420572161058
+      },
+      {
+        "name": "coherent corp",
+        "type": "ORG",
+        "degree": 68,
+        "specificity": 0.23617733727628992
+      },
+      {
+        "name": "kla corporation",
+        "type": "ORG",
+        "degree": 68,
+        "specificity": 0.23617733727628992
+      },
+      {
+        "name": "effective tax rate",
+        "type": "FIN_METRIC",
+        "degree": 67,
+        "specificity": 0.23699447183691388
+      },
+      {
+        "name": "intel corporation",
+        "type": "ORG",
+        "degree": 66,
+        "specificity": 0.23782951347935782
+      },
+      {
+        "name": "japan",
+        "type": "GPE",
+        "degree": 64,
+        "specificity": 0.23955611574701857
+      },
+      {
+        "name": "capital expenditures",
+        "type": "FIN_METRIC",
+        "degree": 59,
+        "specificity": 0.2442393366759723
+      },
+      {
+        "name": "california",
+        "type": "GPE",
+        "degree": 57,
+        "specificity": 0.24627854581449443
+      },
+      {
+        "name": "interest expense",
+        "type": "FIN_METRIC",
+        "degree": 56,
+        "specificity": 0.2473379469500514
+      },
+      {
+        "name": "tariffs",
+        "type": "MACRO_CONDITION",
+        "degree": 54,
+        "specificity": 0.24954251462921184
+      },
+      {
+        "name": "geopolitical tensions",
+        "type": "MACRO_CONDITION",
+        "degree": 52,
+        "specificity": 0.2518706487516997
+      },
+      {
+        "name": "international operations risks",
+        "type": "RISK_FACTOR",
+        "degree": 51,
+        "specificity": 0.2530848692773169
+      },
+      {
+        "name": "singapore",
+        "type": "GPE",
+        "degree": 51,
+        "specificity": 0.2530848692773169
+      },
+      {
+        "name": "vmware merger",
+        "type": "EVENT",
+        "degree": 50,
+        "specificity": 0.25433477814404226
+      },
+      {
+        "name": "export controls",
+        "type": "REGULATORY_REQUIREMENT",
+        "degree": 49,
+        "specificity": 0.25562221863533147
+      },
+      {
+        "name": "korea",
+        "type": "GPE",
+        "degree": 47,
+        "specificity": 0.25831776680732876
+      }
+    ],
+    "hub_stats": {
+      "top10_degree_share_pct": 21.14300358790364,
+      "top25_degree_share_pct": 31.21476166068683,
+      "degree_sum": 35118
+    },
+    "generic_entities": [
+      {
+        "name": "revenue",
+        "type": "FIN_METRIC",
+        "degree": 229,
+        "mention_count": 170
+      },
+      {
+        "name": "ai",
+        "type": "MACRO_CONDITION",
+        "degree": 9,
+        "mention_count": 11
+      },
+      {
+        "name": "demand",
+        "type": "FIN_METRIC",
+        "degree": 9,
+        "mention_count": 6
+      },
+      {
+        "name": "l4",
+        "type": "PRODUCT",
+        "degree": 5,
+        "mention_count": 7
+      },
+      {
+        "name": "5g",
+        "type": "PRODUCT",
+        "degree": 5,
+        "mention_count": 3
+      },
+      {
+        "name": "competition",
+        "type": "RISK_FACTOR",
+        "degree": 3,
+        "mention_count": 8
+      },
+      {
+        "name": "uk",
+        "type": "GPE",
+        "degree": 3,
+        "mention_count": 6
+      },
+      {
+        "name": "ms",
+        "type": "SEGMENT",
+        "degree": 3,
+        "mention_count": 5
+      },
+      {
+        "name": "5g",
+        "type": "MACRO_CONDITION",
+        "degree": 3,
+        "mention_count": 4
+      },
+      {
+        "name": "sales",
+        "type": "FIN_METRIC",
+        "degree": 2,
+        "mention_count": 4
+      },
+      {
+        "name": "ec",
+        "type": "ORG",
+        "degree": 2,
+        "mention_count": 1
+      },
+      {
+        "name": "ms",
+        "type": "PRODUCT",
+        "degree": 2,
+        "mention_count": 1
+      },
+      {
+        "name": "eu",
+        "type": "GPE",
+        "degree": 1,
+        "mention_count": 6
+      },
+      {
+        "name": "competition",
+        "type": "MACRO_CONDITION",
+        "degree": 1,
+        "mention_count": 2
+      },
+      {
+        "name": "costs",
+        "type": "FIN_METRIC",
+        "degree": 1,
+        "mention_count": 2
+      },
+      {
+        "name": "gf",
+        "type": "COMP",
+        "degree": 1,
+        "mention_count": 2
+      },
+      {
+        "name": "3g",
+        "type": "PRODUCT",
+        "degree": 1,
+        "mention_count": 1
+      },
+      {
+        "name": "4g",
+        "type": "PRODUCT",
+        "degree": 1,
+        "mention_count": 1
+      },
+      {
+        "name": "6g",
+        "type": "PRODUCT",
+        "degree": 1,
+        "mention_count": 1
+      },
+      {
+        "name": "mc",
+        "type": "SEGMENT",
+        "degree": 1,
+        "mention_count": 1
+      },
+      {
+        "name": "mc",
+        "type": "PRODUCT",
+        "degree": 1,
+        "mention_count": 1
+      },
+      {
+        "name": "p3",
+        "type": "PRODUCT",
+        "degree": 1,
+        "mention_count": 1
+      },
+      {
+        "name": "ts",
+        "type": "PRODUCT",
+        "degree": 1,
+        "mention_count": 1
+      },
+      {
+        "name": "semiconductors",
+        "type": "RAW_MATERIAL",
+        "degree": 0,
+        "mention_count": 2
+      },
+      {
+        "name": "er",
+        "type": "RAW_MATERIAL",
+        "degree": 0,
+        "mention_count": 1
+      },
+      {
+        "name": "m1",
+        "type": "PRODUCT",
+        "degree": 0,
+        "mention_count": 1
+      },
+      {
+        "name": "m2",
+        "type": "PRODUCT",
+        "degree": 0,
+        "mention_count": 1
+      },
+      {
+        "name": "nd",
+        "type": "RAW_MATERIAL",
+        "degree": 0,
+        "mention_count": 1
+      },
+      {
+        "name": "pc",
+        "type": "SEGMENT",
+        "degree": 0,
+        "mention_count": 1
+      },
+      {
+        "name": "services",
+        "type": "PRODUCT",
+        "degree": 0,
+        "mention_count": 1
+      },
+      {
+        "name": "services",
+        "type": "SEGMENT",
+        "degree": 0,
+        "mention_count": 1
+      },
+      {
+        "name": "ti",
+        "type": "COMP",
+        "degree": 0,
+        "mention_count": 1
+      },
+      {
+        "name": "tm",
+        "type": "RAW_MATERIAL",
+        "degree": 0,
+        "mention_count": 1
+      },
+      {
+        "name": "yb",
+        "type": "RAW_MATERIAL",
+        "degree": 0,
+        "mention_count": 1
+      }
+    ],
+    "self_loops": 0,
+    "duplicate_pair_relation_count": 1560,
+    "synonym_clusters": [
+      {
+        "cluster": [
+          "advanced micro devices",
+          "advanced micro devices inc",
+          "advanced micro devices, inc.",
+          "amd"
+        ],
+        "size": 4
+      },
+      {
+        "cluster": [
+          "advanced micro devices",
+          "advanced micro devices inc",
+          "advanced micro devices, inc.",
+          "amd"
+        ],
+        "size": 4
+      },
+      {
+        "cluster": [
+          "advanced micro devices",
+          "advanced micro devices inc",
+          "advanced micro devices, inc.",
+          "amd"
+        ],
+        "size": 4
+      },
+      {
+        "cluster": [
+          "advanced micro devices",
+          "advanced micro devices inc",
+          "advanced micro devices, inc.",
+          "amd"
+        ],
+        "size": 4
+      },
+      {
+        "cluster": [
+          "changxin memory technologies",
+          "changxin memory technologies inc",
+          "changxin memory technologies inc.",
+          "changxin memory technologies, inc."
+        ],
+        "size": 4
+      },
+      {
+        "cluster": [
+          "changxin memory technologies",
+          "changxin memory technologies inc",
+          "changxin memory technologies inc.",
+          "changxin memory technologies, inc."
+        ],
+        "size": 4
+      },
+      {
+        "cluster": [
+          "changxin memory technologies",
+          "changxin memory technologies inc",
+          "changxin memory technologies inc.",
+          "changxin memory technologies, inc."
+        ],
+        "size": 4
+      },
+      {
+        "cluster": [
+          "changxin memory technologies",
+          "changxin memory technologies inc",
+          "changxin memory technologies inc.",
+          "changxin memory technologies, inc."
+        ],
+        "size": 4
+      },
+      {
+        "cluster": [
+          "lumentum",
+          "lumentum holdings",
+          "lumentum holdings inc",
+          "lumentum holdings inc."
+        ],
+        "size": 4
+      },
+      {
+        "cluster": [
+          "lumentum",
+          "lumentum holdings",
+          "lumentum holdings inc",
+          "lumentum holdings inc."
+        ],
+        "size": 4
+      },
+      {
+        "cluster": [
+          "lumentum",
+          "lumentum holdings",
+          "lumentum holdings inc",
+          "lumentum holdings inc."
+        ],
+        "size": 4
+      },
+      {
+        "cluster": [
+          "lumentum",
+          "lumentum holdings",
+          "lumentum holdings inc",
+          "lumentum holdings inc."
+        ],
+        "size": 4
+      },
+      {
+        "cluster": [
+          "marvell technology group",
+          "marvell technology group ltd",
+          "marvell technology inc",
+          "marvell technology, inc."
+        ],
+        "size": 4
+      },
+      {
+        "cluster": [
+          "marvell technology group",
+          "marvell technology group ltd",
+          "marvell technology inc",
+          "marvell technology, inc."
+        ],
+        "size": 4
+      },
+      {
+        "cluster": [
+          "tongfu microelectronics",
+          "tongfu microelectronics co ltd",
+          "tongfu microelectronics co., ltd",
+          "tongfu microelectronics co., ltd."
+        ],
+        "size": 4
+      },
+      {
+        "cluster": [
+          "tongfu microelectronics",
+          "tongfu microelectronics co ltd",
+          "tongfu microelectronics co., ltd",
+          "tongfu microelectronics co., ltd."
+        ],
+        "size": 4
+      },
+      {
+        "cluster": [
+          "tongfu microelectronics",
+          "tongfu microelectronics co ltd",
+          "tongfu microelectronics co., ltd",
+          "tongfu microelectronics co., ltd."
+        ],
+        "size": 4
+      },
+      {
+        "cluster": [
+          "tongfu microelectronics",
+          "tongfu microelectronics co ltd",
+          "tongfu microelectronics co., ltd",
+          "tongfu microelectronics co., ltd."
+        ],
+        "size": 4
+      },
+      {
+        "cluster": [
+          "broadcom",
+          "broadcom corporation",
+          "broadcom inc"
+        ],
+        "size": 3
+      },
+      {
+        "cluster": [
+          "broadcom",
+          "broadcom corporation",
+          "broadcom inc"
+        ],
+        "size": 3
+      },
+      {
+        "cluster": [
+          "broadcom",
+          "broadcom corporation",
+          "broadcom inc"
+        ],
+        "size": 3
+      },
+      {
+        "cluster": [
+          "marvell technology group",
+          "marvell technology group ltd",
+          "marvell technology inc"
+        ],
+        "size": 3
+      },
+      {
+        "cluster": [
+          "marvell technology group",
+          "marvell technology inc",
+          "marvell technology, inc."
+        ],
+        "size": 3
+      },
+      {
+        "cluster": [
+          "siliconware precision industries",
+          "siliconware precision industries ltd",
+          "siliconware precision industries ltd."
+        ],
+        "size": 3
+      },
+      {
+        "cluster": [
+          "siliconware precision industries",
+          "siliconware precision industries ltd",
+          "siliconware precision industries ltd."
+        ],
+        "size": 3
+      },
+      {
+        "cluster": [
+          "siliconware precision industries",
+          "siliconware precision industries ltd",
+          "siliconware precision industries ltd."
+        ],
+        "size": 3
+      },
+      {
+        "cluster": [
+          "sk hynix",
+          "sk hynix inc",
+          "sk hynix inc."
+        ],
+        "size": 3
+      },
+      {
+        "cluster": [
+          "sk hynix",
+          "sk hynix inc",
+          "sk hynix inc."
+        ],
+        "size": 3
+      },
+      {
+        "cluster": [
+          "sk hynix",
+          "sk hynix inc",
+          "sk hynix inc."
+        ],
+        "size": 3
+      },
+      {
+        "cluster": [
+          "texas instruments",
+          "texas instruments incorporated",
+          "ti"
+        ],
+        "size": 3
+      }
+    ],
+    "components": {
+      "ok": true,
+      "n_components": 4162,
+      "largest_components": [
+        {
+          "rank": 1,
+          "size": 8347
+        },
+        {
+          "rank": 2,
+          "size": 9
+        },
+        {
+          "rank": 3,
+          "size": 7
+        },
+        {
+          "rank": 4,
+          "size": 7
+        },
+        {
+          "rank": 5,
+          "size": 6
+        },
+        {
+          "rank": 6,
+          "size": 6
+        },
+        {
+          "rank": 7,
+          "size": 6
+        },
+        {
+          "rank": 8,
+          "size": 5
+        },
+        {
+          "rank": 9,
+          "size": 5
+        },
+        {
+          "rank": 10,
+          "size": 5
+        },
+        {
+          "rank": 11,
+          "size": 5
+        },
+        {
+          "rank": 12,
+          "size": 5
+        },
+        {
+          "rank": 13,
+          "size": 5
+        },
+        {
+          "rank": 14,
+          "size": 5
+        },
+        {
+          "rank": 15,
+          "size": 5
+        },
+        {
+          "rank": 16,
+          "size": 5
+        },
+        {
+          "rank": 17,
+          "size": 5
+        },
+        {
+          "rank": 18,
+          "size": 5
+        },
+        {
+          "rank": 19,
+          "size": 5
+        },
+        {
+          "rank": 20,
+          "size": 5
+        }
+      ]
+    }
+  },
+  "entity_samples": {
+    "amd": [
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "acquisition of zt systems",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "product purchase agreement with openai",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "sale of zt manufacturing business to sanmina",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "warrant issued to openai",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "xilinx acquisition",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "altera",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "nvidia",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "nvidia",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "nvidia corporation",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "arizona",
+        "neighbor_type": "GPE"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "atmp jvs",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "california",
+        "neighbor_type": "GPE"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "globalfoundries",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "israel",
+        "neighbor_type": "GPE"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "microsoft",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "oregon",
+        "neighbor_type": "GPE"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "rambus",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "sony",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "tongfu microelectronics",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "tsmc",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "umc",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "all other",
+        "neighbor_type": "SEGMENT"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "all other operating loss",
+        "neighbor_type": "FIN_METRIC"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "all other segment",
+        "neighbor_type": "SEGMENT"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "amd epyc cpus",
+        "neighbor_type": "PRODUCT"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "amd instinct gpus",
+        "neighbor_type": "PRODUCT"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "amortization of acquisition-related intangibles",
+        "neighbor_type": "ACCOUNTING_POLICY"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "amortization of acquisition-related intangibles",
+        "neighbor_type": "FIN_METRIC"
+      }
+    ],
+    "advanced micro devices": [
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "2014 senior notes issuance",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "2019 senior notes issuance",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "2020 senior notes issuance",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "2022 senior notes issuance",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "acquisition of mipsology sas",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "acquisition of nod inc",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "acquisition of zt systems",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "revolving credit facility establishment",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "unveiling of accelerated amd instinct accelerator roadmap",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "altera",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "analog devices",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "broadcom corporation",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "intel corporation",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "lattice semiconductor corporation",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "marvell technology group",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "marvell technology group ltd",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "microsemi corporation",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "nvidia",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "nvidia",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "nvidia corporation",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "nxp semiconductors",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "nxp semiconductors n.v.",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "nxp semiconductors nv",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "qualcomm incorporated",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "texas instruments incorporated",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "capacitors",
+        "neighbor_type": "RAW_MATERIAL"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "china",
+        "neighbor_type": "GPE"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "gf",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "interposers",
+        "neighbor_type": "RAW_MATERIAL"
+      }
+    ],
+    "nvidia": [
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "acquisition of alphawave",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "common stock repurchase program approval",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "advanced micro devices",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "advanced micro devices",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "alibaba group",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "alphabet",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "amazon",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "ambarella",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "amd",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "amd",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "arista networks",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "baidu",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "broadcom",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "cisco",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "hewlett packard enterprise",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "huawei",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "huawei technologies",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "intel corporation",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "lumentum",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "marvell",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "microsoft",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "qualcomm",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "renesas",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "samsung",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "tesla",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "bulgaria",
+        "neighbor_type": "GPE"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "canada",
+        "neighbor_type": "GPE"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "china",
+        "neighbor_type": "GPE"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "china",
+        "neighbor_type": "GPE"
+      }
+    ],
+    "tsmc": [
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "advanced micro devices",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "amd",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "applied materials",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "broadcom",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "broadcom",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "lam research",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "lam research corporation",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "nvidia",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "nvidia",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "nvidia corporation",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "qualcomm",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "qualcomm",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "qualcomm",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "the_filer",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "competition from contract foundries",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "competition from foundries with full turnkey",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "dependence on tsmc",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "disaggregated design supply chain risk",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "intense foundry competition",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "tsmc 7nm supply constraint",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "tsmc_supply_dependency",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "INVESTS_IN",
+        "neighbor": "semiconductor process control",
+        "neighbor_type": "SEGMENT"
+      },
+      {
+        "rel_type": "INVOLVED_IN",
+        "neighbor": "sale of minority stakes in ims business",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "SUPPLIES",
+        "neighbor": "advanced micro devices",
+        "neighbor_type": "ORG"
+      }
+    ],
+    "taiwan": [
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "micron",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "micron technology",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "nvidia",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "nvidia",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "qualcomm",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "qualcomm",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "texas instruments",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "applied materials",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "applied materials",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "lam research",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "micron technology",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "china-taiwan geopolitical changes",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "china-taiwan geopolitical tensions",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "concentration of new wafer starts in korea and taiwan",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "customer concentration",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "customer concentration",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "disruption from external events",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "foreign currency exchange rate fluctuations",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "foreign currency exchange rate risk",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "geographic concentration",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "geographic concentration of customer base",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "geopolitical changes china taiwan",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "geopolitical instability",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "geopolitical instability",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "geopolitical risk from china taiwan tensions",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "geopolitical risks",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "geopolitical tensions and trade disputes",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "geopolitical trade dispute risk in semiconductor industry",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "global trade issues and export regulations",
+        "neighbor_type": "RISK_FACTOR"
+      }
+    ],
+    "hbm": [
+      {
+        "rel_type": "POSITIVELY_IMPACTS",
+        "neighbor": "ai demand",
+        "neighbor_type": "MACRO_CONDITION"
+      },
+      {
+        "rel_type": "POSITIVELY_IMPACTS",
+        "neighbor": "gross margin",
+        "neighbor_type": "FIN_METRIC"
+      },
+      {
+        "rel_type": "POSITIVELY_IMPACTS",
+        "neighbor": "hbm advanced packaging facility groundbreaking",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "POSITIVELY_IMPACTS",
+        "neighbor": "market demand",
+        "neighbor_type": "MACRO_CONDITION"
+      },
+      {
+        "rel_type": "POSITIVELY_IMPACTS",
+        "neighbor": "taiwan production capacity modernization",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "micron",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "micron technology",
+        "neighbor_type": "ORG"
+      }
+    ],
+    "hbm3e": [
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "micron",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "micron technology",
+        "neighbor_type": "ORG"
+      }
+    ],
+    "micron": [
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "changxin memory technologies inc",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "cxmt",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "kioxia",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "kioxia holdings corporation",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "samsung electronics",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "samsung electronics co ltd",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "sandisk",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "sk hynix",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "sk hynix inc",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "western digital corporation",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "yangtze memory technologies co ltd",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "ymtc",
+        "neighbor_type": "COMP"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "chemicals",
+        "neighbor_type": "RAW_MATERIAL"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "lam research",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "lam research corporation",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "nvidia",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "rambus",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "raw materials",
+        "neighbor_type": "RAW_MATERIAL"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "taiwan",
+        "neighbor_type": "GPE"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "rambus",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "rambus",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "FACES",
+        "neighbor": "cac ban on micron products in china",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "FACES",
+        "neighbor": "changes in foreign economic policies",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "FACES",
+        "neighbor": "china cybersecurity review and restrictions",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "FACES",
+        "neighbor": "chinese government investment competition risk",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "FACES",
+        "neighbor": "competition from chinese state-backed companies",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "FACES",
+        "neighbor": "competitive disadvantage from consolidation",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "FACES",
+        "neighbor": "compliance with international laws",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "FACES",
+        "neighbor": "compliance with trade and technical standards",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "FACES",
+        "neighbor": "compliance with trade laws",
+        "neighbor_type": "RISK_FACTOR"
+      }
+    ],
+    "blackwell": [
+      {
+        "rel_type": "POSITIVELY_IMPACTS",
+        "neighbor": "gaming revenue",
+        "neighbor_type": "FIN_METRIC"
+      },
+      {
+        "rel_type": "POSITIVELY_IMPACTS",
+        "neighbor": "professional visualization revenue",
+        "neighbor_type": "FIN_METRIC"
+      },
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "nvidia",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "nvidia corporation",
+        "neighbor_type": "ORG"
+      }
+    ],
+    "hopper": [
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "nvidia corporation",
+        "neighbor_type": "ORG"
+      }
+    ],
+    "intel": [
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "2022 restructuring plan",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "2024 restructuring plan",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "2024 restructuring plan",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "2024 restructuring plan",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "2024 restructuring plan",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "2024 restructuring plan",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "2024 restructuring plan",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "2025 restructuring plan",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "2025 restructuring plan",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "2025 restructuring plan",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "accelerated funds from u.s. government",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "advanced packaging design wins",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "ai pc acceleration program",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "ai pc acceleration program",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "altera standalone business",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "collaboration with microsoft for ai on pc",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "commercial agreement with tower",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "definitive agreement with synopsys",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "demo ucie in silicon 2023",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "design wins on intel 18a",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "disciplined capital deployment approach",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "establish intel foundry as independent subsidiary",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "goodwill impairment charge",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "intel foundry subsidiary establishment",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "introduce intel 14a",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "launch of 5th generation intel xeon processors",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "launch of intel gaudi 3 ai accelerators",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "launch of intel xeon 6 processors",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "multigenerational agreement with arm",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "ANNOUNCES",
+        "neighbor": "organization of altera as standalone business",
+        "neighbor_type": "EVENT"
+      }
+    ],
+    "intel 18a": [
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "INTRODUCES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "INVESTS_IN",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "NEGATIVELY_IMPACTS",
+        "neighbor": "intersegment inventory reserves",
+        "neighbor_type": "FIN_METRIC"
+      },
+      {
+        "rel_type": "POSITIVELY_IMPACTS",
+        "neighbor": "intersegment revenue",
+        "neighbor_type": "FIN_METRIC"
+      },
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      }
+    ],
+    "xeon scalable": [],
+    "mobileye": [
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "global vehicle production",
+        "neighbor_type": "MACRO_CONDITION"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "operating income",
+        "neighbor_type": "FIN_METRIC"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "qualcomm",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "revenue",
+        "neighbor_type": "FIN_METRIC"
+      },
+      {
+        "rel_type": "FACES",
+        "neighbor": "disruption of israel fabrication facility",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "GUIDES_ON",
+        "neighbor": "industry adas volumes",
+        "neighbor_type": "FIN_METRIC"
+      },
+      {
+        "rel_type": "GUIDES_ON",
+        "neighbor": "mobileye adas volumes",
+        "neighbor_type": "FIN_METRIC"
+      },
+      {
+        "rel_type": "INTRODUCES",
+        "neighbor": "cloud-enhanced driver-assist",
+        "neighbor_type": "PRODUCT"
+      },
+      {
+        "rel_type": "INTRODUCES",
+        "neighbor": "mobileye supervision",
+        "neighbor_type": "PRODUCT"
+      },
+      {
+        "rel_type": "INVESTS_IN",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "INVESTS_IN",
+        "neighbor": "mobileye chauffeur",
+        "neighbor_type": "PRODUCT"
+      },
+      {
+        "rel_type": "INVESTS_IN",
+        "neighbor": "mobileye drive",
+        "neighbor_type": "PRODUCT"
+      },
+      {
+        "rel_type": "INVOLVED_IN",
+        "neighbor": "annual goodwill impairment assessment 2024",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "INVOLVED_IN",
+        "neighbor": "annual goodwill impairment assessment 2025",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "INVOLVED_IN",
+        "neighbor": "goodwill impairment charge",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "INVOLVED_IN",
+        "neighbor": "mente robotics acquisition",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "INVOLVED_IN",
+        "neighbor": "mobileye ipo",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "INVOLVED_IN",
+        "neighbor": "quarterly qualitative impairment assessment",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "INVOLVED_IN",
+        "neighbor": "sale of mobileye shares",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "INVOLVED_IN",
+        "neighbor": "secondary offering of mobileye stock",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "NEGATIVELY_IMPACTS",
+        "neighbor": "conflict in israel",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "NEGATIVELY_IMPACTS",
+        "neighbor": "customer inventory reduction",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "NEGATIVELY_IMPACTS",
+        "neighbor": "customer inventory reductions",
+        "neighbor_type": "MACRO_CONDITION"
+      }
+    ],
+    "microsoft": [
+      {
+        "rel_type": "COMPETES_WITH",
+        "neighbor": "nvidia",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "advanced micro devices",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "amd",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "nvidia",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "nvidia corporation",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "change in control risk",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "change in control risk",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "change of control provisions",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "delaware law and change in control",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "delaware law change in control risk",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "delaware law, provisions in governing documents and agreement with microsoft",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "INVOLVED_IN",
+        "neighbor": "rampc program expansion",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "NEGATIVELY_IMPACTS",
+        "neighbor": "change in control risk",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "PARTNERS_WITH",
+        "neighbor": "advanced micro devices",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "PARTNERS_WITH",
+        "neighbor": "amd",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "SUBJECT_TO",
+        "neighbor": "nvidia",
+        "neighbor_type": "ORG"
+      }
+    ],
+    "brookfield": [
+      {
+        "rel_type": "PARTNERS_WITH",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      }
+    ],
+    "apollo": [
+      {
+        "rel_type": "PARTNERS_WITH",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      }
+    ],
+    "chips act": [
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "amendment to chips act funding agreements",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "announcement clay fab",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "announcement of advanced hbm packaging in u.s.",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "announcement of clay fab",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "announcement of new york memory manufacturing site",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "announcement of second idaho fab",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "capacity expansion risks",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "chips act award conditions",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "chips act enactment",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "chips act grant applications",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "chips act supply increase risk",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "commercial chips act agreement",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "construction start boise fab",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "construction start of boise fab",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "direct funding agreement",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "direct funding agreement for manassas fab",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "direct funding agreement with department of commerce",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "first dram wafer output projection",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "government grants and incentives risk",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "government incentives benefiting competitors",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "government incentives disadvantage",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "groundbreaking boise fab",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "groundbreaking of boise fab",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "groundbreaking of boise fab",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "micron technology",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "non-binding term sheet with state of new york",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "u.s. department of commerce",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "NEGATIVELY_IMPACTS",
+        "neighbor": "capacity expansion risks",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "NEGATIVELY_IMPACTS",
+        "neighbor": "chips act award conditions",
+        "neighbor_type": "RISK_FACTOR"
+      }
+    ],
+    "export controls": [
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "ai regulatory and compliance risks",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "changes in demand",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "china export controls licensing requirements",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "competition from larger competitors and export control disadvantages",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "dependence on international factories and trade restrictions",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "distributor dependency risk",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "export control and sanctions compliance",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "export controls and entity list restrictions affecting china sales",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "export controls and license restrictions",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "export controls compliance risk",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "export controls on ai technologies",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "impact of export controls economic sanctions and other restrictions",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "international operations risk",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "key materials availability and geopolitical tensions",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "tariffs and export control impacts",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "united states",
+        "neighbor_type": "GPE"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "us export controls on china",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "INTRODUCES",
+        "neighbor": "u.s. government",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "NEGATIVELY_IMPACTS",
+        "neighbor": "backlog",
+        "neighbor_type": "FIN_METRIC"
+      },
+      {
+        "rel_type": "NEGATIVELY_IMPACTS",
+        "neighbor": "china",
+        "neighbor_type": "GPE"
+      },
+      {
+        "rel_type": "NEGATIVELY_IMPACTS",
+        "neighbor": "china",
+        "neighbor_type": "GPE"
+      },
+      {
+        "rel_type": "NEGATIVELY_IMPACTS",
+        "neighbor": "china",
+        "neighbor_type": "GPE"
+      },
+      {
+        "rel_type": "NEGATIVELY_IMPACTS",
+        "neighbor": "china",
+        "neighbor_type": "GPE"
+      },
+      {
+        "rel_type": "NEGATIVELY_IMPACTS",
+        "neighbor": "competitive position harmed by export controls",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "NEGATIVELY_IMPACTS",
+        "neighbor": "data center revenue",
+        "neighbor_type": "FIN_METRIC"
+      },
+      {
+        "rel_type": "NEGATIVELY_IMPACTS",
+        "neighbor": "demand estimation challenges",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "NEGATIVELY_IMPACTS",
+        "neighbor": "demand forecasting inaccuracies",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "NEGATIVELY_IMPACTS",
+        "neighbor": "export controls and economic sanctions",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "NEGATIVELY_IMPACTS",
+        "neighbor": "hong kong",
+        "neighbor_type": "GPE"
+      },
+      {
+        "rel_type": "NEGATIVELY_IMPACTS",
+        "neighbor": "huawei",
+        "neighbor_type": "ORG"
+      }
+    ],
+    "china": [
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "advanced micro devices",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "intel",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "kla",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "lam research",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "nvidia",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "nvidia",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "qualcomm",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "qualcomm",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "smic",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "texas instruments",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DEPENDS_ON",
+        "neighbor": "texas instruments",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "applied materials",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "kla",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "lam research",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "micron technology",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "nvidia",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "nvidia",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "rambus",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "DISCLOSES",
+        "neighbor": "texas instruments",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "acquisition approval risk",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "acquisition regulatory approval risk",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "ai regulation risk",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "april 2025 licensing requirement",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "august 2022 export restrictions",
+        "neighbor_type": "EVENT"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "bis export control restrictions",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "bis export controls",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "bis export controls on china",
+        "neighbor_type": "RISK_FACTOR"
+      },
+      {
+        "rel_type": "IMPACTED_BY",
+        "neighbor": "bis regulations on china sales",
+        "neighbor_type": "RISK_FACTOR"
+      }
+    ],
+    "radeon": [
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "advanced micro devices",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "advanced micro devices, inc.",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "amd",
+        "neighbor_type": "ORG"
+      }
+    ],
+    "ryzen": [
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "advanced micro devices",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "advanced micro devices, inc.",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "amd",
+        "neighbor_type": "ORG"
+      }
+    ],
+    "epyc": [
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "advanced micro devices",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "advanced micro devices, inc.",
+        "neighbor_type": "ORG"
+      },
+      {
+        "rel_type": "PRODUCES",
+        "neighbor": "amd",
+        "neighbor_type": "ORG"
+      }
+    ]
+  },
+  "benchmark": {
+    "summary": {
+      "queries": 30,
+      "queries_with_gold_chunks": 21,
+      "queries_missing_entity": 5,
+      "queries_missing_chunk": 0,
+      "queries_disconnected": 0,
+      "queries_gold_chunk_no_gold_mention": 2
+    },
+    "avg_pair_reachability": 0.9821428571428571,
+    "missing_entities_top": [
+      [
+        "xeon scalable",
+        3
+      ],
+      [
+        "instinct",
+        1
+      ],
+      [
+        "rtx",
+        1
+      ],
+      [
+        "smart capital",
+        1
+      ]
+    ],
+    "missing_chunks_top": [],
+    "queries": [
+      {
+        "id": "T001",
+        "query": "How exposed is AMD to TSMC supply risk?",
+        "type": "graph_multihop",
+        "gold_entities": [
+          "amd",
+          "tsmc"
+        ],
+        "gold_entity_exists": {
+          "amd": true,
+          "tsmc": true
+        },
+        "gold_entity_types": {
+          "amd": "COMP",
+          "tsmc": "ORG"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [
+          "AMD_2026_Item_1A_0008_e84e4130"
+        ],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [
+          {
+            "chunk_id": "AMD_2026_Item_1A_0008_e84e4130",
+            "exists": true,
+            "ticker": "AMD",
+            "section": "Item_1A",
+            "mentioned_gold_entities": [
+              "tsmc"
+            ],
+            "n_mentions": 8
+          }
+        ],
+        "reachable_gold_entity_pairs": 1,
+        "total_gold_entity_pairs": 1,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "amd",
+            "b": "tsmc",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "amd",
+                "tsmc"
+              ],
+              "rels": [
+                "DEPENDS_ON"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      },
+      {
+        "id": "T002",
+        "query": "Which foundry partner manufactures the Hopper architecture chips?",
+        "type": "supplier_via_product",
+        "gold_entities": [
+          "hopper",
+          "nvidia",
+          "tsmc"
+        ],
+        "gold_entity_exists": {
+          "hopper": true,
+          "nvidia": true,
+          "tsmc": true
+        },
+        "gold_entity_types": {
+          "hopper": "PRODUCT",
+          "nvidia": "COMP",
+          "tsmc": "ORG"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [
+          "NVDA_2024_Item_1_0007_bae70036",
+          "NVDA_2025_Item_1_0008_a4407f7e",
+          "AMD_2025_Item_1_0009_c842eea0",
+          "AMD_2026_Item_1_0010_460dfa17",
+          "INTC_2026_Item_1_0008_c74f560f"
+        ],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [
+          {
+            "chunk_id": "NVDA_2024_Item_1_0007_bae70036",
+            "exists": true,
+            "ticker": "NVDA",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "nvidia",
+              "tsmc"
+            ],
+            "n_mentions": 19
+          },
+          {
+            "chunk_id": "NVDA_2025_Item_1_0008_a4407f7e",
+            "exists": true,
+            "ticker": "NVDA",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "nvidia",
+              "tsmc"
+            ],
+            "n_mentions": 28
+          },
+          {
+            "chunk_id": "AMD_2025_Item_1_0009_c842eea0",
+            "exists": true,
+            "ticker": "AMD",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "nvidia",
+              "tsmc"
+            ],
+            "n_mentions": 19
+          },
+          {
+            "chunk_id": "AMD_2026_Item_1_0010_460dfa17",
+            "exists": true,
+            "ticker": "AMD",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "nvidia",
+              "tsmc"
+            ],
+            "n_mentions": 19
+          },
+          {
+            "chunk_id": "INTC_2026_Item_1_0008_c74f560f",
+            "exists": true,
+            "ticker": "INTC",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "nvidia",
+              "tsmc"
+            ],
+            "n_mentions": 17
+          }
+        ],
+        "reachable_gold_entity_pairs": 3,
+        "total_gold_entity_pairs": 3,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "hopper",
+            "b": "nvidia",
+            "path": {
+              "hops": 3,
+              "nodes": [
+                "hopper",
+                "nvidia corporation",
+                "gpu",
+                "nvidia"
+              ],
+              "rels": [
+                "PRODUCES",
+                "PRODUCES",
+                "PRODUCES"
+              ]
+            }
+          },
+          {
+            "a": "hopper",
+            "b": "tsmc",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "hopper",
+                "nvidia corporation",
+                "tsmc"
+              ],
+              "rels": [
+                "PRODUCES",
+                "DEPENDS_ON"
+              ]
+            }
+          },
+          {
+            "a": "nvidia",
+            "b": "tsmc",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "nvidia",
+                "tsmc"
+              ],
+              "rels": [
+                "DEPENDS_ON"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      },
+      {
+        "id": "T003",
+        "query": "Who produces the dense memory chips that power modern AI training accelerators?",
+        "type": "supplier_via_product",
+        "gold_entities": [
+          "micron",
+          "hbm",
+          "ai accelerators"
+        ],
+        "gold_entity_exists": {
+          "micron": true,
+          "hbm": true,
+          "ai accelerators": true
+        },
+        "gold_entity_types": {
+          "micron": "COMP",
+          "hbm": "PRODUCT",
+          "ai accelerators": "PRODUCT"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [
+          "MU_2023_Item_1A_0003_92be33e3",
+          "MU_2025_Item_1A_0004_836bee10",
+          "NVDA_2024_Item_1_0007_bae70036",
+          "NVDA_2025_Item_1_0008_a4407f7e"
+        ],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [
+          {
+            "chunk_id": "MU_2023_Item_1A_0003_92be33e3",
+            "exists": true,
+            "ticker": "MU",
+            "section": "Item_1A",
+            "mentioned_gold_entities": [
+              "micron"
+            ],
+            "n_mentions": 34
+          },
+          {
+            "chunk_id": "MU_2025_Item_1A_0004_836bee10",
+            "exists": true,
+            "ticker": "MU",
+            "section": "Item_1A",
+            "mentioned_gold_entities": [],
+            "n_mentions": 22
+          },
+          {
+            "chunk_id": "NVDA_2024_Item_1_0007_bae70036",
+            "exists": true,
+            "ticker": "NVDA",
+            "section": "Item_1",
+            "mentioned_gold_entities": [],
+            "n_mentions": 19
+          },
+          {
+            "chunk_id": "NVDA_2025_Item_1_0008_a4407f7e",
+            "exists": true,
+            "ticker": "NVDA",
+            "section": "Item_1",
+            "mentioned_gold_entities": [],
+            "n_mentions": 28
+          }
+        ],
+        "reachable_gold_entity_pairs": 3,
+        "total_gold_entity_pairs": 3,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "micron",
+            "b": "hbm",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "micron",
+                "hbm"
+              ],
+              "rels": [
+                "PRODUCES"
+              ]
+            }
+          },
+          {
+            "a": "micron",
+            "b": "ai accelerators",
+            "path": {
+              "hops": 3,
+              "nodes": [
+                "micron",
+                "nvidia",
+                "advanced micro devices",
+                "ai accelerators"
+              ],
+              "rels": [
+                "DEPENDS_ON",
+                "NEGATIVELY_IMPACTS",
+                "PRODUCES"
+              ]
+            }
+          },
+          {
+            "a": "hbm",
+            "b": "ai accelerators",
+            "path": {
+              "hops": 3,
+              "nodes": [
+                "hbm",
+                "gross margin",
+                "intel",
+                "ai accelerators"
+              ],
+              "rels": [
+                "POSITIVELY_IMPACTS",
+                "DISCLOSES",
+                "DISCLOSES"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "GOLD_CHUNK_NO_GOLD_ENTITY_MENTION"
+      },
+      {
+        "id": "T004",
+        "query": "What AI accelerator product line does the main x86 desktop CPU rival of Intel offer?",
+        "type": "competitor_product",
+        "gold_entities": [
+          "intel",
+          "amd",
+          "instinct"
+        ],
+        "gold_entity_exists": {
+          "intel": true,
+          "amd": true,
+          "instinct": false
+        },
+        "gold_entity_types": {
+          "intel": "COMP",
+          "amd": "COMP"
+        },
+        "missing_gold_entities": [
+          "instinct"
+        ],
+        "gold_chunks": [
+          "AMD_2026_Item_1_0003_ea53a6a5"
+        ],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [
+          {
+            "chunk_id": "AMD_2026_Item_1_0003_ea53a6a5",
+            "exists": true,
+            "ticker": "AMD",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "amd"
+            ],
+            "n_mentions": 26
+          }
+        ],
+        "reachable_gold_entity_pairs": 1,
+        "total_gold_entity_pairs": 1,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "intel",
+            "b": "amd",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "intel",
+                "amd"
+              ],
+              "rels": [
+                "COMPETES_WITH"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "GOLD_ENTITY_MISSING"
+      },
+      {
+        "id": "T005",
+        "query": "What political risks affect the home country of the leading pure-play semiconductor foundry?",
+        "type": "geo_via_supplier",
+        "gold_entities": [
+          "tsmc",
+          "taiwan",
+          "political risk"
+        ],
+        "gold_entity_exists": {
+          "tsmc": true,
+          "taiwan": true,
+          "political risk": true
+        },
+        "gold_entity_types": {
+          "tsmc": "ORG",
+          "taiwan": "GPE",
+          "political risk": "MACRO_CONDITION"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [],
+        "reachable_gold_entity_pairs": 3,
+        "total_gold_entity_pairs": 3,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "tsmc",
+            "b": "taiwan",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "tsmc",
+                "nvidia",
+                "taiwan"
+              ],
+              "rels": [
+                "DEPENDS_ON",
+                "DEPENDS_ON"
+              ]
+            }
+          },
+          {
+            "a": "tsmc",
+            "b": "political risk",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "tsmc",
+                "intel",
+                "political risk"
+              ],
+              "rels": [
+                "DEPENDS_ON",
+                "IMPACTED_BY"
+              ]
+            }
+          },
+          {
+            "a": "taiwan",
+            "b": "political risk",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "taiwan",
+                "intel",
+                "political risk"
+              ],
+              "rels": [
+                "DEPENDS_ON",
+                "IMPACTED_BY"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      },
+      {
+        "id": "T006",
+        "query": "Which Asian semiconductor manufacturer supplies wafers to NVIDIA's GPU production?",
+        "type": "supplier_via_company",
+        "gold_entities": [
+          "nvidia",
+          "tsmc",
+          "samsung",
+          "sk hynix"
+        ],
+        "gold_entity_exists": {
+          "nvidia": true,
+          "tsmc": true,
+          "samsung": true,
+          "sk hynix": true
+        },
+        "gold_entity_types": {
+          "nvidia": "COMP",
+          "tsmc": "ORG",
+          "samsung": "ORG",
+          "sk hynix": "ORG"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [],
+        "reachable_gold_entity_pairs": 6,
+        "total_gold_entity_pairs": 6,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "nvidia",
+            "b": "tsmc",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "nvidia",
+                "tsmc"
+              ],
+              "rels": [
+                "DEPENDS_ON"
+              ]
+            }
+          },
+          {
+            "a": "nvidia",
+            "b": "samsung",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "nvidia",
+                "samsung"
+              ],
+              "rels": [
+                "COMPETES_WITH"
+              ]
+            }
+          },
+          {
+            "a": "nvidia",
+            "b": "sk hynix",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "nvidia",
+                "sk hynix"
+              ],
+              "rels": [
+                "DEPENDS_ON"
+              ]
+            }
+          },
+          {
+            "a": "tsmc",
+            "b": "samsung",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "tsmc",
+                "nvidia",
+                "samsung"
+              ],
+              "rels": [
+                "DEPENDS_ON",
+                "COMPETES_WITH"
+              ]
+            }
+          },
+          {
+            "a": "tsmc",
+            "b": "sk hynix",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "tsmc",
+                "nvidia",
+                "sk hynix"
+              ],
+              "rels": [
+                "DEPENDS_ON",
+                "DEPENDS_ON"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      },
+      {
+        "id": "T007",
+        "query": "What graphics product line does AMD offer to compete with NVIDIA's RTX series?",
+        "type": "competitor_product",
+        "gold_entities": [
+          "amd",
+          "nvidia",
+          "radeon",
+          "rtx"
+        ],
+        "gold_entity_exists": {
+          "amd": true,
+          "nvidia": true,
+          "radeon": true,
+          "rtx": false
+        },
+        "gold_entity_types": {
+          "amd": "COMP",
+          "nvidia": "COMP",
+          "radeon": "PRODUCT"
+        },
+        "missing_gold_entities": [
+          "rtx"
+        ],
+        "gold_chunks": [],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [],
+        "reachable_gold_entity_pairs": 3,
+        "total_gold_entity_pairs": 3,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "amd",
+            "b": "nvidia",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "amd",
+                "nvidia"
+              ],
+              "rels": [
+                "COMPETES_WITH"
+              ]
+            }
+          },
+          {
+            "a": "amd",
+            "b": "radeon",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "amd",
+                "radeon"
+              ],
+              "rels": [
+                "PRODUCES"
+              ]
+            }
+          },
+          {
+            "a": "nvidia",
+            "b": "radeon",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "nvidia",
+                "advanced micro devices",
+                "radeon"
+              ],
+              "rels": [
+                "NEGATIVELY_IMPACTS",
+                "PRODUCES"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "GOLD_ENTITY_MISSING"
+      },
+      {
+        "id": "T008",
+        "query": "Who supplies the high-bandwidth memory used in NVIDIA's H200 data center accelerator?",
+        "type": "supplier_via_product",
+        "gold_entities": [
+          "h200",
+          "nvidia",
+          "hbm",
+          "micron",
+          "sk hynix",
+          "samsung"
+        ],
+        "gold_entity_exists": {
+          "h200": true,
+          "nvidia": true,
+          "hbm": true,
+          "micron": true,
+          "sk hynix": true,
+          "samsung": true
+        },
+        "gold_entity_types": {
+          "h200": "PRODUCT",
+          "nvidia": "COMP",
+          "hbm": "PRODUCT",
+          "micron": "COMP",
+          "sk hynix": "ORG",
+          "samsung": "ORG"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [],
+        "reachable_gold_entity_pairs": 15,
+        "total_gold_entity_pairs": 15,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "h200",
+            "b": "nvidia",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "h200",
+                "nvidia"
+              ],
+              "rels": [
+                "PRODUCES"
+              ]
+            }
+          },
+          {
+            "a": "h200",
+            "b": "hbm",
+            "path": {
+              "hops": 3,
+              "nodes": [
+                "h200",
+                "nvidia",
+                "micron",
+                "hbm"
+              ],
+              "rels": [
+                "PRODUCES",
+                "DEPENDS_ON",
+                "PRODUCES"
+              ]
+            }
+          },
+          {
+            "a": "h200",
+            "b": "micron",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "h200",
+                "nvidia",
+                "micron"
+              ],
+              "rels": [
+                "PRODUCES",
+                "DEPENDS_ON"
+              ]
+            }
+          },
+          {
+            "a": "h200",
+            "b": "sk hynix",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "h200",
+                "nvidia",
+                "sk hynix"
+              ],
+              "rels": [
+                "PRODUCES",
+                "DEPENDS_ON"
+              ]
+            }
+          },
+          {
+            "a": "h200",
+            "b": "samsung",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "h200",
+                "nvidia",
+                "samsung"
+              ],
+              "rels": [
+                "PRODUCES",
+                "COMPETES_WITH"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      },
+      {
+        "id": "T009",
+        "query": "How do export controls affect NVIDIA's data center business?",
+        "type": "risk_via_product",
+        "gold_entities": [
+          "nvidia",
+          "export controls",
+          "data center",
+          "china"
+        ],
+        "gold_entity_exists": {
+          "nvidia": true,
+          "export controls": true,
+          "data center": true,
+          "china": true
+        },
+        "gold_entity_types": {
+          "nvidia": "COMP",
+          "export controls": "MACRO_CONDITION",
+          "data center": "PRODUCT",
+          "china": "ORG"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [],
+        "reachable_gold_entity_pairs": 6,
+        "total_gold_entity_pairs": 6,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "nvidia",
+            "b": "export controls",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "nvidia",
+                "export controls"
+              ],
+              "rels": [
+                "SUBJECT_TO"
+              ]
+            }
+          },
+          {
+            "a": "nvidia",
+            "b": "data center",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "nvidia",
+                "data center"
+              ],
+              "rels": [
+                "HAS_STAKE_IN"
+              ]
+            }
+          },
+          {
+            "a": "nvidia",
+            "b": "china",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "nvidia",
+                "china"
+              ],
+              "rels": [
+                "DEPENDS_ON"
+              ]
+            }
+          },
+          {
+            "a": "export controls",
+            "b": "data center",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "export controls",
+                "nvidia",
+                "data center"
+              ],
+              "rels": [
+                "SUBJECT_TO",
+                "HAS_STAKE_IN"
+              ]
+            }
+          },
+          {
+            "a": "export controls",
+            "b": "china",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "export controls",
+                "china"
+              ],
+              "rels": [
+                "NEGATIVELY_IMPACTS"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      },
+      {
+        "id": "T010",
+        "query": "Which materials and purity solutions does Entegris provide to semiconductor manufacturers?",
+        "type": "vector_friendly",
+        "gold_entities": [
+          "entegris",
+          "materials solutions",
+          "advanced purity solutions"
+        ],
+        "gold_entity_exists": {
+          "entegris": true,
+          "materials solutions": true,
+          "advanced purity solutions": true
+        },
+        "gold_entity_types": {
+          "entegris": "ORG",
+          "materials solutions": "SEGMENT",
+          "advanced purity solutions": "SEGMENT"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [
+          "ENTG_2026_Item_1_0000_a9f06bac"
+        ],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [
+          {
+            "chunk_id": "ENTG_2026_Item_1_0000_a9f06bac",
+            "exists": true,
+            "ticker": "ENTG",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "advanced purity solutions",
+              "entegris",
+              "materials solutions"
+            ],
+            "n_mentions": 8
+          }
+        ],
+        "reachable_gold_entity_pairs": 3,
+        "total_gold_entity_pairs": 3,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "entegris",
+            "b": "materials solutions",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "entegris",
+                "materials solutions"
+              ],
+              "rels": [
+                "HAS_STAKE_IN"
+              ]
+            }
+          },
+          {
+            "a": "entegris",
+            "b": "advanced purity solutions",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "entegris",
+                "advanced purity solutions"
+              ],
+              "rels": [
+                "HAS_STAKE_IN"
+              ]
+            }
+          },
+          {
+            "a": "materials solutions",
+            "b": "advanced purity solutions",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "materials solutions",
+                "entegris",
+                "advanced purity solutions"
+              ],
+              "rels": [
+                "HAS_STAKE_IN",
+                "HAS_STAKE_IN"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      },
+      {
+        "id": "T011",
+        "query": "What gross margin impact did Entegris expect from its useful-life accounting estimate change?",
+        "type": "vector_friendly",
+        "gold_entities": [
+          "entegris",
+          "gross margin",
+          "depreciation"
+        ],
+        "gold_entity_exists": {
+          "entegris": true,
+          "gross margin": true,
+          "depreciation": true
+        },
+        "gold_entity_types": {
+          "entegris": "ORG",
+          "gross margin": "FIN_METRIC",
+          "depreciation": "ACCOUNTING_POLICY"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [
+          "ENTG_2026_Item_7_0000_6c99ba90"
+        ],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [
+          {
+            "chunk_id": "ENTG_2026_Item_7_0000_6c99ba90",
+            "exists": true,
+            "ticker": "ENTG",
+            "section": "Item_7",
+            "mentioned_gold_entities": [],
+            "n_mentions": 0
+          }
+        ],
+        "reachable_gold_entity_pairs": 3,
+        "total_gold_entity_pairs": 3,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "entegris",
+            "b": "gross margin",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "entegris",
+                "revenue",
+                "gross margin"
+              ],
+              "rels": [
+                "DISCLOSES",
+                "NEGATIVELY_IMPACTS"
+              ]
+            }
+          },
+          {
+            "a": "entegris",
+            "b": "depreciation",
+            "path": {
+              "hops": 3,
+              "nodes": [
+                "entegris",
+                "north america",
+                "intel",
+                "depreciation"
+              ],
+              "rels": [
+                "OPERATES_IN",
+                "OPERATES_IN",
+                "DISCLOSES"
+              ]
+            }
+          },
+          {
+            "a": "gross margin",
+            "b": "depreciation",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "gross margin",
+                "intel",
+                "depreciation"
+              ],
+              "rels": [
+                "DISCLOSES",
+                "DISCLOSES"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "GOLD_CHUNK_NO_GOLD_ENTITY_MENTION"
+      },
+      {
+        "id": "T012",
+        "query": "What are Entegris's main business segments?",
+        "type": "vector_friendly",
+        "gold_entities": [
+          "entegris",
+          "materials solutions",
+          "advanced purity solutions"
+        ],
+        "gold_entity_exists": {
+          "entegris": true,
+          "materials solutions": true,
+          "advanced purity solutions": true
+        },
+        "gold_entity_types": {
+          "entegris": "ORG",
+          "materials solutions": "SEGMENT",
+          "advanced purity solutions": "SEGMENT"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [
+          "ENTG_2026_Item_1_0000_a9f06bac"
+        ],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [
+          {
+            "chunk_id": "ENTG_2026_Item_1_0000_a9f06bac",
+            "exists": true,
+            "ticker": "ENTG",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "advanced purity solutions",
+              "entegris",
+              "materials solutions"
+            ],
+            "n_mentions": 8
+          }
+        ],
+        "reachable_gold_entity_pairs": 3,
+        "total_gold_entity_pairs": 3,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "entegris",
+            "b": "materials solutions",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "entegris",
+                "materials solutions"
+              ],
+              "rels": [
+                "HAS_STAKE_IN"
+              ]
+            }
+          },
+          {
+            "a": "entegris",
+            "b": "advanced purity solutions",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "entegris",
+                "advanced purity solutions"
+              ],
+              "rels": [
+                "HAS_STAKE_IN"
+              ]
+            }
+          },
+          {
+            "a": "materials solutions",
+            "b": "advanced purity solutions",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "materials solutions",
+                "entegris",
+                "advanced purity solutions"
+              ],
+              "rels": [
+                "HAS_STAKE_IN",
+                "HAS_STAKE_IN"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      },
+      {
+        "id": "T013",
+        "query": "What is AMD's latest FY2025 revenue and gross margin?",
+        "type": "financial_exact_metric",
+        "gold_entities": [
+          "amd",
+          "revenue",
+          "gross margin"
+        ],
+        "gold_entity_exists": {
+          "amd": true,
+          "revenue": true,
+          "gross margin": true
+        },
+        "gold_entity_types": {
+          "amd": "COMP",
+          "revenue": "FIN_METRIC",
+          "gross margin": "FIN_METRIC"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [],
+        "reachable_gold_entity_pairs": 3,
+        "total_gold_entity_pairs": 3,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "amd",
+            "b": "revenue",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "amd",
+                "revenue"
+              ],
+              "rels": [
+                "DISCLOSES"
+              ]
+            }
+          },
+          {
+            "a": "amd",
+            "b": "gross margin",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "amd",
+                "gross margin"
+              ],
+              "rels": [
+                "DISCLOSES"
+              ]
+            }
+          },
+          {
+            "a": "revenue",
+            "b": "gross margin",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "revenue",
+                "gross margin"
+              ],
+              "rels": [
+                "NEGATIVELY_IMPACTS"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      },
+      {
+        "id": "T014",
+        "query": "What has AMD announced recently?",
+        "type": "news_recent_event",
+        "gold_entities": [
+          "amd"
+        ],
+        "gold_entity_exists": {
+          "amd": true
+        },
+        "gold_entity_types": {
+          "amd": "COMP"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [],
+        "reachable_gold_entity_pairs": 0,
+        "total_gold_entity_pairs": 0,
+        "pair_reachability_ratio": null,
+        "sample_paths": [],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      },
+      {
+        "id": "T015",
+        "query": "What is the relationship between KLA yield improvement tools and downstream AMD gross margin risk?",
+        "type": "graph_multihop",
+        "gold_entities": [
+          "kla",
+          "tsmc",
+          "amd",
+          "yield",
+          "gross margin"
+        ],
+        "gold_entity_exists": {
+          "kla": true,
+          "tsmc": true,
+          "amd": true,
+          "yield": true,
+          "gross margin": true
+        },
+        "gold_entity_types": {
+          "kla": "ORG",
+          "tsmc": "ORG",
+          "amd": "COMP",
+          "yield": "FIN_METRIC",
+          "gross margin": "FIN_METRIC"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [],
+        "reachable_gold_entity_pairs": 10,
+        "total_gold_entity_pairs": 10,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "kla",
+            "b": "tsmc",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "kla",
+                "semiconductor process control",
+                "tsmc"
+              ],
+              "rels": [
+                "HAS_STAKE_IN",
+                "INVESTS_IN"
+              ]
+            }
+          },
+          {
+            "a": "kla",
+            "b": "amd",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "kla",
+                "entity list",
+                "amd"
+              ],
+              "rels": [
+                "NEGATIVELY_IMPACTS",
+                "SUBJECT_TO"
+              ]
+            }
+          },
+          {
+            "a": "kla",
+            "b": "yield",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "kla",
+                "yield"
+              ],
+              "rels": [
+                "DISCLOSES"
+              ]
+            }
+          },
+          {
+            "a": "kla",
+            "b": "gross margin",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "kla",
+                "gross margin"
+              ],
+              "rels": [
+                "DISCLOSES"
+              ]
+            }
+          },
+          {
+            "a": "tsmc",
+            "b": "amd",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "tsmc",
+                "amd"
+              ],
+              "rels": [
+                "DEPENDS_ON"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      },
+      {
+        "id": "T016",
+        "query": "qwerty zzz random semiconductor nonsense",
+        "type": "off_corpus",
+        "gold_entities": [],
+        "gold_entity_exists": {},
+        "gold_entity_types": {},
+        "missing_gold_entities": [],
+        "gold_chunks": [],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [],
+        "reachable_gold_entity_pairs": 0,
+        "total_gold_entity_pairs": 0,
+        "pair_reachability_ratio": null,
+        "sample_paths": [],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      },
+      {
+        "id": "T017",
+        "query": "Which Taiwanese contract chipmaker fabricates AMD's processors?",
+        "type": "supplier_via_company",
+        "gold_entities": [
+          "amd",
+          "tsmc",
+          "umc"
+        ],
+        "gold_entity_exists": {
+          "amd": true,
+          "tsmc": true,
+          "umc": true
+        },
+        "gold_entity_types": {
+          "amd": "COMP",
+          "tsmc": "ORG",
+          "umc": "ORG"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [
+          "AMD_2025_Item_1_0009_c842eea0",
+          "AMD_2026_Item_1A_0008_e84e4130"
+        ],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [
+          {
+            "chunk_id": "AMD_2025_Item_1_0009_c842eea0",
+            "exists": true,
+            "ticker": "AMD",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "tsmc",
+              "umc"
+            ],
+            "n_mentions": 19
+          },
+          {
+            "chunk_id": "AMD_2026_Item_1A_0008_e84e4130",
+            "exists": true,
+            "ticker": "AMD",
+            "section": "Item_1A",
+            "mentioned_gold_entities": [
+              "tsmc"
+            ],
+            "n_mentions": 8
+          }
+        ],
+        "reachable_gold_entity_pairs": 3,
+        "total_gold_entity_pairs": 3,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "amd",
+            "b": "tsmc",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "amd",
+                "tsmc"
+              ],
+              "rels": [
+                "DEPENDS_ON"
+              ]
+            }
+          },
+          {
+            "a": "amd",
+            "b": "umc",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "amd",
+                "umc"
+              ],
+              "rels": [
+                "DEPENDS_ON"
+              ]
+            }
+          },
+          {
+            "a": "tsmc",
+            "b": "umc",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "tsmc",
+                "advanced micro devices",
+                "umc"
+              ],
+              "rels": [
+                "SUPPLIES",
+                "DEPENDS_ON"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      },
+      {
+        "id": "T018",
+        "query": "Which gaming console makers partner with the Ryzen processor company?",
+        "type": "partner_via_product",
+        "gold_entities": [
+          "ryzen",
+          "amd",
+          "sony",
+          "microsoft",
+          "valve"
+        ],
+        "gold_entity_exists": {
+          "ryzen": true,
+          "amd": true,
+          "sony": true,
+          "microsoft": true,
+          "valve": true
+        },
+        "gold_entity_types": {
+          "ryzen": "PRODUCT",
+          "amd": "COMP",
+          "sony": "ORG",
+          "microsoft": "ORG",
+          "valve": "COMP"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [
+          "AMD_2024_Item_1_0006_e41aed21",
+          "AMD_2026_Item_1_0004_b5e66359"
+        ],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [
+          {
+            "chunk_id": "AMD_2024_Item_1_0006_e41aed21",
+            "exists": true,
+            "ticker": "AMD",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "amd",
+              "microsoft",
+              "sony",
+              "valve"
+            ],
+            "n_mentions": 27
+          },
+          {
+            "chunk_id": "AMD_2026_Item_1_0004_b5e66359",
+            "exists": true,
+            "ticker": "AMD",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "amd",
+              "microsoft"
+            ],
+            "n_mentions": 27
+          }
+        ],
+        "reachable_gold_entity_pairs": 10,
+        "total_gold_entity_pairs": 10,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "ryzen",
+            "b": "amd",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "ryzen",
+                "amd"
+              ],
+              "rels": [
+                "PRODUCES"
+              ]
+            }
+          },
+          {
+            "a": "ryzen",
+            "b": "sony",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "ryzen",
+                "advanced micro devices",
+                "sony"
+              ],
+              "rels": [
+                "PRODUCES",
+                "DEPENDS_ON"
+              ]
+            }
+          },
+          {
+            "a": "ryzen",
+            "b": "microsoft",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "ryzen",
+                "advanced micro devices",
+                "microsoft"
+              ],
+              "rels": [
+                "PRODUCES",
+                "DEPENDS_ON"
+              ]
+            }
+          },
+          {
+            "a": "ryzen",
+            "b": "valve",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "ryzen",
+                "advanced micro devices",
+                "valve"
+              ],
+              "rels": [
+                "PRODUCES",
+                "PARTNERS_WITH"
+              ]
+            }
+          },
+          {
+            "a": "amd",
+            "b": "sony",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "amd",
+                "sony"
+              ],
+              "rels": [
+                "DEPENDS_ON"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      },
+      {
+        "id": "T019",
+        "query": "What revenue segments does the developer of EPYC processors disclose?",
+        "type": "segment_via_product",
+        "gold_entities": [
+          "epyc",
+          "amd",
+          "data center",
+          "client segment",
+          "gaming segment",
+          "embedded"
+        ],
+        "gold_entity_exists": {
+          "epyc": true,
+          "amd": true,
+          "data center": true,
+          "client segment": true,
+          "gaming segment": true,
+          "embedded": true
+        },
+        "gold_entity_types": {
+          "epyc": "PRODUCT",
+          "amd": "COMP",
+          "data center": "PRODUCT",
+          "client segment": "SEGMENT",
+          "gaming segment": "SEGMENT",
+          "embedded": "SEGMENT"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [
+          "AMD_2024_Item_1_0003_ee436d61",
+          "AMD_2024_Item_7_0002_d4114c99"
+        ],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [
+          {
+            "chunk_id": "AMD_2024_Item_1_0003_ee436d61",
+            "exists": true,
+            "ticker": "AMD",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "data center",
+              "embedded"
+            ],
+            "n_mentions": 20
+          },
+          {
+            "chunk_id": "AMD_2024_Item_7_0002_d4114c99",
+            "exists": true,
+            "ticker": "AMD",
+            "section": "Item_7",
+            "mentioned_gold_entities": [
+              "amd",
+              "client segment",
+              "gaming segment"
+            ],
+            "n_mentions": 16
+          }
+        ],
+        "reachable_gold_entity_pairs": 15,
+        "total_gold_entity_pairs": 15,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "epyc",
+            "b": "amd",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "epyc",
+                "amd"
+              ],
+              "rels": [
+                "PRODUCES"
+              ]
+            }
+          },
+          {
+            "a": "epyc",
+            "b": "data center",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "epyc",
+                "advanced micro devices",
+                "data center"
+              ],
+              "rels": [
+                "PRODUCES",
+                "HAS_STAKE_IN"
+              ]
+            }
+          },
+          {
+            "a": "epyc",
+            "b": "client segment",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "epyc",
+                "advanced micro devices",
+                "client segment"
+              ],
+              "rels": [
+                "PRODUCES",
+                "HAS_STAKE_IN"
+              ]
+            }
+          },
+          {
+            "a": "epyc",
+            "b": "gaming segment",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "epyc",
+                "advanced micro devices",
+                "gaming segment"
+              ],
+              "rels": [
+                "PRODUCES",
+                "HAS_STAKE_IN"
+              ]
+            }
+          },
+          {
+            "a": "epyc",
+            "b": "embedded",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "epyc",
+                "advanced micro devices",
+                "embedded"
+              ],
+              "rels": [
+                "PRODUCES",
+                "HAS_STAKE_IN"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      },
+      {
+        "id": "T020",
+        "query": "What export controls affect AI chip sales from the maker of Blackwell architecture?",
+        "type": "regulation_via_product",
+        "gold_entities": [
+          "blackwell",
+          "nvidia",
+          "export controls",
+          "china",
+          "export administration regulations"
+        ],
+        "gold_entity_exists": {
+          "blackwell": true,
+          "nvidia": true,
+          "export controls": true,
+          "china": true,
+          "export administration regulations": true
+        },
+        "gold_entity_types": {
+          "blackwell": "PRODUCT",
+          "nvidia": "COMP",
+          "export controls": "MACRO_CONDITION",
+          "china": "ORG",
+          "export administration regulations": "REGULATORY_REQUIREMENT"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [
+          "NVDA_2024_Item_1A_0020_ac4ad7b4",
+          "NVDA_2024_Item_1A_0022_b1d57eb9"
+        ],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [
+          {
+            "chunk_id": "NVDA_2024_Item_1A_0020_ac4ad7b4",
+            "exists": true,
+            "ticker": "NVDA",
+            "section": "Item_1A",
+            "mentioned_gold_entities": [
+              "china",
+              "nvidia"
+            ],
+            "n_mentions": 24
+          },
+          {
+            "chunk_id": "NVDA_2024_Item_1A_0022_b1d57eb9",
+            "exists": true,
+            "ticker": "NVDA",
+            "section": "Item_1A",
+            "mentioned_gold_entities": [
+              "china",
+              "nvidia"
+            ],
+            "n_mentions": 17
+          }
+        ],
+        "reachable_gold_entity_pairs": 10,
+        "total_gold_entity_pairs": 10,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "blackwell",
+            "b": "nvidia",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "blackwell",
+                "nvidia"
+              ],
+              "rels": [
+                "PRODUCES"
+              ]
+            }
+          },
+          {
+            "a": "blackwell",
+            "b": "export controls",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "blackwell",
+                "nvidia",
+                "export controls"
+              ],
+              "rels": [
+                "PRODUCES",
+                "SUBJECT_TO"
+              ]
+            }
+          },
+          {
+            "a": "blackwell",
+            "b": "china",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "blackwell",
+                "nvidia",
+                "china"
+              ],
+              "rels": [
+                "PRODUCES",
+                "DEPENDS_ON"
+              ]
+            }
+          },
+          {
+            "a": "blackwell",
+            "b": "export administration regulations",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "blackwell",
+                "nvidia",
+                "export administration regulations"
+              ],
+              "rels": [
+                "PRODUCES",
+                "SUBJECT_TO"
+              ]
+            }
+          },
+          {
+            "a": "nvidia",
+            "b": "export controls",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "nvidia",
+                "export controls"
+              ],
+              "rels": [
+                "SUBJECT_TO"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      },
+      {
+        "id": "T021",
+        "query": "Which Asian contract chipmakers fabricate older-generation processors for the developer of Intel 18A?",
+        "type": "supplier_via_product",
+        "gold_entities": [
+          "intel 18a",
+          "intel",
+          "tsmc",
+          "umc",
+          "smic"
+        ],
+        "gold_entity_exists": {
+          "intel 18a": true,
+          "intel": true,
+          "tsmc": true,
+          "umc": true,
+          "smic": true
+        },
+        "gold_entity_types": {
+          "intel 18a": "PRODUCT",
+          "intel": "COMP",
+          "tsmc": "ORG",
+          "umc": "ORG",
+          "smic": "ORG"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [
+          "INTC_2024_Item_1A_0001_f0f6c35c",
+          "INTC_2025_Item_1A_0001_65932be2"
+        ],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [
+          {
+            "chunk_id": "INTC_2024_Item_1A_0001_f0f6c35c",
+            "exists": true,
+            "ticker": "INTC",
+            "section": "Item_1A",
+            "mentioned_gold_entities": [
+              "intel",
+              "tsmc"
+            ],
+            "n_mentions": 6
+          },
+          {
+            "chunk_id": "INTC_2025_Item_1A_0001_65932be2",
+            "exists": true,
+            "ticker": "INTC",
+            "section": "Item_1A",
+            "mentioned_gold_entities": [
+              "intel",
+              "smic",
+              "tsmc",
+              "umc"
+            ],
+            "n_mentions": 10
+          }
+        ],
+        "reachable_gold_entity_pairs": 10,
+        "total_gold_entity_pairs": 10,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "intel 18a",
+            "b": "intel",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "intel 18a",
+                "intel"
+              ],
+              "rels": [
+                "PRODUCES"
+              ]
+            }
+          },
+          {
+            "a": "intel 18a",
+            "b": "tsmc",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "intel 18a",
+                "intel",
+                "tsmc"
+              ],
+              "rels": [
+                "PRODUCES",
+                "DEPENDS_ON"
+              ]
+            }
+          },
+          {
+            "a": "intel 18a",
+            "b": "umc",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "intel 18a",
+                "intel",
+                "umc"
+              ],
+              "rels": [
+                "PRODUCES",
+                "DISCLOSES"
+              ]
+            }
+          },
+          {
+            "a": "intel 18a",
+            "b": "smic",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "intel 18a",
+                "intel",
+                "smic"
+              ],
+              "rels": [
+                "PRODUCES",
+                "DISCLOSES"
+              ]
+            }
+          },
+          {
+            "a": "intel",
+            "b": "tsmc",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "intel",
+                "tsmc"
+              ],
+              "rels": [
+                "DEPENDS_ON"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      },
+      {
+        "id": "T022",
+        "query": "Which infrastructure investment firms partner with the maker of Xeon Scalable processors on fab financing?",
+        "type": "partner_via_product",
+        "gold_entities": [
+          "xeon scalable",
+          "intel",
+          "brookfield",
+          "apollo",
+          "smart capital"
+        ],
+        "gold_entity_exists": {
+          "xeon scalable": false,
+          "intel": true,
+          "brookfield": true,
+          "apollo": true,
+          "smart capital": false
+        },
+        "gold_entity_types": {
+          "intel": "COMP",
+          "brookfield": "COMP",
+          "apollo": "ORG"
+        },
+        "missing_gold_entities": [
+          "xeon scalable",
+          "smart capital"
+        ],
+        "gold_chunks": [
+          "INTC_2025_Item_1_0011_b8759c99",
+          "INTC_2024_Item_1A_0007_6560bf56"
+        ],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [
+          {
+            "chunk_id": "INTC_2025_Item_1_0011_b8759c99",
+            "exists": true,
+            "ticker": "INTC",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "apollo",
+              "brookfield",
+              "intel"
+            ],
+            "n_mentions": 8
+          },
+          {
+            "chunk_id": "INTC_2024_Item_1A_0007_6560bf56",
+            "exists": true,
+            "ticker": "INTC",
+            "section": "Item_1A",
+            "mentioned_gold_entities": [
+              "brookfield",
+              "intel"
+            ],
+            "n_mentions": 17
+          }
+        ],
+        "reachable_gold_entity_pairs": 3,
+        "total_gold_entity_pairs": 3,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "intel",
+            "b": "brookfield",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "intel",
+                "brookfield"
+              ],
+              "rels": [
+                "PARTNERS_WITH"
+              ]
+            }
+          },
+          {
+            "a": "intel",
+            "b": "apollo",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "intel",
+                "apollo"
+              ],
+              "rels": [
+                "PARTNERS_WITH"
+              ]
+            }
+          },
+          {
+            "a": "brookfield",
+            "b": "apollo",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "brookfield",
+                "intel",
+                "apollo"
+              ],
+              "rels": [
+                "PARTNERS_WITH",
+                "PARTNERS_WITH"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "GOLD_ENTITY_MISSING"
+      },
+      {
+        "id": "T023",
+        "query": "Which autonomous driving subsidiary does the developer of Intel Core Ultra operate?",
+        "type": "subsidiary_via_product",
+        "gold_entities": [
+          "intel core ultra",
+          "intel",
+          "mobileye"
+        ],
+        "gold_entity_exists": {
+          "intel core ultra": true,
+          "intel": true,
+          "mobileye": true
+        },
+        "gold_entity_types": {
+          "intel core ultra": "PRODUCT",
+          "intel": "COMP",
+          "mobileye": "COMP"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [
+          "INTC_2024_Item_1_0010_4835f632",
+          "INTC_2024_Item_7_0010_3742bdd2"
+        ],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [
+          {
+            "chunk_id": "INTC_2024_Item_1_0010_4835f632",
+            "exists": true,
+            "ticker": "INTC",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "intel",
+              "mobileye"
+            ],
+            "n_mentions": 6
+          },
+          {
+            "chunk_id": "INTC_2024_Item_7_0010_3742bdd2",
+            "exists": true,
+            "ticker": "INTC",
+            "section": "Item_7",
+            "mentioned_gold_entities": [
+              "mobileye"
+            ],
+            "n_mentions": 13
+          }
+        ],
+        "reachable_gold_entity_pairs": 3,
+        "total_gold_entity_pairs": 3,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "intel core ultra",
+            "b": "intel",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "intel core ultra",
+                "intel"
+              ],
+              "rels": [
+                "PRODUCES"
+              ]
+            }
+          },
+          {
+            "a": "intel core ultra",
+            "b": "mobileye",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "intel core ultra",
+                "intel",
+                "mobileye"
+              ],
+              "rels": [
+                "PRODUCES",
+                "DISCLOSES"
+              ]
+            }
+          },
+          {
+            "a": "intel",
+            "b": "mobileye",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "intel",
+                "mobileye"
+              ],
+              "rels": [
+                "DISCLOSES"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      },
+      {
+        "id": "T024",
+        "query": "Which operating system maker collaborates with the Xeon Scalable processor developer on AI PC platforms?",
+        "type": "partner_via_product",
+        "gold_entities": [
+          "xeon scalable",
+          "intel",
+          "microsoft",
+          "ai pc"
+        ],
+        "gold_entity_exists": {
+          "xeon scalable": false,
+          "intel": true,
+          "microsoft": true,
+          "ai pc": true
+        },
+        "gold_entity_types": {
+          "intel": "COMP",
+          "microsoft": "ORG",
+          "ai pc": "PRODUCT"
+        },
+        "missing_gold_entities": [
+          "xeon scalable"
+        ],
+        "gold_chunks": [
+          "INTC_2024_Item_7_0002_7c82ed88",
+          "INTC_2026_Item_1_0008_c74f560f"
+        ],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [
+          {
+            "chunk_id": "INTC_2024_Item_7_0002_7c82ed88",
+            "exists": true,
+            "ticker": "INTC",
+            "section": "Item_7",
+            "mentioned_gold_entities": [
+              "intel",
+              "microsoft"
+            ],
+            "n_mentions": 28
+          },
+          {
+            "chunk_id": "INTC_2026_Item_1_0008_c74f560f",
+            "exists": true,
+            "ticker": "INTC",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "intel",
+              "microsoft"
+            ],
+            "n_mentions": 17
+          }
+        ],
+        "reachable_gold_entity_pairs": 3,
+        "total_gold_entity_pairs": 3,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "intel",
+            "b": "microsoft",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "intel",
+                "microsoft"
+              ],
+              "rels": [
+                "DISCLOSES"
+              ]
+            }
+          },
+          {
+            "a": "intel",
+            "b": "ai pc",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "intel",
+                "ai pc"
+              ],
+              "rels": [
+                "PRODUCES"
+              ]
+            }
+          },
+          {
+            "a": "microsoft",
+            "b": "ai pc",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "microsoft",
+                "intel",
+                "ai pc"
+              ],
+              "rels": [
+                "DISCLOSES",
+                "PRODUCES"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "GOLD_ENTITY_MISSING"
+      },
+      {
+        "id": "T025",
+        "query": "In which U.S. states does the developer of the Intel 18A process operate wafer fabrication facilities?",
+        "type": "geo_via_product",
+        "gold_entities": [
+          "intel 18a",
+          "intel",
+          "arizona",
+          "ohio",
+          "oregon",
+          "new mexico"
+        ],
+        "gold_entity_exists": {
+          "intel 18a": true,
+          "intel": true,
+          "arizona": true,
+          "ohio": true,
+          "oregon": true,
+          "new mexico": true
+        },
+        "gold_entity_types": {
+          "intel 18a": "PRODUCT",
+          "intel": "COMP",
+          "arizona": "GPE",
+          "ohio": "GPE",
+          "oregon": "GPE",
+          "new mexico": "GPE"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [
+          "INTC_2025_Item_1_0004_c5a12b11",
+          "INTC_2024_Item_1_0014_32e0816b"
+        ],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [
+          {
+            "chunk_id": "INTC_2025_Item_1_0004_c5a12b11",
+            "exists": true,
+            "ticker": "INTC",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "arizona",
+              "intel",
+              "intel 18a",
+              "new mexico",
+              "oregon"
+            ],
+            "n_mentions": 19
+          },
+          {
+            "chunk_id": "INTC_2024_Item_1_0014_32e0816b",
+            "exists": true,
+            "ticker": "INTC",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "arizona",
+              "intel",
+              "new mexico",
+              "ohio",
+              "oregon"
+            ],
+            "n_mentions": 13
+          }
+        ],
+        "reachable_gold_entity_pairs": 15,
+        "total_gold_entity_pairs": 15,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "intel 18a",
+            "b": "intel",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "intel 18a",
+                "intel"
+              ],
+              "rels": [
+                "PRODUCES"
+              ]
+            }
+          },
+          {
+            "a": "intel 18a",
+            "b": "arizona",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "intel 18a",
+                "intel",
+                "arizona"
+              ],
+              "rels": [
+                "PRODUCES",
+                "OPERATES_IN"
+              ]
+            }
+          },
+          {
+            "a": "intel 18a",
+            "b": "ohio",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "intel 18a",
+                "intel",
+                "ohio"
+              ],
+              "rels": [
+                "PRODUCES",
+                "OPERATES_IN"
+              ]
+            }
+          },
+          {
+            "a": "intel 18a",
+            "b": "oregon",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "intel 18a",
+                "intel",
+                "oregon"
+              ],
+              "rels": [
+                "PRODUCES",
+                "OPERATES_IN"
+              ]
+            }
+          },
+          {
+            "a": "intel 18a",
+            "b": "new mexico",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "intel 18a",
+                "intel",
+                "new mexico"
+              ],
+              "rels": [
+                "PRODUCES",
+                "OPERATES_IN"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      },
+      {
+        "id": "T026",
+        "query": "What U.S. legislative act funds domestic semiconductor manufacturing expansion at the Intel 18A developer?",
+        "type": "regulator_via_product",
+        "gold_entities": [
+          "intel 18a",
+          "intel",
+          "chips act"
+        ],
+        "gold_entity_exists": {
+          "intel 18a": true,
+          "intel": true,
+          "chips act": true
+        },
+        "gold_entity_types": {
+          "intel 18a": "PRODUCT",
+          "intel": "COMP",
+          "chips act": "MACRO_CONDITION"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [
+          "INTC_2025_Item_1A_0008_80e72e45",
+          "INTC_2026_Item_1A_0008_662b7d4d"
+        ],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [
+          {
+            "chunk_id": "INTC_2025_Item_1A_0008_80e72e45",
+            "exists": true,
+            "ticker": "INTC",
+            "section": "Item_1A",
+            "mentioned_gold_entities": [
+              "chips act",
+              "intel"
+            ],
+            "n_mentions": 18
+          },
+          {
+            "chunk_id": "INTC_2026_Item_1A_0008_662b7d4d",
+            "exists": true,
+            "ticker": "INTC",
+            "section": "Item_1A",
+            "mentioned_gold_entities": [
+              "chips act"
+            ],
+            "n_mentions": 11
+          }
+        ],
+        "reachable_gold_entity_pairs": 3,
+        "total_gold_entity_pairs": 3,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "intel 18a",
+            "b": "intel",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "intel 18a",
+                "intel"
+              ],
+              "rels": [
+                "PRODUCES"
+              ]
+            }
+          },
+          {
+            "a": "intel 18a",
+            "b": "chips act",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "intel 18a",
+                "intel",
+                "chips act"
+              ],
+              "rels": [
+                "PRODUCES",
+                "DEPENDS_ON"
+              ]
+            }
+          },
+          {
+            "a": "intel",
+            "b": "chips act",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "intel",
+                "chips act"
+              ],
+              "rels": [
+                "DEPENDS_ON"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      },
+      {
+        "id": "T027",
+        "query": "What advanced driver assistance product lines come from the autonomous driving subsidiary of the Xeon Scalable developer?",
+        "type": "three_hop_subsidiary_product",
+        "gold_entities": [
+          "xeon scalable",
+          "intel",
+          "mobileye",
+          "mobileye supervision",
+          "mobileye chauffeur",
+          "mobileye drive"
+        ],
+        "gold_entity_exists": {
+          "xeon scalable": false,
+          "intel": true,
+          "mobileye": true,
+          "mobileye supervision": true,
+          "mobileye chauffeur": true,
+          "mobileye drive": true
+        },
+        "gold_entity_types": {
+          "intel": "COMP",
+          "mobileye": "COMP",
+          "mobileye supervision": "PRODUCT",
+          "mobileye chauffeur": "PRODUCT",
+          "mobileye drive": "PRODUCT"
+        },
+        "missing_gold_entities": [
+          "xeon scalable"
+        ],
+        "gold_chunks": [
+          "INTC_2024_Item_7_0010_3742bdd2",
+          "INTC_2024_Item_7_0014_e766ac95"
+        ],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [
+          {
+            "chunk_id": "INTC_2024_Item_7_0010_3742bdd2",
+            "exists": true,
+            "ticker": "INTC",
+            "section": "Item_7",
+            "mentioned_gold_entities": [
+              "mobileye",
+              "mobileye chauffeur",
+              "mobileye drive",
+              "mobileye supervision"
+            ],
+            "n_mentions": 13
+          },
+          {
+            "chunk_id": "INTC_2024_Item_7_0014_e766ac95",
+            "exists": true,
+            "ticker": "INTC",
+            "section": "Item_7",
+            "mentioned_gold_entities": [
+              "intel",
+              "mobileye",
+              "mobileye supervision"
+            ],
+            "n_mentions": 25
+          }
+        ],
+        "reachable_gold_entity_pairs": 10,
+        "total_gold_entity_pairs": 10,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "intel",
+            "b": "mobileye",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "intel",
+                "mobileye"
+              ],
+              "rels": [
+                "DISCLOSES"
+              ]
+            }
+          },
+          {
+            "a": "intel",
+            "b": "mobileye supervision",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "intel",
+                "mobileye supervision"
+              ],
+              "rels": [
+                "INTRODUCES"
+              ]
+            }
+          },
+          {
+            "a": "intel",
+            "b": "mobileye chauffeur",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "intel",
+                "mobileye chauffeur"
+              ],
+              "rels": [
+                "INTRODUCES"
+              ]
+            }
+          },
+          {
+            "a": "intel",
+            "b": "mobileye drive",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "intel",
+                "mobileye",
+                "mobileye drive"
+              ],
+              "rels": [
+                "DISCLOSES",
+                "INVESTS_IN"
+              ]
+            }
+          },
+          {
+            "a": "mobileye",
+            "b": "mobileye supervision",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "mobileye",
+                "mobileye supervision"
+              ],
+              "rels": [
+                "INTRODUCES"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "GOLD_ENTITY_MISSING"
+      },
+      {
+        "id": "T028",
+        "query": "What consumer storage and DRAM brand is sold by the U.S. supplier of HBM3E memory?",
+        "type": "product_via_company",
+        "gold_entities": [
+          "hbm3e",
+          "micron",
+          "crucial"
+        ],
+        "gold_entity_exists": {
+          "hbm3e": true,
+          "micron": true,
+          "crucial": true
+        },
+        "gold_entity_types": {
+          "hbm3e": "PRODUCT",
+          "micron": "COMP",
+          "crucial": "PRODUCT"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [
+          "MU_2025_Item_1_0000_6418b9d4",
+          "MU_2024_Item_1_0000_82417507"
+        ],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [
+          {
+            "chunk_id": "MU_2025_Item_1_0000_6418b9d4",
+            "exists": true,
+            "ticker": "MU",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "crucial",
+              "micron"
+            ],
+            "n_mentions": 16
+          },
+          {
+            "chunk_id": "MU_2024_Item_1_0000_82417507",
+            "exists": true,
+            "ticker": "MU",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "crucial",
+              "micron"
+            ],
+            "n_mentions": 14
+          }
+        ],
+        "reachable_gold_entity_pairs": 3,
+        "total_gold_entity_pairs": 3,
+        "pair_reachability_ratio": 1.0,
+        "sample_paths": [
+          {
+            "a": "hbm3e",
+            "b": "micron",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "hbm3e",
+                "micron"
+              ],
+              "rels": [
+                "PRODUCES"
+              ]
+            }
+          },
+          {
+            "a": "hbm3e",
+            "b": "crucial",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "hbm3e",
+                "micron",
+                "crucial"
+              ],
+              "rels": [
+                "PRODUCES",
+                "PRODUCES"
+              ]
+            }
+          },
+          {
+            "a": "micron",
+            "b": "crucial",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "micron",
+                "crucial"
+              ],
+              "rels": [
+                "PRODUCES"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      },
+      {
+        "id": "T029",
+        "query": "Why has HBM become critical for modern AI training and inference workloads?",
+        "type": "topical_memory",
+        "gold_entities": [
+          "hbm",
+          "hbm3e",
+          "ai",
+          "data center"
+        ],
+        "gold_entity_exists": {
+          "hbm": true,
+          "hbm3e": true,
+          "ai": true,
+          "data center": true
+        },
+        "gold_entity_types": {
+          "hbm": "PRODUCT",
+          "hbm3e": "PRODUCT",
+          "ai": "MACRO_CONDITION",
+          "data center": "PRODUCT"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [
+          "MU_2025_Item_1_0001_b64486b7",
+          "MU_2024_Item_1_0003_acd8d0ff"
+        ],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [
+          {
+            "chunk_id": "MU_2025_Item_1_0001_b64486b7",
+            "exists": true,
+            "ticker": "MU",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "hbm"
+            ],
+            "n_mentions": 14
+          },
+          {
+            "chunk_id": "MU_2024_Item_1_0003_acd8d0ff",
+            "exists": true,
+            "ticker": "MU",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "hbm"
+            ],
+            "n_mentions": 17
+          }
+        ],
+        "reachable_gold_entity_pairs": 5,
+        "total_gold_entity_pairs": 6,
+        "pair_reachability_ratio": 0.8333333333333334,
+        "sample_paths": [
+          {
+            "a": "hbm",
+            "b": "hbm3e",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "hbm",
+                "micron",
+                "hbm3e"
+              ],
+              "rels": [
+                "PRODUCES",
+                "PRODUCES"
+              ]
+            }
+          },
+          {
+            "a": "hbm",
+            "b": "ai",
+            "path": {
+              "hops": 3,
+              "nodes": [
+                "hbm",
+                "gross margin",
+                "intel",
+                "ai"
+              ],
+              "rels": [
+                "POSITIVELY_IMPACTS",
+                "DISCLOSES",
+                "POSITIVELY_IMPACTS"
+              ]
+            }
+          },
+          {
+            "a": "hbm",
+            "b": "data center",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "hbm",
+                "gross margin",
+                "data center"
+              ],
+              "rels": [
+                "POSITIVELY_IMPACTS",
+                "POSITIVELY_IMPACTS"
+              ]
+            }
+          },
+          {
+            "a": "hbm3e",
+            "b": "data center",
+            "path": {
+              "hops": 3,
+              "nodes": [
+                "hbm3e",
+                "micron",
+                "nvidia",
+                "data center"
+              ],
+              "rels": [
+                "PRODUCES",
+                "DEPENDS_ON",
+                "HAS_STAKE_IN"
+              ]
+            }
+          },
+          {
+            "a": "ai",
+            "b": "data center",
+            "path": {
+              "hops": 3,
+              "nodes": [
+                "ai",
+                "semiconductor systems",
+                "net revenue",
+                "data center"
+              ],
+              "rels": [
+                "POSITIVELY_IMPACTS",
+                "POSITIVELY_IMPACTS",
+                "POSITIVELY_IMPACTS"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      },
+      {
+        "id": "T030",
+        "query": "Which cloud hyperscalers partner with the EPYC processor maker for server CPU deployments in their data centers?",
+        "type": "customer_via_product",
+        "gold_entities": [
+          "epyc",
+          "amd",
+          "microsoft",
+          "amazon",
+          "google",
+          "meta"
+        ],
+        "gold_entity_exists": {
+          "epyc": true,
+          "amd": true,
+          "microsoft": true,
+          "amazon": true,
+          "google": true,
+          "meta": true
+        },
+        "gold_entity_types": {
+          "epyc": "PRODUCT",
+          "amd": "COMP",
+          "microsoft": "ORG",
+          "amazon": "ORG",
+          "google": "ORG",
+          "meta": "ORG"
+        },
+        "missing_gold_entities": [],
+        "gold_chunks": [
+          "AMD_2024_Item_1_0006_e41aed21",
+          "AMD_2026_Item_1_0004_b5e66359"
+        ],
+        "missing_gold_chunks": [],
+        "gold_chunk_mentions": [
+          {
+            "chunk_id": "AMD_2024_Item_1_0006_e41aed21",
+            "exists": true,
+            "ticker": "AMD",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "amd",
+              "microsoft"
+            ],
+            "n_mentions": 27
+          },
+          {
+            "chunk_id": "AMD_2026_Item_1_0004_b5e66359",
+            "exists": true,
+            "ticker": "AMD",
+            "section": "Item_1",
+            "mentioned_gold_entities": [
+              "amd",
+              "microsoft"
+            ],
+            "n_mentions": 27
+          }
+        ],
+        "reachable_gold_entity_pairs": 10,
+        "total_gold_entity_pairs": 15,
+        "pair_reachability_ratio": 0.6666666666666666,
+        "sample_paths": [
+          {
+            "a": "epyc",
+            "b": "amd",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "epyc",
+                "amd"
+              ],
+              "rels": [
+                "PRODUCES"
+              ]
+            }
+          },
+          {
+            "a": "epyc",
+            "b": "microsoft",
+            "path": {
+              "hops": 2,
+              "nodes": [
+                "epyc",
+                "advanced micro devices",
+                "microsoft"
+              ],
+              "rels": [
+                "PRODUCES",
+                "DEPENDS_ON"
+              ]
+            }
+          },
+          {
+            "a": "epyc",
+            "b": "amazon",
+            "path": {
+              "hops": 3,
+              "nodes": [
+                "epyc",
+                "advanced micro devices",
+                "nvidia",
+                "amazon"
+              ],
+              "rels": [
+                "PRODUCES",
+                "NEGATIVELY_IMPACTS",
+                "COMPETES_WITH"
+              ]
+            }
+          },
+          {
+            "a": "epyc",
+            "b": "google",
+            "path": {
+              "hops": 3,
+              "nodes": [
+                "epyc",
+                "advanced micro devices",
+                "intel",
+                "google"
+              ],
+              "rels": [
+                "PRODUCES",
+                "DISCLOSES",
+                "DISCLOSES"
+              ]
+            }
+          },
+          {
+            "a": "amd",
+            "b": "microsoft",
+            "path": {
+              "hops": 1,
+              "nodes": [
+                "amd",
+                "microsoft"
+              ],
+              "rels": [
+                "DEPENDS_ON"
+              ]
+            }
+          }
+        ],
+        "bottleneck": "CORPUS_READY_SIGNAL"
+      }
+    ]
+  }
+}

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from semigraph.offline.chunker import Chunk
 from semigraph.offline.kg_store import KGStore
+from semigraph.ontology.nodes import GraphExtractionResult
 
 
 class _FakeResult:
@@ -89,3 +90,27 @@ def test_ensure_chunk_persists_filing_type():
     query, params = tx.calls[0]
     assert "c.filing_type = $filing_type" in query
     assert params["filing_type"] == "10-K"
+
+
+def test_store_extraction_clears_previous_chunk_extraction_before_rewrite():
+    tx = _FakeTx([])
+    session = _FakeSession(tx)
+    store = KGStore(driver=_FakeDriver(session))
+    chunk = Chunk(
+        chunk_id="AMD_2026_Item_1_0000_deadbeef",
+        text="sample text",
+        ticker="AMD",
+        fiscal_year="2026",
+        filing_type="10-K",
+        section="Item_1",
+        char_count=11,
+        token_estimate=3,
+    )
+
+    counts = store.store_extraction(chunk, GraphExtractionResult())
+
+    assert counts == {"nodes": 0, "relationships": 0}
+    queries = [q for q, _ in tx.calls]
+    assert any("WHERE r.source_chunk = $chunk_id" in q and "DELETE r" in q for q in queries)
+    assert any("MATCH (:Chunk {chunk_id: $chunk_id})-[m:MENTIONS]->(:Entity)" in q for q in queries)
+    assert any("WHERE NOT (e)<-[:MENTIONS]-(:Chunk)" in q and "DETACH DELETE e" in q for q in queries)

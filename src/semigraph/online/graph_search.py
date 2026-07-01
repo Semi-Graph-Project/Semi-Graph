@@ -31,7 +31,11 @@ from semigraph.config import Config, get_config
 from semigraph.connections import get_neo4j_driver
 from semigraph.online.ppr import run_ppr
 from semigraph.online.query_expand import expand_query
-from semigraph.online.seed import query_to_triple_seeds
+from semigraph.online.seed import (
+    query_to_hybrid_seeds,
+    query_to_seeds,
+    query_to_triple_seeds,
+)
 
 
 _RISK_TERMS = {
@@ -421,6 +425,125 @@ def _collapse_clusters(
     return entries
 
 
+def _select_seed_entities(
+    query: str,
+    seed_mode: str,
+    top_k_triples: int,
+    cfg: Optional[Config] = None,
+) -> list[dict]:
+    """Select seed entities for graph retrieval diagnostics.
+
+    `graph_search` keeps the production default as Query-to-Triple, but the
+    Phase T-R evaluator needs to compare node/triple/hybrid seed loss without
+    duplicating the graph pipeline.
+    """
+    if seed_mode == "triple":
+        return query_to_triple_seeds(
+            query,
+            top_k_triples=top_k_triples,
+            cfg=cfg,
+        )
+    if seed_mode == "node":
+        return query_to_seeds(
+            query,
+            top_k=top_k_triples,
+            cfg=cfg,
+        )
+    if seed_mode == "hybrid":
+        return query_to_hybrid_seeds(
+            query,
+            top_k_nodes=top_k_triples,
+            top_k_triples=top_k_triples,
+            cfg=cfg,
+        )
+    raise ValueError(f"Unknown graph seed_mode: {seed_mode}")
+
+
+def trace_graph_search(
+    query: str,
+    top_k_chunks: int = 5,
+    top_k_entities: int = 20,
+    damping: float = 0.7,
+    top_k_triples: int = 8,
+    use_expansion: bool = True,
+    seed_mode: str = "triple",
+    cfg: Optional[Config] = None,
+) -> dict:
+    """Run graph retrieval and return both chunks and stage-level trace.
+
+    This is the same pipeline as `graph_search`, with extra intermediate
+    artifacts for Phase T-R bottleneck attribution:
+    query expansion -> seeds -> PPR entities -> alias clusters -> chunk
+    candidates -> intent reranked chunks.
+    """
+    print(f"[graph_search] query={query!r} "
+          f"top_k_chunks={top_k_chunks} top_k_entities={top_k_entities}")
+
+    effective_query = expand_query(query, cfg=cfg) if use_expansion else query
+    trace = {
+        "query": query,
+        "effective_query": effective_query,
+        "use_expansion": use_expansion,
+        "seed_mode": seed_mode,
+        "top_k_chunks": top_k_chunks,
+        "top_k_entities": top_k_entities,
+        "top_k_triples": top_k_triples,
+        "damping": damping,
+        "seeds": [],
+        "ppr_entities": [],
+        "cluster_entries": [],
+        "chunk_candidates": [],
+        "chunks": [],
+        "abort_reason": None,
+    }
+
+    seeds = _select_seed_entities(
+        effective_query,
+        seed_mode=seed_mode,
+        top_k_triples=top_k_triples,
+        cfg=cfg,
+    )
+    trace["seeds"] = seeds
+    if not seeds:
+        trace["abort_reason"] = "no_seeds"
+        print("[graph_search] no seeds — aborting")
+        return trace
+
+    ppr_entities = run_ppr(
+        seeds,
+        top_k=top_k_entities,
+        damping=damping,
+        cfg=cfg,
+    )
+    trace["ppr_entities"] = ppr_entities
+    if not ppr_entities:
+        trace["abort_reason"] = "empty_ppr"
+        print("[graph_search] PPR returned empty — aborting")
+        return trace
+
+    cluster_map = _cluster_aliases(
+        [e["name"] for e in ppr_entities],
+        cfg=cfg,
+    )
+
+    cluster_entries = _collapse_clusters(ppr_entities, cluster_map)
+    trace["cluster_entries"] = cluster_entries
+    print(f"[graph_search] {len(ppr_entities)} PPR entities → "
+          f"{len(cluster_entries)} unique clusters")
+
+    candidate_k = max(top_k_chunks, min(top_k_chunks * 4, 40))
+    chunk_candidates = _map_chunks(cluster_entries, top_k=candidate_k, cfg=cfg)
+    trace["chunk_candidates"] = chunk_candidates
+    chunks = _rerank_chunks_by_query_intent(
+        effective_query,
+        chunk_candidates,
+        cfg=cfg,
+    )[:top_k_chunks]
+    trace["chunks"] = chunks
+    print(f"[graph_search] returning {len(chunks)} chunks")
+    return trace
+
+
 def graph_search(
     query: str,
     top_k_chunks: int = 5,
@@ -428,6 +551,7 @@ def graph_search(
     damping: float = 0.7,
     top_k_triples: int = 8,
     use_expansion: bool = True,
+    seed_mode: str = "triple",
     cfg: Optional[Config] = None,
 ) -> list[dict]:
     """Full graph_search pipeline: query → top-k chunks ranked by PPR mass.
@@ -456,6 +580,8 @@ def graph_search(
                         we want their triples to all reach PPR.
         use_expansion:  Toggle LLM query expansion. Set False for ablation
                         ("does the LLM call actually help?").
+        seed_mode:      `triple` default, with `node` and `hybrid` available
+                        for Phase T-R seed ablations.
         cfg:            Optional Config; defaults to cached singleton.
 
     Returns:
@@ -463,45 +589,17 @@ def graph_search(
         Empty list if seeds is empty, PPR returns nothing, or no chunk
         mentions any retrieved entity.
     """
-    print(f"[graph_search] query={query!r} "
-          f"top_k_chunks={top_k_chunks} top_k_entities={top_k_entities}")
-
-    effective_query = expand_query(query, cfg=cfg) if use_expansion else query
-    seeds = query_to_triple_seeds(
-        effective_query, top_k_triples=top_k_triples, cfg=cfg
-    )
-    if not seeds:
-        print("[graph_search] no seeds — aborting")
-        return []
-
-    ppr_entities = run_ppr(
-        seeds,
-        top_k=top_k_entities,
+    trace = trace_graph_search(
+        query,
+        top_k_chunks=top_k_chunks,
+        top_k_entities=top_k_entities,
         damping=damping,
+        top_k_triples=top_k_triples,
+        use_expansion=use_expansion,
+        seed_mode=seed_mode,
         cfg=cfg,
     )
-    if not ppr_entities:
-        print("[graph_search] PPR returned empty — aborting")
-        return []
-
-    cluster_map = _cluster_aliases(
-        [e["name"] for e in ppr_entities],
-        cfg=cfg,
-    )
-
-    cluster_entries = _collapse_clusters(ppr_entities, cluster_map)
-    print(f"[graph_search] {len(ppr_entities)} PPR entities → "
-          f"{len(cluster_entries)} unique clusters")
-
-    candidate_k = max(top_k_chunks, min(top_k_chunks * 4, 40))
-    chunk_candidates = _map_chunks(cluster_entries, top_k=candidate_k, cfg=cfg)
-    chunks = _rerank_chunks_by_query_intent(
-        effective_query,
-        chunk_candidates,
-        cfg=cfg,
-    )[:top_k_chunks]
-    print(f"[graph_search] returning {len(chunks)} chunks")
-    return chunks
+    return trace["chunks"]
 
 
 if __name__ == "__main__":

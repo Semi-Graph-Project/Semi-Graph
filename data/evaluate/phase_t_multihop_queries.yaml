@@ -56,7 +56,7 @@ queries:
     query: "What AI accelerator product line does the main x86 desktop CPU rival of Intel offer?"
     type: competitor_product
     gold_tools: ["graph", "hybrid"]
-    gold_entities: ["intel", "amd", "instinct"]
+    gold_entities: ["intel", "amd", "amd instinct"]
     gold_chunks:
       - AMD_2026_Item_1_0003_ea53a6a5
     answer_points:
@@ -88,7 +88,7 @@ queries:
     query: "What graphics product line does AMD offer to compete with NVIDIA's RTX series?"
     type: competitor_product
     gold_tools: ["graph", "hybrid"]
-    gold_entities: ["amd", "nvidia", "radeon", "rtx"]
+    gold_entities: ["amd", "nvidia", "radeon", "geforce rtx"]
     gold_chunks: []
     answer_points:
       - AMD's graphics product line is Radeon.
@@ -131,7 +131,7 @@ queries:
     gold_tools: ["vector"]
     gold_entities: ["entegris", "gross margin", "depreciation"]
     gold_chunks:
-      - ENTG_2026_Item_7_0000_6c99ba90
+      - ENTG_2026_Item_7_0003_d6e71ea2
     answer_points:
       - Entegris expected reduced depreciation expense.
       - The change was expected to increase gross margin by about $52.4 million.

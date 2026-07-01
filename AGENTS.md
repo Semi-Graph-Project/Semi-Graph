@@ -5,7 +5,7 @@ IMPORTANT: You MUST read and strictly adhere to all instructions
 SemiGraph — CS senior thesis (KMUTNB): **Agentic GraphRAG for semiconductor stock fundamental analysis** (NVDA/AMD/MU/ASML). Contribution is engineering (KG retrieval + structured numerics + news in one agentic pipeline), not finance insight. Position as **Agentic Heterogeneous RAG vs Homogeneous Vector RAG**; 3-config ablation: Vanilla Vector / Agentic Vector / Agentic Heterogeneous.
 
 ## Rules (สำคัญทุกครั้ง)
-เมื่อผมถามอะไรก็ตามที่ไม่ได้สั่งให้คุณ "เขียน" , "Implement" ตรงๆ คุณต้องอธิบายก่อนเขียนจริง และทุกครั้งที่คุณจะ "Write", "Edit" File ใดๆก็ตาม ที่ไม่ได้อยู่ใน SandBox ของคุณ แต่เป็น File Project คุณต้องขอ Confirm จากผมก่อนทุกครั้ง ห้ามแก้ไขเอง เพื่อให้ Implement เกิดขึ้นใน Step ถัดไป
+1) เมื่อผมถามอะไรก็ตามที่ไม่ได้สั่งให้คุณ "เขียน" , "Implement" ตรงๆ คุณต้องอธิบายก่อนเขียนจริง และทุกครั้งที่คุณจะ "Write", "Edit" File ใดๆก็ตาม ที่ไม่ได้อยู่ใน SandBox ของคุณ แต่เป็น File Project คุณต้องขอ Confirm จากผมก่อนทุกครั้ง ห้ามแก้ไขเอง เพื่อให้ Implement เกิดขึ้นใน Step ถัดไป
 
 ## Response Style (สำคัญทุกครั้ง)
 

@@ -38,6 +38,7 @@ def hybrid_search(
     w_vector: float = 1.0,
     w_graph: float = 1.0,
     graph_use_expansion: bool = True,
+    graph_seed_mode: str = "triple",
     cfg: Optional[Config] = None,
 ) -> list[dict]:
     """Reciprocal Rank Fusion of vector_search and graph_search.
@@ -62,6 +63,8 @@ def hybrid_search(
                        Available as escape hatch — empirically no
                        non-symmetric value tested improves dev metrics.
         w_graph:       Weight on graph's RRF contribution (default 1.0).
+        graph_seed_mode: Seed mode passed to graph_search for Phase T-R
+                       retriever ablations. Default keeps production behavior.
         cfg:           Optional Config; defaults to cached singleton.
 
     Returns:
@@ -78,6 +81,7 @@ def hybrid_search(
         query,
         top_k_chunks=top_k_each,
         use_expansion=graph_use_expansion,
+        seed_mode=graph_seed_mode,
         cfg=cfg,
     )
 

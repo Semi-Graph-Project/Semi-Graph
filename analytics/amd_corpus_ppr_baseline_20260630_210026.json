@@ -1,0 +1,3932 @@
+{
+  "generated_at": "2026-06-30T21:05:22",
+  "purpose": "Baseline before targeted Item 1A / AMD re-extraction experiment",
+  "snapshot_reference": "backups/neo4j/20260630_200944",
+  "query_file": "/home/kantinan/programming/project/data/evaluate/phase_t_multihop_queries.yaml",
+  "ppr_params": {
+    "top_k_chunks": 5,
+    "oracle_k": 20,
+    "top_k_entities": 20,
+    "top_k_triples": 8,
+    "damping": 0.7,
+    "use_expansion": true,
+    "seed_mode": "query_to_triple_seeds",
+    "teleport": "uniform"
+  },
+  "metrics": {
+    "core_counts": {
+      "nodes_total": 15863,
+      "entities": 13348,
+      "chunks": 2347,
+      "sections": 126,
+      "relationships_total": 49929,
+      "mentions": 29789,
+      "informative_relationships": 17567
+    },
+    "orphan_chunks": {
+      "n": 0
+    },
+    "broad_chunks_gt40": {
+      "broad_chunks_gt40": 5,
+      "max_mentions": 48,
+      "avg_mentions": 12.692373242437155
+    },
+    "missing_embeddings": {
+      "entities_missing_embedding": 0,
+      "entities_missing_specificity": 0,
+      "chunks_missing_embedding": 0,
+      "informative_rels_missing_triple_embedding": 0
+    },
+    "isolated_overall": {
+      "total": 13348,
+      "isolated": 4047,
+      "isolated_pct": 30.32
+    },
+    "isolated_by_type": [
+      {
+        "type": "RISK_FACTOR",
+        "total": 5028,
+        "isolated": 2204,
+        "isolated_pct": 43.83
+      },
+      {
+        "type": "FIN_METRIC",
+        "total": 1564,
+        "isolated": 401,
+        "isolated_pct": 25.64
+      },
+      {
+        "type": "PRODUCT",
+        "total": 1907,
+        "isolated": 336,
+        "isolated_pct": 17.62
+      },
+      {
+        "type": "ORG",
+        "total": 370,
+        "isolated": 184,
+        "isolated_pct": 49.73
+      },
+      {
+        "type": "ACCOUNTING_POLICY",
+        "total": 331,
+        "isolated": 172,
+        "isolated_pct": 51.96
+      },
+      {
+        "type": "EVENT",
+        "total": 1537,
+        "isolated": 171,
+        "isolated_pct": 11.13
+      },
+      {
+        "type": "MACRO_CONDITION",
+        "total": 993,
+        "isolated": 138,
+        "isolated_pct": 13.9
+      },
+      {
+        "type": "COMP",
+        "total": 322,
+        "isolated": 137,
+        "isolated_pct": 42.55
+      },
+      {
+        "type": "GPE",
+        "total": 236,
+        "isolated": 86,
+        "isolated_pct": 36.44
+      },
+      {
+        "type": "SEGMENT",
+        "total": 352,
+        "isolated": 84,
+        "isolated_pct": 23.86
+      },
+      {
+        "type": "RAW_MATERIAL",
+        "total": 181,
+        "isolated": 67,
+        "isolated_pct": 37.02
+      },
+      {
+        "type": "REGULATORY_REQUIREMENT",
+        "total": 511,
+        "isolated": 57,
+        "isolated_pct": 11.15
+      },
+      {
+        "type": "ESG_TOPIC",
+        "total": 14,
+        "isolated": 10,
+        "isolated_pct": 71.43
+      },
+      {
+        "type": "FIN_MARKET",
+        "total": 2,
+        "isolated": 0,
+        "isolated_pct": 0.0
+      }
+    ],
+    "isolated_by_section": [
+      {
+        "section": "Item_1A",
+        "isolated_entities": 2467
+      },
+      {
+        "section": "Item_7",
+        "isolated_entities": 963
+      },
+      {
+        "section": "Item_1",
+        "isolated_entities": 643
+      }
+    ],
+    "section_type_mentions": [
+      {
+        "section": "Item_1",
+        "type": "PRODUCT",
+        "n": 1559
+      },
+      {
+        "section": "Item_1",
+        "type": "SEGMENT",
+        "n": 281
+      },
+      {
+        "section": "Item_1",
+        "type": "COMP",
+        "n": 264
+      },
+      {
+        "section": "Item_1",
+        "type": "ORG",
+        "n": 227
+      },
+      {
+        "section": "Item_1",
+        "type": "GPE",
+        "n": 133
+      },
+      {
+        "section": "Item_1",
+        "type": "RAW_MATERIAL",
+        "n": 105
+      },
+      {
+        "section": "Item_1",
+        "type": "FIN_MARKET",
+        "n": 2
+      },
+      {
+        "section": "Item_1",
+        "type": "EVENT",
+        "n": 1
+      },
+      {
+        "section": "Item_1A",
+        "type": "RISK_FACTOR",
+        "n": 5028
+      },
+      {
+        "section": "Item_1A",
+        "type": "EVENT",
+        "n": 631
+      },
+      {
+        "section": "Item_1A",
+        "type": "MACRO_CONDITION",
+        "n": 551
+      },
+      {
+        "section": "Item_1A",
+        "type": "REGULATORY_REQUIREMENT",
+        "n": 511
+      },
+      {
+        "section": "Item_1A",
+        "type": "GPE",
+        "n": 176
+      },
+      {
+        "section": "Item_1A",
+        "type": "RAW_MATERIAL",
+        "n": 117
+      },
+      {
+        "section": "Item_1A",
+        "type": "ORG",
+        "n": 101
+      },
+      {
+        "section": "Item_1A",
+        "type": "COMP",
+        "n": 91
+      },
+      {
+        "section": "Item_7",
+        "type": "FIN_METRIC",
+        "n": 1564
+      },
+      {
+        "section": "Item_7",
+        "type": "EVENT",
+        "n": 959
+      },
+      {
+        "section": "Item_7",
+        "type": "MACRO_CONDITION",
+        "n": 521
+      },
+      {
+        "section": "Item_7",
+        "type": "PRODUCT",
+        "n": 463
+      },
+      {
+        "section": "Item_7",
+        "type": "ACCOUNTING_POLICY",
+        "n": 331
+      },
+      {
+        "section": "Item_7",
+        "type": "ORG",
+        "n": 175
+      },
+      {
+        "section": "Item_7",
+        "type": "SEGMENT",
+        "n": 151
+      },
+      {
+        "section": "Item_7",
+        "type": "ESG_TOPIC",
+        "n": 14
+      },
+      {
+        "section": "Item_7",
+        "type": "COMP",
+        "n": 12
+      }
+    ],
+    "rel_by_section": [
+      {
+        "section": "Item_1",
+        "rel": "PRODUCES",
+        "n": 2049
+      },
+      {
+        "section": "Item_1",
+        "rel": "OPERATES_IN",
+        "n": 721
+      },
+      {
+        "section": "Item_1",
+        "rel": "HAS_STAKE_IN",
+        "n": 515
+      },
+      {
+        "section": "Item_1",
+        "rel": "DEPENDS_ON",
+        "n": 194
+      },
+      {
+        "section": "Item_1",
+        "rel": "COMPETES_WITH",
+        "n": 141
+      },
+      {
+        "section": "Item_1",
+        "rel": "PARTNERS_WITH",
+        "n": 66
+      },
+      {
+        "section": "Item_1",
+        "rel": "SUPPLIES",
+        "n": 35
+      },
+      {
+        "section": "Item_1",
+        "rel": "LISTED_ON",
+        "n": 7
+      },
+      {
+        "section": "Item_1",
+        "rel": "ANNOUNCES",
+        "n": 1
+      },
+      {
+        "section": "Item_1A",
+        "rel": "NEGATIVELY_IMPACTS",
+        "n": 2725
+      },
+      {
+        "section": "Item_1A",
+        "rel": "IMPACTED_BY",
+        "n": 2127
+      },
+      {
+        "section": "Item_1A",
+        "rel": "FACES",
+        "n": 1842
+      },
+      {
+        "section": "Item_1A",
+        "rel": "SUBJECT_TO",
+        "n": 343
+      },
+      {
+        "section": "Item_1A",
+        "rel": "DISCLOSES",
+        "n": 220
+      },
+      {
+        "section": "Item_1A",
+        "rel": "DEPENDS_ON",
+        "n": 117
+      },
+      {
+        "section": "Item_1A",
+        "rel": "CAUSES_SHORTAGE_OF",
+        "n": 39
+      },
+      {
+        "section": "Item_1A",
+        "rel": "IMPACTS",
+        "n": 1
+      },
+      {
+        "section": "Item_1A",
+        "rel": "INVOLVED_IN",
+        "n": 1
+      },
+      {
+        "section": "Item_7",
+        "rel": "DISCLOSES",
+        "n": 2241
+      },
+      {
+        "section": "Item_7",
+        "rel": "NEGATIVELY_IMPACTS",
+        "n": 1624
+      },
+      {
+        "section": "Item_7",
+        "rel": "POSITIVELY_IMPACTS",
+        "n": 1499
+      },
+      {
+        "section": "Item_7",
+        "rel": "INVOLVED_IN",
+        "n": 585
+      },
+      {
+        "section": "Item_7",
+        "rel": "INTRODUCES",
+        "n": 194
+      },
+      {
+        "section": "Item_7",
+        "rel": "ANNOUNCES",
+        "n": 129
+      },
+      {
+        "section": "Item_7",
+        "rel": "INVESTS_IN",
+        "n": 117
+      },
+      {
+        "section": "Item_7",
+        "rel": "GUIDES_ON",
+        "n": 34
+      }
+    ],
+    "risk_bridge_edges": [],
+    "item1a_product_mentions": {
+      "products_in_item1a": 0,
+      "sample": []
+    },
+    "amd_counts": {
+      "chunks": 191,
+      "mentioned_entities": 1356,
+      "amd_source_chunk_relationships": 1546
+    },
+    "amd_isolated_by_section_type": [
+      {
+        "section": "Item_1",
+        "type": "PRODUCT",
+        "total": 297,
+        "isolated": 11,
+        "isolated_pct": 3.7
+      },
+      {
+        "section": "Item_1",
+        "type": "COMP",
+        "total": 39,
+        "isolated": 9,
+        "isolated_pct": 23.08
+      },
+      {
+        "section": "Item_1",
+        "type": "GPE",
+        "total": 14,
+        "isolated": 1,
+        "isolated_pct": 7.14
+      },
+      {
+        "section": "Item_1",
+        "type": "ORG",
+        "total": 7,
+        "isolated": 0,
+        "isolated_pct": 0.0
+      },
+      {
+        "section": "Item_1",
+        "type": "SEGMENT",
+        "total": 15,
+        "isolated": 0,
+        "isolated_pct": 0.0
+      },
+      {
+        "section": "Item_1",
+        "type": "RAW_MATERIAL",
+        "total": 1,
+        "isolated": 0,
+        "isolated_pct": 0.0
+      },
+      {
+        "section": "Item_1",
+        "type": "FIN_MARKET",
+        "total": 1,
+        "isolated": 0,
+        "isolated_pct": 0.0
+      },
+      {
+        "section": "Item_1A",
+        "type": "RISK_FACTOR",
+        "total": 449,
+        "isolated": 127,
+        "isolated_pct": 28.29
+      },
+      {
+        "section": "Item_1A",
+        "type": "REGULATORY_REQUIREMENT",
+        "total": 86,
+        "isolated": 10,
+        "isolated_pct": 11.63
+      },
+      {
+        "section": "Item_1A",
+        "type": "GPE",
+        "total": 41,
+        "isolated": 10,
+        "isolated_pct": 24.39
+      },
+      {
+        "section": "Item_1A",
+        "type": "COMP",
+        "total": 28,
+        "isolated": 7,
+        "isolated_pct": 25.0
+      },
+      {
+        "section": "Item_1A",
+        "type": "EVENT",
+        "total": 60,
+        "isolated": 3,
+        "isolated_pct": 5.0
+      },
+      {
+        "section": "Item_1A",
+        "type": "MACRO_CONDITION",
+        "total": 46,
+        "isolated": 2,
+        "isolated_pct": 4.35
+      },
+      {
+        "section": "Item_1A",
+        "type": "RAW_MATERIAL",
+        "total": 14,
+        "isolated": 1,
+        "isolated_pct": 7.14
+      },
+      {
+        "section": "Item_1A",
+        "type": "ORG",
+        "total": 10,
+        "isolated": 0,
+        "isolated_pct": 0.0
+      },
+      {
+        "section": "Item_7",
+        "type": "FIN_METRIC",
+        "total": 119,
+        "isolated": 19,
+        "isolated_pct": 15.97
+      },
+      {
+        "section": "Item_7",
+        "type": "EVENT",
+        "total": 44,
+        "isolated": 9,
+        "isolated_pct": 20.45
+      },
+      {
+        "section": "Item_7",
+        "type": "MACRO_CONDITION",
+        "total": 22,
+        "isolated": 8,
+        "isolated_pct": 36.36
+      },
+      {
+        "section": "Item_7",
+        "type": "ACCOUNTING_POLICY",
+        "total": 25,
+        "isolated": 3,
+        "isolated_pct": 12.0
+      },
+      {
+        "section": "Item_7",
+        "type": "COMP",
+        "total": 4,
+        "isolated": 3,
+        "isolated_pct": 75.0
+      },
+      {
+        "section": "Item_7",
+        "type": "PRODUCT",
+        "total": 77,
+        "isolated": 2,
+        "isolated_pct": 2.6
+      },
+      {
+        "section": "Item_7",
+        "type": "ORG",
+        "total": 3,
+        "isolated": 0,
+        "isolated_pct": 0.0
+      },
+      {
+        "section": "Item_7",
+        "type": "SEGMENT",
+        "total": 12,
+        "isolated": 0,
+        "isolated_pct": 0.0
+      }
+    ],
+    "amd_item1a_product_mentions": {
+      "products_in_amd_item1a": 0,
+      "sample": []
+    },
+    "amd_item1a_risk_isolated_sample": [
+      {
+        "name": "product development delays",
+        "mentions": 3
+      },
+      {
+        "name": "customer platform launch dependency",
+        "mentions": 2
+      },
+      {
+        "name": "ability to introduce products timely",
+        "mentions": 1
+      },
+      {
+        "name": "acquisition and joint venture risk",
+        "mentions": 1
+      },
+      {
+        "name": "activism or litigation on esg matters",
+        "mentions": 1
+      },
+      {
+        "name": "air transportation disruption",
+        "mentions": 1
+      },
+      {
+        "name": "atmp jv dependency",
+        "mentions": 1
+      },
+      {
+        "name": "attract and retain qualified personnel",
+        "mentions": 1
+      },
+      {
+        "name": "cash generation shortfall",
+        "mentions": 1
+      },
+      {
+        "name": "changes to tax laws risk",
+        "mentions": 1
+      },
+      {
+        "name": "competition from competitors and customers",
+        "mentions": 1
+      },
+      {
+        "name": "competitive disadvantage from export control asymmetry",
+        "mentions": 1
+      },
+      {
+        "name": "competitive pressure from new product introductions",
+        "mentions": 1
+      },
+      {
+        "name": "competitive pressures on r&d spending",
+        "mentions": 1
+      },
+      {
+        "name": "competitive pricing and marketing aggression",
+        "mentions": 1
+      },
+      {
+        "name": "competitor earlier technology development",
+        "mentions": 1
+      },
+      {
+        "name": "consumer class action claims",
+        "mentions": 1
+      },
+      {
+        "name": "consumer litigation risk",
+        "mentions": 1
+      },
+      {
+        "name": "cross-border fund transfer restrictions",
+        "mentions": 1
+      },
+      {
+        "name": "customer inventory normalization",
+        "mentions": 1
+      },
+      {
+        "name": "cyclical industry downturns",
+        "mentions": 1
+      },
+      {
+        "name": "deferred tax asset realization risk",
+        "mentions": 1
+      },
+      {
+        "name": "demand dependent on market conditions",
+        "mentions": 1
+      },
+      {
+        "name": "dependence on emerging markets",
+        "mentions": 1
+      },
+      {
+        "name": "dependence on semi-custom soc products",
+        "mentions": 1
+      }
+    ],
+    "amd_rel_by_section": [
+      {
+        "section": "Item_1",
+        "rel": "PRODUCES",
+        "n": 408
+      },
+      {
+        "section": "Item_1",
+        "rel": "HAS_STAKE_IN",
+        "n": 24
+      },
+      {
+        "section": "Item_1",
+        "rel": "COMPETES_WITH",
+        "n": 19
+      },
+      {
+        "section": "Item_1",
+        "rel": "OPERATES_IN",
+        "n": 15
+      },
+      {
+        "section": "Item_1",
+        "rel": "PARTNERS_WITH",
+        "n": 13
+      },
+      {
+        "section": "Item_1",
+        "rel": "SUPPLIES",
+        "n": 11
+      },
+      {
+        "section": "Item_1",
+        "rel": "LISTED_ON",
+        "n": 3
+      },
+      {
+        "section": "Item_1",
+        "rel": "DEPENDS_ON",
+        "n": 1
+      },
+      {
+        "section": "Item_1A",
+        "rel": "FACES",
+        "n": 221
+      },
+      {
+        "section": "Item_1A",
+        "rel": "NEGATIVELY_IMPACTS",
+        "n": 200
+      },
+      {
+        "section": "Item_1A",
+        "rel": "IMPACTED_BY",
+        "n": 182
+      },
+      {
+        "section": "Item_1A",
+        "rel": "SUBJECT_TO",
+        "n": 35
+      },
+      {
+        "section": "Item_1A",
+        "rel": "DEPENDS_ON",
+        "n": 24
+      },
+      {
+        "section": "Item_1A",
+        "rel": "DISCLOSES",
+        "n": 15
+      },
+      {
+        "section": "Item_1A",
+        "rel": "CAUSES_SHORTAGE_OF",
+        "n": 2
+      },
+      {
+        "section": "Item_7",
+        "rel": "DISCLOSES",
+        "n": 146
+      },
+      {
+        "section": "Item_7",
+        "rel": "POSITIVELY_IMPACTS",
+        "n": 83
+      },
+      {
+        "section": "Item_7",
+        "rel": "INTRODUCES",
+        "n": 57
+      },
+      {
+        "section": "Item_7",
+        "rel": "NEGATIVELY_IMPACTS",
+        "n": 55
+      },
+      {
+        "section": "Item_7",
+        "rel": "INVOLVED_IN",
+        "n": 18
+      },
+      {
+        "section": "Item_7",
+        "rel": "ANNOUNCES",
+        "n": 9
+      },
+      {
+        "section": "Item_7",
+        "rel": "INVESTS_IN",
+        "n": 5
+      }
+    ]
+  },
+  "retrieval_summary": {
+    "n_queries": 9,
+    "n_scored": 7,
+    "hit_at_5": 0.5714285714285714,
+    "recall_at_5": 0.39999999999999997,
+    "mrr_at_5": 0.42857142857142855,
+    "oracle_hit_at_20": 0.8571428571428571,
+    "oracle_recall_at_20": 0.6428571428571429,
+    "errors": 0
+  },
+  "retrieval_rows": [
+    {
+      "id": "T001",
+      "query": "How exposed is AMD to TSMC supply risk?",
+      "type": "graph_multihop",
+      "gold_chunks": [
+        "AMD_2026_Item_1A_0008_e84e4130"
+      ],
+      "effective_query": "How exposed is AMD to TSMC supply risk? AMD TSMC",
+      "latency_sec": 43.716,
+      "error": null,
+      "scored": true,
+      "hit_at_5": 0,
+      "recall_at_5": 0.0,
+      "mrr_at_5": 0.0,
+      "oracle_hit_at_20": 1,
+      "oracle_recall_at_20": 1.0,
+      "first_gold_rank_at_20": 6,
+      "returned_chunk_ids_at_5": [
+        "AMD_2025_Item_1A_0000_ac2e47a8",
+        "AMD_2025_Item_1A_0001_0fd81b24",
+        "AMD_2025_Item_1A_0011_10eec6d1",
+        "AMD_2025_Item_1_0009_c842eea0",
+        "AMD_2026_Item_1_0010_460dfa17"
+      ],
+      "returned_chunk_ids_at_20": [
+        "AMD_2025_Item_1A_0000_ac2e47a8",
+        "AMD_2025_Item_1A_0001_0fd81b24",
+        "AMD_2025_Item_1A_0011_10eec6d1",
+        "AMD_2025_Item_1_0009_c842eea0",
+        "AMD_2026_Item_1_0010_460dfa17",
+        "AMD_2026_Item_1A_0008_e84e4130",
+        "AMD_2026_Item_1A_0031_ee99bb7d",
+        "AMD_2024_Item_1A_0000_2d7713d3",
+        "AMD_2024_Item_1A_0016_1f10868e",
+        "AMD_2025_Item_1A_0015_7b3b3396",
+        "AMD_2026_Item_1A_0014_3e7d6bac",
+        "AMD_2026_Item_1A_0010_025c9883",
+        "NVDA_2025_Item_1_0008_a4407f7e",
+        "AMD_2024_Item_1_0011_49024c2d",
+        "NVDA_2024_Item_1_0007_bae70036",
+        "INTC_2026_Item_1_0008_c74f560f",
+        "NVDA_2026_Item_1_0007_bf6a51b6",
+        "AMD_2025_Item_1_0008_db609f8f",
+        "AMD_2026_Item_1_0009_ac9cc232",
+        "INTC_2024_Item_1A_0000_1a5c79ae"
+      ],
+      "hits_at_5": [],
+      "hits_at_20": [
+        "AMD_2026_Item_1A_0008_e84e4130"
+      ],
+      "seeds": [
+        {
+          "name": "amd",
+          "type": "ORG",
+          "specificity": 0.1635084431645399,
+          "similarity": 0.8503192663192749
+        },
+        {
+          "name": "tsmc",
+          "type": "COMP",
+          "specificity": 0.3898712452512801,
+          "similarity": 0.8503192663192749
+        },
+        {
+          "name": "tsmc 7nm supply constraint",
+          "type": "RISK_FACTOR",
+          "specificity": 1.4426950408889634,
+          "similarity": 0.7958154678344727
+        },
+        {
+          "name": "supply chain disruption risk",
+          "type": "RISK_FACTOR",
+          "specificity": 0.40242960438184466,
+          "similarity": 0.7899771928787231
+        },
+        {
+          "name": "embedded segment inventory risk",
+          "type": "RISK_FACTOR",
+          "specificity": 1.4426950408889634,
+          "similarity": 0.7869428992271423
+        },
+        {
+          "name": "investment portfolio risk",
+          "type": "RISK_FACTOR",
+          "specificity": 0.3789231816899512,
+          "similarity": 0.7832313776016235
+        },
+        {
+          "name": "advanced micro devices",
+          "type": "ORG",
+          "specificity": 0.15632499556792623,
+          "similarity": 0.7793596982955933
+        },
+        {
+          "name": "tsmc supply dependency",
+          "type": "RISK_FACTOR",
+          "specificity": 1.4426950408889634,
+          "similarity": 0.7793596982955933
+        },
+        {
+          "name": "market demand fluctuations risk",
+          "type": "RISK_FACTOR",
+          "specificity": 1.4426950408889634,
+          "similarity": 0.7784023880958557
+        },
+        {
+          "name": "trade disruption risk",
+          "type": "RISK_FACTOR",
+          "specificity": 1.4426950408889634,
+          "similarity": 0.7757889628410339
+        }
+      ],
+      "ppr_top_entities": [
+        {
+          "name": "amd",
+          "type": "ORG",
+          "score": 1.5563789865164042
+        },
+        {
+          "name": "advanced micro devices",
+          "type": "ORG",
+          "score": 1.0299911815498988
+        },
+        {
+          "name": "tsmc",
+          "type": "COMP",
+          "score": 0.5555273188579535
+        },
+        {
+          "name": "investment portfolio risk",
+          "type": "RISK_FACTOR",
+          "score": 0.3951073880525414
+        },
+        {
+          "name": "intel",
+          "type": "ORG",
+          "score": 0.3408977550702867
+        },
+        {
+          "name": "tsmc 7nm supply constraint",
+          "type": "RISK_FACTOR",
+          "score": 0.3324056141312516
+        },
+        {
+          "name": "tsmc",
+          "type": "ORG",
+          "score": 0.3301583323219747
+        },
+        {
+          "name": "supply chain disruption risk",
+          "type": "RISK_FACTOR",
+          "score": 0.31064152517234606
+        },
+        {
+          "name": "market demand fluctuations risk",
+          "type": "RISK_FACTOR",
+          "score": 0.3024100919127744
+        },
+        {
+          "name": "trade disruption risk",
+          "type": "RISK_FACTOR",
+          "score": 0.3024100919127744
+        },
+        {
+          "name": "embedded segment inventory risk",
+          "type": "RISK_FACTOR",
+          "score": 0.3024100919127744
+        },
+        {
+          "name": "tsmc supply dependency",
+          "type": "RISK_FACTOR",
+          "score": 0.3012034470758264
+        },
+        {
+          "name": "amd",
+          "type": "COMP",
+          "score": 0.3005414598663618
+        },
+        {
+          "name": "nvidia",
+          "type": "ORG",
+          "score": 0.22731079058750137
+        },
+        {
+          "name": "rambus",
+          "type": "ORG",
+          "score": 0.16856635728982505
+        },
+        {
+          "name": "nvidia corporation",
+          "type": "ORG",
+          "score": 0.15388907038282607
+        },
+        {
+          "name": "broadcom",
+          "type": "ORG",
+          "score": 0.12477075866617895
+        },
+        {
+          "name": "lam research",
+          "type": "ORG",
+          "score": 0.08412574696769871
+        },
+        {
+          "name": "qualcomm",
+          "type": "ORG",
+          "score": 0.08003316342825653
+        },
+        {
+          "name": "the_filer",
+          "type": "ORG",
+          "score": 0.06415300709026349
+        }
+      ],
+      "cluster_entries": [
+        {
+          "aliases": [
+            "advanced micro devices",
+            "advanced micro devices inc",
+            "advanced micro devices, inc.",
+            "amd"
+          ],
+          "score": 1.3305326414162606
+        },
+        {
+          "aliases": [
+            "investment portfolio risk"
+          ],
+          "score": 0.3951073880525414
+        },
+        {
+          "aliases": [
+            "nvidia",
+            "nvidia corporation"
+          ],
+          "score": 0.38119986097032743
+        },
+        {
+          "aliases": [
+            "intel",
+            "intel corporation"
+          ],
+          "score": 0.3408977550702867
+        },
+        {
+          "aliases": [
+            "tsmc 7nm supply constraint"
+          ],
+          "score": 0.3324056141312516
+        },
+        {
+          "aliases": [
+            "tsmc"
+          ],
+          "score": 0.3301583323219747
+        },
+        {
+          "aliases": [
+            "supply chain disruption risk"
+          ],
+          "score": 0.31064152517234606
+        },
+        {
+          "aliases": [
+            "market demand fluctuations risk"
+          ],
+          "score": 0.3024100919127744
+        },
+        {
+          "aliases": [
+            "trade disruption risk"
+          ],
+          "score": 0.3024100919127744
+        },
+        {
+          "aliases": [
+            "embedded segment inventory risk"
+          ],
+          "score": 0.3024100919127744
+        },
+        {
+          "aliases": [
+            "tsmc supply dependency"
+          ],
+          "score": 0.3012034470758264
+        },
+        {
+          "aliases": [
+            "rambus"
+          ],
+          "score": 0.16856635728982505
+        }
+      ],
+      "top_chunks": [
+        {
+          "rank": 1,
+          "chunk_id": "AMD_2025_Item_1A_0000_ac2e47a8",
+          "ticker": "AMD",
+          "fiscal_year": "2025",
+          "section": "Item_1A",
+          "score": 4.2951288137285095,
+          "preview": "ITEM 1A. RISK FACTORS  The risks and uncertainties described below are not the only ones we face. If any of the following risks actually occurs, our business, financial condition or results of operations could be materially adversely affected. In addition, you"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "AMD_2025_Item_1A_0001_0fd81b24",
+          "ticker": "AMD",
+          "fiscal_year": "2025",
+          "section": "Item_1A",
+          "score": 4.2951288137285095,
+          "preview": "◦Costs related to defective products could have a material adverse effect on us.  ◦We may fail to maintain the efficiency of our supply chain as we respond to changes in customer demand.  ◦We outsource to third parties certain supply-chain logistics functions."
+        },
+        {
+          "rank": 3,
+          "chunk_id": "AMD_2025_Item_1A_0011_10eec6d1",
+          "ticker": "AMD",
+          "fiscal_year": "2025",
+          "section": "Item_1A",
+          "score": 4.105264075553424,
+          "preview": "Failure to achieve expected manufacturing yields for our products could negatively impact our results of operations.  Semiconductor manufacturing yields are a result of product design, process technology and packaging technology, which is typically proprietary"
+        },
+        {
+          "rank": 4,
+          "chunk_id": "AMD_2025_Item_1_0009_c842eea0",
+          "ticker": "AMD",
+          "fiscal_year": "2025",
+          "section": "Item_1",
+          "score": 3.8867169900897944,
+          "preview": "Competition in Client Segment  Our primary competitor in the supply of CPUs and APUs is Intel. A variety of companies provide or have developed Arm-based microprocessors and platforms which could lead to further adoption of Arm-based PC solutions.  Competition"
+        },
+        {
+          "rank": 5,
+          "chunk_id": "AMD_2026_Item_1_0010_460dfa17",
+          "ticker": "AMD",
+          "fiscal_year": "2026",
+          "section": "Item_1",
+          "score": 3.8867169900897944,
+          "preview": "Competition in Client and Gaming Segment  Our primary competitor in the supply of CPUs and APUs is Intel. A variety of companies provide or have developed Arm-based microprocessors and platforms which could lead to further adoption of Arm-based PC solutions.  "
+        }
+      ],
+      "debug_log_tail": [
+        "[expand] hints='AMD TSMC'",
+        "[embeddings] loading BAAI/bge-base-en-v1.5 on cpu...",
+        "[embeddings] ready (dim=768)",
+        "[triple_index] loaded 17567 triples (51.5 MB)",
+        "[triple_seed] query='How exposed is AMD to TSMC supply risk? AMD TSMC' top_k_triples=8 min_sim=0.6 → kept 8 triples → 10 unique seeds",
+        "[run_ppr] Projected 'ppr_83788432': 13348 nodes, 35134 relationships",
+        "[run_ppr] PPR over 12 seeds (damping=0.7, max_iter=20, teleport=uniform (12 seeds))"
+      ]
+    },
+    {
+      "id": "T002",
+      "query": "Which foundry partner manufactures the Hopper architecture chips?",
+      "type": "supplier_via_product",
+      "gold_chunks": [
+        "NVDA_2024_Item_1_0007_bae70036",
+        "NVDA_2025_Item_1_0008_a4407f7e",
+        "AMD_2025_Item_1_0009_c842eea0",
+        "AMD_2026_Item_1_0010_460dfa17",
+        "INTC_2026_Item_1_0008_c74f560f"
+      ],
+      "effective_query": "Which foundry partner manufactures the Hopper architecture chips? NVDA TSMC Hopper foundry",
+      "latency_sec": 9.692,
+      "error": null,
+      "scored": true,
+      "hit_at_5": 1,
+      "recall_at_5": 0.8,
+      "mrr_at_5": 1.0,
+      "oracle_hit_at_20": 1,
+      "oracle_recall_at_20": 1.0,
+      "first_gold_rank_at_20": 1,
+      "returned_chunk_ids_at_5": [
+        "NVDA_2025_Item_1_0008_a4407f7e",
+        "NVDA_2026_Item_1_0007_bf6a51b6",
+        "NVDA_2024_Item_1_0007_bae70036",
+        "INTC_2026_Item_1_0008_c74f560f",
+        "AMD_2025_Item_1_0009_c842eea0"
+      ],
+      "returned_chunk_ids_at_20": [
+        "NVDA_2025_Item_1_0008_a4407f7e",
+        "NVDA_2026_Item_1_0007_bf6a51b6",
+        "NVDA_2024_Item_1_0007_bae70036",
+        "INTC_2026_Item_1_0008_c74f560f",
+        "AMD_2025_Item_1_0009_c842eea0",
+        "AMD_2026_Item_1_0010_460dfa17",
+        "NVDA_2024_Item_1_0008_20833acc",
+        "NVDA_2025_Item_1_0009_7a56593b",
+        "NVDA_2026_Item_1_0008_edf8fe4b",
+        "RMBS_2025_Item_1_0001_479b0c1e",
+        "RMBS_2026_Item_1_0001_bc3d8a01",
+        "NVDA_2024_Item_1_0012_e3eecadc",
+        "RMBS_2024_Item_1_0001_1bbcc1ae",
+        "AMD_2024_Item_1_0011_49024c2d",
+        "NVDA_2024_Item_7_0003_ba144df9",
+        "RMBS_2026_Item_7_0001_544e4d1d",
+        "AVGO_2023_Item_1_0010_68f5ffd4",
+        "AVGO_2024_Item_1_0012_88739b41",
+        "AMD_2025_Item_1_0008_db609f8f",
+        "AMD_2026_Item_1_0009_ac9cc232"
+      ],
+      "hits_at_5": [
+        "NVDA_2025_Item_1_0008_a4407f7e",
+        "NVDA_2024_Item_1_0007_bae70036",
+        "INTC_2026_Item_1_0008_c74f560f",
+        "AMD_2025_Item_1_0009_c842eea0"
+      ],
+      "hits_at_20": [
+        "NVDA_2025_Item_1_0008_a4407f7e",
+        "NVDA_2024_Item_1_0007_bae70036",
+        "INTC_2026_Item_1_0008_c74f560f",
+        "AMD_2025_Item_1_0009_c842eea0",
+        "AMD_2026_Item_1_0010_460dfa17"
+      ],
+      "seeds": [
+        {
+          "name": "nvidia corporation",
+          "type": "ORG",
+          "specificity": 0.16333216405677026,
+          "similarity": 0.7588555216789246
+        },
+        {
+          "name": "hopper",
+          "type": "PRODUCT",
+          "specificity": 1.4426950408889634,
+          "similarity": 0.7588555216789246
+        },
+        {
+          "name": "nvidia",
+          "type": "ORG",
+          "specificity": 0.14087730079589394,
+          "similarity": 0.7391647100448608
+        },
+        {
+          "name": "hopper architecture",
+          "type": "PRODUCT",
+          "specificity": 0.7213475204444817,
+          "similarity": 0.7391647100448608
+        },
+        {
+          "name": "nvidia hopper gpu",
+          "type": "PRODUCT",
+          "specificity": 0.9102392266268373,
+          "similarity": 0.7328841686248779
+        },
+        {
+          "name": "nvidia hopper",
+          "type": "PRODUCT",
+          "specificity": 1.4426950408889634,
+          "similarity": 0.7225972414016724
+        },
+        {
+          "name": "tsmc",
+          "type": "COMP",
+          "specificity": 0.3898712452512801,
+          "similarity": 0.7164736986160278
+        },
+        {
+          "name": "hopper hgx systems",
+          "type": "PRODUCT",
+          "specificity": 1.4426950408889634,
+          "similarity": 0.7128530740737915
+        },
+        {
+          "name": "advanced micro devices",
+          "type": "ORG",
+          "specificity": 0.15632499556792623,
+          "similarity": 0.7024028301239014
+        },
+        {
+          "name": "tsmc supply dependency",
+          "type": "RISK_FACTOR",
+          "specificity": 1.4426950408889634,
+          "similarity": 0.7024028301239014
+        }
+      ],
+      "ppr_top_entities": [
+        {
+          "name": "nvidia corporation",
+          "type": "ORG",
+          "score": 1.4814861806818462
+        },
+        {
+          "name": "nvidia",
+          "type": "ORG",
+          "score": 1.004987327235665
+        },
+        {
+          "name": "advanced micro devices",
+          "type": "ORG",
+          "score": 0.8676136584932567
+        },
+        {
+          "name": "tsmc",
+          "type": "COMP",
+          "score": 0.3319208444925858
+        },
+        {
+          "name": "tsmc",
+          "type": "ORG",
+          "score": 0.330761204104622
+        },
+        {
+          "name": "nvidia hopper gpu",
+          "type": "PRODUCT",
+          "score": 0.3171860942248517
+        },
+        {
+          "name": "hopper architecture",
+          "type": "PRODUCT",
+          "score": 0.303012909570923
+        },
+        {
+          "name": "hopper",
+          "type": "PRODUCT",
+          "score": 0.3022790508711025
+        },
+        {
+          "name": "hopper hgx systems",
+          "type": "PRODUCT",
+          "score": 0.3022790508711025
+        },
+        {
+          "name": "nvidia hopper",
+          "type": "PRODUCT",
+          "score": 0.3022790508711025
+        },
+        {
+          "name": "tsmc supply dependency",
+          "type": "RISK_FACTOR",
+          "score": 0.3010137781871297
+        },
+        {
+          "name": "nvidia",
+          "type": "COMP",
+          "score": 0.30067677777948987
+        },
+        {
+          "name": "qualcomm",
+          "type": "ORG",
+          "score": 0.24815297925791555
+        },
+        {
+          "name": "intel",
+          "type": "ORG",
+          "score": 0.18453624658068138
+        },
+        {
+          "name": "rambus",
+          "type": "ORG",
+          "score": 0.17149099758370037
+        },
+        {
+          "name": "amd",
+          "type": "ORG",
+          "score": 0.12621630918637233
+        },
+        {
+          "name": "compute & networking",
+          "type": "SEGMENT",
+          "score": 0.11860328586055821
+        },
+        {
+          "name": "revenue",
+          "type": "FIN_METRIC",
+          "score": 0.1123756408468604
+        },
+        {
+          "name": "broadcom",
+          "type": "ORG",
+          "score": 0.09299771916988232
+        },
+        {
+          "name": "data center",
+          "type": "SEGMENT",
+          "score": 0.09246115663942596
+        }
+      ],
+      "cluster_entries": [
+        {
+          "aliases": [
+            "nvidia",
+            "nvidia corporation"
+          ],
+          "score": 1.782162958461336
+        },
+        {
+          "aliases": [
+            "advanced micro devices",
+            "advanced micro devices inc",
+            "advanced micro devices, inc.",
+            "amd"
+          ],
+          "score": 0.993829967679629
+        },
+        {
+          "aliases": [
+            "tsmc"
+          ],
+          "score": 0.330761204104622
+        },
+        {
+          "aliases": [
+            "nvidia hopper gpu"
+          ],
+          "score": 0.3171860942248517
+        },
+        {
+          "aliases": [
+            "hopper architecture"
+          ],
+          "score": 0.303012909570923
+        },
+        {
+          "aliases": [
+            "hopper"
+          ],
+          "score": 0.3022790508711025
+        },
+        {
+          "aliases": [
+            "hopper hgx systems"
+          ],
+          "score": 0.3022790508711025
+        },
+        {
+          "aliases": [
+            "nvidia hopper"
+          ],
+          "score": 0.3022790508711025
+        },
+        {
+          "aliases": [
+            "tsmc supply dependency"
+          ],
+          "score": 0.3010137781871297
+        },
+        {
+          "aliases": [
+            "qualcomm"
+          ],
+          "score": 0.24815297925791555
+        },
+        {
+          "aliases": [
+            "intel",
+            "intel corporation"
+          ],
+          "score": 0.18453624658068138
+        },
+        {
+          "aliases": [
+            "rambus"
+          ],
+          "score": 0.17149099758370037
+        }
+      ],
+      "top_chunks": [
+        {
+          "rank": 1,
+          "chunk_id": "NVDA_2025_Item_1_0008_a4407f7e",
+          "ticker": "NVDA",
+          "fiscal_year": "2025",
+          "section": "Item_1",
+          "score": 7.072362773519666,
+          "preview": "8  * * *  Table of Contents  of growth, we may place non-cancellable inventory orders for certain product components in advance of our historical lead times, pay premiums, or provide deposits to secure future supply and capacity and may need to continue to do "
+        },
+        {
+          "rank": 2,
+          "chunk_id": "NVDA_2026_Item_1_0007_bf6a51b6",
+          "ticker": "NVDA",
+          "fiscal_year": "2026",
+          "section": "Item_1",
+          "score": 6.589208922904505,
+          "preview": "We have expanded our supplier relationships to build redundancy and resilience in our operations to provide long-term manufacturing capacity aligned with growing customer demand. While currently our supply chain is mainly concentrated in Asia, we are expanding"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "NVDA_2024_Item_1_0007_bae70036",
+          "ticker": "NVDA",
+          "fiscal_year": "2024",
+          "section": "Item_1",
+          "score": 6.588164235657707,
+          "preview": "Seasonality  Our computing platforms serve a diverse set of markets such as data centers, gaming, professional visualization, and automotive. Our desktop gaming products typically see stronger revenue in the second half of our fiscal year. Historical seasonali"
+        },
+        {
+          "rank": 4,
+          "chunk_id": "INTC_2026_Item_1_0008_c74f560f",
+          "ticker": "INTC",
+          "fiscal_year": "2026",
+          "section": "Item_1",
+          "score": 5.59084393458564,
+          "preview": "Competition  DCAI competitors include AMD, which utilizes the x86 architecture and competes with us across the full spectrum of CPUs, GPUs, accelerators and other products; providers of GPU systems such as NVIDIA, whose GPU systems have experienced the highest"
+        },
+        {
+          "rank": 5,
+          "chunk_id": "AMD_2025_Item_1_0009_c842eea0",
+          "ticker": "AMD",
+          "fiscal_year": "2025",
+          "section": "Item_1",
+          "score": 5.271367138323605,
+          "preview": "Competition in Client Segment  Our primary competitor in the supply of CPUs and APUs is Intel. A variety of companies provide or have developed Arm-based microprocessors and platforms which could lead to further adoption of Arm-based PC solutions.  Competition"
+        }
+      ],
+      "debug_log_tail": [
+        "[expand] hints='NVDA TSMC Hopper foundry'",
+        "[triple_seed] query='Which foundry partner manufactures the Hopper architecture chips? NVDA TSMC Hopper foundry' top_k_triples=8 min_sim=0.6 → kept 8 triples → 10 unique seeds",
+        "[run_ppr] Projected 'ppr_9dff4238': 13348 nodes, 35134 relationships",
+        "[run_ppr] PPR over 12 seeds (damping=0.7, max_iter=20, teleport=uniform (12 seeds))"
+      ]
+    },
+    {
+      "id": "T004",
+      "query": "What AI accelerator product line does the main x86 desktop CPU rival of Intel offer?",
+      "type": "competitor_product",
+      "gold_chunks": [
+        "AMD_2026_Item_1_0003_ea53a6a5"
+      ],
+      "effective_query": "What AI accelerator product line does the main x86 desktop CPU rival of Intel offer? AMD INTC Instinct MI Ryzen AI x86",
+      "latency_sec": 7.964,
+      "error": null,
+      "scored": true,
+      "hit_at_5": 1,
+      "recall_at_5": 1.0,
+      "mrr_at_5": 0.5,
+      "oracle_hit_at_20": 1,
+      "oracle_recall_at_20": 1.0,
+      "first_gold_rank_at_20": 2,
+      "returned_chunk_ids_at_5": [
+        "AMD_2026_Item_1_0007_f252541b",
+        "AMD_2026_Item_1_0003_ea53a6a5",
+        "AMD_2024_Item_1_0009_01379c5a",
+        "AMD_2025_Item_1_0006_551768e4",
+        "AMD_2025_Item_1_0007_0ffd6ad4"
+      ],
+      "returned_chunk_ids_at_20": [
+        "AMD_2026_Item_1_0007_f252541b",
+        "AMD_2026_Item_1_0003_ea53a6a5",
+        "AMD_2024_Item_1_0009_01379c5a",
+        "AMD_2025_Item_1_0006_551768e4",
+        "AMD_2025_Item_1_0007_0ffd6ad4",
+        "AMD_2026_Item_1_0008_302d3abf",
+        "INTC_2026_Item_1_0008_c74f560f",
+        "INTC_2026_Item_1_0007_f3f3671c",
+        "AMD_2025_Item_1_0009_c842eea0",
+        "AMD_2026_Item_1_0010_460dfa17",
+        "AMD_2024_Item_1_0011_49024c2d",
+        "AMD_2025_Item_1_0008_db609f8f",
+        "AMD_2026_Item_1_0009_ac9cc232",
+        "AMD_2025_Item_7_0001_223169cf",
+        "INTC_2024_Item_7_0005_d449d027",
+        "INTC_2025_Item_7_0003_878f7d25",
+        "INTC_2024_Item_7_0002_7c82ed88",
+        "INTC_2025_Item_7_0002_f7953bfd",
+        "NVDA_2024_Item_1_0007_bae70036",
+        "AMD_2025_Item_1A_0001_0fd81b24"
+      ],
+      "hits_at_5": [
+        "AMD_2026_Item_1_0003_ea53a6a5"
+      ],
+      "hits_at_20": [
+        "AMD_2026_Item_1_0003_ea53a6a5"
+      ],
+      "seeds": [
+        {
+          "name": "amd",
+          "type": "ORG",
+          "specificity": 0.1635084431645399,
+          "similarity": 0.775611937046051
+        },
+        {
+          "name": "amd instinct accelerators",
+          "type": "PRODUCT",
+          "specificity": 0.7213475204444817,
+          "similarity": 0.775611937046051
+        },
+        {
+          "name": "amd ryzen ai",
+          "type": "PRODUCT",
+          "specificity": 0.9102392266268373,
+          "similarity": 0.7720450162887573
+        },
+        {
+          "name": "versal ai core",
+          "type": "PRODUCT",
+          "specificity": 0.9102392266268373,
+          "similarity": 0.7591707706451416
+        },
+        {
+          "name": "versal ai edge",
+          "type": "PRODUCT",
+          "specificity": 0.9102392266268373,
+          "similarity": 0.7382328510284424
+        },
+        {
+          "name": "amd instinct mi350",
+          "type": "PRODUCT",
+          "specificity": 1.4426950408889634,
+          "similarity": 0.7380648851394653
+        },
+        {
+          "name": "advanced micro devices",
+          "type": "ORG",
+          "specificity": 0.15632499556792623,
+          "similarity": 0.7353266477584839
+        },
+        {
+          "name": "amd instinct mi355x",
+          "type": "PRODUCT",
+          "specificity": 1.4426950408889634,
+          "similarity": 0.7352973818778992
+        },
+        {
+          "name": "amd instinct mi325",
+          "type": "PRODUCT",
+          "specificity": 1.4426950408889634,
+          "similarity": 0.7339970469474792
+        }
+      ],
+      "ppr_top_entities": [
+        {
+          "name": "amd",
+          "type": "ORG",
+          "score": 2.069132789433654
+        },
+        {
+          "name": "advanced micro devices",
+          "type": "ORG",
+          "score": 1.135428397946363
+        },
+        {
+          "name": "amd instinct accelerators",
+          "type": "PRODUCT",
+          "score": 0.39127684451397166
+        },
+        {
+          "name": "versal ai core",
+          "type": "PRODUCT",
+          "score": 0.3045307460829729
+        },
+        {
+          "name": "versal ai edge",
+          "type": "PRODUCT",
+          "score": 0.3045307460829729
+        },
+        {
+          "name": "amd ryzen ai",
+          "type": "PRODUCT",
+          "score": 0.3045307460829729
+        },
+        {
+          "name": "amd instinct mi325",
+          "type": "PRODUCT",
+          "score": 0.3032041269987466
+        },
+        {
+          "name": "amd instinct mi350",
+          "type": "PRODUCT",
+          "score": 0.3032041269987466
+        },
+        {
+          "name": "amd instinct mi355x",
+          "type": "PRODUCT",
+          "score": 0.3032041269987466
+        },
+        {
+          "name": "amd",
+          "type": "COMP",
+          "score": 0.30047948400155433
+        },
+        {
+          "name": "intel",
+          "type": "ORG",
+          "score": 0.2243474359596475
+        },
+        {
+          "name": "rambus",
+          "type": "ORG",
+          "score": 0.1646023405434388
+        },
+        {
+          "name": "acquisition of silo ai",
+          "type": "EVENT",
+          "score": 0.10356521282148527
+        },
+        {
+          "name": "silo ai software stack",
+          "type": "PRODUCT",
+          "score": 0.0912976464951421
+        },
+        {
+          "name": "nvidia",
+          "type": "ORG",
+          "score": 0.06914929303452519
+        },
+        {
+          "name": "advanced micro devices, inc.",
+          "type": "ORG",
+          "score": 0.037028872918788924
+        },
+        {
+          "name": "united states",
+          "type": "GPE",
+          "score": 0.0288784923031296
+        },
+        {
+          "name": "nvidia corporation",
+          "type": "ORG",
+          "score": 0.02795498503988144
+        },
+        {
+          "name": "merger acquisition divestiture integration risks",
+          "type": "RISK_FACTOR",
+          "score": 0.025896492421495627
+        },
+        {
+          "name": "acquisition of zt systems",
+          "type": "EVENT",
+          "score": 0.024740412134376798
+        }
+      ],
+      "cluster_entries": [
+        {
+          "aliases": [
+            "advanced micro devices",
+            "advanced micro devices inc",
+            "advanced micro devices, inc.",
+            "amd"
+          ],
+          "score": 1.4729367548667063
+        },
+        {
+          "aliases": [
+            "amd instinct accelerators"
+          ],
+          "score": 0.39127684451397166
+        },
+        {
+          "aliases": [
+            "versal ai core"
+          ],
+          "score": 0.3045307460829729
+        },
+        {
+          "aliases": [
+            "versal ai edge"
+          ],
+          "score": 0.3045307460829729
+        },
+        {
+          "aliases": [
+            "amd ryzen ai"
+          ],
+          "score": 0.3045307460829729
+        },
+        {
+          "aliases": [
+            "amd instinct mi325"
+          ],
+          "score": 0.3032041269987466
+        },
+        {
+          "aliases": [
+            "amd instinct mi350"
+          ],
+          "score": 0.3032041269987466
+        },
+        {
+          "aliases": [
+            "amd instinct mi355x"
+          ],
+          "score": 0.3032041269987466
+        },
+        {
+          "aliases": [
+            "intel",
+            "intel corporation"
+          ],
+          "score": 0.2243474359596475
+        },
+        {
+          "aliases": [
+            "rambus"
+          ],
+          "score": 0.1646023405434388
+        },
+        {
+          "aliases": [
+            "acquisition of silo ai"
+          ],
+          "score": 0.10356521282148527
+        },
+        {
+          "aliases": [
+            "nvidia",
+            "nvidia corporation"
+          ],
+          "score": 0.09710427807440664
+        }
+      ],
+      "top_chunks": [
+        {
+          "rank": 1,
+          "chunk_id": "AMD_2026_Item_1_0007_f252541b",
+          "ticker": "AMD",
+          "fiscal_year": "2026",
+          "section": "Item_1",
+          "score": 5.736169054705115,
+          "preview": "6  * * *  Table of Contents    Design Platforms and Services  Adaptable Platforms. We offer two types of platforms that support our customers' designs and reduce their development efforts: FPGAs and adaptive SoCs. FPGAs feature reconfigurable hardware as well "
+        },
+        {
+          "rank": 2,
+          "chunk_id": "AMD_2026_Item_1_0003_ea53a6a5",
+          "ticker": "AMD",
+          "fiscal_year": "2026",
+          "section": "Item_1",
+          "score": 5.548819956218321,
+          "preview": "•the Client and Gaming segment, which primarily includes CPUs, APUs, chipsets for desktops and notebooks, discrete GPUs, and semi-custom SoC products and development services; and  •the Embedded segment, which primarily includes embedded CPUs, APUs, FPGAs, SOM"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "AMD_2024_Item_1_0009_01379c5a",
+          "ticker": "AMD",
+          "fiscal_year": "2024",
+          "section": "Item_1",
+          "score": 5.107313064043777,
+          "preview": "We generally warrant that our products sold to our customers will conform to our approved specifications and be free from defects in material and workmanship under normal use and conditions for one year. We offer up to three-year limited warranties for certain"
+        },
+        {
+          "rank": 4,
+          "chunk_id": "AMD_2025_Item_1_0006_551768e4",
+          "ticker": "AMD",
+          "fiscal_year": "2025",
+          "section": "Item_1",
+          "score": 4.928182370783764,
+          "preview": "Legacy Product Families. We offer prior generation high-end Virtex™ and low-end Spartan™ FPGA families as well as the original Virtex and Spartan families. Our prior generations of Complex Programmable Logic Devices \\(CPLD\\) include the CoolRunner™ and XC9500 "
+        },
+        {
+          "rank": 5,
+          "chunk_id": "AMD_2025_Item_1_0007_0ffd6ad4",
+          "ticker": "AMD",
+          "fiscal_year": "2025",
+          "section": "Item_1",
+          "score": 4.053650586972573,
+          "preview": "6  * * *  Table of Contents  Our product brand for professional graphics products is AMD Radeon PRO graphics.  We also market and sell our chipsets under AMD trademarks.  Our FPGA products are Virtex™-6, Virtex-7, Virtex UltraScale+, Kintex™-7, Kintex UltraSca"
+        }
+      ],
+      "debug_log_tail": [
+        "[expand] hints='AMD INTC Instinct MI Ryzen AI x86'",
+        "[triple_seed] query='What AI accelerator product line does the main x86 desktop CPU rival of Intel offer? AMD INTC Instinct MI Ryzen AI x86' top_k_triples=8 min_sim=0.6 → kept 8 triples → 9 unique seeds",
+        "[run_ppr] Projected 'ppr_a6ff456d': 13348 nodes, 35134 relationships",
+        "[run_ppr] PPR over 10 seeds (damping=0.7, max_iter=20, teleport=uniform (10 seeds))"
+      ]
+    },
+    {
+      "id": "T007",
+      "query": "What graphics product line does AMD offer to compete with NVIDIA's RTX series?",
+      "type": "competitor_product",
+      "gold_chunks": [],
+      "effective_query": "What graphics product line does AMD offer to compete with NVIDIA's RTX series? AMD NVDA Radeon RTX RDNA",
+      "latency_sec": 4.008,
+      "error": null,
+      "scored": false,
+      "hit_at_5": null,
+      "recall_at_5": null,
+      "mrr_at_5": null,
+      "oracle_hit_at_20": null,
+      "oracle_recall_at_20": null,
+      "first_gold_rank_at_20": null,
+      "returned_chunk_ids_at_5": [
+        "NVDA_2025_Item_1_0009_7a56593b",
+        "NVDA_2026_Item_1_0008_edf8fe4b",
+        "AMD_2024_Item_1_0011_49024c2d",
+        "AMD_2025_Item_1_0008_db609f8f",
+        "AMD_2026_Item_1_0009_ac9cc232"
+      ],
+      "returned_chunk_ids_at_20": [
+        "NVDA_2025_Item_1_0009_7a56593b",
+        "NVDA_2026_Item_1_0008_edf8fe4b",
+        "AMD_2024_Item_1_0011_49024c2d",
+        "AMD_2025_Item_1_0008_db609f8f",
+        "AMD_2026_Item_1_0009_ac9cc232",
+        "AMD_2025_Item_1_0009_c842eea0",
+        "AMD_2026_Item_1_0010_460dfa17",
+        "NVDA_2025_Item_1_0008_a4407f7e",
+        "RMBS_2024_Item_1_0001_1bbcc1ae",
+        "RMBS_2025_Item_1_0001_479b0c1e",
+        "NVDA_2024_Item_1_0008_20833acc",
+        "NVDA_2026_Item_1_0007_bf6a51b6",
+        "NVDA_2024_Item_1_0007_bae70036",
+        "NVDA_2024_Item_1_0012_e3eecadc",
+        "AMD_2025_Item_1A_0000_ac2e47a8",
+        "AMD_2025_Item_1A_0001_0fd81b24",
+        "AMD_2024_Item_1_0009_01379c5a",
+        "AMD_2025_Item_1_0006_551768e4",
+        "AMD_2026_Item_1_0007_f252541b",
+        "AVGO_2024_Item_1_0012_88739b41"
+      ],
+      "hits_at_5": [],
+      "hits_at_20": [],
+      "seeds": [
+        {
+          "name": "amd",
+          "type": "ORG",
+          "specificity": 0.1635084431645399,
+          "similarity": 0.754812479019165
+        },
+        {
+          "name": "nvidia",
+          "type": "ORG",
+          "specificity": 0.14087730079589394,
+          "similarity": 0.754812479019165
+        },
+        {
+          "name": "amd radeon graphics",
+          "type": "PRODUCT",
+          "specificity": 0.9102392266268373,
+          "similarity": 0.7389061450958252
+        },
+        {
+          "name": "nvidia corporation",
+          "type": "ORG",
+          "specificity": 0.16333216405677026,
+          "similarity": 0.7388308048248291
+        },
+        {
+          "name": "amd rdna 3 graphics",
+          "type": "PRODUCT",
+          "specificity": 1.4426950408889634,
+          "similarity": 0.7309752702713013
+        },
+        {
+          "name": "amd radeon pro graphics",
+          "type": "PRODUCT",
+          "specificity": 0.9102392266268373,
+          "similarity": 0.7243933081626892
+        },
+        {
+          "name": "amd radeon software",
+          "type": "PRODUCT",
+          "specificity": 1.4426950408889634,
+          "similarity": 0.717643678188324
+        },
+        {
+          "name": "advanced micro devices",
+          "type": "ORG",
+          "specificity": 0.15632499556792623,
+          "similarity": 0.7165101170539856
+        }
+      ],
+      "ppr_top_entities": [
+        {
+          "name": "amd",
+          "type": "ORG",
+          "score": 1.435438052119978
+        },
+        {
+          "name": "advanced micro devices",
+          "type": "ORG",
+          "score": 0.9222097272520997
+        },
+        {
+          "name": "nvidia",
+          "type": "ORG",
+          "score": 0.5385576965086889
+        },
+        {
+          "name": "nvidia corporation",
+          "type": "ORG",
+          "score": 0.47345532788901845
+        },
+        {
+          "name": "rambus",
+          "type": "ORG",
+          "score": 0.3139751317047676
+        },
+        {
+          "name": "amd radeon graphics",
+          "type": "PRODUCT",
+          "score": 0.3033003578188146
+        },
+        {
+          "name": "amd radeon pro graphics",
+          "type": "PRODUCT",
+          "score": 0.3033003578188146
+        },
+        {
+          "name": "amd rdna 3 graphics",
+          "type": "PRODUCT",
+          "score": 0.3022228309392901
+        },
+        {
+          "name": "amd radeon software",
+          "type": "PRODUCT",
+          "score": 0.3022228309392901
+        },
+        {
+          "name": "nvidia",
+          "type": "COMP",
+          "score": 0.30093062978357166
+        },
+        {
+          "name": "amd",
+          "type": "COMP",
+          "score": 0.3008236031922499
+        },
+        {
+          "name": "intel",
+          "type": "ORG",
+          "score": 0.22722140491241943
+        },
+        {
+          "name": "qualcomm",
+          "type": "ORG",
+          "score": 0.18405755545803373
+        },
+        {
+          "name": "united states",
+          "type": "GPE",
+          "score": 0.03848815558488602
+        },
+        {
+          "name": "lam research",
+          "type": "ORG",
+          "score": 0.032600730710725584
+        },
+        {
+          "name": "china",
+          "type": "GPE",
+          "score": 0.030390444282166848
+        },
+        {
+          "name": "advanced micro devices, inc.",
+          "type": "ORG",
+          "score": 0.027193805280198116
+        },
+        {
+          "name": "revenue",
+          "type": "FIN_METRIC",
+          "score": 0.026724174618229825
+        },
+        {
+          "name": "gross margin",
+          "type": "FIN_METRIC",
+          "score": 0.02451812636957665
+        },
+        {
+          "name": "coherent",
+          "type": "ORG",
+          "score": 0.023223018341397207
+        }
+      ],
+      "cluster_entries": [
+        {
+          "aliases": [
+            "advanced micro devices",
+            "advanced micro devices inc",
+            "advanced micro devices, inc.",
+            "amd"
+          ],
+          "score": 1.2502271357245478
+        },
+        {
+          "aliases": [
+            "nvidia",
+            "nvidia corporation"
+          ],
+          "score": 0.7743859576725901
+        },
+        {
+          "aliases": [
+            "rambus"
+          ],
+          "score": 0.3139751317047676
+        },
+        {
+          "aliases": [
+            "amd radeon graphics"
+          ],
+          "score": 0.3033003578188146
+        },
+        {
+          "aliases": [
+            "amd radeon pro graphics"
+          ],
+          "score": 0.3033003578188146
+        },
+        {
+          "aliases": [
+            "amd rdna 3 graphics"
+          ],
+          "score": 0.3022228309392901
+        },
+        {
+          "aliases": [
+            "amd radeon software"
+          ],
+          "score": 0.3022228309392901
+        },
+        {
+          "aliases": [
+            "intel",
+            "intel corporation"
+          ],
+          "score": 0.22722140491241943
+        },
+        {
+          "aliases": [
+            "qualcomm"
+          ],
+          "score": 0.18405755545803373
+        },
+        {
+          "aliases": [
+            "u.s.",
+            "united states"
+          ],
+          "score": 0.03848815558488602
+        },
+        {
+          "aliases": [
+            "lam research"
+          ],
+          "score": 0.032600730710725584
+        },
+        {
+          "aliases": [
+            "china"
+          ],
+          "score": 0.030390444282166848
+        }
+      ],
+      "top_chunks": [
+        {
+          "rank": 1,
+          "chunk_id": "NVDA_2025_Item_1_0009_7a56593b",
+          "ticker": "NVDA",
+          "fiscal_year": "2025",
+          "section": "Item_1",
+          "score": 4.518428402149859,
+          "preview": "•networking products consisting of switches, network adapters \\(including DPUs\\), and cable solutions \\(including optical modules\\) include such as AMD, Arista Networks, Broadcom, Cisco Systems, Inc., Hewlett Packard Enterprise Company, Huawei, Intel, Lumentum"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "NVDA_2026_Item_1_0008_edf8fe4b",
+          "ticker": "NVDA",
+          "fiscal_year": "2026",
+          "section": "Item_1",
+          "score": 4.518428402149859,
+          "preview": "•networking products consisting of switches, network adapters \\(including DPUs\\), and cable solutions \\(including optical modules\\) include such as AMD, Arista Networks, Broadcom, Cisco Systems, Inc., Hewlett Packard Enterprise Company, Huawei, Intel, Lumentum"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "AMD_2024_Item_1_0011_49024c2d",
+          "ticker": "AMD",
+          "fiscal_year": "2024",
+          "section": "Item_1",
+          "score": 4.384321768208708,
+          "preview": "Competition  The markets in which our products are sold are highly competitive and delivering the latest and best products to market on a timely basis is critical to achieving revenue growth. We believe that the main factors that determine our product competit"
+        },
+        {
+          "rank": 4,
+          "chunk_id": "AMD_2025_Item_1_0008_db609f8f",
+          "ticker": "AMD",
+          "fiscal_year": "2025",
+          "section": "Item_1",
+          "score": 4.384321768208708,
+          "preview": "Hyperscale Data Centers  Large multi-national public cloud service providers and hyperscale private data centers directly and indirectly purchase a substantial portion of our data center-focused products, including server CPUs, GPU accelerators, DPUs, FPGAs an"
+        },
+        {
+          "rank": 5,
+          "chunk_id": "AMD_2026_Item_1_0009_ac9cc232",
+          "ticker": "AMD",
+          "fiscal_year": "2026",
+          "section": "Item_1",
+          "score": 4.384321768208708,
+          "preview": "8  * * *  Table of Contents    Hyperscale Data Centers  Large multi-national public cloud service providers and hyperscale private data centers directly and indirectly purchase a substantial portion of our data center-focused products, including server CPUs, G"
+        }
+      ],
+      "debug_log_tail": [
+        "[expand] hints='AMD NVDA Radeon RTX RDNA'",
+        "[triple_seed] query='What graphics product line does AMD offer to compete with NVIDIA's RTX series? AMD NVDA Radeon RTX RDNA' top_k_triples=8 min_sim=0.6 → kept 8 triples → 8 unique seeds",
+        "[run_ppr] Projected 'ppr_65ee4dcf': 13348 nodes, 35134 relationships",
+        "[run_ppr] PPR over 10 seeds (damping=0.7, max_iter=20, teleport=uniform (10 seeds))"
+      ]
+    },
+    {
+      "id": "T015",
+      "query": "What is the relationship between KLA yield improvement tools and downstream AMD gross margin risk?",
+      "type": "graph_multihop",
+      "gold_chunks": [],
+      "effective_query": "What is the relationship between KLA yield improvement tools and downstream AMD gross margin risk? KLAC AMD TSMC Taiwan",
+      "latency_sec": 18.471,
+      "error": null,
+      "scored": false,
+      "hit_at_5": null,
+      "recall_at_5": null,
+      "mrr_at_5": null,
+      "oracle_hit_at_20": null,
+      "oracle_recall_at_20": null,
+      "first_gold_rank_at_20": null,
+      "returned_chunk_ids_at_5": [
+        "MU_2025_Item_1A_0001_8d660135",
+        "KLAC_2023_Item_7_0009_9b5b651f",
+        "KLAC_2024_Item_7_0006_313cb934",
+        "AMD_2025_Item_1_0009_c842eea0",
+        "AMD_2026_Item_1_0010_460dfa17"
+      ],
+      "returned_chunk_ids_at_20": [
+        "MU_2025_Item_1A_0001_8d660135",
+        "KLAC_2023_Item_7_0009_9b5b651f",
+        "KLAC_2024_Item_7_0006_313cb934",
+        "AMD_2025_Item_1_0009_c842eea0",
+        "AMD_2026_Item_1_0010_460dfa17",
+        "AMD_2025_Item_1A_0000_ac2e47a8",
+        "AMD_2025_Item_1A_0001_0fd81b24",
+        "KLAC_2023_Item_7_0002_34d825f8",
+        "KLAC_2024_Item_7_0002_06735542",
+        "AMD_2024_Item_1_0011_49024c2d",
+        "KLAC_2025_Item_7_0002_3eb30bda",
+        "NVDA_2024_Item_1_0007_bae70036",
+        "NVDA_2025_Item_1_0008_a4407f7e",
+        "NVDA_2026_Item_1_0007_bf6a51b6",
+        "MU_2023_Item_7_0001_2dba5c20",
+        "AVGO_2023_Item_1_0010_68f5ffd4",
+        "RMBS_2025_Item_1_0001_479b0c1e",
+        "INTC_2024_Item_7_0005_d449d027",
+        "INTC_2025_Item_7_0003_878f7d25",
+        "NVDA_2026_Item_7_0001_485abbd3"
+      ],
+      "hits_at_5": [],
+      "hits_at_20": [],
+      "seeds": [
+        {
+          "name": "output reduction or production ramp delays",
+          "type": "RISK_FACTOR",
+          "specificity": 0.7213475204444817,
+          "similarity": 0.7454276084899902
+        },
+        {
+          "name": "gross margin risk",
+          "type": "RISK_FACTOR",
+          "specificity": 0.5581106265512472,
+          "similarity": 0.7454276084899902
+        },
+        {
+          "name": "kla",
+          "type": "ORG",
+          "specificity": 0.1575450893225112,
+          "similarity": 0.7449928522109985
+        },
+        {
+          "name": "yield",
+          "type": "FIN_METRIC",
+          "specificity": 1.4426950408889634,
+          "similarity": 0.7449928522109985
+        },
+        {
+          "name": "texas instruments",
+          "type": "ORG",
+          "specificity": 0.18856166434639035,
+          "similarity": 0.7278504967689514
+        },
+        {
+          "name": "margin variability",
+          "type": "RISK_FACTOR",
+          "specificity": 0.7213475204444817,
+          "similarity": 0.7278504967689514
+        },
+        {
+          "name": "trade restrictions",
+          "type": "REGULATORY_REQUIREMENT",
+          "specificity": 0.5138983423697507,
+          "similarity": 0.7254669070243835
+        },
+        {
+          "name": "amd",
+          "type": "ORG",
+          "specificity": 0.1635084431645399,
+          "similarity": 0.7251118421554565
+        },
+        {
+          "name": "gross margin",
+          "type": "FIN_METRIC",
+          "specificity": 0.190204637234765,
+          "similarity": 0.7251118421554565
+        },
+        {
+          "name": "tariffs",
+          "type": "REGULATORY_REQUIREMENT",
+          "specificity": 0.32351545314867247,
+          "similarity": 0.7239911556243896
+        },
+        {
+          "name": "average selling price volatility",
+          "type": "RISK_FACTOR",
+          "specificity": 0.7213475204444817,
+          "similarity": 0.7219560146331787
+        },
+        {
+          "name": "micron technology",
+          "type": "ORG",
+          "specificity": 0.17451703074550312,
+          "similarity": 0.7212246656417847
+        }
+      ],
+      "ppr_top_entities": [
+        {
+          "name": "kla",
+          "type": "ORG",
+          "score": 0.8391247788831883
+        },
+        {
+          "name": "texas instruments",
+          "type": "ORG",
+          "score": 0.5743090104173693
+        },
+        {
+          "name": "gross margin risk",
+          "type": "RISK_FACTOR",
+          "score": 0.5592428426782318
+        },
+        {
+          "name": "geopolitical and trade restrictions",
+          "type": "RISK_FACTOR",
+          "score": 0.5107240392240325
+        },
+        {
+          "name": "micron technology",
+          "type": "ORG",
+          "score": 0.5065971187259204
+        },
+        {
+          "name": "amd",
+          "type": "ORG",
+          "score": 0.47196910016528565
+        },
+        {
+          "name": "nvidia",
+          "type": "ORG",
+          "score": 0.46742559965169067
+        },
+        {
+          "name": "tariffs",
+          "type": "REGULATORY_REQUIREMENT",
+          "score": 0.45922566040156787
+        },
+        {
+          "name": "tariffs",
+          "type": "MACRO_CONDITION",
+          "score": 0.45732961289251783
+        },
+        {
+          "name": "trade restrictions",
+          "type": "REGULATORY_REQUIREMENT",
+          "score": 0.433710641042322
+        },
+        {
+          "name": "average selling price volatility",
+          "type": "RISK_FACTOR",
+          "score": 0.43196396489486166
+        },
+        {
+          "name": "gross margin",
+          "type": "FIN_METRIC",
+          "score": 0.42001670745720887
+        },
+        {
+          "name": "output reduction or production ramp delays",
+          "type": "RISK_FACTOR",
+          "score": 0.393383520156888
+        },
+        {
+          "name": "intel",
+          "type": "ORG",
+          "score": 0.3729773088330913
+        },
+        {
+          "name": "margin variability",
+          "type": "RISK_FACTOR",
+          "score": 0.36805317896243145
+        },
+        {
+          "name": "tariffs",
+          "type": "EVENT",
+          "score": 0.3508092479572068
+        },
+        {
+          "name": "trade restrictions",
+          "type": "EVENT",
+          "score": 0.34468299730181184
+        },
+        {
+          "name": "trade restrictions",
+          "type": "MACRO_CONDITION",
+          "score": 0.3411012542913029
+        },
+        {
+          "name": "rambus",
+          "type": "ORG",
+          "score": 0.3364666284627613
+        },
+        {
+          "name": "tariffs",
+          "type": "RISK_FACTOR",
+          "score": 0.3192770126296882
+        }
+      ],
+      "cluster_entries": [
+        {
+          "aliases": [
+            "kla"
+          ],
+          "score": 0.8391247788831883
+        },
+        {
+          "aliases": [
+            "texas instruments",
+            "texas instruments incorporated",
+            "ti"
+          ],
+          "score": 0.5743090104173693
+        },
+        {
+          "aliases": [
+            "gross margin risk"
+          ],
+          "score": 0.5592428426782318
+        },
+        {
+          "aliases": [
+            "geopolitical and trade restrictions"
+          ],
+          "score": 0.5107240392240325
+        },
+        {
+          "aliases": [
+            "micron technology",
+            "micron technology inc"
+          ],
+          "score": 0.5065971187259204
+        },
+        {
+          "aliases": [
+            "advanced micro devices",
+            "advanced micro devices inc",
+            "advanced micro devices, inc.",
+            "amd"
+          ],
+          "score": 0.47196910016528565
+        },
+        {
+          "aliases": [
+            "nvidia",
+            "nvidia corporation"
+          ],
+          "score": 0.46742559965169067
+        },
+        {
+          "aliases": [
+            "average selling price volatility"
+          ],
+          "score": 0.43196396489486166
+        },
+        {
+          "aliases": [
+            "gross margin"
+          ],
+          "score": 0.42001670745720887
+        },
+        {
+          "aliases": [
+            "output reduction or production ramp delays"
+          ],
+          "score": 0.393383520156888
+        },
+        {
+          "aliases": [
+            "intel",
+            "intel corporation"
+          ],
+          "score": 0.3729773088330913
+        },
+        {
+          "aliases": [
+            "margin variability"
+          ],
+          "score": 0.36805317896243145
+        }
+      ],
+      "top_chunks": [
+        {
+          "rank": 1,
+          "chunk_id": "MU_2025_Item_1A_0001_8d660135",
+          "ticker": "MU",
+          "fiscal_year": "2025",
+          "section": "Item_1A",
+          "score": 3.8649906438903385,
+          "preview": "•our ability to generate sufficient cash flows or obtain access to external financing;  •our debt obligations;  •changes in foreign currency exchange rates;  •counterparty default risk;  •volatility in the trading price of our common stock; and  •fluctuations "
+        },
+        {
+          "rank": 2,
+          "chunk_id": "KLAC_2023_Item_7_0009_9b5b651f",
+          "ticker": "KLAC",
+          "fiscal_year": "2023",
+          "section": "Item_7",
+          "score": 3.3797126682141507,
+          "preview": "Recent Accounting Pronouncements  For a description of recent accounting pronouncements, including those recently adopted and the expected dates of adoption as well as estimated effects, if any, on our Consolidated Financial Statements of those not yet adopted"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "KLAC_2024_Item_7_0006_313cb934",
+          "ticker": "KLAC",
+          "fiscal_year": "2024",
+          "section": "Item_7",
+          "score": 3.3797126682141507,
+          "preview": "Recent Accounting Pronouncements  For a description of recent accounting pronouncements, including those recently adopted and the expected dates of adoption as well as estimated effects, if any, on our Consolidated Financial Statements of those not yet adopted"
+        },
+        {
+          "rank": 4,
+          "chunk_id": "AMD_2025_Item_1_0009_c842eea0",
+          "ticker": "AMD",
+          "fiscal_year": "2025",
+          "section": "Item_1",
+          "score": 3.113023681461271,
+          "preview": "Competition in Client Segment  Our primary competitor in the supply of CPUs and APUs is Intel. A variety of companies provide or have developed Arm-based microprocessors and platforms which could lead to further adoption of Arm-based PC solutions.  Competition"
+        },
+        {
+          "rank": 5,
+          "chunk_id": "AMD_2026_Item_1_0010_460dfa17",
+          "ticker": "AMD",
+          "fiscal_year": "2026",
+          "section": "Item_1",
+          "score": 3.113023681461271,
+          "preview": "Competition in Client and Gaming Segment  Our primary competitor in the supply of CPUs and APUs is Intel. A variety of companies provide or have developed Arm-based microprocessors and platforms which could lead to further adoption of Arm-based PC solutions.  "
+        }
+      ],
+      "debug_log_tail": [
+        "[expand] hints='KLAC AMD TSMC Taiwan'",
+        "[triple_seed] query='What is the relationship between KLA yield improvement tools and downstream AMD gross margin risk? KLAC AMD TSMC Taiwan' top_k_triples=8 min_sim=0.6 → kept 8 triples → 12 unique seeds",
+        "[run_ppr] Projected 'ppr_d383afdf': 13348 nodes, 35134 relationships",
+        "[run_ppr] PPR over 20 seeds (damping=0.7, max_iter=20, teleport=uniform (20 seeds))"
+      ]
+    },
+    {
+      "id": "T017",
+      "query": "Which Taiwanese contract chipmaker fabricates AMD's processors?",
+      "type": "supplier_via_company",
+      "gold_chunks": [
+        "AMD_2025_Item_1_0009_c842eea0",
+        "AMD_2026_Item_1A_0008_e84e4130"
+      ],
+      "effective_query": "Which Taiwanese contract chipmaker fabricates AMD's processors? AMD TSMC Taiwan foundry",
+      "latency_sec": 15.002,
+      "error": null,
+      "scored": true,
+      "hit_at_5": 1,
+      "recall_at_5": 0.5,
+      "mrr_at_5": 0.5,
+      "oracle_hit_at_20": 1,
+      "oracle_recall_at_20": 0.5,
+      "first_gold_rank_at_20": 2,
+      "returned_chunk_ids_at_5": [
+        "RMBS_2025_Item_1_0001_479b0c1e",
+        "AMD_2025_Item_1_0009_c842eea0",
+        "AMD_2026_Item_1_0010_460dfa17",
+        "NVDA_2025_Item_1_0008_a4407f7e",
+        "NVDA_2024_Item_1_0007_bae70036"
+      ],
+      "returned_chunk_ids_at_20": [
+        "RMBS_2025_Item_1_0001_479b0c1e",
+        "AMD_2025_Item_1_0009_c842eea0",
+        "AMD_2026_Item_1_0010_460dfa17",
+        "NVDA_2025_Item_1_0008_a4407f7e",
+        "NVDA_2024_Item_1_0007_bae70036",
+        "NVDA_2026_Item_1_0007_bf6a51b6",
+        "RMBS_2024_Item_1_0001_1bbcc1ae",
+        "AMD_2024_Item_1_0011_49024c2d",
+        "AVGO_2023_Item_1_0010_68f5ffd4",
+        "AVGO_2024_Item_1_0012_88739b41",
+        "INTC_2026_Item_1_0008_c74f560f",
+        "MU_2025_Item_1A_0004_836bee10",
+        "RMBS_2026_Item_1_0002_55e193f8",
+        "MU_2023_Item_1A_0002_e54b8152",
+        "RMBS_2026_Item_1_0001_bc3d8a01",
+        "MU_2023_Item_1A_0003_92be33e3",
+        "MU_2024_Item_1A_0025_1809ff3b",
+        "LRCX_2023_Item_1_0005_de991ae1",
+        "NVDA_2024_Item_1_0008_20833acc",
+        "NVDA_2025_Item_1_0009_7a56593b"
+      ],
+      "hits_at_5": [
+        "AMD_2025_Item_1_0009_c842eea0"
+      ],
+      "hits_at_20": [
+        "AMD_2025_Item_1_0009_c842eea0"
+      ],
+      "seeds": [
+        {
+          "name": "intel",
+          "type": "ORG",
+          "specificity": 0.1362122453866201,
+          "similarity": 0.7060972452163696
+        },
+        {
+          "name": "taiwan",
+          "type": "GPE",
+          "specificity": 0.22569202144874392,
+          "similarity": 0.7060972452163696
+        },
+        {
+          "name": "amd",
+          "type": "ORG",
+          "specificity": 0.1635084431645399,
+          "similarity": 0.7033843994140625
+        },
+        {
+          "name": "china",
+          "type": "GPE",
+          "specificity": 0.17724503211885126,
+          "similarity": 0.7033843994140625
+        },
+        {
+          "name": "texas instruments",
+          "type": "ORG",
+          "specificity": 0.18856166434639035,
+          "similarity": 0.6964297294616699
+        },
+        {
+          "name": "chipset products",
+          "type": "PRODUCT",
+          "specificity": 1.4426950408889634,
+          "similarity": 0.6964174509048462
+        },
+        {
+          "name": "tsmc",
+          "type": "COMP",
+          "specificity": 0.3898712452512801,
+          "similarity": 0.6947709918022156
+        },
+        {
+          "name": "processors",
+          "type": "PRODUCT",
+          "specificity": 0.9102392266268373,
+          "similarity": 0.6902846097946167
+        },
+        {
+          "name": "micron technology",
+          "type": "ORG",
+          "specificity": 0.17451703074550312,
+          "similarity": 0.6885062456130981
+        }
+      ],
+      "ppr_top_entities": [
+        {
+          "name": "intel",
+          "type": "ORG",
+          "score": 0.8331434357874113
+        },
+        {
+          "name": "amd",
+          "type": "ORG",
+          "score": 0.8006181835821153
+        },
+        {
+          "name": "texas instruments",
+          "type": "ORG",
+          "score": 0.7516619175011113
+        },
+        {
+          "name": "micron technology",
+          "type": "ORG",
+          "score": 0.4813220247612205
+        },
+        {
+          "name": "china",
+          "type": "GPE",
+          "score": 0.4127694399411529
+        },
+        {
+          "name": "rambus",
+          "type": "ORG",
+          "score": 0.3500803350191034
+        },
+        {
+          "name": "taiwan",
+          "type": "GPE",
+          "score": 0.346984148174528
+        },
+        {
+          "name": "tsmc",
+          "type": "ORG",
+          "score": 0.3328063772786452
+        },
+        {
+          "name": "tsmc",
+          "type": "COMP",
+          "score": 0.325614205073767
+        },
+        {
+          "name": "china",
+          "type": "ORG",
+          "score": 0.3218617887523425
+        },
+        {
+          "name": "processors",
+          "type": "PRODUCT",
+          "score": 0.30526138706148326
+        },
+        {
+          "name": "chipset products",
+          "type": "PRODUCT",
+          "score": 0.3012397721707989
+        },
+        {
+          "name": "amd",
+          "type": "COMP",
+          "score": 0.3011814644119246
+        },
+        {
+          "name": "texas instruments",
+          "type": "COMP",
+          "score": 0.30112303167943383
+        },
+        {
+          "name": "intel",
+          "type": "COMP",
+          "score": 0.30000000000000004
+        },
+        {
+          "name": "qualcomm",
+          "type": "ORG",
+          "score": 0.28003894582891825
+        },
+        {
+          "name": "nvidia",
+          "type": "ORG",
+          "score": 0.19007285474751362
+        },
+        {
+          "name": "advanced micro devices",
+          "type": "ORG",
+          "score": 0.16441176860045778
+        },
+        {
+          "name": "tariffs",
+          "type": "MACRO_CONDITION",
+          "score": 0.13473309884372675
+        },
+        {
+          "name": "retaliatory measures",
+          "type": "MACRO_CONDITION",
+          "score": 0.11494559966009858
+        }
+      ],
+      "cluster_entries": [
+        {
+          "aliases": [
+            "micron technology",
+            "micron technology inc"
+          ],
+          "score": 0.4813220247612205
+        },
+        {
+          "aliases": [
+            "advanced micro devices",
+            "advanced micro devices inc",
+            "advanced micro devices, inc.",
+            "amd"
+          ],
+          "score": 0.4655932330123824
+        },
+        {
+          "aliases": [
+            "rambus"
+          ],
+          "score": 0.3500803350191034
+        },
+        {
+          "aliases": [
+            "taiwan"
+          ],
+          "score": 0.346984148174528
+        },
+        {
+          "aliases": [
+            "tsmc"
+          ],
+          "score": 0.325614205073767
+        },
+        {
+          "aliases": [
+            "china"
+          ],
+          "score": 0.3218617887523425
+        },
+        {
+          "aliases": [
+            "processors"
+          ],
+          "score": 0.30526138706148326
+        },
+        {
+          "aliases": [
+            "chipset products"
+          ],
+          "score": 0.3012397721707989
+        },
+        {
+          "aliases": [
+            "texas instruments",
+            "texas instruments incorporated",
+            "ti"
+          ],
+          "score": 0.30112303167943383
+        },
+        {
+          "aliases": [
+            "intel",
+            "intel corporation"
+          ],
+          "score": 0.30000000000000004
+        },
+        {
+          "aliases": [
+            "qualcomm"
+          ],
+          "score": 0.28003894582891825
+        },
+        {
+          "aliases": [
+            "nvidia",
+            "nvidia corporation"
+          ],
+          "score": 0.19007285474751362
+        }
+      ],
+      "top_chunks": [
+        {
+          "rank": 1,
+          "chunk_id": "RMBS_2025_Item_1_0001_479b0c1e",
+          "ticker": "RMBS",
+          "fiscal_year": "2025",
+          "section": "Item_1",
+          "score": 3.300619746211849,
+          "preview": "We sell memory interface chips directly and indirectly to memory module manufacturers, OEMs and hyperscalers worldwide through multiple channels, including our direct sales force and distributors, and we employ sales personnel to support such operations in the"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "AMD_2025_Item_1_0009_c842eea0",
+          "ticker": "AMD",
+          "fiscal_year": "2025",
+          "section": "Item_1",
+          "score": 3.267662865119544,
+          "preview": "Competition in Client Segment  Our primary competitor in the supply of CPUs and APUs is Intel. A variety of companies provide or have developed Arm-based microprocessors and platforms which could lead to further adoption of Arm-based PC solutions.  Competition"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "AMD_2026_Item_1_0010_460dfa17",
+          "ticker": "AMD",
+          "fiscal_year": "2026",
+          "section": "Item_1",
+          "score": 3.267662865119544,
+          "preview": "Competition in Client and Gaming Segment  Our primary competitor in the supply of CPUs and APUs is Intel. A variety of companies provide or have developed Arm-based microprocessors and platforms which could lead to further adoption of Arm-based PC solutions.  "
+        },
+        {
+          "rank": 4,
+          "chunk_id": "NVDA_2025_Item_1_0008_a4407f7e",
+          "ticker": "NVDA",
+          "fiscal_year": "2025",
+          "section": "Item_1",
+          "score": 3.1816180319089136,
+          "preview": "8  * * *  Table of Contents  of growth, we may place non-cancellable inventory orders for certain product components in advance of our historical lead times, pay premiums, or provide deposits to secure future supply and capacity and may need to continue to do "
+        },
+        {
+          "rank": 5,
+          "chunk_id": "NVDA_2024_Item_1_0007_bae70036",
+          "ticker": "NVDA",
+          "fiscal_year": "2024",
+          "section": "Item_1",
+          "score": 2.7454293698857906,
+          "preview": "Seasonality  Our computing platforms serve a diverse set of markets such as data centers, gaming, professional visualization, and automotive. Our desktop gaming products typically see stronger revenue in the second half of our fiscal year. Historical seasonali"
+        }
+      ],
+      "debug_log_tail": [
+        "[expand] hints='AMD TSMC Taiwan foundry'",
+        "[triple_seed] query='Which Taiwanese contract chipmaker fabricates AMD's processors? AMD TSMC Taiwan foundry' top_k_triples=8 min_sim=0.6 → kept 8 triples → 9 unique seeds",
+        "[run_ppr] Projected 'ppr_aea1a4ad': 13348 nodes, 35134 relationships",
+        "[run_ppr] PPR over 14 seeds (damping=0.7, max_iter=20, teleport=uniform (14 seeds))"
+      ]
+    },
+    {
+      "id": "T018",
+      "query": "Which gaming console makers partner with the Ryzen processor company?",
+      "type": "partner_via_product",
+      "gold_chunks": [
+        "AMD_2024_Item_1_0006_e41aed21",
+        "AMD_2026_Item_1_0004_b5e66359"
+      ],
+      "effective_query": "Which gaming console makers partner with the Ryzen processor company? AMD Sony Microsoft Ryzen",
+      "latency_sec": 3.508,
+      "error": null,
+      "scored": true,
+      "hit_at_5": 1,
+      "recall_at_5": 0.5,
+      "mrr_at_5": 1.0,
+      "oracle_hit_at_20": 1,
+      "oracle_recall_at_20": 0.5,
+      "first_gold_rank_at_20": 1,
+      "returned_chunk_ids_at_5": [
+        "AMD_2024_Item_1_0006_e41aed21",
+        "AMD_2025_Item_1_0009_c842eea0",
+        "AMD_2026_Item_1_0010_460dfa17",
+        "AMD_2024_Item_1_0011_49024c2d",
+        "AMD_2024_Item_1_0005_7be264c6"
+      ],
+      "returned_chunk_ids_at_20": [
+        "AMD_2024_Item_1_0006_e41aed21",
+        "AMD_2025_Item_1_0009_c842eea0",
+        "AMD_2026_Item_1_0010_460dfa17",
+        "AMD_2024_Item_1_0011_49024c2d",
+        "AMD_2024_Item_1_0005_7be264c6",
+        "AMD_2025_Item_1_0004_7a6fa20c",
+        "AMD_2026_Item_1_0005_808c1965",
+        "NVDA_2025_Item_1_0008_a4407f7e",
+        "NVDA_2026_Item_1_0007_bf6a51b6",
+        "AMD_2025_Item_1A_0000_ac2e47a8",
+        "AMD_2025_Item_1_0008_db609f8f",
+        "AMD_2026_Item_1_0009_ac9cc232",
+        "INTC_2026_Item_1_0008_c74f560f",
+        "NVDA_2024_Item_1_0008_20833acc",
+        "AMD_2024_Item_1A_0004_eabb01e8",
+        "AMD_2024_Item_1A_0000_2d7713d3",
+        "AMD_2024_Item_1A_0016_1f10868e",
+        "AMD_2025_Item_1A_0015_7b3b3396",
+        "AMD_2026_Item_1A_0014_3e7d6bac",
+        "NVDA_2024_Item_1_0007_bae70036"
+      ],
+      "hits_at_5": [
+        "AMD_2024_Item_1_0006_e41aed21"
+      ],
+      "hits_at_20": [
+        "AMD_2024_Item_1_0006_e41aed21"
+      ],
+      "seeds": [
+        {
+          "name": "amd",
+          "type": "ORG",
+          "specificity": 0.1635084431645399,
+          "similarity": 0.7608515024185181
+        },
+        {
+          "name": "sony",
+          "type": "COMP",
+          "specificity": 0.6213349345596119,
+          "similarity": 0.7608515024185181
+        },
+        {
+          "name": "advanced micro devices inc",
+          "type": "ORG",
+          "specificity": 0.36926937306885504,
+          "similarity": 0.723941445350647
+        },
+        {
+          "name": "amd ryzen processors",
+          "type": "PRODUCT",
+          "specificity": 1.4426950408889634,
+          "similarity": 0.723941445350647
+        },
+        {
+          "name": "microsoft",
+          "type": "COMP",
+          "specificity": 0.36067376022224085,
+          "similarity": 0.7190420031547546
+        },
+        {
+          "name": "advanced micro devices",
+          "type": "ORG",
+          "specificity": 0.15632499556792623,
+          "similarity": 0.7106907367706299
+        },
+        {
+          "name": "ryzen processors",
+          "type": "PRODUCT",
+          "specificity": 0.7213475204444817,
+          "similarity": 0.7106907367706299
+        },
+        {
+          "name": "sony playstation 5",
+          "type": "PRODUCT",
+          "specificity": 1.4426950408889634,
+          "similarity": 0.7052657008171082
+        },
+        {
+          "name": "amd ryzen",
+          "type": "PRODUCT",
+          "specificity": 0.9102392266268373,
+          "similarity": 0.6902414560317993
+        }
+      ],
+      "ppr_top_entities": [
+        {
+          "name": "amd",
+          "type": "ORG",
+          "score": 1.2537010780064648
+        },
+        {
+          "name": "advanced micro devices",
+          "type": "ORG",
+          "score": 1.1284773456742705
+        },
+        {
+          "name": "advanced micro devices inc",
+          "type": "ORG",
+          "score": 0.6315628197666292
+        },
+        {
+          "name": "intel",
+          "type": "ORG",
+          "score": 0.4965703197730144
+        },
+        {
+          "name": "microsoft",
+          "type": "COMP",
+          "score": 0.34505422479105474
+        },
+        {
+          "name": "ryzen processors",
+          "type": "PRODUCT",
+          "score": 0.3420741876125792
+        },
+        {
+          "name": "amd ryzen processors",
+          "type": "PRODUCT",
+          "score": 0.3315779770579483
+        },
+        {
+          "name": "microsoft",
+          "type": "ORG",
+          "score": 0.3084622115631953
+        },
+        {
+          "name": "sony",
+          "type": "COMP",
+          "score": 0.30651977709831235
+        },
+        {
+          "name": "amd ryzen",
+          "type": "PRODUCT",
+          "score": 0.3032598885491563
+        },
+        {
+          "name": "sony playstation 5",
+          "type": "PRODUCT",
+          "score": 0.3019413484715124
+        },
+        {
+          "name": "amd",
+          "type": "COMP",
+          "score": 0.30060898504351746
+        },
+        {
+          "name": "sony",
+          "type": "ORG",
+          "score": 0.30000000000000004
+        },
+        {
+          "name": "rambus",
+          "type": "ORG",
+          "score": 0.1671950412735999
+        },
+        {
+          "name": "nvidia",
+          "type": "ORG",
+          "score": 0.16304783821884652
+        },
+        {
+          "name": "nvidia corporation",
+          "type": "ORG",
+          "score": 0.11756836854192751
+        },
+        {
+          "name": "weak pc market conditions",
+          "type": "MACRO_CONDITION",
+          "score": 0.08733443142500956
+        },
+        {
+          "name": "inventory correction",
+          "type": "MACRO_CONDITION",
+          "score": 0.08733443142500956
+        },
+        {
+          "name": "gross margin",
+          "type": "FIN_METRIC",
+          "score": 0.08319334214389057
+        },
+        {
+          "name": "rampc program expansion",
+          "type": "EVENT",
+          "score": 0.06673962779145234
+        }
+      ],
+      "cluster_entries": [
+        {
+          "aliases": [
+            "advanced micro devices",
+            "advanced micro devices inc",
+            "advanced micro devices, inc.",
+            "amd"
+          ],
+          "score": 2.060649150484417
+        },
+        {
+          "aliases": [
+            "intel",
+            "intel corporation"
+          ],
+          "score": 0.4965703197730144
+        },
+        {
+          "aliases": [
+            "ryzen processors"
+          ],
+          "score": 0.3420741876125792
+        },
+        {
+          "aliases": [
+            "amd ryzen processors"
+          ],
+          "score": 0.3315779770579483
+        },
+        {
+          "aliases": [
+            "microsoft",
+            "microsoft corporation"
+          ],
+          "score": 0.3084622115631953
+        },
+        {
+          "aliases": [
+            "amd ryzen"
+          ],
+          "score": 0.3032598885491563
+        },
+        {
+          "aliases": [
+            "sony playstation 5"
+          ],
+          "score": 0.3019413484715124
+        },
+        {
+          "aliases": [
+            "sony"
+          ],
+          "score": 0.30000000000000004
+        },
+        {
+          "aliases": [
+            "nvidia",
+            "nvidia corporation"
+          ],
+          "score": 0.28061620676077403
+        },
+        {
+          "aliases": [
+            "rambus"
+          ],
+          "score": 0.1671950412735999
+        },
+        {
+          "aliases": [
+            "weak pc market conditions"
+          ],
+          "score": 0.08733443142500956
+        },
+        {
+          "aliases": [
+            "inventory correction"
+          ],
+          "score": 0.08733443142500956
+        }
+      ],
+      "top_chunks": [
+        {
+          "rank": 1,
+          "chunk_id": "AMD_2024_Item_1_0006_e41aed21",
+          "ticker": "AMD",
+          "fiscal_year": "2024",
+          "section": "Item_1",
+          "score": 6.135223847221991,
+          "preview": "Gaming Products  Semi-Custom Products. Our semi-custom products are tailored, high-performance, customer-specific solutions based on our CPU, GPU and multi-media technologies. We work closely with our customers to define solutions to precisely match the requir"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "AMD_2025_Item_1_0009_c842eea0",
+          "ticker": "AMD",
+          "fiscal_year": "2025",
+          "section": "Item_1",
+          "score": 5.860130673042593,
+          "preview": "Competition in Client Segment  Our primary competitor in the supply of CPUs and APUs is Intel. A variety of companies provide or have developed Arm-based microprocessors and platforms which could lead to further adoption of Arm-based PC solutions.  Competition"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "AMD_2026_Item_1_0010_460dfa17",
+          "ticker": "AMD",
+          "fiscal_year": "2026",
+          "section": "Item_1",
+          "score": 5.860130673042593,
+          "preview": "Competition in Client and Gaming Segment  Our primary competitor in the supply of CPUs and APUs is Intel. A variety of companies provide or have developed Arm-based microprocessors and platforms which could lead to further adoption of Arm-based PC solutions.  "
+        },
+        {
+          "rank": 4,
+          "chunk_id": "AMD_2024_Item_1_0011_49024c2d",
+          "ticker": "AMD",
+          "fiscal_year": "2024",
+          "section": "Item_1",
+          "score": 5.5252660631544455,
+          "preview": "Competition  The markets in which our products are sold are highly competitive and delivering the latest and best products to market on a timely basis is critical to achieving revenue growth. We believe that the main factors that determine our product competit"
+        },
+        {
+          "rank": 5,
+          "chunk_id": "AMD_2024_Item_1_0005_7be264c6",
+          "ticker": "AMD",
+          "fiscal_year": "2024",
+          "section": "Item_1",
+          "score": 5.511714962628318,
+          "preview": "Commercial CPUs. We offer enterprise-class desktop and mobile PC solutions sold as AMD PRO Mobile and AMD PRO desktop processors with Radeon™ graphics for the commercial market. AMD Ryzen PRO, AMD Threadripper PRO and AMD Athlon PRO processors solutions are de"
+        }
+      ],
+      "debug_log_tail": [
+        "[expand] hints='AMD Sony Microsoft Ryzen'",
+        "[triple_seed] query='Which gaming console makers partner with the Ryzen processor company? AMD Sony Microsoft Ryzen' top_k_triples=8 min_sim=0.6 → kept 8 triples → 9 unique seeds",
+        "[run_ppr] Projected 'ppr_2c70eda0': 13348 nodes, 35134 relationships",
+        "[run_ppr] PPR over 12 seeds (damping=0.7, max_iter=20, teleport=uniform (12 seeds))"
+      ]
+    },
+    {
+      "id": "T019",
+      "query": "What revenue segments does the developer of EPYC processors disclose?",
+      "type": "segment_via_product",
+      "gold_chunks": [
+        "AMD_2024_Item_1_0003_ee436d61",
+        "AMD_2024_Item_7_0002_d4114c99"
+      ],
+      "effective_query": "What revenue segments does the developer of EPYC processors disclose? AMD EPYC",
+      "latency_sec": 5.875,
+      "error": null,
+      "scored": true,
+      "hit_at_5": 0,
+      "recall_at_5": 0.0,
+      "mrr_at_5": 0.0,
+      "oracle_hit_at_20": 1,
+      "oracle_recall_at_20": 0.5,
+      "first_gold_rank_at_20": 11,
+      "returned_chunk_ids_at_5": [
+        "AMD_2025_Item_7_0000_16c93d97",
+        "AMD_2026_Item_7_0000_6b145a7b",
+        "AMD_2026_Item_7_0005_8ab9ed73",
+        "AMD_2025_Item_7_0005_36426dd3",
+        "AMD_2025_Item_7_0004_58e0bdd2"
+      ],
+      "returned_chunk_ids_at_20": [
+        "AMD_2025_Item_7_0000_16c93d97",
+        "AMD_2026_Item_7_0000_6b145a7b",
+        "AMD_2026_Item_7_0005_8ab9ed73",
+        "AMD_2025_Item_7_0005_36426dd3",
+        "AMD_2025_Item_7_0004_58e0bdd2",
+        "AMD_2025_Item_7_0001_223169cf",
+        "AMD_2024_Item_7_0005_86aec648",
+        "AMD_2025_Item_7_0003_a2d9991c",
+        "AMD_2025_Item_1_0003_861e4bfa",
+        "AMD_2026_Item_1_0003_ea53a6a5",
+        "AMD_2024_Item_7_0002_d4114c99",
+        "AMD_2026_Item_7_0006_2b606b28",
+        "INTC_2024_Item_7_0002_7c82ed88",
+        "AMD_2024_Item_1_0011_49024c2d",
+        "AMD_2025_Item_1_0008_db609f8f",
+        "AMD_2025_Item_1_0009_c842eea0",
+        "AMD_2026_Item_1_0009_ac9cc232",
+        "AMD_2026_Item_1_0010_460dfa17",
+        "AMD_2025_Item_7_0007_f427b161",
+        "AMD_2026_Item_7_0002_a0e008dc"
+      ],
+      "hits_at_5": [],
+      "hits_at_20": [
+        "AMD_2024_Item_7_0002_d4114c99"
+      ],
+      "seeds": [
+        {
+          "name": "amd",
+          "type": "ORG",
+          "specificity": 0.1635084431645399,
+          "similarity": 0.830986738204956
+        },
+        {
+          "name": "amd epyc cpus",
+          "type": "PRODUCT",
+          "specificity": 0.6213349345596119,
+          "similarity": 0.830986738204956
+        },
+        {
+          "name": "amd epyc processors",
+          "type": "PRODUCT",
+          "specificity": 0.9102392266268373,
+          "similarity": 0.8084479570388794
+        },
+        {
+          "name": "epyc",
+          "type": "PRODUCT",
+          "specificity": 0.7213475204444817,
+          "similarity": 0.8066307306289673
+        },
+        {
+          "name": "advanced micro devices inc",
+          "type": "ORG",
+          "specificity": 0.36926937306885504,
+          "similarity": 0.8021289110183716
+        },
+        {
+          "name": "5th generation amd epyc processors",
+          "type": "PRODUCT",
+          "specificity": 1.4426950408889634,
+          "similarity": 0.8021289110183716
+        },
+        {
+          "name": "amd epyc",
+          "type": "PRODUCT",
+          "specificity": 0.9102392266268373,
+          "similarity": 0.7968795895576477
+        },
+        {
+          "name": "advanced micro devices",
+          "type": "ORG",
+          "specificity": 0.15632499556792623,
+          "similarity": 0.7878205180168152
+        },
+        {
+          "name": "advanced micro devices, inc.",
+          "type": "ORG",
+          "specificity": 0.28126641406272834,
+          "similarity": 0.775225043296814
+        },
+        {
+          "name": "revenue",
+          "type": "FIN_METRIC",
+          "specificity": 0.18388845457974975,
+          "similarity": 0.7745733261108398
+        }
+      ],
+      "ppr_top_entities": [
+        {
+          "name": "amd",
+          "type": "ORG",
+          "score": 1.1821380238851404
+        },
+        {
+          "name": "advanced micro devices",
+          "type": "ORG",
+          "score": 1.0204279241925112
+        },
+        {
+          "name": "advanced micro devices inc",
+          "type": "ORG",
+          "score": 0.6384745690178907
+        },
+        {
+          "name": "advanced micro devices, inc.",
+          "type": "ORG",
+          "score": 0.4823493873027082
+        },
+        {
+          "name": "revenue",
+          "type": "FIN_METRIC",
+          "score": 0.3882735447766432
+        },
+        {
+          "name": "5th generation amd epyc processors",
+          "type": "PRODUCT",
+          "score": 0.3319235805248711
+        },
+        {
+          "name": "amd epyc cpus",
+          "type": "PRODUCT",
+          "score": 0.3216657059262827
+        },
+        {
+          "name": "epyc",
+          "type": "PRODUCT",
+          "score": 0.31295336707787896
+        },
+        {
+          "name": "amd epyc processors",
+          "type": "PRODUCT",
+          "score": 0.30827816437921124
+        },
+        {
+          "name": "amd epyc",
+          "type": "PRODUCT",
+          "score": 0.30302285926106626
+        },
+        {
+          "name": "amd",
+          "type": "COMP",
+          "score": 0.3005324941166408
+        },
+        {
+          "name": "data center",
+          "type": "SEGMENT",
+          "score": 0.2855425175800059
+        },
+        {
+          "name": "intel",
+          "type": "ORG",
+          "score": 0.2745780052868599
+        },
+        {
+          "name": "rambus",
+          "type": "ORG",
+          "score": 0.17777103494596555
+        },
+        {
+          "name": "nvidia corporation",
+          "type": "ORG",
+          "score": 0.10610123321122995
+        },
+        {
+          "name": "gross margin",
+          "type": "FIN_METRIC",
+          "score": 0.1024272608785447
+        },
+        {
+          "name": "nvidia",
+          "type": "ORG",
+          "score": 0.09682196546373532
+        },
+        {
+          "name": "data center net revenue",
+          "type": "FIN_METRIC",
+          "score": 0.06940100420886887
+        },
+        {
+          "name": "net revenue",
+          "type": "FIN_METRIC",
+          "score": 0.06627036458647075
+        },
+        {
+          "name": "qualcomm",
+          "type": "ORG",
+          "score": 0.056962376556575885
+        }
+      ],
+      "cluster_entries": [
+        {
+          "aliases": [
+            "advanced micro devices",
+            "advanced micro devices inc",
+            "advanced micro devices, inc.",
+            "amd"
+          ],
+          "score": 2.441784374629751
+        },
+        {
+          "aliases": [
+            "revenue"
+          ],
+          "score": 0.3882735447766432
+        },
+        {
+          "aliases": [
+            "5th gen amd epyc processors",
+            "5th generation amd epyc processors"
+          ],
+          "score": 0.3319235805248711
+        },
+        {
+          "aliases": [
+            "amd epyc cpus"
+          ],
+          "score": 0.3216657059262827
+        },
+        {
+          "aliases": [
+            "epyc"
+          ],
+          "score": 0.31295336707787896
+        },
+        {
+          "aliases": [
+            "amd epyc processors"
+          ],
+          "score": 0.30827816437921124
+        },
+        {
+          "aliases": [
+            "amd epyc"
+          ],
+          "score": 0.30302285926106626
+        },
+        {
+          "aliases": [
+            "data center"
+          ],
+          "score": 0.2855425175800059
+        },
+        {
+          "aliases": [
+            "intel",
+            "intel corporation"
+          ],
+          "score": 0.2745780052868599
+        },
+        {
+          "aliases": [
+            "nvidia",
+            "nvidia corporation"
+          ],
+          "score": 0.20292319867496528
+        },
+        {
+          "aliases": [
+            "rambus"
+          ],
+          "score": 0.17777103494596555
+        },
+        {
+          "aliases": [
+            "gross margin"
+          ],
+          "score": 0.1024272608785447
+        }
+      ],
+      "top_chunks": [
+        {
+          "rank": 1,
+          "chunk_id": "AMD_2025_Item_7_0000_16c93d97",
+          "ticker": "AMD",
+          "fiscal_year": "2025",
+          "section": "Item_7",
+          "score": 7.721697856874133,
+          "preview": "ITEM 7\\. MANAGEMENT’S DISCUSSION AND ANALYSIS OF FINANCIAL CONDITION AND RESULTS OF OPERATIONS  The following discussion should be read in conjunction with the Consolidated Financial Statements as of December 28, 2024 and December 30, 2023 and for each of the "
+        },
+        {
+          "rank": 2,
+          "chunk_id": "AMD_2026_Item_7_0000_6b145a7b",
+          "ticker": "AMD",
+          "fiscal_year": "2026",
+          "section": "Item_7",
+          "score": 7.2306037399672,
+          "preview": "ITEM 7\\. MANAGEMENT’S DISCUSSION AND ANALYSIS OF FINANCIAL CONDITION AND RESULTS OF OPERATIONS  The following discussion should be read in conjunction with the Consolidated Financial Statements as of December 27, 2025 and December 28, 2024 and for each of the "
+        },
+        {
+          "rank": 3,
+          "chunk_id": "AMD_2026_Item_7_0005_8ab9ed73",
+          "ticker": "AMD",
+          "fiscal_year": "2026",
+          "section": "Item_7",
+          "score": 6.948200943432982,
+          "preview": "50  * * *  Table of Contents    Income Taxes. In determining taxable income for financial statement reporting purposes, we must make certain estimates and judgments. These estimates and judgments are applied in the calculation of certain tax liabilities and in"
+        },
+        {
+          "rank": 4,
+          "chunk_id": "AMD_2025_Item_7_0005_36426dd3",
+          "ticker": "AMD",
+          "fiscal_year": "2025",
+          "section": "Item_7",
+          "score": 6.802373663127933,
+          "preview": "Data Center  Data Center net revenue of $12.6 billion in 2024 increased by 94%, compared to net revenue of $6.5 billion in 2023. The increase was primarily driven by higher sales of AMD Instinct GPUs and AMD EPYC CPUs.  Data Center operating income was $3.5 bi"
+        },
+        {
+          "rank": 5,
+          "chunk_id": "AMD_2025_Item_7_0004_58e0bdd2",
+          "ticker": "AMD",
+          "fiscal_year": "2025",
+          "section": "Item_7",
+          "score": 6.579435377269942,
+          "preview": "45  * * *  Table of Contents  Long-Lived and Intangible Assets. Long-lived and intangible assets to be held and used are reviewed for impairment if indicators of potential impairment exist and at least annually for indefinite-lived intangible assets. Impairmen"
+        }
+      ],
+      "debug_log_tail": [
+        "[expand] hints='AMD EPYC'",
+        "[triple_seed] query='What revenue segments does the developer of EPYC processors disclose? AMD EPYC' top_k_triples=8 min_sim=0.6 → kept 8 triples → 10 unique seeds",
+        "[run_ppr] Projected 'ppr_d79d1f72': 13348 nodes, 35134 relationships",
+        "[run_ppr] PPR over 11 seeds (damping=0.7, max_iter=20, teleport=uniform (11 seeds))"
+      ]
+    },
+    {
+      "id": "T030",
+      "query": "Which cloud hyperscalers partner with the EPYC processor maker for server CPU deployments in their data centers?",
+      "type": "customer_via_product",
+      "gold_chunks": [
+        "AMD_2024_Item_1_0006_e41aed21",
+        "AMD_2026_Item_1_0004_b5e66359"
+      ],
+      "effective_query": "Which cloud hyperscalers partner with the EPYC processor maker for server CPU deployments in their data centers? AMD EPYC AWS Microsoft Google Azure GCP cloud hyperscalers",
+      "latency_sec": 5.548,
+      "error": null,
+      "scored": true,
+      "hit_at_5": 0,
+      "recall_at_5": 0.0,
+      "mrr_at_5": 0.0,
+      "oracle_hit_at_20": 0,
+      "oracle_recall_at_20": 0.0,
+      "first_gold_rank_at_20": null,
+      "returned_chunk_ids_at_5": [
+        "AMD_2025_Item_7_0005_36426dd3",
+        "AMD_2024_Item_1_0011_49024c2d",
+        "AMD_2025_Item_1_0008_db609f8f",
+        "AMD_2026_Item_1_0009_ac9cc232",
+        "AMD_2024_Item_7_0005_86aec648"
+      ],
+      "returned_chunk_ids_at_20": [
+        "AMD_2025_Item_7_0005_36426dd3",
+        "AMD_2024_Item_1_0011_49024c2d",
+        "AMD_2025_Item_1_0008_db609f8f",
+        "AMD_2026_Item_1_0009_ac9cc232",
+        "AMD_2024_Item_7_0005_86aec648",
+        "AMD_2024_Item_7_0002_d4114c99",
+        "AMD_2024_Item_1_0009_01379c5a",
+        "AMD_2025_Item_1_0009_c842eea0",
+        "AMD_2026_Item_1_0010_460dfa17",
+        "AMD_2026_Item_1_0002_9bce02c2",
+        "AMD_2025_Item_7_0000_16c93d97",
+        "AMD_2025_Item_7_0004_58e0bdd2",
+        "AMD_2025_Item_1_0002_6fadf6e4",
+        "AMD_2025_Item_1_0007_0ffd6ad4",
+        "AMD_2026_Item_1_0008_302d3abf",
+        "NVDA_2024_Item_1_0007_bae70036",
+        "AMD_2026_Item_7_0006_2b606b28",
+        "AMD_2025_Item_1A_0000_ac2e47a8",
+        "AMD_2025_Item_1A_0001_0fd81b24",
+        "AMD_2026_Item_7_0005_8ab9ed73"
+      ],
+      "hits_at_5": [],
+      "hits_at_20": [],
+      "seeds": [
+        {
+          "name": "amd epyc cpus",
+          "type": "PRODUCT",
+          "specificity": 0.6213349345596119,
+          "similarity": 0.7368016242980957
+        },
+        {
+          "name": "data center",
+          "type": "SEGMENT",
+          "specificity": 0.28853900817779266,
+          "similarity": 0.7368016242980957
+        },
+        {
+          "name": "amd epyc processors",
+          "type": "PRODUCT",
+          "specificity": 0.9102392266268373,
+          "similarity": 0.7354470491409302
+        },
+        {
+          "name": "4th gen amd epyc cpus",
+          "type": "PRODUCT",
+          "specificity": 0.9102392266268373,
+          "similarity": 0.7275333404541016
+        },
+        {
+          "name": "data center segment",
+          "type": "SEGMENT",
+          "specificity": 0.48089834696298783,
+          "similarity": 0.7275333404541016
+        },
+        {
+          "name": "advanced micro devices",
+          "type": "ORG",
+          "specificity": 0.15632499556792623,
+          "similarity": 0.7196818590164185
+        },
+        {
+          "name": "5th gen amd epyc server processors",
+          "type": "PRODUCT",
+          "specificity": 1.4426950408889634,
+          "similarity": 0.7196818590164185
+        },
+        {
+          "name": "amd",
+          "type": "ORG",
+          "specificity": 0.1635084431645399,
+          "similarity": 0.7179756164550781
+        },
+        {
+          "name": "data center net revenue",
+          "type": "FIN_METRIC",
+          "specificity": 0.48089834696298783,
+          "similarity": 0.7140458226203918
+        }
+      ],
+      "ppr_top_entities": [
+        {
+          "name": "advanced micro devices",
+          "type": "ORG",
+          "score": 1.1763177677339627
+        },
+        {
+          "name": "amd",
+          "type": "ORG",
+          "score": 1.0090206565457105
+        },
+        {
+          "name": "data center",
+          "type": "SEGMENT",
+          "score": 0.6332288213580823
+        },
+        {
+          "name": "data center net revenue",
+          "type": "FIN_METRIC",
+          "score": 0.5675350598579896
+        },
+        {
+          "name": "data center segment",
+          "type": "SEGMENT",
+          "score": 0.46972556946240235
+        },
+        {
+          "name": "4th gen amd epyc cpus",
+          "type": "PRODUCT",
+          "score": 0.4037257320148366
+        },
+        {
+          "name": "amd epyc cpus",
+          "type": "PRODUCT",
+          "score": 0.3869129927379656
+        },
+        {
+          "name": "amd epyc processors",
+          "type": "PRODUCT",
+          "score": 0.31586105171239437
+        },
+        {
+          "name": "5th gen amd epyc server processors",
+          "type": "PRODUCT",
+          "score": 0.30137447944433027
+        },
+        {
+          "name": "data center",
+          "type": "PRODUCT",
+          "score": 0.30114429297504586
+        },
+        {
+          "name": "amd",
+          "type": "COMP",
+          "score": 0.3005293413409179
+        },
+        {
+          "name": "nvidia",
+          "type": "ORG",
+          "score": 0.2724790559398206
+        },
+        {
+          "name": "gross margin",
+          "type": "FIN_METRIC",
+          "score": 0.2692275051190812
+        },
+        {
+          "name": "intel",
+          "type": "ORG",
+          "score": 0.24637452343837624
+        },
+        {
+          "name": "amd instinct gpus",
+          "type": "PRODUCT",
+          "score": 0.19063872475280208
+        },
+        {
+          "name": "rambus",
+          "type": "ORG",
+          "score": 0.18197589007813753
+        },
+        {
+          "name": "revenue",
+          "type": "FIN_METRIC",
+          "score": 0.10041013926514633
+        },
+        {
+          "name": "nvidia corporation",
+          "type": "ORG",
+          "score": 0.10014768835855829
+        },
+        {
+          "name": "qualcomm",
+          "type": "ORG",
+          "score": 0.07417750351332096
+        },
+        {
+          "name": "data center operating income",
+          "type": "FIN_METRIC",
+          "score": 0.06673505746011797
+        }
+      ],
+      "cluster_entries": [
+        {
+          "aliases": [
+            "advanced micro devices",
+            "advanced micro devices inc",
+            "advanced micro devices, inc.",
+            "amd"
+          ],
+          "score": 1.4768471090748805
+        },
+        {
+          "aliases": [
+            "data center net revenue"
+          ],
+          "score": 0.5675350598579896
+        },
+        {
+          "aliases": [
+            "data center segment"
+          ],
+          "score": 0.46972556946240235
+        },
+        {
+          "aliases": [
+            "4th gen amd epyc cpus"
+          ],
+          "score": 0.4037257320148366
+        },
+        {
+          "aliases": [
+            "amd epyc cpus"
+          ],
+          "score": 0.3869129927379656
+        },
+        {
+          "aliases": [
+            "nvidia",
+            "nvidia corporation"
+          ],
+          "score": 0.3726267442983789
+        },
+        {
+          "aliases": [
+            "amd epyc processors"
+          ],
+          "score": 0.31586105171239437
+        },
+        {
+          "aliases": [
+            "5th gen amd epyc server processors"
+          ],
+          "score": 0.30137447944433027
+        },
+        {
+          "aliases": [
+            "data center"
+          ],
+          "score": 0.30114429297504586
+        },
+        {
+          "aliases": [
+            "gross margin"
+          ],
+          "score": 0.2692275051190812
+        },
+        {
+          "aliases": [
+            "intel",
+            "intel corporation"
+          ],
+          "score": 0.24637452343837624
+        },
+        {
+          "aliases": [
+            "amd instinct gpus"
+          ],
+          "score": 0.19063872475280208
+        }
+      ],
+      "top_chunks": [
+        {
+          "rank": 1,
+          "chunk_id": "AMD_2025_Item_7_0005_36426dd3",
+          "ticker": "AMD",
+          "fiscal_year": "2025",
+          "section": "Item_7",
+          "score": 5.703321298461295,
+          "preview": "Data Center  Data Center net revenue of $12.6 billion in 2024 increased by 94%, compared to net revenue of $6.5 billion in 2023. The increase was primarily driven by higher sales of AMD Instinct GPUs and AMD EPYC CPUs.  Data Center operating income was $3.5 bi"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "AMD_2024_Item_1_0011_49024c2d",
+          "ticker": "AMD",
+          "fiscal_year": "2024",
+          "section": "Item_1",
+          "score": 5.297910199055887,
+          "preview": "Competition  The markets in which our products are sold are highly competitive and delivering the latest and best products to market on a timely basis is critical to achieving revenue growth. We believe that the main factors that determine our product competit"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "AMD_2025_Item_1_0008_db609f8f",
+          "ticker": "AMD",
+          "fiscal_year": "2025",
+          "section": "Item_1",
+          "score": 5.297910199055887,
+          "preview": "Hyperscale Data Centers  Large multi-national public cloud service providers and hyperscale private data centers directly and indirectly purchase a substantial portion of our data center-focused products, including server CPUs, GPU accelerators, DPUs, FPGAs an"
+        },
+        {
+          "rank": 4,
+          "chunk_id": "AMD_2026_Item_1_0009_ac9cc232",
+          "ticker": "AMD",
+          "fiscal_year": "2026",
+          "section": "Item_1",
+          "score": 5.297910199055887,
+          "preview": "8  * * *  Table of Contents    Hyperscale Data Centers  Large multi-national public cloud service providers and hyperscale private data centers directly and indirectly purchase a substantial portion of our data center-focused products, including server CPUs, G"
+        },
+        {
+          "rank": 5,
+          "chunk_id": "AMD_2024_Item_7_0005_86aec648",
+          "ticker": "AMD",
+          "fiscal_year": "2024",
+          "section": "Item_7",
+          "score": 5.2615954582374265,
+          "preview": "Income Taxes. In determining taxable income for financial statement reporting purposes, we must make certain estimates and judgments. These estimates and judgments are applied in the calculation of certain tax liabilities and in the determination of the recove"
+        }
+      ],
+      "debug_log_tail": [
+        "[expand] hints='AMD EPYC AWS Microsoft Google Azure GCP cloud hyperscalers'",
+        "[triple_seed] query='Which cloud hyperscalers partner with the EPYC processor maker for server CPU deployments in their data centers? AMD EPYC AWS Microsoft Google Azure GCP cloud hyperscalers' top_k_triples=8 min_sim=0.6 → kept 8 triples → 9 unique seeds",
+        "[run_ppr] Projected 'ppr_05bbdfb3': 13348 nodes, 35134 relationships",
+        "[run_ppr] PPR over 11 seeds (damping=0.7, max_iter=20, teleport=uniform (11 seeds))"
+      ]
+    }
+  ]
+}

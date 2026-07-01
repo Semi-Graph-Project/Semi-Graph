@@ -170,6 +170,7 @@ def main() -> None:
                 c_print(f"[{elapsed:7.2f}s]", color="magenta", dim=True, end=" ")
                 c_print(f"{node_name}:", color=_node_color(node_name), bold=True, end=" ")
                 c_print(_summarize_update(update), color="white")
+                print("\n\n--------------------------------")
     except Exception as exc:
         elapsed = time.time() - started
         c_print(
@@ -203,6 +204,11 @@ def main() -> None:
 
     if args.show_final_state:
         _print_json("\nFINAL_STATE", final_state)
+
+        c_print(f"\n\n Answer : {final_state.get('final_answer')}", color="green",bold=True)
+        # c_print("\n\n Answer : ", color="green",bold=True)
+        
+
 
 
 if __name__ == "__main__":

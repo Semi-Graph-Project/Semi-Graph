@@ -239,6 +239,37 @@ class KGStore:
     # Entities + relationships
     # ------------------------------------------------------------------
 
+    def _clear_chunk_extraction(self, tx, chunk_id: str) -> None:
+        """Remove previous extraction output for one chunk before rewriting it.
+
+        Chunk text/provenance and embeddings stay intact; only extracted
+        MENTIONS and chunk-scoped domain facts are replaced. This prevents
+        partial reprocessing from accumulating stale entities on the same
+        chunk, which would otherwise inflate graph retrieval scores.
+        """
+        tx.run(
+            """
+            MATCH ()-[r]->()
+            WHERE r.source_chunk = $chunk_id
+            DELETE r
+            """,
+            chunk_id=chunk_id,
+        )
+        tx.run(
+            """
+            MATCH (:Chunk {chunk_id: $chunk_id})-[m:MENTIONS]->(:Entity)
+            DELETE m
+            """,
+            chunk_id=chunk_id,
+        )
+        tx.run(
+            """
+            MATCH (e:Entity)
+            WHERE NOT (e)<-[:MENTIONS]-(:Chunk)
+            DETACH DELETE e
+            """
+        )
+
     def _upsert_entities_and_mentions(
         self, tx, chunk_id: str, nodes: list
     ) -> int:
@@ -326,6 +357,7 @@ class KGStore:
             def _tx(tx):
                 self._ensure_section(tx, doc_key, chunk.section)
                 self._ensure_chunk(tx, doc_key, chunk)
+                self._clear_chunk_extraction(tx, chunk.chunk_id)
                 n_count = self._upsert_entities_and_mentions(tx, chunk.chunk_id, result.nodes)
                 r_count = self._upsert_relationships(tx, chunk.chunk_id, result.relationships)
                 return n_count, r_count

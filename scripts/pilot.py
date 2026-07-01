@@ -84,12 +84,12 @@ def phase1_download(ticker: str, skip: bool) -> list[Path]:
 # ── Phase 2: preprocess ───────────────────────────────────────────────────────
 
 def phase2_preprocess(ticker: str, filing_paths: list[Path], skip: bool) -> None:
-    print(f"\n{DIVIDER}\nPHASE 2 — Preprocess → Markdown sections\n{DIVIDER}")
+    print(f"\n{DIVIDER}\nPHASE 2 - Preprocess -> Markdown sections\n{DIVIDER}")
     if skip:
-        print("  --skip-preprocess set — skipping")
+        print("  --skip-preprocess set - skipping")
         return
     if not filing_paths:
-        print("  No filings to preprocess — abort")
+        print("  No filings to preprocess - abort")
         return
     for fp in filing_paths:
         accession = fp.parent.name
@@ -472,7 +472,7 @@ def main() -> int:
     status = "COMPLETE" if not missing_fy else f"INCOMPLETE ({len(missing_fy)} year(s) dropped)"
     print(f"  Pilot {status} — {ticker} | total wall: {wall/60:.1f} min")
     if missing_fy:
-        print(f"  ⚠ missing: {', '.join('FY' + fy for fy in missing_fy)} "
+        print(f"  missing: {', '.join('FY' + fy for fy in missing_fy)} "
               f"— re-run after fixing preprocess to recover them")
     print(f"{'#' * 70}\n")
     return 0 if not missing_fy else 2

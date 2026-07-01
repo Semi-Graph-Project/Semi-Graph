@@ -27,6 +27,10 @@ from semigraph.ontology.nodes import (
     GraphNode,
     GraphRelationship,
 )
+from semigraph.ontology.normalization import (
+    is_known_product_name,
+    normalize_entity_name,
+)
 from semigraph.ontology.schema import (
     NODE_CATALOG,
     RELATIONSHIP_CATALOG,
@@ -160,10 +164,14 @@ _PRONOUN_BLACKLIST: frozenset[str] = frozenset({
     "the firm", "the issuer", "the parent", "the group",
 })
 
+_MAX_NODES_PER_CHUNK = 60
+_MAX_RELATIONSHIPS_PER_CHUNK = 80
+_COMPANY_TYPES = {"ORG", "COMP"}
 
-def _normalize_id(value: str) -> str:
+
+def _normalize_id(value: str, entity_type: str | None = None) -> str:
     """Match the lowercasing + whitespace-stripping rule from the prompt."""
-    return value.strip().strip('"\'').lower()
+    return normalize_entity_name(value, entity_type)
 
 
 def _validate_nodes(raw_nodes: list) -> tuple[List[GraphNode], set[tuple[str, str]]]:
@@ -185,10 +193,19 @@ def _validate_nodes(raw_nodes: list) -> tuple[List[GraphNode], set[tuple[str, st
         if n["type"] not in NODE_CATALOG:
             continue
 
-        nid = _normalize_id(str(n["id"]))
+        nid = _normalize_id(str(n["id"]), n["type"])
         if not nid:
             continue
         if nid in _PRONOUN_BLACKLIST:
+            continue
+
+        # Defense in depth: product aliases such as "blackwell" or "rtx"
+        # should not become company nodes just because the LLM chose ORG.
+        if n["type"] in _COMPANY_TYPES and is_known_product_name(nid):
+            continue
+
+        key = (nid, n["type"])
+        if key in keys:
             continue
 
         try:
@@ -201,7 +218,7 @@ def _validate_nodes(raw_nodes: list) -> tuple[List[GraphNode], set[tuple[str, st
             continue
 
         valid.append(node)
-        keys.add((nid, n["type"]))
+        keys.add(key)
 
     return valid, keys
 
@@ -215,8 +232,14 @@ def _is_valid_triple(triple: dict, allowed_keys: set[tuple[str, str]]) -> bool:
     if not required.issubset(triple.keys()):
         return False
 
-    src_key = (_normalize_id(str(triple["source"])), triple["source_type"])
-    tgt_key = (_normalize_id(str(triple["target"])), triple["target_type"])
+    src_key = (
+        _normalize_id(str(triple["source"]), triple["source_type"]),
+        triple["source_type"],
+    )
+    tgt_key = (
+        _normalize_id(str(triple["target"]), triple["target_type"]),
+        triple["target_type"],
+    )
     if src_key not in allowed_keys or tgt_key not in allowed_keys:
         return False
 
@@ -233,6 +256,42 @@ def _is_valid_triple(triple: dict, allowed_keys: set[tuple[str, str]]) -> bool:
     if rel_info["target_type"] != "any" and rel_info["target_type"] != triple["target_type"]:
         return False
 
+    if not _passes_semantic_direction_guard(triple):
+        return False
+
+    return True
+
+
+def _passes_semantic_direction_guard(triple: dict) -> bool:
+    """Reject triples whose endpoint semantics are clearly backwards.
+
+    Ontology type checks catch most errors, but the LLM sometimes assigns a
+    company type to a product name. These guards use stable semiconductor
+    aliases to prevent high-impact bad edges such as
+    `blackwell PRODUCES nvidia` from entering future corpora.
+    """
+    rel_type = triple["type"]
+    src_name = _normalize_id(str(triple["source"]), triple["source_type"])
+    tgt_name = _normalize_id(str(triple["target"]), triple["target_type"])
+    src_type = triple["source_type"]
+    tgt_type = triple["target_type"]
+
+    if rel_type in {"produces", "introduces"}:
+        if is_known_product_name(src_name):
+            return False
+        if tgt_type in _COMPANY_TYPES and not is_known_product_name(tgt_name):
+            return False
+
+    if rel_type in {"depends_on", "faces", "subject_to", "discloses"}:
+        if is_known_product_name(src_name):
+            return False
+
+    if rel_type == "supplies":
+        if is_known_product_name(src_name):
+            return False
+        if tgt_type == "PRODUCT":
+            return False
+
     return True
 
 
@@ -243,18 +302,31 @@ def _validate_relationships(
         return []
 
     valid: List[GraphRelationship] = []
+    seen: set[tuple[str, str, str, str, str]] = set()
     for triple in raw_rels:
         if not _is_valid_triple(triple, allowed_keys):
             continue
+        source = _normalize_id(str(triple["source"]), triple["source_type"])
+        target = _normalize_id(str(triple["target"]), triple["target_type"])
+        key = (
+            source,
+            triple["source_type"],
+            target,
+            triple["target_type"],
+            triple["type"],
+        )
+        if key in seen:
+            continue
         try:
             valid.append(GraphRelationship(
-                source=_normalize_id(str(triple["source"])),
+                source=source,
                 source_type=triple["source_type"],
-                target=_normalize_id(str(triple["target"])),
+                target=target,
                 target_type=triple["target_type"],
                 type=triple["type"],
                 properties=triple.get("properties") or {},
             ))
+            seen.add(key)
         except ValidationError:
             continue
     return valid
@@ -317,7 +389,16 @@ def extract_chunk(
     if not isinstance(parsed, dict):
         return GraphExtractionResult(nodes=[], relationships=[])
 
-    nodes, allowed_keys = _validate_nodes(parsed.get("nodes", []))
-    relationships = _validate_relationships(parsed.get("relationships", []), allowed_keys)
+    raw_nodes = parsed.get("nodes", [])
+    raw_rels = parsed.get("relationships", [])
+    # if isinstance(raw_nodes, list):
+    #     raw_nodes = raw_nodes[:_MAX_NODES_PER_CHUNK]
+    # if isinstance(raw_rels, list):
+    #     raw_rels = raw_rels[:_MAX_RELATIONSHIPS_PER_CHUNK]
 
+    nodes, allowed_keys = _validate_nodes(raw_nodes)
+    relationships = _validate_relationships(raw_rels, allowed_keys)
+
+
+    
     return GraphExtractionResult(nodes=nodes, relationships=relationships)

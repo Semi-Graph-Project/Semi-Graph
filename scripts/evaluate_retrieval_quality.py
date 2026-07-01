@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import random
 import sys
 import time
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 
@@ -19,6 +20,8 @@ if str(SRC) not in sys.path:
 DEFAULT_QUERY_FILE = ROOT / "data" / "evaluate" / "phase_t_multihop_queries.yaml"
 DEFAULT_OUTPUT_DIR = ROOT / "analytics"
 TOOL_CHOICES = ("vector", "graph", "hybrid")
+SEED_MODE_CHOICES = ("triple", "node", "hybrid")
+DEFAULT_REEXTRACT_TICKERS = ("AMD", "NVDA", "AVGO", "RMBS")
 
 
 def _get_config():
@@ -39,7 +42,34 @@ def _get_corpus_chunk_count(cfg) -> int:
         driver.close()
 
 
-def _get_tool(tool_name: str, use_graph_expansion: bool = True):
+def _get_existing_entities(cfg, names: list[str]) -> set[str]:
+    from semigraph.connections import get_neo4j_driver
+
+    unique_names = sorted({name for name in names if name})
+    if not unique_names:
+        return set()
+
+    driver = get_neo4j_driver(cfg)
+    try:
+        with driver.session() as session:
+            rows = list(session.run(
+                """
+                UNWIND $names AS name
+                MATCH (e:Entity {name: name})
+                RETURN DISTINCT e.name AS name
+                """,
+                names=unique_names,
+            ))
+            return {str(row["name"]) for row in rows}
+    finally:
+        driver.close()
+
+
+def _get_tool(
+    tool_name: str,
+    use_graph_expansion: bool = True,
+    graph_seed_mode: str = "triple",
+):
     if tool_name == "vector":
         from semigraph.online.vector_search import vector_search
 
@@ -52,6 +82,7 @@ def _get_tool(tool_name: str, use_graph_expansion: bool = True):
                 query,
                 top_k_chunks=top_k_chunks,
                 use_expansion=use_graph_expansion,
+                seed_mode=graph_seed_mode,
                 cfg=cfg,
             )
 
@@ -64,6 +95,7 @@ def _get_tool(tool_name: str, use_graph_expansion: bool = True):
                 query,
                 top_k_chunks=top_k_chunks,
                 graph_use_expansion=use_graph_expansion,
+                graph_seed_mode=graph_seed_mode,
                 cfg=cfg,
             )
 
@@ -77,6 +109,51 @@ def _load_queries(path: Path) -> list[dict]:
     if not isinstance(queries, list):
         raise ValueError(f"{path} must contain a top-level 'queries' list")
     return queries
+
+
+def _normalize_entity(name: str) -> str:
+    return " ".join(str(name).strip().lower().split())
+
+
+def _gold_entities(item: dict) -> list[str]:
+    return [
+        _normalize_entity(name)
+        for name in item.get("gold_entities", [])
+        if _normalize_entity(name)
+    ]
+
+
+def _gold_chunk_tickers(item: dict) -> set[str]:
+    tickers: set[str] = set()
+    for chunk_id in item.get("gold_chunks", []) or []:
+        prefix = str(chunk_id).split("_", 1)[0].upper()
+        if prefix:
+            tickers.add(prefix)
+    return tickers
+
+
+def _mentioned_tickers(item: dict, known_tickers: set[str]) -> set[str]:
+    haystack = " ".join(
+        [
+            str(item.get("query", "")),
+            " ".join(str(e) for e in item.get("gold_entities", []) or []),
+        ]
+    ).upper()
+    terms = set(haystack.replace("-", " ").replace("/", " ").split())
+    return {ticker for ticker in known_tickers if ticker in terms}
+
+
+def _classify_subset(
+    item: dict,
+    reextract_tickers: set[str],
+    known_tickers: set[str],
+) -> str:
+    involved = _gold_chunk_tickers(item) | _mentioned_tickers(item, known_tickers)
+    if involved & reextract_tickers:
+        if involved - reextract_tickers:
+            return "mixed_subset"
+        return "reextract_subset"
+    return "legacy_subset"
 
 
 def _chunk_ids(chunks: list[dict], k: int) -> list[str]:
@@ -147,23 +224,128 @@ def _unscored_result() -> dict:
     }
 
 
+def _hit_from_names(names: set[str], gold_entities: list[str]) -> int | None:
+    if not gold_entities:
+        return None
+    return 1 if names & set(gold_entities) else 0
+
+
+def _graph_stage_metrics(
+    trace: dict | None,
+    gold_entities: list[str],
+    gold_chunks: list[str],
+    missing_gold_entities: list[str],
+    score_at_k: dict,
+    score_at_oracle: dict,
+    error: str | None,
+) -> dict:
+    if trace is None:
+        return {
+            "seed_hit": None,
+            "ppr_hit": None,
+            "chunk_map_hit": None,
+            "bottleneck_label": "not_applicable",
+        }
+
+    seed_names = {
+        _normalize_entity(seed.get("name", ""))
+        for seed in trace.get("seeds", [])
+        if seed.get("name")
+    }
+    ppr_names = {
+        _normalize_entity(entity.get("name", ""))
+        for entity in trace.get("ppr_entities", [])
+        if entity.get("name")
+    }
+    for cluster in trace.get("cluster_entries", []):
+        ppr_names.update(
+            _normalize_entity(alias)
+            for alias in cluster.get("aliases", [])
+            if alias
+        )
+
+    candidate_ids = {
+        str(chunk.get("chunk_id", ""))
+        for chunk in trace.get("chunk_candidates", [])
+        if chunk.get("chunk_id")
+    }
+
+    seed_hit = _hit_from_names(seed_names, gold_entities)
+    ppr_hit = _hit_from_names(ppr_names, gold_entities)
+    chunk_map_hit = None
+    if gold_chunks:
+        chunk_map_hit = 1 if candidate_ids & set(gold_chunks) else 0
+
+    if not gold_chunks:
+        bottleneck = "unscored_discovery"
+    elif error:
+        bottleneck = "tool_error"
+    elif score_at_k["hit"] == 1:
+        bottleneck = "hit_top_k"
+    elif missing_gold_entities:
+        bottleneck = "corpus_not_ready"
+    elif seed_hit == 0:
+        bottleneck = "seed_loss"
+    elif ppr_hit == 0:
+        bottleneck = "ppr_loss"
+    elif chunk_map_hit == 0:
+        bottleneck = "chunk_mapping_loss"
+    elif score_at_oracle["hit"] == 1:
+        bottleneck = "rerank_loss"
+    else:
+        bottleneck = "candidate_pool_loss"
+
+    return {
+        "seed_hit": seed_hit,
+        "ppr_hit": ppr_hit,
+        "chunk_map_hit": chunk_map_hit,
+        "bottleneck_label": bottleneck,
+        "abort_reason": trace.get("abort_reason"),
+        "effective_query": trace.get("effective_query"),
+        "seed_mode": trace.get("seed_mode"),
+        "seed_names": sorted(seed_names),
+        "ppr_entity_names": [
+            str(entity.get("name", ""))
+            for entity in trace.get("ppr_entities", [])[:20]
+            if entity.get("name")
+        ],
+        "chunk_candidate_ids": _chunk_ids(
+            trace.get("chunk_candidates", []),
+            len(trace.get("chunk_candidates", [])),
+        ),
+    }
+
+
 def _run_tool(
     tool_name: str,
     query: str,
     top_k: int,
     cfg,
     use_graph_expansion: bool,
-) -> tuple[list[dict], str | None, float]:
+    graph_seed_mode: str,
+) -> tuple[list[dict], str | None, float, dict | None]:
     started = time.time()
     try:
-        chunks = _get_tool(tool_name, use_graph_expansion=use_graph_expansion)(
-            query,
-            top_k_chunks=top_k,
-            cfg=cfg,
-        )
-        return chunks, None, time.time() - started
+        if tool_name == "graph":
+            from semigraph.online.graph_search import trace_graph_search
+
+            trace = trace_graph_search(
+                query,
+                top_k_chunks=top_k,
+                use_expansion=use_graph_expansion,
+                seed_mode=graph_seed_mode,
+                cfg=cfg,
+            )
+            return trace["chunks"], None, time.time() - started, trace
+
+        chunks = _get_tool(
+            tool_name,
+            use_graph_expansion=use_graph_expansion,
+            graph_seed_mode=graph_seed_mode,
+        )(query, top_k_chunks=top_k, cfg=cfg)
+        return chunks, None, time.time() - started, None
     except Exception as exc:
-        return [], f"{type(exc).__name__}: {exc}", time.time() - started
+        return [], f"{type(exc).__name__}: {exc}", time.time() - started, None
 
 
 def _evaluate_query(
@@ -174,15 +356,33 @@ def _evaluate_query(
     cfg,
     dry_run: bool,
     use_graph_expansion: bool,
+    graph_seed_mode: str,
     corpus_size: int,
+    subset: str,
+    existing_entities: set[str],
 ) -> dict:
     query = str(item.get("query", "")).strip()
     gold_chunks = [str(cid) for cid in item.get("gold_chunks", []) if cid]
+    gold_entities = _gold_entities(item)
+    missing_gold_entities = [
+        entity for entity in gold_entities if entity not in existing_entities
+    ]
+    if not gold_chunks:
+        corpus_status = "unscored_discovery"
+    elif missing_gold_entities:
+        corpus_status = "missing_gold_entities"
+    else:
+        corpus_status = "ready"
+
     result = {
         "id": item.get("id", ""),
         "query": query,
         "type": item.get("type", ""),
+        "subset": subset,
         "gold_tools": item.get("gold_tools", []),
+        "gold_entities": gold_entities,
+        "missing_gold_entities": missing_gold_entities,
+        "corpus_status": corpus_status,
         "gold_chunks": gold_chunks,
         "answer_points": item.get("answer_points", []),
         "tools": {},
@@ -200,14 +400,15 @@ def _evaluate_query(
 
     for tool_name in tools:
         if dry_run:
-            chunks, error, latency = [], None, 0.0
+            chunks, error, latency, trace = [], None, 0.0, None
         else:
-            chunks, error, latency = _run_tool(
+            chunks, error, latency, trace = _run_tool(
                 tool_name=tool_name,
                 query=query,
                 top_k=max(top_k, oracle_k),
                 cfg=cfg,
                 use_graph_expansion=use_graph_expansion,
+                graph_seed_mode=graph_seed_mode,
             )
 
         returned_at_k = _chunk_ids(chunks, top_k)
@@ -218,6 +419,16 @@ def _evaluate_query(
         else:
             score_at_k = _score_result(returned_at_k, gold_chunks)
             score_at_oracle = _score_result(returned_at_oracle, gold_chunks)
+
+        stage = _graph_stage_metrics(
+            trace=trace,
+            gold_entities=gold_entities,
+            gold_chunks=gold_chunks,
+            missing_gold_entities=missing_gold_entities,
+            score_at_k=score_at_k,
+            score_at_oracle=score_at_oracle,
+            error=error,
+        )
         result["tools"][tool_name] = {
             "latency_sec": round(latency, 3),
             "error": error,
@@ -232,6 +443,7 @@ def _evaluate_query(
             "oracle_recall": score_at_oracle["recall"],
             "oracle_hits": score_at_oracle["hits"],
             "chance_oracle_hit": chance_hit_at_oracle if score_at_oracle["scored"] else None,
+            "stage": stage,
         }
 
     return result
@@ -241,11 +453,100 @@ def _mean(values: list[float]) -> float:
     return sum(values) / len(values) if values else 0.0
 
 
+def _metric_bucket() -> dict[str, list[float]]:
+    return defaultdict(list)
+
+
+def _add_tool_metrics(bucket: dict, tool_name: str, metrics: dict) -> None:
+    bucket[tool_name]["hit"].append(float(metrics["hit_at_k"]))
+    bucket[tool_name]["recall"].append(float(metrics["recall_at_k"]))
+    bucket[tool_name]["mrr"].append(float(metrics["mrr_at_k"]))
+    bucket[tool_name]["oracle_hit"].append(float(metrics["oracle_hit"]))
+
+
+def _summarize_grouped_metrics(grouped: dict, tools: list[str], key_name: str) -> list[dict]:
+    rows: list[dict] = []
+    for group in sorted(grouped):
+        row = {key_name: group}
+        for tool_name in tools:
+            row[f"{tool_name}_hit"] = _mean(grouped[group][tool_name]["hit"])
+            row[f"{tool_name}_recall"] = _mean(grouped[group][tool_name]["recall"])
+            row[f"{tool_name}_mrr"] = _mean(grouped[group][tool_name]["mrr"])
+            row[f"{tool_name}_oracle_hit"] = _mean(
+                grouped[group][tool_name]["oracle_hit"]
+            )
+        rows.append(row)
+    return rows
+
+
+def _paired_recall_test(
+    results: list[dict],
+    compare_tool: str,
+    subset: str | None = None,
+    baseline_tool: str = "vector",
+    iterations: int = 10000,
+) -> dict:
+    diffs: list[float] = []
+    for row in results:
+        if subset is not None and row.get("subset") != subset:
+            continue
+        tools = row.get("tools", {})
+        if baseline_tool not in tools or compare_tool not in tools:
+            continue
+        base = tools[baseline_tool].get("recall_at_k")
+        comp = tools[compare_tool].get("recall_at_k")
+        if base is None or comp is None:
+            continue
+        diffs.append(float(comp) - float(base))
+
+    observed = _mean(diffs)
+    if len(diffs) < 2:
+        return {
+            "n": len(diffs),
+            "mean_delta_recall": observed,
+            "p_value_one_sided": None,
+        }
+
+    if observed <= 0:
+        return {
+            "n": len(diffs),
+            "mean_delta_recall": observed,
+            "p_value_one_sided": 1.0,
+        }
+
+    rng = random.Random(1337)
+    more_extreme = 0
+    for _ in range(iterations):
+        signed_mean = _mean([
+            diff if rng.random() < 0.5 else -diff
+            for diff in diffs
+        ])
+        if signed_mean >= observed:
+            more_extreme += 1
+
+    return {
+        "n": len(diffs),
+        "mean_delta_recall": observed,
+        "p_value_one_sided": (more_extreme + 1) / (iterations + 1),
+    }
+
+
 def _aggregate(results: list[dict], tools: list[str]) -> dict:
     aggregate: dict[str, dict] = {}
     by_type: dict[str, dict[str, dict[str, list[float]]]] = defaultdict(
-        lambda: defaultdict(lambda: defaultdict(list))
+        lambda: defaultdict(_metric_bucket)
     )
+    by_subset: dict[str, dict[str, dict[str, list[float]]]] = defaultdict(
+        lambda: defaultdict(_metric_bucket)
+    )
+    graph_stage = {
+        "full_mixed": {
+            "seed_hit": [],
+            "ppr_hit": [],
+            "chunk_map_hit": [],
+            "bottlenecks": Counter(),
+        }
+    }
 
     for tool_name in tools:
         hits: list[float] = []
@@ -272,9 +573,28 @@ def _aggregate(results: list[dict], tools: list[str]) -> dict:
                 chance_hits.append(float(metrics["chance_hit_at_k"]))
 
             qtype = row.get("type") or "unknown"
-            by_type[qtype][tool_name]["hit"].append(float(metrics["hit_at_k"]))
-            by_type[qtype][tool_name]["recall"].append(float(metrics["recall_at_k"]))
-            by_type[qtype][tool_name]["mrr"].append(float(metrics["mrr_at_k"]))
+            _add_tool_metrics(by_type[qtype], tool_name, metrics)
+            subset = row.get("subset") or "unknown_subset"
+            _add_tool_metrics(by_subset[subset], tool_name, metrics)
+
+            if tool_name == "graph":
+                stage = metrics.get("stage", {})
+                labels = ["full_mixed", subset]
+                for label in labels:
+                    graph_stage.setdefault(label, {
+                        "seed_hit": [],
+                        "ppr_hit": [],
+                        "chunk_map_hit": [],
+                        "bottlenecks": Counter(),
+                    })
+                    for metric_name in ("seed_hit", "ppr_hit", "chunk_map_hit"):
+                        value = stage.get(metric_name)
+                        if value is not None:
+                            graph_stage[label][metric_name].append(float(value))
+                    graph_stage[label]["bottlenecks"][stage.get(
+                        "bottleneck_label",
+                        "unknown",
+                    )] += 1
 
         random_baseline = _mean(chance_hits)
         hit_rate = _mean(hits)
@@ -290,16 +610,37 @@ def _aggregate(results: list[dict], tools: list[str]) -> dict:
             "hit_lift_vs_random": (hit_rate / random_baseline) if random_baseline else None,
         }
 
-    type_rows: list[dict] = []
-    for qtype in sorted(by_type):
-        row = {"type": qtype}
-        for tool_name in tools:
-            row[f"{tool_name}_hit"] = _mean(by_type[qtype][tool_name]["hit"])
-            row[f"{tool_name}_recall"] = _mean(by_type[qtype][tool_name]["recall"])
-            row[f"{tool_name}_mrr"] = _mean(by_type[qtype][tool_name]["mrr"])
-        type_rows.append(row)
+    stage_rows: list[dict] = []
+    for subset, values in sorted(graph_stage.items()):
+        stage_rows.append({
+            "subset": subset,
+            "seed_hit": _mean(values["seed_hit"]),
+            "ppr_hit": _mean(values["ppr_hit"]),
+            "chunk_map_hit": _mean(values["chunk_map_hit"]),
+            "bottlenecks": dict(values["bottlenecks"]),
+        })
 
-    return {"overall": aggregate, "by_type": type_rows}
+    paired = {}
+    if "vector" in tools:
+        paired["full_mixed"] = {
+            tool_name: _paired_recall_test(results, tool_name)
+            for tool_name in tools
+            if tool_name != "vector"
+        }
+        for subset in sorted(by_subset):
+            paired[subset] = {
+                tool_name: _paired_recall_test(results, tool_name, subset=subset)
+                for tool_name in tools
+                if tool_name != "vector"
+            }
+
+    return {
+        "overall": aggregate,
+        "by_type": _summarize_grouped_metrics(by_type, tools, "type"),
+        "by_subset": _summarize_grouped_metrics(by_subset, tools, "subset"),
+        "graph_stage": stage_rows,
+        "paired_recall_vs_vector": paired,
+    }
 
 
 def _fmt(value) -> str:
@@ -320,6 +661,8 @@ def _write_markdown(
     oracle_k: int,
     dry_run: bool,
     corpus_size: int,
+    use_graph_expansion: bool,
+    graph_seed_mode: str,
 ) -> None:
     lines: list[str] = []
     lines.append("# Phase T Retrieval Baseline")
@@ -331,6 +674,8 @@ def _write_markdown(
     lines.append(f"oracle_k: `{oracle_k}`")
     lines.append(f"dry_run: `{dry_run}`")
     lines.append(f"corpus_chunks: `{corpus_size}`")
+    lines.append(f"graph_use_expansion: `{use_graph_expansion}`")
+    lines.append(f"graph_seed_mode: `{graph_seed_mode}`")
     lines.append("")
 
     lines.append("## Overall")
@@ -366,6 +711,58 @@ def _write_markdown(
                 cells.append(_fmt(row.get(f"{tool_name}_recall")))
             lines.append("| " + " | ".join(cells) + " |")
 
+    if aggregate["by_subset"]:
+        lines.append("")
+        lines.append("## By Subset")
+        lines.append("")
+        header = ["Subset"]
+        for tool_name in tools:
+            header.extend([f"{tool_name} Hit", f"{tool_name} Recall", f"{tool_name} Oracle"])
+        lines.append("| " + " | ".join(header) + " |")
+        lines.append("|" + "|".join(["---"] + ["---:"] * (len(header) - 1)) + "|")
+        for row in aggregate["by_subset"]:
+            cells = [row["subset"]]
+            for tool_name in tools:
+                cells.append(_fmt(row.get(f"{tool_name}_hit")))
+                cells.append(_fmt(row.get(f"{tool_name}_recall")))
+                cells.append(_fmt(row.get(f"{tool_name}_oracle_hit")))
+            lines.append("| " + " | ".join(cells) + " |")
+
+    if aggregate["graph_stage"]:
+        lines.append("")
+        lines.append("## Graph Stage Diagnostics")
+        lines.append("")
+        lines.append("| Subset | SeedHit | PPRHit | ChunkMapHit | Bottlenecks |")
+        lines.append("|---|---:|---:|---:|---|")
+        for row in aggregate["graph_stage"]:
+            bottlenecks = ", ".join(
+                f"{name}={count}"
+                for name, count in sorted(row["bottlenecks"].items())
+            )
+            lines.append(
+                "| "
+                f"{row['subset']} | "
+                f"{_fmt(row['seed_hit'])} | "
+                f"{_fmt(row['ppr_hit'])} | "
+                f"{_fmt(row['chunk_map_hit'])} | "
+                f"{bottlenecks or 'n/a'} |"
+            )
+
+    if aggregate["paired_recall_vs_vector"]:
+        lines.append("")
+        lines.append("## Paired Recall Test vs Vector")
+        lines.append("")
+        lines.append("| Subset | Tool | n | Mean Delta Recall | One-sided p |")
+        lines.append("|---|---|---:|---:|---:|")
+        for subset, comparisons in aggregate["paired_recall_vs_vector"].items():
+            for tool_name, row in comparisons.items():
+                lines.append(
+                    "| "
+                    f"{subset} | {tool_name} | {row['n']} | "
+                    f"{_fmt(row['mean_delta_recall'])} | "
+                    f"{_fmt(row['p_value_one_sided'])} |"
+                )
+
     lines.append("")
     lines.append("## Per Query")
     for row in results:
@@ -373,13 +770,18 @@ def _write_markdown(
         lines.append(f"### {row['id']}: `{row['query']}`")
         lines.append("")
         lines.append(f"- type: `{row['type']}`")
+        lines.append(f"- subset: `{row['subset']}`")
+        lines.append(f"- corpus_status: `{row['corpus_status']}`")
         lines.append(f"- gold_tools: `{row['gold_tools']}`")
+        lines.append(f"- gold_entities: `{row['gold_entities']}`")
+        lines.append(f"- missing_gold_entities: `{row['missing_gold_entities']}`")
         lines.append(f"- gold_chunks: `{row['gold_chunks']}`")
         lines.append("")
-        lines.append("| Tool | Error | Latency | Hit@k | Random Hit@k | Recall@k | MRR@k | Oracle Hit | Hits | Returned |")
-        lines.append("|---|---|---:|---:|---:|---:|---:|---:|---|---|")
+        lines.append("| Tool | Error | Latency | Hit@k | Random Hit@k | Recall@k | MRR@k | Oracle Hit | SeedHit | PPRHit | ChunkMapHit | Bottleneck | Hits | Returned |")
+        lines.append("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---|")
         for tool_name in tools:
             metrics = row["tools"][tool_name]
+            stage = metrics.get("stage", {})
             lines.append(
                 "| "
                 f"{tool_name} | "
@@ -390,6 +792,10 @@ def _write_markdown(
                 f"{_fmt(metrics['recall_at_k'])} | "
                 f"{_fmt(metrics['mrr_at_k'])} | "
                 f"{_fmt(metrics['oracle_hit'])} | "
+                f"{_fmt(stage.get('seed_hit'))} | "
+                f"{_fmt(stage.get('ppr_hit'))} | "
+                f"{_fmt(stage.get('chunk_map_hit'))} | "
+                f"{stage.get('bottleneck_label', 'n/a')} | "
                 f"`{metrics['hits_at_k']}` | "
                 f"`{metrics['returned_chunk_ids']}` |"
             )
@@ -435,6 +841,17 @@ def main() -> None:
         action="store_true",
         help="Disable graph query expansion for graph/hybrid diagnostic runs.",
     )
+    parser.add_argument(
+        "--graph-seed-mode",
+        choices=SEED_MODE_CHOICES,
+        default="triple",
+        help="Seed strategy for graph retrieval diagnostics.",
+    )
+    parser.add_argument(
+        "--reextract-tickers",
+        default=",".join(DEFAULT_REEXTRACT_TICKERS),
+        help="Comma-separated tickers already re-extracted for subset reporting.",
+    )
     args = parser.parse_args()
 
     queries = _load_queries(args.queries)
@@ -448,6 +865,27 @@ def main() -> None:
 
     cfg = None if args.dry_run else _get_config()
     corpus_size = 0 if args.dry_run else _get_corpus_chunk_count(cfg)
+    known_tickers = {
+        ticker.upper()
+        for ticker in (getattr(cfg, "tickers", None) or DEFAULT_REEXTRACT_TICKERS)
+        if ticker
+    }
+    reextract_tickers = {
+        ticker.strip().upper()
+        for ticker in args.reextract_tickers.split(",")
+        if ticker.strip()
+    }
+    all_gold_entities = sorted({
+        entity
+        for item in queries
+        for entity in _gold_entities(item)
+    })
+    existing_entities = (
+        set(all_gold_entities)
+        if args.dry_run
+        else _get_existing_entities(cfg, all_gold_entities)
+    )
+
     results = [
         _evaluate_query(
             item=item,
@@ -457,7 +895,10 @@ def main() -> None:
             cfg=cfg,
             dry_run=args.dry_run,
             use_graph_expansion=not args.no_llm_expansion,
+            graph_seed_mode=args.graph_seed_mode,
             corpus_size=corpus_size,
+            subset=_classify_subset(item, reextract_tickers, known_tickers),
+            existing_entities=existing_entities,
         )
         for item in queries
     ]
@@ -473,6 +914,8 @@ def main() -> None:
         oracle_k=args.oracle_k,
         dry_run=args.dry_run,
         corpus_size=corpus_size,
+        use_graph_expansion=not args.no_llm_expansion,
+        graph_seed_mode=args.graph_seed_mode,
     )
     _write_jsonl(jsonl_path, results)
 
