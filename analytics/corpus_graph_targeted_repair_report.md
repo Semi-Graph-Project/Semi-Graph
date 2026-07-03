@@ -22,8 +22,8 @@ This repair intentionally avoided a full KG extraction rerun. It applied:
 
 ## Current Neo4j Repair
 
-Repair log: `analytics/neo4j_manual_corpus_repair_20260630_014347.json`
-Structural cleanup log: `analytics/neo4j_structural_cleanup_20260630_015029.json`
+Repair log: `analytics/corpus_graph_manual_repair_log.json`
+Structural cleanup log: `analytics/corpus_graph_structural_cleanup_log.json`
 
 | Operation | Count |
 |---|---:|

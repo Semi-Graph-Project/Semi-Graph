@@ -58,4 +58,3 @@ Missing checks: ทุกบริษัทมี `chunk embedding`, `entity emb
 สำหรับ graph health โดยรวม การ re-extract รอบนี้ผ่านเกณฑ์ที่จะเดิน Phase T ต่อได้ โดยเฉพาะถ้าเป้าหมายคือ tune PPR/No Expand PPR บน graph ที่มี entity bridge ดีขึ้นแล้ว
 
 ข้อควรระวังหลักคือ AMD เคยมี retrieval ranking แย่ลงเล็กน้อยหลัง re-extract แม้ graph health ดีขึ้น แปลว่า Phase T ควร tune retrieval parameters ต่อ ไม่ใช่ re-extract ทั้ง corpus เพื่อแก้ทุกอย่างทันที
-

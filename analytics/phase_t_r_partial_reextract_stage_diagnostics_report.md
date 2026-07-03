@@ -2,7 +2,7 @@
 
 Generated: `2026-07-01`
 
-Input health report: `analytics/reextract_health_report_20260701.md`
+Input health report: `analytics/corpus_graph_partial_reextract_health_report.md`
 
 ## What Changed In This Run
 
@@ -20,8 +20,8 @@ This separates the partial re-extract signal from the still-old corpus.
 
 | Run | Report | Details |
 |---|---|---|
-| No expansion | `analytics/phase_t_retrieval_baseline_20260701_151204.md` | `analytics/phase_t_retrieval_details_20260701_151204.jsonl` |
-| With expansion | `analytics/phase_t_retrieval_baseline_20260701_151517.md` | `analytics/phase_t_retrieval_details_20260701_151517.jsonl` |
+| No expansion | `analytics/phase_t_r_partial_reextract_no_expansion_30q.md` | `analytics/phase_t_r_partial_reextract_no_expansion_30q_details.jsonl` |
+| With expansion | `analytics/phase_t_r_partial_reextract_expansion_30q.md` | `analytics/phase_t_r_partial_reextract_expansion_30q_details.jsonl` |
 
 Commands:
 

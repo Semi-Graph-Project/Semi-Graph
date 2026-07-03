@@ -101,8 +101,8 @@ HF_HUB_OFFLINE=1 conda run -n senior_project python scripts/evaluate_retrieval_q
 Results:
 
 - `pytest`: 5 passed
-- Latest expansion report: `analytics/phase_t_retrieval_baseline_20260629_154002.md`
-- Latest no-expansion report: `analytics/phase_t_retrieval_baseline_20260629_154627.md`
+- Latest expansion report: `analytics/phase_t_t2_rerank_expansion_benchmark_16q.md`
+- Latest no-expansion report: `analytics/phase_t_t2_rerank_no_expansion_benchmark_16q.md`
 
 ## Next Step
 

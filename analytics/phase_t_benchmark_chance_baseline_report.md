@@ -26,8 +26,8 @@ So a system with Hit@5 around `0.50` is not just lucky. It is more than 100x abo
 
 Two benchmark runs were executed on the same 30-query Phase T set:
 
-- No expansion: `analytics/phase_t_retrieval_baseline_20260629_190328.md`
-- With expansion: `analytics/phase_t_retrieval_baseline_20260629_190622.md`
+- No expansion: `analytics/phase_t_t3_chance_baseline_no_expansion_30q.md`
+- With expansion: `analytics/phase_t_t3_chance_baseline_expansion_30q.md`
 
 Both use:
 

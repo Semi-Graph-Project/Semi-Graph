@@ -2,7 +2,7 @@
 
 Generated: 2026-06-30T01:20:11
 Query file: `/home/kantinan/programming/project/data/evaluate/phase_t_multihop_queries.yaml`
-Details JSON: `/home/kantinan/programming/project/analytics/corpus_graph_audit_details_20260630_012006.json`
+Details JSON: `/home/kantinan/programming/project/analytics/corpus_graph_ppr_readiness_audit_details.json`
 
 ## Executive Summary
 
@@ -567,4 +567,3 @@ No exact entity node found, or no informative neighborhood.
 5. หลัง clean corpus ให้ rerun retrieval baseline แบบ `--no-llm-expansion` เพื่อแยกผลของ corpus/PPR ออกจาก query expansion
 
 Interpretation: ถ้า seed/entity ยังไม่มีใน graph หรือ gold entities ไม่มี path ภายใน 3 hops, PPR ไม่มีทางแก้ด้วย parameter อย่างเดียว เพราะ random walk เดินบนถนนที่ไม่มีอยู่จริง
-

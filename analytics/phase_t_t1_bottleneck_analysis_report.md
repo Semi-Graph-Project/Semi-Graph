@@ -15,10 +15,10 @@ HF_HUB_OFFLINE=1 conda run -n senior_project python scripts/evaluate_retrieval_q
 
 รายงานที่เกี่ยวข้อง:
 
-- `analytics/phase_t_retrieval_baseline_20260629_135900.md`
-- `analytics/phase_t_retrieval_details_20260629_135900.jsonl`
-- `analytics/phase_t_retrieval_baseline_20260629_140019.md`
-- `analytics/phase_t_retrieval_details_20260629_140019.jsonl`
+- `analytics/phase_t_t1_vector_baseline_16q.md`
+- `analytics/phase_t_t1_vector_baseline_16q_details.jsonl`
+- `analytics/phase_t_t1_graph_hybrid_no_expansion_baseline_16q.md`
+- `analytics/phase_t_t1_graph_hybrid_no_expansion_baseline_16q_details.jsonl`
 
 หมายเหตุ: รันรวม `vector graph hybrid` แบบเปิด LLM expansion ติดค้างนาน จึงเพิ่ม diagnostic flag `--no-llm-expansion` เพื่อแยกปัญหา Graph/PPR ออกจาก LLM query expansion latency
 
