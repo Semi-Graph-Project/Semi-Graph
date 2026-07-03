@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SemiGraph — Progress Update 22 June 2026</title>
+<title>SemiGraph — Progress Update 2 July 2026</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -164,7 +164,7 @@ function imgFallback(img){
   <div class="brand-mark"></div>
   <h1>Agentic GraphRAG for Semiconductor Stocks</h1>
   <p class="title-sub">SemiGraph — วิเคราะห์ปัจจัยพื้นฐานหุ้นเซมิคอนดักเตอร์</p>
-  <p class="title-meta">PROGRESS UPDATE · 22 มิถุนายน 2026 · KMUTNB ENET-C SENIOR PROJECT</p>
+  <p class="title-meta">PROGRESS UPDATE · 2 กรกฎาคม 2026 · KMUTNB ENET-C SENIOR PROJECT</p>
 </section>
 
 <!-- 2 — Architecture -->
@@ -172,7 +172,7 @@ function imgFallback(img){
   <div class="eyebrow">ภาพรวม</div>
   <h2>ระบบปัจจุบันใน repo</h2>
   <img class="diagram" src="images/architecture.png" alt="System architecture" onerror="imgFallback(this)">
-  <p class="caption">รับคำถาม → route ไปยัง vector / graph / hybrid / financial / news → LLM สรุปคำตอบพร้อม citation; agent loop ถูกวางโครงไว้แล้วด้วย LangGraph</p>
+  <p class="caption">รับคำถาม → plan → route ไปยัง vector / graph / hybrid / financial / news → observe/reflect → LLM สรุปคำตอบพร้อม citation; agent loop ตอนนี้เดินได้ครบเส้นหลักแล้ว</p>
 </section>
 
 <!-- 3 — Status -->
@@ -183,17 +183,18 @@ function imgFallback(img){
     <div class="col done">
       <div class="col-head">พร้อมแล้ว</div>
       <ul>
-        <li>Corpus 12 ticker · 36 เอกสาร 10-K · offline pipeline + chunking ครบ</li>
+        <li>Corpus 14 ticker · 42 filings · 2,347 chunks พร้อม embedding และ KG</li>
         <li>Retrieval stack 5 tools — vector / graph / hybrid / financial / news</li>
-        <li>Benchmark, held-out script, demo CLI และ Streamlit UI</li>
+        <li>LangGraph agent loop ทำงานครบ plan → execute → observe → reflect → synthesize</li>
+        <li>Phase T evaluator มี stage trace แยก seed / PPR / chunk mapping / rerank</li>
       </ul>
     </div>
     <div class="col todo">
       <div class="col-head">ยังไม่ complete</div>
       <ul>
-        <li>LangGraph agent loop ทำงานจริงครบปลายทางยังไม่เสร็จ</li>
-        <li>`execute` / `observe` / `reflect` / `synthesize` ยังเป็น stub</li>
-        <li>End-to-end evaluation ของระบบ agent เต็มรูปแบบ</li>
+        <li>Graph retrieval ยังติดคอขวดที่ chunk mapping และ rerank หลัง PPR</li>
+        <li>Hybrid ชนะบางชุด แต่ผล no-expansion ยังไม่ significant ทางสถิติ</li>
+        <li>Answer-level evaluation ของ agent เต็มระบบยังเป็นงานถัดไป</li>
       </ul>
     </div>
   </div>
@@ -219,13 +220,13 @@ function imgFallback(img){
   <div class="eyebrow">01 · Corpus &amp; Offline</div>
   <h2>สถานะ corpus ปัจจุบัน</h2>
   <div class="stat-row">
-    <div class="stat"><div class="stat-num">12</div><div class="stat-label">tickers</div></div>
-    <div class="stat"><div class="stat-num">36</div><div class="stat-label">10-K filings</div></div>
-    <div class="stat"><div class="stat-num">1,982</div><div class="stat-label">chunks</div></div>
+    <div class="stat"><div class="stat-num">14</div><div class="stat-label">tickers</div></div>
+    <div class="stat"><div class="stat-num">42</div><div class="stat-label">filings</div></div>
+    <div class="stat"><div class="stat-num">2,347</div><div class="stat-label">chunks</div></div>
     <div class="stat"><div class="stat-num">3</div><div class="stat-label">target sections</div></div>
     <div class="stat"><div class="stat-num">5</div><div class="stat-label">retrievers</div></div>
   </div>
-  <p class="caption">ticker ใน `config/default.yaml`: AMAT · AMD · AMKR · AVGO · INTC · KLAC · LRCX · MU · NVDA · QCOM · RMBS · TXN — ใช้ Item 1 / 1A / 7 เป็น narrative sections หลัก</p>
+  <p class="caption">ticker ใน `config/default.yaml`: AMAT · AMD · AMKR · AVGO · COHR · ENTG · INTC · KLAC · LRCX · MU · NVDA · QCOM · RMBS · TXN — ใช้ Item 1 / 1A / 7 เป็น narrative sections หลัก</p>
 </section>
 
 <!-- 7 — Divider 02 -->
@@ -271,7 +272,7 @@ function imgFallback(img){
   <div class="eyebrow">02 · Retrieval Stack</div>
   <h2>Graph Search — Personalized PageRank</h2>
   <img class="diagram" src="images/graph_ppr.png" alt="Graph retrieval engine" onerror="imgFallback(this)">
-  <p class="caption">query → seed entities → PPR บน graph → collapse aliases → map กลับเป็น chunk; จุดแข็งคือเชื่อมคำถามไปหาหลักฐานที่ไม่ได้ใช้คำเดียวกัน</p>
+  <p class="caption">query → optional expansion → seed entities/triples → PPR บน graph → collapse aliases → map กลับเป็น chunk → intent rerank; จุดแข็งคือเชื่อมคำถามไปหาหลักฐานที่ไม่ได้ใช้คำเดียวกัน</p>
 </section>
 
 <!-- 10 — Retrieval upgrades -->
@@ -280,56 +281,56 @@ function imgFallback(img){
   <h2>สิ่งที่เพิ่มเข้ามาใน graph pipeline</h2>
   <ul class="tune-list">
     <li><strong>Query Expansion</strong> — ให้ LLM เติม entity / ticker ที่แฝงอยู่ในคำถามก่อน embed</li>
-    <li><strong>Query-to-Triple seeds</strong> — หา triple ที่ใกล้กับคำถาม แล้วใช้ทั้ง head และ tail เป็นจุดตั้งต้น</li>
-    <li><strong>Damping 0.7</strong> — ปรับให้เหมาะกับ sparse KG และลด hub leakage</li>
-    <li><strong>SYNONYM collapse</strong> — รวม alias ของ entity ก่อนสะสมคะแนนกลับมาที่ chunk</li>
+    <li><strong>Seed modes</strong> — เทียบ `triple`, `node`, `hybrid` เพื่อแยก seed loss ใน evaluator</li>
+    <li><strong>Trace</strong> — `trace_graph_search()` คืน seed, PPR entities, clusters, chunk candidates และ final chunks</li>
+    <li><strong>Intent Rerank</strong> — boost ตาม section, ticker และคำสำคัญ ก่อนตัด top-k</li>
   </ul>
-  <p class="caption">`graph_search()` ตอนนี้ไม่ใช่ PPR ตรงๆ อย่างเดียว แต่เป็น pipeline เต็ม query → expansion → triple seeds → PPR → alias collapse → chunk ranking</p>
+  <p class="caption">`graph_search()` เป็น wrapper ที่คืน chunks ส่วน `trace_graph_search()` ใช้ debug คอขวดของ retrieval ใน Phase T-R</p>
 </section>
 
 <!-- 11 — Divider 03 -->
 <section class="divider">
   <div class="divider-num">03</div>
   <h2>Evaluation</h2>
-  <p>retrieval layer ถูกวัดผลแล้วทั้ง dev set และ held-out</p>
+  <p>retrieval layer ถูกวัดผลด้วย Phase T พร้อม stage diagnostics</p>
 </section>
 
 <!-- 12 — Benchmark results -->
 <section>
   <div class="eyebrow">03 · Evaluation</div>
-  <h2>ผลบน dev set N=50</h2>
+  <h2>Phase T no-expansion — full mixed set</h2>
   <table class="result">
-    <thead><tr><th>รูปแบบการค้น</th><th>Hit@5</th><th>Recall@5</th></tr></thead>
+    <thead><tr><th>รูปแบบการค้น</th><th>Hit@5</th><th>Recall@5</th><th>Oracle@20</th></tr></thead>
     <tbody>
-      <tr><td>Vector Search</td><td>66%</td><td>0.369</td></tr>
-      <tr><td>Graph Search (PPR)</td><td>76%</td><td>0.492</td></tr>
-      <tr class="hl"><td>Hybrid Search (RRF)</td><td>78%</td><td>0.485</td></tr>
+      <tr><td>Vector Search</td><td>0.333</td><td>0.224</td><td>0.571</td></tr>
+      <tr><td>Graph Search (PPR)</td><td>0.190</td><td>0.121</td><td>0.333</td></tr>
+      <tr class="hl"><td>Hybrid Search (RRF)</td><td>0.381</td><td>0.243</td><td>0.571</td></tr>
     </tbody>
   </table>
-  <p class="finding">Hybrid &gt; Vector บน Recall@5 อย่างมีนัยสำคัญทางสถิติ — Wilcoxon p = 0.0015</p>
-  <p class="finding">Graph &gt; Vector บน Recall@5 เช่นกัน — Wilcoxon p = 0.028</p>
+  <p class="finding">Hybrid ดีกว่า vector เล็กน้อยใน full mixed set แต่ paired recall ยังไม่ significant — p ≈ 0.495</p>
+  <p class="caption">รันล่าสุดจาก `analytics/phase_t_r_partial_reextract_stage_diagnostics_report.md`; ใช้ผลนี้เป็น diagnosis ไม่ใช่ claim สุดท้ายของ thesis</p>
 </section>
 
-<!-- 13 — Held-out -->
+<!-- 13 — Stage diagnostics -->
 <section>
   <div class="eyebrow">03 · Evaluation</div>
-  <h2>Held-out sanity check N=10</h2>
+  <h2>Stage diagnostics บอกว่าควรแก้ตรงไหน</h2>
   <table class="result">
-    <thead><tr><th>รูปแบบการค้น</th><th>Hit@5</th><th>Recall@5</th></tr></thead>
+    <thead><tr><th>Setting</th><th>SeedHit</th><th>PPRHit</th><th>ChunkMapHit</th><th>Main loss</th></tr></thead>
     <tbody>
-      <tr><td>Vector Search</td><td>7/10</td><td>0.390</td></tr>
-      <tr><td>Graph Search (PPR)</td><td>7/10</td><td>0.420</td></tr>
-      <tr class="hl"><td>Hybrid Search (RRF)</td><td>8/10</td><td>0.450</td></tr>
+      <tr><td>No expansion</td><td>0.952</td><td>1.000</td><td>0.333</td><td>chunk mapping loss = 13</td></tr>
+      <tr class="hl"><td>With expansion</td><td>1.000</td><td>1.000</td><td>0.667</td><td>chunk mapping loss = 7, rerank loss = 4</td></tr>
     </tbody>
   </table>
-  <p class="caption">sample ยังเล็กมาก จึงใช้เป็น sanity check มากกว่าข้อสรุปสุดท้าย แต่ทิศทางยังสอดคล้องกับ dev set ว่า hybrid ครอบคลุมที่สุด</p>
+  <p class="finding">Seed และ PPR ไม่ใช่คอขวดหลักแล้ว; งานถัดไปควรอยู่ที่ mapping entity → chunk และ rerank ก่อน tuning damping</p>
+  <p class="caption">full_mixed diagnostics จากรัน 1 กรกฎาคม 2026: expansion ช่วยให้ chunk mapping ดีขึ้น แต่ยังมีหลักฐานหลุดก่อน top-k</p>
 </section>
 
 <!-- 14 — Divider 04 -->
 <section class="divider">
   <div class="divider-num">04</div>
   <h2>Agent &amp; Demo</h2>
-  <p>มีทั้งส่วนขยาย real-time และ skeleton ของ agent แล้ว</p>
+  <p>agent loop มี behavior จริงแล้ว เหลือวัดผลปลายทางและ polish tool routing</p>
 </section>
 
 <!-- 15 — Extensions -->
@@ -361,16 +362,17 @@ function imgFallback(img){
       <div class="col-head">มีแล้ว</div>
       <ul>
         <li>`plan_node` แตกคำถามเป็น 1-3 subqueries</li>
-        <li>`tool_select_node` ใช้ tool calling route ไปยัง `vector / graph / financial / news` (ยังไม่ expose `hybrid`)</li>
-        <li>`build_agent()` ประกอบ workflow `plan → tool_select → execute → observe → reflect → synthesize`</li>
+        <li>`tool_select_node` ใช้ tool calling route ไปยัง `vector / graph / financial / news`</li>
+        <li>`execute_node` เรียก retriever จริงและ dedupe evidence</li>
+        <li>`observe_node`, `reflect_node`, `advance_subquery_node`, `synthesize_node` ทำงานครบ loop</li>
       </ul>
     </div>
     <div class="col todo">
       <div class="col-head">ต้องต่อเพิ่ม</div>
       <ul>
-        <li>`execute_node`, `observe_node`, `reflect_node`, `synthesize_node` ยังคืนค่าเปล่า</li>
-        <li>ยังไม่มี multi-round loop, memory accumulation และ citation merge</li>
-        <li>ยังไม่ใช่ end-to-end agent ที่ใช้งานจริงใน production flow</li>
+        <li>`hybrid` ยัง dispatch ได้ แต่ยังไม่ expose ใน tool schema ของ agent</li>
+        <li>ต้องทำ answer-level eval เพื่อวัดว่า reflection ช่วยคำตอบจริงแค่ไหน</li>
+        <li>ต้อง polish citation merge และ failure mode ก่อนใช้เป็น demo หลัก</li>
       </ul>
     </div>
   </div>
@@ -379,11 +381,11 @@ function imgFallback(img){
 <!-- 17 — Next -->
 <section>
   <div class="eyebrow">ขั้นถัดไป</div>
-  <h2>งานที่เหลือเพื่อให้คำว่า "Agentic" สมบูรณ์</h2>
+  <h2>งานที่เหลือก่อน present รอบถัดไป</h2>
   <ul class="next">
-    <li><span class="ph">D1</span> ต่อ `execute → synthesize` ให้ agent เรียก tool แล้วสรุปคำตอบหลายแหล่งได้จริง</li>
-    <li><span class="ph">D2</span> เพิ่ม loop สะท้อนผล retrieval เมื่อหลักฐานยังไม่พอ</li>
-    <li><span class="ph">E</span> ประเมิน answer quality ของ agent เต็มรูปแบบทั้งไทยและอังกฤษ</li>
+    <li><span class="ph">T-R2</span> แก้ chunk mapping / rerank เพราะ PPR หา entity ถูกแต่ evidence ยังหลุด</li>
+    <li><span class="ph">D2</span> ตัดสินใจ expose `hybrid` ใน agent schema หรือให้ router เลือก graph/vector แยก</li>
+    <li><span class="ph">E</span> ประเมิน answer quality ของ agent เต็มรูปแบบ พร้อม citation correctness</li>
     <li><span class="ph">F2</span> ถ้าต้องรองรับหลายปีเชิงตัวเลข ค่อยแยก financial backend ไป SQL / XBRL</li>
   </ul>
 </section>
@@ -391,8 +393,8 @@ function imgFallback(img){
 <!-- 18 — Closing -->
 <section class="closing">
   <h2>สรุป</h2>
-  <p class="closing-line">Corpus, retrieval และ real-time tools พร้อมแล้ว<br>งานหลักที่เหลือคือเชื่อม agent loop ให้ครบ end-to-end</p>
-  <p class="closing-meta">SEMIGRAPH · PROGRESS UPDATE · 22 มิ.ย. 2026</p>
+  <p class="closing-line">Corpus, retriever และ agent loop พร้อมระดับ prototype แล้ว<br>งานหลักถัดไปคือทำให้ evidence retrieval คมขึ้นและวัด answer quality</p>
+  <p class="closing-meta">SEMIGRAPH · PROGRESS UPDATE · 2 ก.ค. 2026</p>
 </section>
 
 </div>
