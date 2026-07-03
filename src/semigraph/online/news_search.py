@@ -7,9 +7,9 @@ so news_search is a drop-in 5th retriever alongside vector/graph/hybrid/financia
 Default behaviour: real-time API call per query (no cache, no scraping) — matches
 Proposal §5.1.4 "real-time, no cache". Two opt-in extensions:
 
-  - `use_cache=True`  → file-based JSON cache under `data/news/cache/`. Needed
+  - `use_cache=True`  -> file-based JSON cache under `data/news/cache/`. Needed
                         for eval batch (555 queries hit 60/min rate limit).
-  - `depth="full"`    → fetch full article body via newspaper3k. Slow (~5 sec
+  - `depth="full"`    -> fetch full article body via newspaper3k. Slow (~5 sec
                         per article) + can fail on paywalled / JS-rendered
                         pages → graceful fallback to headline+summary.
 
@@ -102,6 +102,7 @@ def _make_chunk(
         "fiscal_year": article_year,
         "section": SECTION_PREFIX,
         "score": round(score, 3),
+        "datetime": datetime.fromtimestamp(article_ts).isoformat() if article_ts else None,
     }
 
 
@@ -360,5 +361,5 @@ if __name__ == "__main__":
             print("  (empty — guard tripped or no data)")
             continue
         for i, c in enumerate(chunks, start=1):
-            print(f"  #{i} [{c['ticker']} score={c['score']}]")
+            print(f"  #{i} [{c['ticker']} score={c['score']} datetime={c['datetime']}]")
             print(f"     {c['text'][:120]}")
