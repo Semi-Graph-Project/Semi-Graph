@@ -17,6 +17,7 @@ data/news/
 data/schemas/
 data/evaluate/
 data/neo4j/
+backups/
 
 # Reference datasets — large, downloadable from public source
 data/*.parquet
@@ -69,6 +70,7 @@ htmlcov/
 # =============================================================================
 .idea/
 .vscode/
+.claude/settings.json
 *.swp
 *.swo
 .DS_Store
