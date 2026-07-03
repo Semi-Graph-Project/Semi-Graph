@@ -65,7 +65,7 @@ def test_extract_chunk_enforces_node_and_relationship_caps():
         def invoke(self, messages):
             nodes = [
                 {"id": f"Product {i}", "type": "PRODUCT", "properties": {}}
-                for i in range(45)
+                for i in range(65)
             ]
             rels = [
                 {
@@ -75,7 +75,7 @@ def test_extract_chunk_enforces_node_and_relationship_caps():
                     "target_type": "PRODUCT",
                     "type": "produces",
                 }
-                for i in range(45)
+                for i in range(85)
             ]
             nodes.insert(0, {"id": "NVIDIA", "type": "ORG", "properties": {}})
             import json
@@ -84,5 +84,5 @@ def test_extract_chunk_enforces_node_and_relationship_caps():
 
     result = kg_extract.extract_chunk("NVIDIA produces many products.", "Item_1", llm=_LLM())
 
-    assert len(result.nodes) == 40
-    assert len(result.relationships) == 39
+    assert len(result.nodes) == 60
+    assert len(result.relationships) == 59

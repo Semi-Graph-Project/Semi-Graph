@@ -24,6 +24,19 @@ tickers:
   - RMBS
   - TXN
 
+reextract_tickers:
+  - AMAT
+  - AMD
+  - AVGO
+  - COHR
+  - ENTG
+  - INTC
+  - KLAC
+  - MU
+  - NVDA
+  - QCOM
+  - RMBS
+
 # Data paths
 paths:
   raw: "data/raw"
@@ -62,6 +75,28 @@ llm:
 kg:
   max_workers: 16
   batch_size: 5
+
+# Deterministic graph repair runs after KG extraction and before triple
+# embedding/specificity. It adds conservative fallback informative edges so
+# mention-only entities can participate in PPR without requiring re-extraction.
+graph_repair:
+  enabled: true
+  method: "deterministic_graph_repair_v1"
+  filer_aliases:
+    AMAT: "applied materials"
+    AMD: "amd"
+    AMKR: "amkor"
+    AVGO: "broadcom"
+    COHR: "coherent"
+    ENTG: "entegris"
+    INTC: "intel"
+    KLAC: "kla"
+    LRCX: "lam research"
+    MU: "micron"
+    NVDA: "nvidia"
+    QCOM: "qualcomm"
+    RMBS: "rambus"
+    TXN: "texas instruments"
 
 # News tool (Phase E.v1 — Finnhub News API)
 news:

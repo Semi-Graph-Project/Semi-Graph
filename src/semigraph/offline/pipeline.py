@@ -23,6 +23,7 @@ from typing import Optional
 from semigraph.config import Config, get_config
 from semigraph.connections import get_llm, get_neo4j_driver
 from semigraph.offline.chunker import Chunk, chunk_filing
+from semigraph.offline.graph_repair import repair_filing_graph
 from semigraph.offline.kg_extract import extract_chunk
 from semigraph.offline.kg_store import KGStore, init_schema
 
@@ -41,6 +42,8 @@ class FilingResult:
     chunks_failed: int = 0
     nodes: int = 0
     relationships: int = 0
+    repaired_relationships: int = 0
+    repair_summary: dict = field(default_factory=dict)
     elapsed_s: float = 0.0
     error: Optional[str] = None
     completed_at: Optional[str] = None
@@ -254,8 +257,25 @@ def process_filing(
                     print(f"  [{i}/{len(all_chunks)}] ok={success} fail={fail} | "
                           f"{elapsed:.0f}s elapsed, ETA {eta:.0f}s")
 
+        repair_stats = repair_filing_graph(
+            ticker=ticker,
+            fiscal_year=fiscal_year,
+            filing_type=filing_type,
+            cfg=cfg,
+            driver=driver,
+        )
+        if repair_stats.skipped:
+            print(f"  [repair] skipped: {repair_stats.reason}")
+        else:
+            print(
+                f"  [repair] {repair_stats.total_created} rels "
+                f"(anchor={repair_stats.filer_anchor_created}, "
+                f"risk_bridge={repair_stats.item_1a_risk_bridge_created})"
+            )
+
         elapsed = time.time() - t0
         status = "done" if fail == 0 else "partial"
+        repaired_rels = repair_stats.total_created
 
         return FilingResult(
             filing_key=filing_key,
@@ -263,7 +283,9 @@ def process_filing(
             chunks_processed=success,
             chunks_failed=fail,
             nodes=nodes_total,
-            relationships=rels_total,
+            relationships=rels_total + repaired_rels,
+            repaired_relationships=repaired_rels,
+            repair_summary=repair_stats.as_dict(),
             elapsed_s=elapsed,
         )
 
@@ -327,7 +349,8 @@ def process_corpus(
 
         print(f"[pipeline] {filing_key}: {result.status.upper()} "
               f"({result.chunks_processed} ok / {result.chunks_failed} fail) "
-              f"→ {result.nodes} nodes, {result.relationships} rels, {result.elapsed_s:.0f}s")
+              f"→ {result.nodes} nodes, {result.relationships} rels "
+              f"(repair +{result.repaired_relationships}), {result.elapsed_s:.0f}s")
         if result.error:
             print(f"           error: {result.error}")
 

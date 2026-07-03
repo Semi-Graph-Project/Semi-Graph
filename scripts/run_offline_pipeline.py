@@ -97,12 +97,14 @@ def main() -> int:
     total_chunks_fail = sum(r.chunks_failed for r in results)
     total_nodes = sum(r.nodes for r in results)
     total_rels = sum(r.relationships for r in results)
+    total_repair_rels = sum(r.repaired_relationships for r in results)
     total_elapsed = sum(r.elapsed_s for r in results)
 
     print(f"Filings processed:   {len(results)}")
     print(f"Chunks ok / failed:  {total_chunks_ok} / {total_chunks_fail}")
     print(f"Nodes total:         {total_nodes}")
     print(f"Relationships total: {total_rels}")
+    print(f"Repair rels total:   {total_repair_rels}")
     print(f"Wall-clock time:     {total_elapsed:.0f}s")
 
     print("\nPer-filing breakdown:")
@@ -110,7 +112,8 @@ def main() -> int:
         marker = "OK" if r.status == "done" else r.status.upper()
         print(f"  [{marker:7}] {r.filing_key}  "
               f"{r.chunks_processed} ok / {r.chunks_failed} fail  "
-              f"{r.nodes}n / {r.relationships}r  ({r.elapsed_s:.0f}s)")
+              f"{r.nodes}n / {r.relationships}r "
+              f"(repair +{r.repaired_relationships})  ({r.elapsed_s:.0f}s)")
         if r.error:
             print(f"               error: {r.error}")
 

@@ -128,7 +128,7 @@ def phase4_extract(filings: list[tuple[str, str, str]], workers: int, cfg) -> li
     print(f"\n{DIVIDER}\nPHASE 4 — Extract w/ per-chunk metrics (workers={workers})\n{DIVIDER}")
     metrics: list[dict] = []
     for ticker, fy, ftype in filings:
-        print(f"\n  → {ticker} FY{fy}-{ftype}")
+        print(f"\n  ->> {ticker} FY{fy}-{ftype}")
         t0 = time.time()
         result = process_filing(
             ticker=ticker,
@@ -141,7 +141,8 @@ def phase4_extract(filings: list[tuple[str, str, str]], workers: int, cfg) -> li
         wall = time.time() - t0
         print(f"    status={result.status} | "
               f"chunks ok={result.chunks_processed} fail={result.chunks_failed} | "
-              f"nodes={result.nodes} rels={result.relationships} | wall={wall:.0f}s")
+              f"nodes={result.nodes} rels={result.relationships} "
+              f"(repair +{result.repaired_relationships}) | wall={wall:.0f}s")
         if result.error:
             print(f"    error: {result.error}")
     return metrics
@@ -265,6 +266,39 @@ def phase7_verify(ticker: str) -> None:
                  f"WHERE r.triple_embedding IS NOT NULL "
                  "  AND r.source_chunk IN chunk_ids "
                  "RETURN count(r) AS n, count(r.triple_embedding) AS e"),
+                ("repair rels",
+                 f"MATCH (c:Chunk {{ticker:'{ticker}'}}) "
+                 "WITH collect(c.chunk_id) AS chunk_ids "
+                 "MATCH ()-[r]->() "
+                 "WHERE r.source_chunk IN chunk_ids "
+                 "  AND r.repair_method IS NOT NULL "
+                 "RETURN count(r) AS n, count(r.triple_embedding) AS e"),
+                ("isolated entities",
+                 f"MATCH (e:Entity)-[:MENTIONS]-(c:Chunk {{ticker:'{ticker}'}}) "
+                 "WITH DISTINCT e "
+                 "OPTIONAL MATCH (e)-[r]-(other:Entity) "
+                 "WHERE type(r) IN ["
+                 "'ANNOUNCES','CAUSES_SHORTAGE_OF','COMPETES_WITH','DEPENDS_ON',"
+                 "'DISCLOSES','FACES','GUIDES_ON','HAS_STAKE_IN','IMPACTED_BY',"
+                 "'IMPACTS','INTRODUCES','INVESTS_IN','INVOLVED_IN','LISTED_ON',"
+                 "'NEGATIVELY_IMPACTS','OPERATES_IN','PARTNERS_WITH',"
+                 "'POSITIVELY_IMPACTS','PRODUCES','SUBJECT_TO','SUPPLIES'] "
+                 "WITH e, count(r) AS degree "
+                 "WHERE degree = 0 "
+                 "RETURN count(e) AS n, 0 AS e"),
+                ("zero-rel chunks",
+                 f"MATCH (c:Chunk {{ticker:'{ticker}'}}) "
+                 "OPTIONAL MATCH ()-[r]->() "
+                 "WHERE r.source_chunk = c.chunk_id "
+                 "  AND type(r) IN ["
+                 "'ANNOUNCES','CAUSES_SHORTAGE_OF','COMPETES_WITH','DEPENDS_ON',"
+                 "'DISCLOSES','FACES','GUIDES_ON','HAS_STAKE_IN','IMPACTED_BY',"
+                 "'IMPACTS','INTRODUCES','INVESTS_IN','INVOLVED_IN','LISTED_ON',"
+                 "'NEGATIVELY_IMPACTS','OPERATES_IN','PARTNERS_WITH',"
+                 "'POSITIVELY_IMPACTS','PRODUCES','SUBJECT_TO','SUPPLIES'] "
+                 "WITH c, count(r) AS degree "
+                 "WHERE degree = 0 "
+                 "RETURN count(c) AS n, 0 AS e"),
             ]
             for label, q in checks:
                 try:
@@ -374,6 +408,43 @@ def _sync_tickers_to_config(tickers: list[str]) -> Path:
     cfg_path.write_text(new_text, encoding="utf-8")
     return cfg_path
 
+def _sync_reextract_tickers_to_config(tickers: list[str]) -> Path:
+    "Write the `reextract_tickers:` just get the --ticker and write append to the config/default.yaml"
+    cfg_path = PROJECT_ROOT / "config" / "default.yaml"
+    text = cfg_path.read_text(encoding="utf-8")
+
+    existing_tickers = set()
+    match = re.search(
+        r"reextract_tickers:\n((?:[ \t]*-[ \t].*\n)*)",
+        text,
+        flags=re.MULTILINE,
+    )
+
+    if match:
+        lines = match.group(1).strip().splitlines()
+        for line in lines:
+            ticker = line.replace("-", "").strip()
+            if ticker:
+                existing_tickers.add(ticker)
+    else:
+        raise RuntimeError("could not find a `reextract_tickers:` block in config/default.yaml")
+
+    all_tickers = existing_tickers.union(set(tickers))
+
+    block = "reextract_tickers:\n" + "".join(f"  - {t}\n" for t in sorted(all_tickers))
+
+    new_text, n = re.subn(
+        r"^reextract_tickers:\n((?:[ \t]*-[ \t].*\n)*)",
+        block,
+        text,
+        count=1,
+        flags=re.MULTILINE,
+    )
+
+    if n == 0:
+        raise RuntimeError("could not find a `reextract_tickers:` block in config/default.yaml")
+    cfg_path.write_text(new_text, encoding="utf-8")
+    return cfg_path
 
 def phase9_sync_config() -> None:
     print(f"\n{DIVIDER}\nPHASE 9 — Sync config tickers <- Neo4j (DB = source of truth)\n{DIVIDER}")
@@ -383,6 +454,16 @@ def phase9_sync_config() -> None:
         return
     path = _sync_tickers_to_config(db_tickers)
     print(f"  Synced {len(db_tickers)} tickers: {', '.join(db_tickers)}")
+    print(f"  -> {path}  (CORPUS_TICKERS now derives from this)")
+
+def phase9_sync_reextract_config(ticker: str) -> None:
+    print(f"\n{DIVIDER}\n PHASE 9.5 — Sync config.reextract_tickers <- Neo4j (DB = source of truth)\n{DIVIDER}")
+    rextract_ticker = [ticker]
+    if not rextract_ticker:
+        print("  No tickers in Neo4j — skipping config sync")
+        return
+    path = _sync_reextract_tickers_to_config(rextract_ticker)
+    print(f"  Synced {len(rextract_ticker)} tickers: {', '.join(rextract_ticker)}")
     print(f"  -> {path}  (CORPUS_TICKERS now derives from this)")
 
 
@@ -428,6 +509,7 @@ def main() -> int:
     ap.add_argument("--skip-download", action="store_true", help="Skip Phase 1 (use existing data/raw)")
     ap.add_argument("--skip-preprocess", action="store_true", help="Skip Phase 2 (use existing data/processed)")
     ap.add_argument("--skip-embed", action="store_true", help="Skip Phase 6 (extract-only run)")
+    ap.add_argument("--sync-reextract",action="store_true", help="Sync config.reextract_tickers <- Neo4j (Phase 9.5) and exit")
     ap.add_argument("--skip-specificity", action="store_true", help="Skip Phase 6.5 (Node Specificity compute)")
     ap.add_argument("--skip-verify", action="store_true", help="Skip Phase 7 (Neo4j count check)")
     ap.add_argument("--projection-docs", type=int, default=18,
@@ -466,6 +548,10 @@ def main() -> int:
         phase7_verify(ticker)
     phase8_report(ticker, metrics, remaining_docs=args.projection_docs)
     phase9_sync_config()   # config tickers <- Neo4j reality (includes the new ticker)
+
+    if args.sync_reextract:
+        print("\n  --sync-reextract set — syncing config.reextract_tickers <- Neo4j and exiting\n")
+        phase9_sync_reextract_config(ticker)
 
     wall = time.time() - t0
     print(f"\n{'#' * 70}")

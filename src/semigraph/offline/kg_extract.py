@@ -84,7 +84,7 @@ Return ONLY a valid JSON object with this exact structure:
    relationship that does not allow that pair.
 6. Do not invent facts. If the text does not state a relationship, omit it.
 7. Skip any node or triple you are unsure about.
-8. Return at most 40 nodes and 40 relationships per chunk.
+8. Return at most 60 nodes and 80 relationships per chunk.
 
 # Naming rules — CRITICAL for graph quality
 
@@ -94,12 +94,11 @@ Return ONLY a valid JSON object with this exact structure:
    resolve it to the actual named entity (e.g. "the company" in an NVIDIA
    filing → "nvidia") and emit that name. If unresolvable, omit the entity.
 
-10. Any publicly traded company is type ORG — including the filing company,
-    its competitors, suppliers, customers, and partners. Do NOT use type COMP
-    for entities that are also public companies (e.g. amd, intel, nvidia,
-    tsmc, broadcom). Reserve type COMP only for non-public business entities
-    that do not fit ORG (private firms, joint ventures, business divisions
-    that are not the filing company itself).
+10. ORG means the filing company that issued this filing. External companies
+    mentioned by the filer — competitors, suppliers, customers, partners, or
+    counterparties — are type COMP even if they are publicly traded companies
+    (e.g. amd, intel, nvidia, tsmc, broadcom when they are not the filer).
+    Do NOT tag an external company as ORG just because it is public.
 
 11. Use the SHORTEST canonical form of a company name as the id. Drop legal
     suffixes ("inc", "inc.", "corporation", "corp", "ltd", "limited", "llc",
@@ -391,10 +390,10 @@ def extract_chunk(
 
     raw_nodes = parsed.get("nodes", [])
     raw_rels = parsed.get("relationships", [])
-    # if isinstance(raw_nodes, list):
-    #     raw_nodes = raw_nodes[:_MAX_NODES_PER_CHUNK]
-    # if isinstance(raw_rels, list):
-    #     raw_rels = raw_rels[:_MAX_RELATIONSHIPS_PER_CHUNK]
+    if isinstance(raw_nodes, list):
+        raw_nodes = raw_nodes[:_MAX_NODES_PER_CHUNK]
+    if isinstance(raw_rels, list):
+        raw_rels = raw_rels[:_MAX_RELATIONSHIPS_PER_CHUNK]
 
     nodes, allowed_keys = _validate_nodes(raw_nodes)
     relationships = _validate_relationships(raw_rels, allowed_keys)
