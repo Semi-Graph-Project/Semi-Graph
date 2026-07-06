@@ -27,15 +27,18 @@ tickers:
 reextract_tickers:
   - AMAT
   - AMD
+  - AMKR
   - AVGO
   - COHR
   - ENTG
   - INTC
   - KLAC
+  - LRCX
   - MU
   - NVDA
   - QCOM
   - RMBS
+  - TXN
 
 # Data paths
 paths:
@@ -76,12 +79,12 @@ kg:
   max_workers: 16
   batch_size: 5
 
-# Deterministic graph repair runs after KG extraction and before triple
-# embedding/specificity. It adds conservative fallback informative edges so
-# mention-only entities can participate in PPR without requiring re-extraction.
+# Evidence-grounded graph repair runs after KG extraction and before triple
+# embedding/specificity. It asks the LLM to create only relationships supported
+# by an exact evidence sentence, then prunes entities that remain mention-only.
 graph_repair:
   enabled: true
-  method: "deterministic_graph_repair_v1"
+  method: "llm_evidence_graph_repair_v1"
   filer_aliases:
     AMAT: "applied materials"
     AMD: "amd"

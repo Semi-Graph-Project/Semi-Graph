@@ -38,6 +38,15 @@ logs/
 *.log
 
 # =============================================================================
+# Analytics outputs — generated benchmark traces and large graph snapshots
+# =============================================================================
+analytics/*.log
+analytics/graph_snapshots/
+analytics/experiment/
+analytics/phase_t_retrieval_baseline_*.md
+analytics/phase_t_retrieval_details_*.jsonl
+
+# =============================================================================
 # Python
 # =============================================================================
 __pycache__/

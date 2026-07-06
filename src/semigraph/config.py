@@ -110,11 +110,11 @@ class Config:
         self.kg_max_workers: int = kg.get("max_workers", 16)
         self.kg_batch_size: int = kg.get("batch_size", 5)
 
-        # --- Deterministic graph repair ---
+        # --- Evidence-grounded graph repair ---
         repair = data.get("graph_repair", {})
         self.graph_repair_enabled: bool = repair.get("enabled", True)
         self.graph_repair_method: str = repair.get(
-            "method", "deterministic_graph_repair_v1"
+            "method", "llm_evidence_graph_repair_v1"
         )
         self.graph_repair_filer_aliases: dict[str, str] = {
             str(ticker).upper(): str(name)

@@ -23,6 +23,7 @@ entities — the multi-hop reasoning signal we want PPR to surface.
 from __future__ import annotations
 
 import re
+from dataclasses import asdict, dataclass
 from typing import Optional
 
 from neo4j import Driver
@@ -36,6 +37,36 @@ from semigraph.online.seed import (
     query_to_seeds,
     query_to_triple_seeds,
 )
+
+
+@dataclass(frozen=True)
+class MetadataRerankParams:
+    """Tunable weights for metadata reranking.
+
+    Defaults intentionally match the previous hard-coded Phase T settings.
+    Benchmarks can override these values without editing source code.
+    """
+
+    risk_section_boost: float = 1.35
+    business_section_boost: float = 1.18
+    financial_section_boost: float = 1.28
+    ticker_boost: float = 1.20
+    cluster_boost_per_extra: float = 0.04
+    cluster_boost_cap: float = 1.05
+    latest_year_boost: float = 1.08
+    latest_year_min: int = 2025
+    lexical_match_weight: float = 0.10
+    lexical_boost_cap: float = 0.55
+    broad_penalty_enabled: bool = True
+    broad_penalty_floor: float = 0.92
+    broad_penalty_step: float = 0.97
+    broad_penalty_zero_match: float = 0.98
+    broad_penalty_short_token_cutoff: int = 80
+    broad_penalty_mid_token_cutoff: int = 140
+    broad_penalty_long_token_cutoff: int = 220
+
+    def to_dict(self) -> dict:
+        return asdict(self)
 
 
 _RISK_TERMS = {
@@ -95,6 +126,72 @@ _FINANCIAL_TERMS = {
     "revenue",
     "sales",
 }
+_SUPPLY_CHAIN_TERMS = {
+    "capacity",
+    "constraint",
+    "constraints",
+    "depend",
+    "dependency",
+    "dependencies",
+    "foundry",
+    "manufacturing",
+    "shortage",
+    "supplier",
+    "suppliers",
+    "supply",
+    "tsmc",
+    "wafer",
+    "wafers",
+}
+_EXPORT_CONTROL_TERMS = {
+    "ban",
+    "china",
+    "control",
+    "controls",
+    "ear",
+    "export",
+    "geopolitical",
+    "regulation",
+    "regulations",
+    "restriction",
+    "restrictions",
+    "sanction",
+    "sanctions",
+}
+_PRODUCT_TERMS = {
+    "accelerator",
+    "accelerators",
+    "architecture",
+    "chip",
+    "chips",
+    "gpu",
+    "gpus",
+    "instinct",
+    "platform",
+    "product",
+    "products",
+    "ryzen",
+}
+_COMPETITION_TERMS = {
+    "alternative",
+    "alternatives",
+    "compete",
+    "competes",
+    "competition",
+    "competitive",
+    "competitor",
+    "competitors",
+    "versus",
+    "vs",
+}
+_LATEST_TERMS = {
+    "current",
+    "latest",
+    "new",
+    "recent",
+    "recently",
+    "today",
+}
 _CONTENT_STOPWORDS = {
     "a",
     "an",
@@ -141,6 +238,193 @@ def _query_terms(query: str) -> set[str]:
     return set(re.findall(r"[a-z0-9]+", query.lower()))
 
 
+def _query_intent(
+    query: str,
+    cfg: Optional[Config] = None,
+    params: Optional[MetadataRerankParams] = None,
+) -> dict:
+    """Classify query intent for explainable metadata reranking.
+
+    The helper is intentionally rule-based for Phase T. It must be cheap,
+    deterministic, and easy to inspect in benchmark traces. The returned
+    fields do not change ranking by themselves; downstream rerank helpers can
+    decide how strongly to use each signal.
+    """
+    params = params or MetadataRerankParams()
+    terms = _query_terms(query)
+    ticker_boost = _ticker_boosts_for_query(query, cfg=cfg)
+    finance_hits = terms & _FINANCIAL_TERMS
+    risk_hits = terms & _RISK_TERMS
+    business_hits = terms & _BUSINESS_TERMS
+    supply_hits = terms & _SUPPLY_CHAIN_TERMS
+    export_hits = terms & _EXPORT_CONTROL_TERMS
+    product_hits = terms & _PRODUCT_TERMS
+    competition_hits = terms & _COMPETITION_TERMS
+    latest_hits = terms & _LATEST_TERMS
+
+    temporal_latest = bool(latest_hits) and not bool(finance_hits)
+
+    preferred_sections: dict[str, float] = {}
+    if risk_hits or export_hits or supply_hits:
+        preferred_sections["Item_1A"] = params.risk_section_boost
+    if business_hits or product_hits or competition_hits:
+        preferred_sections["Item_1"] = params.business_section_boost
+    if finance_hits:
+        preferred_sections["Item_7"] = params.financial_section_boost
+
+    intent_scores = {
+        "financial": len(finance_hits) * 2,
+        "risk": len(risk_hits) + len(export_hits) + len(supply_hits),
+        "business": len(business_hits) + len(product_hits) + len(competition_hits),
+        "latest": len(latest_hits) if temporal_latest else 0,
+    }
+    primary_intent = max(intent_scores, key=lambda key: (intent_scores[key], key))
+    if intent_scores[primary_intent] == 0:
+        primary_intent = "general"
+
+    return {
+        "primary_intent": primary_intent,
+        "financial": bool(finance_hits),
+        "tickers": sorted(ticker_boost),
+        "risk": bool(risk_hits or export_hits),
+        "business": bool(business_hits),
+        "supply_chain": bool(supply_hits),
+        "export_control": bool(export_hits),
+        "product": bool(product_hits),
+        "competition": bool(competition_hits),
+        "temporal_latest": temporal_latest,
+        "preferred_sections": preferred_sections,
+        "matched_terms": {
+            "financial": sorted(finance_hits),
+            "risk": sorted(risk_hits),
+            "business": sorted(business_hits),
+            "supply_chain": sorted(supply_hits),
+            "export_control": sorted(export_hits),
+            "product": sorted(product_hits),
+            "competition": sorted(competition_hits),
+            "latest": sorted(latest_hits),
+        },
+    }
+
+
+def _metadata_boosts_for_query(
+    intent: dict,
+    chunk: dict,
+    params: Optional[MetadataRerankParams] = None,
+) -> float:
+    """Return an explainable metadata-only boost for one chunk.
+
+    Keep this helper small: query understanding lives in `_query_intent`,
+    lexical matching lives in `_lexical_boost_for_chunk`, and this function
+    only reads filing metadata/debug fields that already exist on a chunk.
+    """
+    params = params or MetadataRerankParams()
+    boost = 1.0
+
+    section = str(chunk.get("section") or "")
+    boost *= intent.get("preferred_sections", {}).get(section, 1.0)
+
+    ticker = str(chunk.get("ticker") or "").upper()
+    if ticker in intent.get("tickers", []):
+        boost *= params.ticker_boost
+    
+    matched_cluster_count = int(chunk.get("matched_cluster_count") or 0)
+    if matched_cluster_count > 1:
+        boost *= min(
+            params.cluster_boost_cap,
+            1.0 + (matched_cluster_count - 1) * params.cluster_boost_per_extra,
+        )
+
+    if intent.get("temporal_latest"):
+        fiscal_year = int(chunk.get("fiscal_year") or 0)
+        if fiscal_year >= params.latest_year_min:
+            boost *= params.latest_year_boost
+
+    return boost
+
+
+def _broad_chunk_penalty(
+    query: str,
+    chunk: dict,
+    params: Optional[MetadataRerankParams] = None,
+) -> float:
+    """Return a very small penalty for broad chunks with weak query overlap.
+
+    The idea is not to punish long chunks aggressively. We only shave off a
+    little score when a chunk is verbose and does not echo much of the query.
+    If the chunk already matches multiple query terms, we leave it untouched.
+    """
+    params = params or MetadataRerankParams()
+    if not params.broad_penalty_enabled:
+        return 1.0
+
+    query_terms = _content_terms_for_query(query)
+    if not query_terms:
+        return 1.0
+
+    haystack = " ".join(
+        str(chunk.get(key) or "")
+        for key in ("chunk_id", "ticker", "section", "text")
+    ).lower()
+    matches = sum(1 for term in query_terms if term in haystack)
+    if matches >= 2:
+        return 1.0
+
+    text = str(chunk.get("text") or "")
+    token_count = len(re.findall(r"[a-z0-9]+", text.lower()))
+
+    if token_count <= params.broad_penalty_short_token_cutoff:
+        return 1.0
+
+    penalty = 1.0
+    if token_count > params.broad_penalty_mid_token_cutoff:
+        penalty *= params.broad_penalty_step
+    if token_count > params.broad_penalty_long_token_cutoff:
+        penalty *= params.broad_penalty_step
+    if matches == 0:
+        penalty *= params.broad_penalty_zero_match
+
+    return max(params.broad_penalty_floor, penalty)
+    
+
+
+def _rerank_chunks_by_metadata(
+    query: str,
+    chunks: list[dict],
+    cfg: Optional[Config] = None,
+    metadata_rerank_params: Optional[MetadataRerankParams] = None,
+) -> list[dict]:
+    params = metadata_rerank_params or MetadataRerankParams()
+    intent = _query_intent(query, cfg=cfg, params=params)
+    query_terms = _content_terms_for_query(query)
+
+    reranked: list[dict] = []
+    for chunk in chunks:
+        ppr_score = float(chunk.get("score") or 0.0) # chunk.score = PPR Score
+        lexical_boost = _lexical_boost_for_chunk(query_terms, chunk, params=params)
+        metadata_boost = _metadata_boosts_for_query(intent, chunk, params=params)
+        broad_penalty = _broad_chunk_penalty(query, chunk, params=params)
+
+        # Combine all boosts
+        final_score = ppr_score * lexical_boost * metadata_boost  * broad_penalty
+        new_chunk = dict(chunk)
+        new_chunk["score"] = final_score
+        new_chunk["rerank_score"] = final_score
+        new_chunk["rerank_debug"] = {
+            "ppr_score": ppr_score,
+            "lexical_boost": lexical_boost,
+            "metadata_boost": metadata_boost,
+            "broad_penalty": broad_penalty,
+            "metadata_rerank_params": params.to_dict(),
+        }
+        reranked.append(new_chunk)
+
+    return sorted(
+        reranked,
+        key=lambda c: (-c["rerank_score"], str(c.get("chunk_id", "")))
+    )
+
+
 def _section_boosts_for_query(query: str) -> dict[str, float]:
     """Infer section preference from the user's wording.
 
@@ -181,20 +465,53 @@ def _content_terms_for_query(query: str) -> set[str]:
     }
 
 
-def _lexical_boost_for_chunk(query_terms: set[str], chunk: dict) -> float:
+def _lexical_boost_for_chunk(
+    query_terms: set[str],
+    chunk: dict,
+    params: Optional[MetadataRerankParams] = None,
+) -> float:
     """Small boost when graph candidates contain answer-bearing query terms."""
     if not query_terms:
         return 1.0
 
+    params = params or MetadataRerankParams()
     haystack = " ".join(
         str(chunk.get(key) or "")
         for key in ("chunk_id", "ticker", "section", "text")
     ).lower()
     matches = sum(1 for term in query_terms if term in haystack)
 
-    return 1.0 + min(0.40, matches * 0.08)
+    return 1.0 + min(
+        params.lexical_boost_cap,
+        matches * params.lexical_match_weight,
+    )
 
+def _rerank_chunks(
+        query: str,
+        chunks: list[dict],
+        rerank_mode: str = "legacy",
+        cfg: Optional[Config] = None,
+        metadata_rerank_params: Optional[MetadataRerankParams] = None,
+) -> list[dict]:
+    """
+    Strategy Pattern for Select Reranking Method based on rerank_mode
+    """
+    if rerank_mode == "legacy":
+        return _rerank_chunks_by_query_intent(query, chunks, cfg=cfg)
+    elif rerank_mode == "metadata":
+        return _rerank_chunks_by_metadata(
+            query,
+            chunks,
+            cfg=cfg,
+            metadata_rerank_params=metadata_rerank_params,
+        )
+    elif rerank_mode == "semantic":
+        return _rerank_chunks_by_query_intent(query, chunks, cfg=cfg)
+    else:
+        raise ValueError(f"Unknown rerank_mode: {rerank_mode}")
+        
 
+    
 def _rerank_chunks_by_query_intent(
     query: str,
     chunks: list[dict],
@@ -306,19 +623,36 @@ def _cluster_aliases(
 # scores tie (without it, Neo4j storage order surfaces nondeterminism).
 _CYPHER_MAP_CHUNKS = """
 UNWIND $clusters AS cluster
-MATCH (c:Chunk)
-WHERE EXISTS {
-  MATCH (c)-[:MENTIONS]->(e:Entity)
-  WHERE e.name IN cluster.aliases
-}
-WITH c, cluster.score AS contribution
-WITH c, sum(contribution) AS score
+MATCH (c:Chunk)-[:MENTIONS]->(e:Entity)
+WHERE e.name IN cluster.aliases
+WITH
+  c,
+  cluster.aliases AS cluster_aliases,
+  cluster.score AS cluster_score,
+  collect(DISTINCT e.name) AS matched_aliases_for_cluster
+WITH
+  c,
+  sum(cluster_score) AS score,
+  collect({
+    cluster_aliases: cluster_aliases,
+    matched_aliases: matched_aliases_for_cluster,
+    cluster_score: cluster_score
+  }) AS matched_clusters,
+  collect(matched_aliases_for_cluster) AS matched_alias_groups
+WITH
+  c,
+  score,
+  matched_clusters,
+  reduce(acc = [], group IN matched_alias_groups | acc + group) AS matched_aliases
 RETURN c.chunk_id AS chunk_id,
-       c.text     AS text,
-       c.ticker   AS ticker,
+       c.text AS text,
+       c.ticker AS ticker,
        c.fiscal_year AS fiscal_year,
-       c.section  AS section,
-       score
+       c.section AS section,
+       score,
+       matched_aliases,
+       matched_clusters,
+       size(matched_clusters) AS matched_cluster_count
 ORDER BY score DESC, chunk_id ASC
 LIMIT $top_k
 """
@@ -366,6 +700,7 @@ def _map_chunks(
             ))
     finally:
         driver.close()
+    
 
     return [
         {
@@ -375,6 +710,9 @@ def _map_chunks(
             "fiscal_year": r["fiscal_year"],
             "section":     r["section"],
             "score":       r["score"],
+            "matched_aliases": r["matched_aliases"],
+            "matched_cluster_count": r["matched_cluster_count"],
+            "matched_clusters": r["matched_clusters"],
         }
         for r in rows
     ]
@@ -384,12 +722,11 @@ def _collapse_clusters(
     ppr_entities: list[dict],
     cluster_map: dict[str, list[str]],
 ) -> list[dict]:
-    """Group PPR entities by alias cluster; SUM PPR scores per cluster.
-
-    Two PPR entities that are aliases (e.g. `amd` + `advanced micro devices`)
-    yield ONE cluster entry whose `score` is the sum of their PPR masses —
-    recovering the AMD concept's total mass that Phase B2 left fragmented
-    across alias nodes.
+    """
+    entity + clus_name => SUM up each cluster's aliases and return
+    [{group , group_score}] 
+    
+    Group PPR entities by alias cluster; SUM PPR scores per cluster.
 
     Args:
         ppr_entities: Output of `run_ppr` — `[{name, type, score}, ...]`.
@@ -433,9 +770,6 @@ def _select_seed_entities(
 ) -> list[dict]:
     """Select seed entities for graph retrieval diagnostics.
 
-    `graph_search` keeps the production default as Query-to-Triple, but the
-    Phase T-R evaluator needs to compare node/triple/hybrid seed loss without
-    duplicating the graph pipeline.
     """
     if seed_mode == "triple":
         return query_to_triple_seeds(
@@ -467,24 +801,29 @@ def trace_graph_search(
     top_k_triples: int = 8,
     use_expansion: bool = True,
     seed_mode: str = "triple",
+    rerank_mode: str = "legacy",
+    candidate_pool_k: int = 100,
+    metadata_rerank_params: Optional[MetadataRerankParams] = None,
     cfg: Optional[Config] = None,
 ) -> dict:
     """Run graph retrieval and return both chunks and stage-level trace.
 
-    This is the same pipeline as `graph_search`, with extra intermediate
-    artifacts for Phase T-R bottleneck attribution:
     query expansion -> seeds -> PPR entities -> alias clusters -> chunk
     candidates -> intent reranked chunks.
     """
     print(f"[graph_search] query={query!r} "
           f"top_k_chunks={top_k_chunks} top_k_entities={top_k_entities}")
 
+    metadata_rerank_params = metadata_rerank_params or MetadataRerankParams()
     effective_query = expand_query(query, cfg=cfg) if use_expansion else query
     trace = {
         "query": query,
         "effective_query": effective_query,
         "use_expansion": use_expansion,
         "seed_mode": seed_mode,
+        "rerank_mode": rerank_mode,
+        "candidate_pool_k": candidate_pool_k,
+        "metadata_rerank_params": metadata_rerank_params.to_dict(),
         "top_k_chunks": top_k_chunks,
         "top_k_entities": top_k_entities,
         "top_k_triples": top_k_triples,
@@ -531,12 +870,13 @@ def trace_graph_search(
     print(f"[graph_search] {len(ppr_entities)} PPR entities → "
           f"{len(cluster_entries)} unique clusters")
 
-    candidate_k = max(top_k_chunks, min(top_k_chunks * 4, 40))
-    chunk_candidates = _map_chunks(cluster_entries, top_k=candidate_k, cfg=cfg)
+    chunk_candidates = _map_chunks(cluster_entries, top_k=candidate_pool_k, cfg=cfg)
     trace["chunk_candidates"] = chunk_candidates
-    chunks = _rerank_chunks_by_query_intent(
+    chunks = _rerank_chunks(
         effective_query,
         chunk_candidates,
+        rerank_mode=rerank_mode,
+        metadata_rerank_params=metadata_rerank_params,
         cfg=cfg,
     )[:top_k_chunks]
     trace["chunks"] = chunks
@@ -552,6 +892,9 @@ def graph_search(
     top_k_triples: int = 8,
     use_expansion: bool = True,
     seed_mode: str = "triple",
+    rerank_mode: str = "legacy",
+    candidate_pool_k: int = 100,
+    metadata_rerank_params: Optional[MetadataRerankParams] = None,
     cfg: Optional[Config] = None,
 ) -> list[dict]:
     """Full graph_search pipeline: query → top-k chunks ranked by PPR mass.
@@ -597,69 +940,19 @@ def graph_search(
         top_k_triples=top_k_triples,
         use_expansion=use_expansion,
         seed_mode=seed_mode,
+        rerank_mode=rerank_mode,
+        candidate_pool_k=candidate_pool_k,
+        metadata_rerank_params=metadata_rerank_params,
         cfg=cfg,
     )
     return trace["chunks"]
 
 
 if __name__ == "__main__":
-    # --- C1 smoke test: alias clustering ---
-    test_names = [
-        "amd",                          # expect 4 aliases (AMD cluster)
-        "advanced micro devices",       # same cluster as 'amd'
-        "amd ryzen",                    # likely alone (PRODUCT)
-        "tsmc",                         # likely alone (COMP)
-        "nonexistent_entity_xyz",       # absent in graph — should drop
+    #debug map_chunks
+    fake_clusters_entries =  [
+        {"aliases": ["amd"], "score": 1.0},
+        {"aliases": ["tsmc"], "score": 1.0},
     ]
-    print(f"[C1] resolving {len(test_names)} entities...\n")
-    clusters = _cluster_aliases(test_names)
 
-    for name in test_names:
-        cluster = clusters.get(name)
-        if cluster is None:
-            print(f"  '{name}' → NOT FOUND in graph")
-            continue
-        marker = "  multi-alias" if len(cluster) > 1 else ""
-        print(f"  '{name}' → {len(cluster)} alias(es){marker}")
-        for alias in cluster:
-            print(f"    - {alias}")
-        print()
-
-    # --- C2 smoke test: cluster → chunks ---
-    # Two synthetic clusters with arbitrary PPR-style scores. The AMD cluster
-    # carries the full alias list from C1 so chunks mentioning ANY alias get
-    # the cluster's score added exactly once.
-    print(f"{'=' * 60}\n[C2] mapping clusters → top-5 chunks\n")
-    fake_clusters = [
-        {"aliases": clusters.get("amd", ["amd"]),   "score": 2.0},
-        {"aliases": clusters.get("tsmc", ["tsmc"]), "score": 1.0},
-    ]
-    print(f"  Input clusters:")
-    for c in fake_clusters:
-        print(f"    aliases={c['aliases']!r}  score={c['score']}")
-
-    chunks = _map_chunks(fake_clusters, top_k=5)
-    print(f"\n  Top-{len(chunks)} chunks by aggregated score:")
-    for ch in chunks:
-        preview = ch["text"][:120].replace("\n", " ")
-        print(f"    score={ch['score']:.3f}  "
-              f"[{ch['ticker']} FY{ch['fiscal_year']} {ch['section']}]")
-        print(f"      id: {ch['chunk_id']}")
-        print(f"      └─ {preview}...")
-        print()
-
-    # --- C3 end-to-end test: 4-query suite (Phase C1b C3 validation set) ---
-    print(f"{'=' * 60}\n[C3] full graph_search pipeline\n")
-    for q in [
-        "AMD",
-        "TSMC supply chain",
-        "china semiconductor ban",
-        "Hopper data center segment revenue",
-    ]:
-        print(f"\n--- Query: {q!r} ---")
-        results = graph_search(q, top_k_chunks=3)
-        for i, ch in enumerate(results, start=1):
-            preview = ch["text"][:120].replace("\n", " ")
-            print(f"  #{i}  score={ch['score']:.3f}  "
-                  f"[{ch['ticker']} FY{ch['fiscal_year']} {ch['section']}]")
-            print(f"      └─ {preview}...")
+    _map_chunks(fake_clusters_entries, top_k=5)

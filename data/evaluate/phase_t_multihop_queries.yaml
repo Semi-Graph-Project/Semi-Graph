@@ -18,10 +18,17 @@ queries:
     gold_entities: ["amd", "tsmc"]
     gold_chunks:
       - AMD_2026_Item_1A_0008_e84e4130
+      - AMD_2025_Item_1A_0009_57657610
+      - AMD_2025_Item_1A_0011_10eec6d1
     answer_points:
       - AMD depends on third-party manufacturing partners such as TSMC.
       - Capacity, wafer supply, or yield issues at these partners can materially affect AMD.
-    notes: "Known from Phase D E2E probe as strong AMD Item 1A risk evidence."
+    notes: >
+      Gold audit 2026-07-07: original 2026 Item 1A chunk is valid, but the
+      2025 Item 1A chunks are also direct evidence for AMD dependency on
+      TSMC/third-party foundries, wafer supply, capacity, and yield risks.
+      AMD_2025_Item_1_0009_c842eea0 is useful supporting business context
+      about manufacturing arrangements, but is not direct Item 1A risk evidence.
 
   - id: T002
     query: "Which foundry partner manufactures the Hopper architecture chips?"
@@ -31,12 +38,29 @@ queries:
     gold_chunks:
       - NVDA_2024_Item_1_0007_bae70036
       - NVDA_2025_Item_1_0008_a4407f7e
-      - AMD_2025_Item_1_0009_c842eea0
-      - AMD_2026_Item_1_0010_460dfa17
-      - INTC_2026_Item_1_0008_c74f560f
+      - NVDA_2026_Item_1_0007_bf6a51b6
+      - NVDA_2024_Item_7_0007_d25e117d
+      - NVDA_2025_Item_7_0000_78a2a641
+      - NVDA_2025_Item_7_0003_d53d3047
     answer_points:
       - Hopper is associated with NVIDIA.
       - TSMC appears as an important foundry/manufacturing partner in the supply chain.
+    gold_evidence_groups:
+      hopper_evidence:
+        - NVDA_2024_Item_7_0007_d25e117d
+        - NVDA_2025_Item_7_0000_78a2a641
+        - NVDA_2025_Item_7_0003_d53d3047
+      supplier_evidence:
+        - NVDA_2024_Item_1_0007_bae70036
+        - NVDA_2025_Item_1_0008_a4407f7e
+        - NVDA_2026_Item_1_0007_bf6a51b6
+    notes: >
+      Gold audit 2026-07-07: no single chunk in Neo4j contains both Hopper
+      and TSMC. Treat this as a two-evidence multi-hop query: Hopper chunks
+      establish the NVIDIA product/platform, and NVIDIA Item 1 supplier chunks
+      establish TSMC/Samsung foundry wafer manufacturing. Removed AMD/INTC
+      chunks from direct gold because they are competitor/manufacturing context,
+      not evidence for Hopper's foundry partner.
 
   - id: T003
     query: "Who produces the dense memory chips that power modern AI training accelerators?"
@@ -48,9 +72,24 @@ queries:
       - MU_2025_Item_1A_0004_836bee10
       - NVDA_2024_Item_1_0007_bae70036
       - NVDA_2025_Item_1_0008_a4407f7e
+      - NVDA_2026_Item_1_0007_bf6a51b6
     answer_points:
       - High-bandwidth memory is important for AI accelerators.
       - Micron is one producer/supplier of these memory products.
+    gold_evidence_groups:
+      direct_answer:
+        - MU_2023_Item_1A_0003_92be33e3
+        - MU_2025_Item_1A_0004_836bee10
+      supplier_context:
+        - NVDA_2024_Item_1_0007_bae70036
+        - NVDA_2025_Item_1_0008_a4407f7e
+        - NVDA_2026_Item_1_0007_bf6a51b6
+    notes: >
+      Gold audit 2026-07-07: the Micron Item 1A chunks are the direct answer
+      evidence. The NVIDIA Item 1 chunks are valid supporting evidence from the
+      candidate pool because they explicitly name Micron as a memory supplier.
+      RMBS HBM chunks are supportive ecosystem context, but not direct proof of
+      who produces the memory chips, so they stay out of direct gold for now.
 
   - id: T004
     query: "What AI accelerator product line does the main x86 desktop CPU rival of Intel offer?"

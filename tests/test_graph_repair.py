@@ -1,83 +1,119 @@
-"""Unit tests for deterministic graph repair row construction."""
+"""Unit tests for evidence-grounded graph repair helpers."""
 from __future__ import annotations
 
 from semigraph.offline.graph_repair import (
-    _build_filer_anchor_rows,
-    _build_item_1a_risk_bridge_rows,
+    EntityRef,
+    RepairChunk,
+    _evidence_in_text,
+    _validate_llm_relationships,
 )
 
 
-def test_build_filer_anchor_rows_maps_entity_types_to_conservative_edges():
-    rows = _build_filer_anchor_rows(
-        [
-            {
-                "source_chunk": "KLAC_2024_Item_1_0001",
-                "section": "Item_1",
-                "target": "process control products",
-                "target_type": "PRODUCT",
-            },
-            {
-                "source_chunk": "KLAC_2024_Item_1A_0002",
-                "section": "Item_1A",
-                "target": "export controls",
-                "target_type": "RISK_FACTOR",
-            },
-            {
-                "source_chunk": "KLAC_2024_Item_1_0003",
-                "section": "Item_1",
-                "target": "kla",
-                "target_type": "ORG",
-            },
-        ],
-        filer_name="kla",
+def _chunk() -> RepairChunk:
+    return RepairChunk(
+        chunk_id="KLAC_2024_Item_1_0001",
         ticker="KLAC",
         fiscal_year="2024",
-        filing_type="10K",
-        method="deterministic_graph_repair_v1",
-        run_id="run1",
-        created_at="2026-07-03T00:00:00+00:00",
-    )
-
-    assert [(row["rel_type"], row["target"]) for row in rows] == [
-        ("PRODUCES", "process control products"),
-        ("FACES", "export controls"),
-    ]
-    assert rows[0]["source"] == "kla"
-    assert rows[0]["source_type"] == "ORG"
-    assert rows[0]["properties"]["repair_rule"] == "filer_anchor"
-    assert rows[0]["properties"]["source_chunk"] == "KLAC_2024_Item_1_0001"
-
-
-def test_build_item_1a_risk_bridge_rows_links_risk_to_impacted_targets():
-    rows = _build_item_1a_risk_bridge_rows(
-        [
-            {
-                "source_chunk": "ENTG_2024_Item_1A_0001",
-                "section": "Item_1A",
-                "source": "supply chain disruption",
-                "source_type": "RISK_FACTOR",
-                "target": "revenue",
-                "target_type": "FIN_METRIC",
-            },
-            {
-                "source_chunk": "ENTG_2024_Item_1A_0001",
-                "section": "Item_1A",
-                "source": "supply chain disruption",
-                "source_type": "RISK_FACTOR",
-                "target": "taiwan",
-                "target_type": "GPE",
-            },
+        filing_type="10-K",
+        section="Item_1",
+        text=(
+            "KLA develops and manufactures process control products. "
+            "The company competes with Applied Materials in some markets."
+        ),
+        entities=[
+            EntityRef(eid="node-1", name="kla", type="ORG"),
+            EntityRef(eid="node-2", name="process control products", type="PRODUCT"),
+            EntityRef(eid="node-3", name="applied materials", type="COMP"),
         ],
-        ticker="ENTG",
-        fiscal_year="2024",
-        filing_type="10K",
-        method="deterministic_graph_repair_v1",
+        candidate_eids=frozenset({"node-2"}),
+    )
+
+
+def test_evidence_sentence_must_be_present_in_chunk_text():
+    assert _evidence_in_text(
+        "KLA develops and manufactures process control products.",
+        _chunk().text,
+    )
+    assert not _evidence_in_text(
+        "KLA sells products that are not named here.",
+        _chunk().text,
+    )
+
+
+def test_validate_llm_relationships_accepts_evidence_backed_candidate_edge():
+    rows, rejected, proposed = _validate_llm_relationships(
+        _chunk(),
+        {
+            "relationships": [
+                {
+                    "source_id": "E1",
+                    "target_id": "E2",
+                    "type": "PRODUCES",
+                    "evidence_sentence": "KLA develops and manufactures process control products.",
+                    "confidence": 0.82,
+                }
+            ]
+        },
+        method="llm_evidence_graph_repair_v1",
         run_id="run1",
         created_at="2026-07-03T00:00:00+00:00",
     )
 
+    assert proposed == 1
+    assert rejected == {}
     assert len(rows) == 1
-    assert rows[0]["source"] == "supply chain disruption"
-    assert rows[0]["rel_type"] == "NEGATIVELY_IMPACTS"
-    assert rows[0]["target"] == "revenue"
-    assert rows[0]["properties"]["repair_rule"] == "item_1a_risk_bridge"
+    assert rows[0]["source"] == "kla"
+    assert rows[0]["target"] == "process control products"
+    assert rows[0]["rel_type"] == "PRODUCES"
+    assert rows[0]["properties"]["repair_method"] == "llm_evidence_graph_repair_v1"
+    assert rows[0]["properties"]["evidence_sentence"] == (
+        "KLA develops and manufactures process control products."
+    )
+
+
+def test_validate_llm_relationships_rejects_weak_or_incompatible_edges():
+    rows, rejected, proposed = _validate_llm_relationships(
+        _chunk(),
+        {
+            "relationships": [
+                {
+                    "source_id": "E1",
+                    "target_id": "E3",
+                    "type": "COMPETES_WITH",
+                    "evidence_sentence": "The company competes with Applied Materials in some markets.",
+                },
+                {
+                    "source_id": "E2",
+                    "target_id": "E1",
+                    "type": "PRODUCES",
+                    "evidence_sentence": "KLA develops and manufactures process control products.",
+                },
+                {
+                    "source_id": "E2",
+                    "target_id": "E3",
+                    "type": "PRODUCES",
+                    "evidence_sentence": "KLA develops and manufactures process control products.",
+                },
+                {
+                    "source_id": "E1",
+                    "target_id": "E2",
+                    "type": "PRODUCES",
+                    "evidence_sentence": "This sentence is not in the chunk.",
+                },
+            ]
+        },
+        method="llm_evidence_graph_repair_v1",
+        run_id="run1",
+        created_at="2026-07-03T00:00:00+00:00",
+    )
+
+    assert proposed == 4
+    assert len(rows) == 1
+    assert rows[0]["source"] == "kla"
+    assert rows[0]["target"] == "process control products"
+    assert rows[0]["properties"]["repair_direction_corrected"] is True
+    assert rejected == {
+        "no_candidate_endpoint": 1,
+        "incompatible_relationship_type": 1,
+        "evidence_not_found_in_chunk": 1,
+    }

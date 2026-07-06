@@ -21,13 +21,53 @@ DEFAULT_QUERY_FILE = ROOT / "data" / "evaluate" / "phase_t_multihop_queries.yaml
 DEFAULT_OUTPUT_DIR = ROOT / "analytics"
 TOOL_CHOICES = ("vector", "graph", "hybrid")
 SEED_MODE_CHOICES = ("triple", "node", "hybrid")
-DEFAULT_REEXTRACT_TICKERS = ("AMD", "NVDA", "AVGO", "RMBS")
+RERANK_MODE_CHOICES = ("legacy", "metadata")
+DEFAULT_TICKER_SCOPE = (
+    "AMAT",
+    "AMD",
+    "AMKR",
+    "AVGO",
+    "COHR",
+    "ENTG",
+    "INTC",
+    "KLAC",
+    "LRCX",
+    "MU",
+    "NVDA",
+    "QCOM",
+    "RMBS",
+    "TXN",
+)
 
 
 def _get_config():
     from semigraph.config import get_config
 
     return get_config()
+
+
+def _build_metadata_rerank_params(args):
+    from semigraph.online.graph_search import MetadataRerankParams
+
+    return MetadataRerankParams(
+        risk_section_boost=args.metadata_risk_section_boost,
+        business_section_boost=args.metadata_business_section_boost,
+        financial_section_boost=args.metadata_financial_section_boost,
+        ticker_boost=args.metadata_ticker_boost,
+        cluster_boost_per_extra=args.metadata_cluster_boost_per_extra,
+        cluster_boost_cap=args.metadata_cluster_boost_cap,
+        latest_year_boost=args.metadata_latest_year_boost,
+        latest_year_min=args.metadata_latest_year_min,
+        lexical_match_weight=args.metadata_lexical_match_weight,
+        lexical_boost_cap=args.metadata_lexical_boost_cap,
+        broad_penalty_enabled=not args.disable_broad_penalty,
+        broad_penalty_floor=args.metadata_broad_penalty_floor,
+        broad_penalty_step=args.metadata_broad_penalty_step,
+        broad_penalty_zero_match=args.metadata_broad_penalty_zero_match,
+        broad_penalty_short_token_cutoff=args.metadata_broad_penalty_short_cutoff,
+        broad_penalty_mid_token_cutoff=args.metadata_broad_penalty_mid_cutoff,
+        broad_penalty_long_token_cutoff=args.metadata_broad_penalty_long_cutoff,
+    )
 
 
 def _get_corpus_chunk_count(cfg) -> int:
@@ -69,6 +109,12 @@ def _get_tool(
     tool_name: str,
     use_graph_expansion: bool = True,
     graph_seed_mode: str = "triple",
+    graph_rerank_mode: str = "legacy",
+    candidate_pool_k: int = 100,
+    graph_top_k_entities: int = 20,
+    graph_top_k_triples: int = 8,
+    graph_damping: float = 0.7,
+    metadata_rerank_params=None,
 ):
     if tool_name == "vector":
         from semigraph.online.vector_search import vector_search
@@ -83,6 +129,12 @@ def _get_tool(
                 top_k_chunks=top_k_chunks,
                 use_expansion=use_graph_expansion,
                 seed_mode=graph_seed_mode,
+                rerank_mode=graph_rerank_mode,
+                candidate_pool_k=candidate_pool_k,
+                top_k_entities=graph_top_k_entities,
+                top_k_triples=graph_top_k_triples,
+                damping=graph_damping,
+                metadata_rerank_params=metadata_rerank_params,
                 cfg=cfg,
             )
 
@@ -96,6 +148,12 @@ def _get_tool(
                 top_k_chunks=top_k_chunks,
                 graph_use_expansion=use_graph_expansion,
                 graph_seed_mode=graph_seed_mode,
+                graph_rerank_mode=graph_rerank_mode,
+                candidate_pool_k=candidate_pool_k,
+                graph_top_k_entities=graph_top_k_entities,
+                graph_top_k_triples=graph_top_k_triples,
+                graph_damping=graph_damping,
+                metadata_rerank_params=metadata_rerank_params,
                 cfg=cfg,
             )
 
@@ -154,6 +212,23 @@ def _classify_subset(
             return "mixed_subset"
         return "reextract_subset"
     return "legacy_subset"
+
+
+def _resolve_ticker_scope(raw_value: str, known_tickers: set[str]) -> set[str]:
+    """Resolve the subset-reporting ticker scope.
+
+    `all` means the current config's corpus tickers. This is the default now
+    that the new extraction/repair pipeline is treated as the normal corpus.
+    A comma-separated list is still accepted for historical comparisons.
+    """
+    value = str(raw_value or "").strip()
+    if not value or value.lower() == "all":
+        return set(known_tickers)
+    return {
+        ticker.strip().upper()
+        for ticker in value.split(",")
+        if ticker.strip()
+    }
 
 
 def _chunk_ids(chunks: list[dict], k: int) -> list[str]:
@@ -323,6 +398,12 @@ def _run_tool(
     cfg,
     use_graph_expansion: bool,
     graph_seed_mode: str,
+    graph_rerank_mode: str,
+    candidate_pool_k: int,
+    graph_top_k_entities: int,
+    graph_top_k_triples: int,
+    graph_damping: float,
+    metadata_rerank_params,
 ) -> tuple[list[dict], str | None, float, dict | None]:
     started = time.time()
     try:
@@ -335,6 +416,12 @@ def _run_tool(
                 use_expansion=use_graph_expansion,
                 seed_mode=graph_seed_mode,
                 cfg=cfg,
+                top_k_entities=graph_top_k_entities,
+                top_k_triples=graph_top_k_triples,
+                damping=graph_damping,
+                rerank_mode=graph_rerank_mode,
+                candidate_pool_k=candidate_pool_k,
+                metadata_rerank_params=metadata_rerank_params,
             )
             return trace["chunks"], None, time.time() - started, trace
 
@@ -342,6 +429,12 @@ def _run_tool(
             tool_name,
             use_graph_expansion=use_graph_expansion,
             graph_seed_mode=graph_seed_mode,
+            graph_rerank_mode=graph_rerank_mode,
+            candidate_pool_k=candidate_pool_k,
+            graph_top_k_entities=graph_top_k_entities,
+            graph_top_k_triples=graph_top_k_triples,
+            graph_damping=graph_damping,
+            metadata_rerank_params=metadata_rerank_params,
         )(query, top_k_chunks=top_k, cfg=cfg)
         return chunks, None, time.time() - started, None
     except Exception as exc:
@@ -360,6 +453,12 @@ def _evaluate_query(
     corpus_size: int,
     subset: str,
     existing_entities: set[str],
+    graph_rerank_mode: str,
+    candidate_pool_k: int,
+    graph_top_k_entities: int,
+    graph_top_k_triples: int,
+    graph_damping: float,
+    metadata_rerank_params,
 ) -> dict:
     query = str(item.get("query", "")).strip()
     gold_chunks = [str(cid) for cid in item.get("gold_chunks", []) if cid]
@@ -409,6 +508,12 @@ def _evaluate_query(
                 cfg=cfg,
                 use_graph_expansion=use_graph_expansion,
                 graph_seed_mode=graph_seed_mode,
+                graph_rerank_mode=graph_rerank_mode,
+                candidate_pool_k=candidate_pool_k,
+                graph_top_k_entities=graph_top_k_entities,
+                graph_top_k_triples=graph_top_k_triples,
+                graph_damping=graph_damping,
+                metadata_rerank_params=metadata_rerank_params,
             )
 
         returned_at_k = _chunk_ids(chunks, top_k)
@@ -663,19 +768,50 @@ def _write_markdown(
     corpus_size: int,
     use_graph_expansion: bool,
     graph_seed_mode: str,
+    graph_rerank_mode: str,
+    candidate_pool_k: int,
+    graph_top_k_entities: int,
+    graph_top_k_triples: int,
+    graph_damping: float,
+    metadata_rerank_params,
+    run_config: dict | None = None,
 ) -> None:
     lines: list[str] = []
     lines.append("# Phase T Retrieval Baseline")
     lines.append("")
     lines.append(f"Generated: {datetime.now().isoformat(timespec='seconds')}")
-    lines.append(f"Query file: `{query_file}`")
-    lines.append(f"Tools: `{', '.join(tools)}`")
-    lines.append(f"top_k: `{top_k}`")
-    lines.append(f"oracle_k: `{oracle_k}`")
-    lines.append(f"dry_run: `{dry_run}`")
-    lines.append(f"corpus_chunks: `{corpus_size}`")
-    lines.append(f"graph_use_expansion: `{use_graph_expansion}`")
-    lines.append(f"graph_seed_mode: `{graph_seed_mode}`")
+    lines.append("")
+    lines.append("## Run Configuration")
+    lines.append("")
+    config_rows = {
+        "script": "scripts/evaluate_retrieval_quality.py",
+        "command": " ".join(sys.argv),
+        "query_file": str(query_file),
+        "query_count": len(results),
+        "tools": ", ".join(tools),
+        "top_k": top_k,
+        "oracle_k": oracle_k,
+        "dry_run": dry_run,
+        "corpus_chunks": corpus_size,
+        "graph_use_expansion": use_graph_expansion,
+        "graph_seed_mode": graph_seed_mode,
+        "graph_rerank_mode": graph_rerank_mode,
+        "candidate_pool_k": candidate_pool_k,
+        "graph_top_k_entities": graph_top_k_entities,
+        "graph_top_k_triples": graph_top_k_triples,
+        "graph_damping": graph_damping,
+        "metadata_rerank_params": (
+            metadata_rerank_params.to_dict()
+            if hasattr(metadata_rerank_params, "to_dict")
+            else metadata_rerank_params
+        ),
+    }
+    if run_config:
+        config_rows.update(run_config)
+    for key, value in config_rows.items():
+        if isinstance(value, (list, tuple, set)):
+            value = ", ".join(str(item) for item in value)
+        lines.append(f"- {key}: `{value}`")
     lines.append("")
 
     lines.append("## Overall")
@@ -849,10 +985,66 @@ def main() -> None:
     )
     parser.add_argument(
         "--reextract-tickers",
-        default=",".join(DEFAULT_REEXTRACT_TICKERS),
-        help="Comma-separated tickers already re-extracted for subset reporting.",
+        default="all",
+        help=(
+            "Ticker scope for subset reporting. Default 'all' means every "
+            "ticker in config/default.yaml; pass a comma-separated list only "
+            "for historical comparisons."
+        ),
     )
+
+    parser.add_argument(
+        "--version-name",
+        "--version_name",
+        dest="version_name",
+        type=str,
+        default=None,
+    )
+
+    parser.add_argument(
+        "--graph-rerank-mode",
+        choices=RERANK_MODE_CHOICES,
+        default="legacy",
+    )
+
+    parser.add_argument(
+        "--candidate-pool-k",
+        type=int,
+        default=100,
+    )
+    parser.add_argument("--graph-top-k-entities", type=int, default=20)
+    parser.add_argument("--graph-top-k-triples", type=int, default=8)
+    parser.add_argument("--graph-damping", type=float, default=0.7)
+    parser.add_argument("--metadata-risk-section-boost", type=float, default=1.35)
+    parser.add_argument("--metadata-business-section-boost", type=float, default=1.18)
+    parser.add_argument("--metadata-financial-section-boost", type=float, default=1.28)
+    parser.add_argument("--metadata-ticker-boost", type=float, default=1.20)
+    parser.add_argument("--metadata-cluster-boost-per-extra", type=float, default=0.04)
+    parser.add_argument("--metadata-cluster-boost-cap", type=float, default=1.05)
+    parser.add_argument("--metadata-latest-year-boost", type=float, default=1.08)
+    parser.add_argument("--metadata-latest-year-min", type=int, default=2025)
+    parser.add_argument("--metadata-lexical-match-weight", type=float, default=0.10)
+    parser.add_argument("--metadata-lexical-boost-cap", type=float, default=0.55)
+    parser.add_argument("--disable-broad-penalty", action="store_true")
+    parser.add_argument("--metadata-broad-penalty-floor", type=float, default=0.92)
+    parser.add_argument("--metadata-broad-penalty-step", type=float, default=0.97)
+    parser.add_argument("--metadata-broad-penalty-zero-match", type=float, default=0.98)
+    parser.add_argument("--metadata-broad-penalty-short-cutoff", type=int, default=80)
+    parser.add_argument("--metadata-broad-penalty-mid-cutoff", type=int, default=140)
+    parser.add_argument("--metadata-broad-penalty-long-cutoff", type=int, default=220)
+
     args = parser.parse_args()
+    metadata_rerank_params = _build_metadata_rerank_params(args)
+    if args.version_name is None:
+        expansion_label = "expansion"
+        if args.no_llm_expansion:
+            expansion_label = "no_expansion"
+        args.version_name = (
+            f"{expansion_label}_{args.graph_rerank_mode}"
+            f"_pool{args.candidate_pool_k}"
+            f"_lex{args.metadata_lexical_match_weight:g}"
+            f"_ticker{args.metadata_ticker_boost:g}"
+        )
 
     queries = _load_queries(args.queries)
     if args.limit is not None:
@@ -860,21 +1052,18 @@ def main() -> None:
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    md_path = args.output_dir / f"phase_t_retrieval_baseline_{stamp}.md"
-    jsonl_path = args.output_dir / f"phase_t_retrieval_details_{stamp}.jsonl"
+    # md_path = args.output_dir / f"phase_t_retrieval_baseline_{args.version_name}_{stamp}.md"
+    md_path = args.output_dir / f"experiment/phase_t_retrieval_baseline_{args.version_name}_{stamp}.md"
+    jsonl_path = args.output_dir / f"phase_t_retrieval_details_{args.version_name}_{stamp}.jsonl"
 
     cfg = None if args.dry_run else _get_config()
     corpus_size = 0 if args.dry_run else _get_corpus_chunk_count(cfg)
     known_tickers = {
         ticker.upper()
-        for ticker in (getattr(cfg, "tickers", None) or DEFAULT_REEXTRACT_TICKERS)
+        for ticker in (getattr(cfg, "tickers", None) or DEFAULT_TICKER_SCOPE)
         if ticker
     }
-    reextract_tickers = {
-        ticker.strip().upper()
-        for ticker in args.reextract_tickers.split(",")
-        if ticker.strip()
-    }
+    reextract_tickers = _resolve_ticker_scope(args.reextract_tickers, known_tickers)
     all_gold_entities = sorted({
         entity
         for item in queries
@@ -899,6 +1088,12 @@ def main() -> None:
             corpus_size=corpus_size,
             subset=_classify_subset(item, reextract_tickers, known_tickers),
             existing_entities=existing_entities,
+            graph_rerank_mode=args.graph_rerank_mode,
+            candidate_pool_k=args.candidate_pool_k,
+            graph_top_k_entities=args.graph_top_k_entities,
+            graph_top_k_triples=args.graph_top_k_triples,
+            graph_damping=args.graph_damping,
+            metadata_rerank_params=metadata_rerank_params,
         )
         for item in queries
     ]
@@ -916,6 +1111,23 @@ def main() -> None:
         corpus_size=corpus_size,
         use_graph_expansion=not args.no_llm_expansion,
         graph_seed_mode=args.graph_seed_mode,
+        graph_rerank_mode=args.graph_rerank_mode,
+        candidate_pool_k=args.candidate_pool_k,
+        graph_top_k_entities=args.graph_top_k_entities,
+        graph_top_k_triples=args.graph_top_k_triples,
+        graph_damping=args.graph_damping,
+        metadata_rerank_params=metadata_rerank_params,
+        run_config={
+            "version_name": args.version_name,
+            "details_jsonl": str(jsonl_path),
+            "reextract_tickers_arg": args.reextract_tickers,
+            "resolved_ticker_scope": sorted(reextract_tickers),
+            "known_tickers": sorted(known_tickers),
+            "scored_queries": sum(1 for row in results if row["gold_chunks"]),
+            "unscored_queries": sum(1 for row in results if not row["gold_chunks"]),
+            "existing_gold_entities": len(existing_entities),
+            "total_gold_entities": len(all_gold_entities),
+        },
     )
     _write_jsonl(jsonl_path, results)
 
