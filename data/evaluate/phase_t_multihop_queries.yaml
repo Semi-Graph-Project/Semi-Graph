@@ -20,6 +20,11 @@ queries:
       - AMD_2026_Item_1A_0008_e84e4130
       - AMD_2025_Item_1A_0009_57657610
       - AMD_2025_Item_1A_0011_10eec6d1
+    gold_evidence_groups:
+      amd_tsmc_supply_risk:
+        - AMD_2026_Item_1A_0008_e84e4130
+        - AMD_2025_Item_1A_0009_57657610
+        - AMD_2025_Item_1A_0011_10eec6d1
     answer_points:
       - AMD depends on third-party manufacturing partners such as TSMC.
       - Capacity, wafer supply, or yield issues at these partners can materially affect AMD.
@@ -98,40 +103,126 @@ queries:
     gold_entities: ["intel", "amd", "amd instinct"]
     gold_chunks:
       - AMD_2026_Item_1_0003_ea53a6a5
+      - AMD_2026_Item_1_0007_f252541b
+      - AMD_2025_Item_1_0006_551768e4
+      - AMD_2024_Item_1_0009_01379c5a
+      - INTC_2026_Item_1_0008_c74f560f
+      - AMD_2024_Item_1_0011_49024c2d
     answer_points:
       - AMD is Intel's x86 CPU rival.
       - AMD offers Instinct AI accelerator products.
+    gold_evidence_groups:
+      direct_answer:
+        - AMD_2026_Item_1_0003_ea53a6a5
+        - AMD_2026_Item_1_0007_f252541b
+        - AMD_2025_Item_1_0006_551768e4
+        - AMD_2024_Item_1_0009_01379c5a
+      competitor_context:
+        - INTC_2026_Item_1_0008_c74f560f
+        - AMD_2024_Item_1_0011_49024c2d
+    notes: >
+      Gold audit 2026-07-07: original 2026 Item 1 chunk is valid, but the
+      2026/2025/2024 AMD product-brand chunks are more direct evidence because
+      they explicitly name AMD Instinct accelerators. Intel/AMD competition
+      chunks are useful context for the "x86 desktop CPU rival of Intel" hop,
+      but they do not answer the product-line part by themselves.
 
   - id: T005
     query: "What political risks affect the home country of the leading pure-play semiconductor foundry?"
     type: geo_via_supplier
     gold_tools: ["graph", "hybrid"]
     gold_entities: ["tsmc", "taiwan", "political risk"]
-    gold_chunks: []
+    gold_chunks:
+      - NVDA_2025_Item_1_0008_a4407f7e
+      - NVDA_2026_Item_1_0007_bf6a51b6
+      - AMD_2025_Item_1_0009_c842eea0
+      - AMD_2026_Item_1_0010_460dfa17
+      - AMD_2025_Item_1A_0032_0a1cf7f3
+      - AMD_2026_Item_1A_0032_c870df0c
+      - NVDA_2024_Item_1A_0022_b1d57eb9
+    gold_evidence_groups:
+      foundry_identity:
+        - NVDA_2025_Item_1_0008_a4407f7e
+        - NVDA_2026_Item_1_0007_bf6a51b6
+        - AMD_2025_Item_1_0009_c842eea0
+        - AMD_2026_Item_1_0010_460dfa17
+      taiwan_political_risk:
+        - AMD_2025_Item_1A_0032_0a1cf7f3
+        - AMD_2026_Item_1A_0032_c870df0c
+        - NVDA_2024_Item_1A_0022_b1d57eb9
     answer_points:
       - TSMC is linked to Taiwan.
       - Taiwan-related geopolitical or regional instability risks are relevant.
-    notes: "Discovery-only until verified gold chunks are pinned."
+    notes: >
+      Verified against Neo4j on 2026-07-07. Treat this as a two-evidence
+      multi-hop query: foundry_identity chunks establish TSMC as the relevant
+      Taiwan Semiconductor Manufacturing foundry, while taiwan_political_risk
+      chunks establish China/Taiwan geopolitical or restriction-related supply
+      risks. QCOM/RMBS/INTC candidate chunks about generic political or
+      international risk are useful context but not direct gold evidence.
 
   - id: T006
     query: "Which Asian semiconductor manufacturer supplies wafers to NVIDIA's GPU production?"
     type: supplier_via_company
     gold_tools: ["graph", "hybrid"]
-    gold_entities: ["nvidia", "tsmc", "samsung", "sk hynix"]
-    gold_chunks: []
+    gold_entities: ["nvidia", "tsmc", "samsung", "semiconductor wafers"]
+    gold_chunks:
+      - NVDA_2024_Item_1_0007_bae70036
+      - NVDA_2025_Item_1_0008_a4407f7e
+      - NVDA_2026_Item_1_0007_bf6a51b6
+    gold_evidence_groups:
+      wafer_foundry_supplier:
+        - NVDA_2024_Item_1_0007_bae70036
+        - NVDA_2025_Item_1_0008_a4407f7e
+        - NVDA_2026_Item_1_0007_bf6a51b6
     answer_points:
       - NVIDIA relies on external manufacturing/supply partners.
-      - TSMC/Samsung/SK Hynix may appear as relevant Asian supply-chain entities.
+      - TSMC and Samsung are named foundries used to produce NVIDIA semiconductor wafers.
+    notes: >
+      Verified against Neo4j on 2026-07-07. These chunks directly state that
+      NVIDIA uses foundries such as Taiwan Semiconductor Manufacturing Company
+      Limited (TSMC) and Samsung Electronics to produce semiconductor wafers.
+      SK Hynix and Micron appear in the same passages as memory suppliers, not
+      wafer foundry suppliers, so they are not direct gold entities for this
+      query.
 
   - id: T007
     query: "What graphics product line does AMD offer to compete with NVIDIA's RTX series?"
     type: competitor_product
     gold_tools: ["graph", "hybrid"]
     gold_entities: ["amd", "nvidia", "radeon", "geforce rtx"]
-    gold_chunks: []
+    gold_chunks:
+      - AMD_2024_Item_1_0009_01379c5a
+      - AMD_2025_Item_1_0006_551768e4
+      - AMD_2026_Item_1_0007_f252541b
+      - AMD_2024_Item_1_0011_49024c2d
+      - AMD_2025_Item_1_0009_c842eea0
+      - AMD_2026_Item_1_0010_460dfa17
+      - NVDA_2024_Item_1_0003_59fa75a8
+      - NVDA_2025_Item_1_0003_ccc9ed65
+      - NVDA_2026_Item_1_0003_0297d539
+    gold_evidence_groups:
+      amd_radeon_product_line:
+        - AMD_2024_Item_1_0009_01379c5a
+        - AMD_2025_Item_1_0006_551768e4
+        - AMD_2026_Item_1_0007_f252541b
+      amd_nvidia_graphics_competition:
+        - AMD_2024_Item_1_0011_49024c2d
+        - AMD_2025_Item_1_0009_c842eea0
+        - AMD_2026_Item_1_0010_460dfa17
+      nvidia_rtx_product_reference:
+        - NVDA_2024_Item_1_0003_59fa75a8
+        - NVDA_2025_Item_1_0003_ccc9ed65
+        - NVDA_2026_Item_1_0003_0297d539
     answer_points:
       - AMD's graphics product line is Radeon.
       - The question requires a competitor-to-product hop.
+    notes: >
+      Verified against Neo4j on 2026-07-07. The AMD Radeon group states that
+      AMD offers AMD Radeon graphics as its consumer graphics product brand.
+      The competition group states that NVIDIA is a principal competitor in
+      discrete graphics. The NVIDIA RTX group anchors the comparison target
+      by stating that NVIDIA produces GeForce RTX / NVIDIA RTX products.
 
   - id: T008
     query: "Who supplies the high-bandwidth memory used in NVIDIA's H200 data center accelerator?"

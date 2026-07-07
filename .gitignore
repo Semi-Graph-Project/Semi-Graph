@@ -79,13 +79,12 @@ htmlcov/
 # =============================================================================
 .idea/
 .vscode/
-.claude/settings.json
+.claude/
+AGENTS.md
+**/AGENTS.md
+CLAUDE.md
+**/CLAUDE.md
 *.swp
 *.swo
 .DS_Store
 Thumbs.db
-
-# ====================
-# Claude.MD
-#--------------------
-CLAUDE.MD/

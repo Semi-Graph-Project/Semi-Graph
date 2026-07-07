@@ -55,6 +55,41 @@ def test_graph_stage_metrics_detect_seed_loss():
     assert stage["bottleneck_label"] == "seed_loss"
 
 
+def test_gold_evidence_groups_fallback_treats_gold_chunks_as_alternatives():
+    item = {
+        "gold_chunks": ["A", "B", "C"],
+    }
+
+    groups = ev._gold_evidence_groups(item, item["gold_chunks"])
+    score = ev._score_group_result(["B"], groups)
+    chunk_score = ev._score_result(["B"], item["gold_chunks"])
+
+    assert groups == {"gold_chunks": ["A", "B", "C"]}
+    assert chunk_score["hit"] == 1
+    assert chunk_score["recall"] == 1 / 3
+    assert score["group_recall"] == 1.0
+    assert score["answerable"] == 1
+
+
+def test_group_scoring_requires_each_evidence_group():
+    groups = {
+        "product_evidence": ["HOPPER_A", "HOPPER_B"],
+        "supplier_evidence": ["TSMC_A", "TSMC_B"],
+    }
+
+    partial = ev._score_group_result(["HOPPER_B"], groups)
+    complete = ev._score_group_result(["HOPPER_B", "TSMC_A"], groups)
+
+    assert partial["group_recall"] == 0.5
+    assert partial["answerable"] == 0
+    assert partial["group_hits"] == {
+        "product_evidence": ["HOPPER_B"],
+        "supplier_evidence": [],
+    }
+    assert complete["group_recall"] == 1.0
+    assert complete["answerable"] == 1
+
+
 def test_graph_stage_metrics_detect_rerank_loss():
     trace = {
         "seeds": [{"name": "amd"}],
@@ -88,6 +123,10 @@ def test_aggregate_reports_subset_and_graph_stage():
             "tools": {
                 "vector": {
                     "error": None,
+                    "chunk_hit_at_k": 0,
+                    "chunk_recall_at_k": 0.0,
+                    "group_recall_at_k": 0.0,
+                    "answerable_at_k": 0,
                     "hit_at_k": 0,
                     "recall_at_k": 0.0,
                     "mrr_at_k": 0.0,
@@ -96,6 +135,10 @@ def test_aggregate_reports_subset_and_graph_stage():
                 },
                 "graph": {
                     "error": None,
+                    "chunk_hit_at_k": 1,
+                    "chunk_recall_at_k": 1.0,
+                    "group_recall_at_k": 1.0,
+                    "answerable_at_k": 1,
                     "hit_at_k": 1,
                     "recall_at_k": 1.0,
                     "mrr_at_k": 1.0,
@@ -116,6 +159,8 @@ def test_aggregate_reports_subset_and_graph_stage():
 
     assert aggregate["by_subset"][0]["subset"] == "reextract_subset"
     assert aggregate["by_subset"][0]["graph_hit"] == 1.0
+    assert aggregate["by_subset"][0]["graph_group_recall"] == 1.0
+    assert aggregate["overall"]["graph"]["answerable_rate"] == 1.0
     stage = {
         row["subset"]: row
         for row in aggregate["graph_stage"]

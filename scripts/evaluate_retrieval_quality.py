@@ -264,6 +264,62 @@ def _score_result(returned_ids: list[str], gold_ids: list[str]) -> dict:
     }
 
 
+def _gold_evidence_groups(item: dict, gold_chunks: list[str]) -> dict[str, list[str]]:
+    """Return evidence groups used for answer-level retrieval scoring.
+
+    `gold_chunks` is a flat qrels-style list. It is useful for ChunkHit and
+    diagnostic ChunkRecall, but it unfairly punishes alternative evidence
+    chunks that say the same thing. Evidence groups model the answer
+    requirements: a group is satisfied when any chunk in that group is found.
+
+    If a query has no explicit groups, treat all gold chunks as one group. This
+    keeps legacy/single-hop queries scored while making duplicate-year evidence
+    behave like alternatives.
+    """
+    raw_groups = item.get("gold_evidence_groups") or {}
+    groups: dict[str, list[str]] = {}
+    if isinstance(raw_groups, dict):
+        for name, chunk_ids in raw_groups.items():
+            if not isinstance(chunk_ids, list):
+                continue
+            cleaned = [str(cid) for cid in chunk_ids if cid]
+            if cleaned:
+                groups[str(name)] = cleaned
+
+    if groups:
+        return groups
+    if gold_chunks:
+        return {"gold_chunks": gold_chunks}
+    return {}
+
+
+def _score_group_result(
+    returned_ids: list[str],
+    evidence_groups: dict[str, list[str]],
+) -> dict:
+    if not evidence_groups:
+        return {
+            "scored": False,
+            "group_recall": None,
+            "answerable": None,
+            "group_hits": {},
+        }
+
+    returned = set(returned_ids)
+    group_hits = {
+        group_name: sorted(returned & set(chunk_ids))
+        for group_name, chunk_ids in evidence_groups.items()
+    }
+    satisfied = sum(1 for hits in group_hits.values() if hits)
+    total = len(evidence_groups)
+    return {
+        "scored": True,
+        "group_recall": satisfied / total if total else None,
+        "answerable": 1 if satisfied == total else 0,
+        "group_hits": group_hits,
+    }
+
+
 def _random_hit_probability(corpus_size: int, gold_count: int, k: int) -> float | None:
     """Probability that random top-k retrieval hits at least one gold chunk.
 
@@ -462,6 +518,7 @@ def _evaluate_query(
 ) -> dict:
     query = str(item.get("query", "")).strip()
     gold_chunks = [str(cid) for cid in item.get("gold_chunks", []) if cid]
+    evidence_groups = _gold_evidence_groups(item, gold_chunks)
     gold_entities = _gold_entities(item)
     missing_gold_entities = [
         entity for entity in gold_entities if entity not in existing_entities
@@ -483,6 +540,7 @@ def _evaluate_query(
         "missing_gold_entities": missing_gold_entities,
         "corpus_status": corpus_status,
         "gold_chunks": gold_chunks,
+        "gold_evidence_groups": evidence_groups,
         "answer_points": item.get("answer_points", []),
         "tools": {},
     }
@@ -521,9 +579,19 @@ def _evaluate_query(
         if dry_run:
             score_at_k = _unscored_result()
             score_at_oracle = _unscored_result()
+            group_score_at_k = _score_group_result([], {})
+            group_score_at_oracle = _score_group_result([], {})
         else:
             score_at_k = _score_result(returned_at_k, gold_chunks)
             score_at_oracle = _score_result(returned_at_oracle, gold_chunks)
+            group_score_at_k = _score_group_result(
+                returned_at_k,
+                evidence_groups,
+            )
+            group_score_at_oracle = _score_group_result(
+                returned_at_oracle,
+                evidence_groups,
+            )
 
         stage = _graph_stage_metrics(
             trace=trace,
@@ -539,11 +607,23 @@ def _evaluate_query(
             "error": error,
             "returned_chunk_ids": returned_at_k,
             "oracle_chunk_ids": returned_at_oracle,
+            "chunk_hit_at_k": score_at_k["hit"],
+            "chunk_recall_at_k": score_at_k["recall"],
+            "chunk_mrr_at_k": score_at_k["mrr"],
+            "chunk_hits_at_k": score_at_k["hits"],
+            "group_recall_at_k": group_score_at_k["group_recall"],
+            "answerable_at_k": group_score_at_k["answerable"],
+            "group_hits_at_k": group_score_at_k["group_hits"],
             "hit_at_k": score_at_k["hit"],
             "recall_at_k": score_at_k["recall"],
             "mrr_at_k": score_at_k["mrr"],
             "hits_at_k": score_at_k["hits"],
             "chance_hit_at_k": chance_hit_at_k if score_at_k["scored"] else None,
+            "oracle_chunk_hit": score_at_oracle["hit"],
+            "oracle_chunk_recall": score_at_oracle["recall"],
+            "oracle_group_recall": group_score_at_oracle["group_recall"],
+            "oracle_answerable": group_score_at_oracle["answerable"],
+            "oracle_group_hits": group_score_at_oracle["group_hits"],
             "oracle_hit": score_at_oracle["hit"],
             "oracle_recall": score_at_oracle["recall"],
             "oracle_hits": score_at_oracle["hits"],
@@ -563,8 +643,17 @@ def _metric_bucket() -> dict[str, list[float]]:
 
 
 def _add_tool_metrics(bucket: dict, tool_name: str, metrics: dict) -> None:
-    bucket[tool_name]["hit"].append(float(metrics["hit_at_k"]))
-    bucket[tool_name]["recall"].append(float(metrics["recall_at_k"]))
+    chunk_hit = metrics.get("chunk_hit_at_k", metrics.get("hit_at_k"))
+    chunk_recall = metrics.get("chunk_recall_at_k", metrics.get("recall_at_k"))
+    group_recall = metrics.get("group_recall_at_k", chunk_recall)
+    answerable = metrics.get("answerable_at_k", chunk_hit)
+
+    bucket[tool_name]["chunk_hit"].append(float(chunk_hit))
+    bucket[tool_name]["chunk_recall"].append(float(chunk_recall))
+    if group_recall is not None:
+        bucket[tool_name]["group_recall"].append(float(group_recall))
+    if answerable is not None:
+        bucket[tool_name]["answerable"].append(float(answerable))
     bucket[tool_name]["mrr"].append(float(metrics["mrr_at_k"]))
     bucket[tool_name]["oracle_hit"].append(float(metrics["oracle_hit"]))
 
@@ -574,12 +663,25 @@ def _summarize_grouped_metrics(grouped: dict, tools: list[str], key_name: str) -
     for group in sorted(grouped):
         row = {key_name: group}
         for tool_name in tools:
-            row[f"{tool_name}_hit"] = _mean(grouped[group][tool_name]["hit"])
-            row[f"{tool_name}_recall"] = _mean(grouped[group][tool_name]["recall"])
+            row[f"{tool_name}_chunk_hit"] = _mean(
+                grouped[group][tool_name]["chunk_hit"]
+            )
+            row[f"{tool_name}_chunk_recall"] = _mean(
+                grouped[group][tool_name]["chunk_recall"]
+            )
+            row[f"{tool_name}_group_recall"] = _mean(
+                grouped[group][tool_name]["group_recall"]
+            )
+            row[f"{tool_name}_answerable"] = _mean(
+                grouped[group][tool_name]["answerable"]
+            )
             row[f"{tool_name}_mrr"] = _mean(grouped[group][tool_name]["mrr"])
             row[f"{tool_name}_oracle_hit"] = _mean(
                 grouped[group][tool_name]["oracle_hit"]
             )
+            # Backward-compatible aliases for older tests/reports.
+            row[f"{tool_name}_hit"] = row[f"{tool_name}_chunk_hit"]
+            row[f"{tool_name}_recall"] = row[f"{tool_name}_chunk_recall"]
         rows.append(row)
     return rows
 
@@ -589,6 +691,7 @@ def _paired_recall_test(
     compare_tool: str,
     subset: str | None = None,
     baseline_tool: str = "vector",
+    metric_key: str = "group_recall_at_k",
     iterations: int = 10000,
 ) -> dict:
     diffs: list[float] = []
@@ -598,8 +701,8 @@ def _paired_recall_test(
         tools = row.get("tools", {})
         if baseline_tool not in tools or compare_tool not in tools:
             continue
-        base = tools[baseline_tool].get("recall_at_k")
-        comp = tools[compare_tool].get("recall_at_k")
+        base = tools[baseline_tool].get(metric_key)
+        comp = tools[compare_tool].get(metric_key)
         if base is None or comp is None:
             continue
         diffs.append(float(comp) - float(base))
@@ -654,8 +757,10 @@ def _aggregate(results: list[dict], tools: list[str]) -> dict:
     }
 
     for tool_name in tools:
-        hits: list[float] = []
-        recalls: list[float] = []
+        chunk_hits: list[float] = []
+        chunk_recalls: list[float] = []
+        group_recalls: list[float] = []
+        answerables: list[float] = []
         mrrs: list[float] = []
         oracle_hits: list[float] = []
         chance_hits: list[float] = []
@@ -670,8 +775,16 @@ def _aggregate(results: list[dict], tools: list[str]) -> dict:
                 continue
 
             scored_count += 1
-            hits.append(float(metrics["hit_at_k"]))
-            recalls.append(float(metrics["recall_at_k"]))
+            chunk_hit = metrics.get("chunk_hit_at_k", metrics.get("hit_at_k"))
+            chunk_recall = metrics.get("chunk_recall_at_k", metrics.get("recall_at_k"))
+            group_recall = metrics.get("group_recall_at_k", chunk_recall)
+            answerable = metrics.get("answerable_at_k", chunk_hit)
+            chunk_hits.append(float(chunk_hit))
+            chunk_recalls.append(float(chunk_recall))
+            if group_recall is not None:
+                group_recalls.append(float(group_recall))
+            if answerable is not None:
+                answerables.append(float(answerable))
             mrrs.append(float(metrics["mrr_at_k"]))
             oracle_hits.append(float(metrics["oracle_hit"]))
             if metrics["chance_hit_at_k"] is not None:
@@ -702,17 +815,25 @@ def _aggregate(results: list[dict], tools: list[str]) -> dict:
                     )] += 1
 
         random_baseline = _mean(chance_hits)
-        hit_rate = _mean(hits)
+        chunk_hit_rate = _mean(chunk_hits)
         aggregate[tool_name] = {
             "scored_queries": scored_count,
             "errors": errors,
-            "hit_rate": hit_rate,
-            "avg_recall": _mean(recalls),
+            "chunk_hit_rate": chunk_hit_rate,
+            "avg_chunk_recall": _mean(chunk_recalls),
+            "avg_group_recall": _mean(group_recalls),
+            "answerable_rate": _mean(answerables),
+            "hit_rate": chunk_hit_rate,
+            "avg_recall": _mean(chunk_recalls),
             "avg_mrr": _mean(mrrs),
             "oracle_hit_rate": _mean(oracle_hits),
             "random_hit_baseline": random_baseline,
-            "hit_minus_random": hit_rate - random_baseline,
-            "hit_lift_vs_random": (hit_rate / random_baseline) if random_baseline else None,
+            "hit_minus_random": chunk_hit_rate - random_baseline,
+            "hit_lift_vs_random": (
+                chunk_hit_rate / random_baseline
+                if random_baseline
+                else None
+            ),
         }
 
     stage_rows: list[dict] = []
@@ -744,6 +865,7 @@ def _aggregate(results: list[dict], tools: list[str]) -> dict:
         "by_type": _summarize_grouped_metrics(by_type, tools, "type"),
         "by_subset": _summarize_grouped_metrics(by_subset, tools, "subset"),
         "graph_stage": stage_rows,
+        "paired_group_recall_vs_vector": paired,
         "paired_recall_vs_vector": paired,
     }
 
@@ -816,18 +938,20 @@ def _write_markdown(
 
     lines.append("## Overall")
     lines.append("")
-    lines.append("| Tool | Scored Queries | Errors | Hit@k | Random Hit@k | Hit Lift | Hit-Random | Recall@k | MRR@k | Oracle Hit |")
-    lines.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
+    lines.append("| Tool | Scored Queries | Errors | ChunkHit@k | Random ChunkHit@k | Hit Lift | Hit-Random | ChunkRecall@k | GroupRecall@k | Answerable@k | MRR@k | Oracle Hit |")
+    lines.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
     for tool_name in tools:
         row = aggregate["overall"][tool_name]
         lines.append(
             "| "
             f"{tool_name} | {row['scored_queries']} | {row['errors']} | "
-            f"{row['hit_rate']:.3f} | "
+            f"{row['chunk_hit_rate']:.3f} | "
             f"{_fmt(row['random_hit_baseline'])} | "
             f"{_fmt(row['hit_lift_vs_random'])} | "
             f"{_fmt(row['hit_minus_random'])} | "
-            f"{row['avg_recall']:.3f} | "
+            f"{row['avg_chunk_recall']:.3f} | "
+            f"{row['avg_group_recall']:.3f} | "
+            f"{row['answerable_rate']:.3f} | "
             f"{row['avg_mrr']:.3f} | {row['oracle_hit_rate']:.3f} |"
         )
 
@@ -837,14 +961,21 @@ def _write_markdown(
         lines.append("")
         header = ["Type"]
         for tool_name in tools:
-            header.extend([f"{tool_name} Hit", f"{tool_name} Recall"])
+            header.extend([
+                f"{tool_name} ChunkHit",
+                f"{tool_name} ChunkRecall",
+                f"{tool_name} GroupRecall",
+                f"{tool_name} Answerable",
+            ])
         lines.append("| " + " | ".join(header) + " |")
         lines.append("|" + "|".join(["---"] + ["---:"] * (len(header) - 1)) + "|")
         for row in aggregate["by_type"]:
             cells = [row["type"]]
             for tool_name in tools:
-                cells.append(_fmt(row.get(f"{tool_name}_hit")))
-                cells.append(_fmt(row.get(f"{tool_name}_recall")))
+                cells.append(_fmt(row.get(f"{tool_name}_chunk_hit")))
+                cells.append(_fmt(row.get(f"{tool_name}_chunk_recall")))
+                cells.append(_fmt(row.get(f"{tool_name}_group_recall")))
+                cells.append(_fmt(row.get(f"{tool_name}_answerable")))
             lines.append("| " + " | ".join(cells) + " |")
 
     if aggregate["by_subset"]:
@@ -853,14 +984,22 @@ def _write_markdown(
         lines.append("")
         header = ["Subset"]
         for tool_name in tools:
-            header.extend([f"{tool_name} Hit", f"{tool_name} Recall", f"{tool_name} Oracle"])
+            header.extend([
+                f"{tool_name} ChunkHit",
+                f"{tool_name} ChunkRecall",
+                f"{tool_name} GroupRecall",
+                f"{tool_name} Answerable",
+                f"{tool_name} Oracle",
+            ])
         lines.append("| " + " | ".join(header) + " |")
         lines.append("|" + "|".join(["---"] + ["---:"] * (len(header) - 1)) + "|")
         for row in aggregate["by_subset"]:
             cells = [row["subset"]]
             for tool_name in tools:
-                cells.append(_fmt(row.get(f"{tool_name}_hit")))
-                cells.append(_fmt(row.get(f"{tool_name}_recall")))
+                cells.append(_fmt(row.get(f"{tool_name}_chunk_hit")))
+                cells.append(_fmt(row.get(f"{tool_name}_chunk_recall")))
+                cells.append(_fmt(row.get(f"{tool_name}_group_recall")))
+                cells.append(_fmt(row.get(f"{tool_name}_answerable")))
                 cells.append(_fmt(row.get(f"{tool_name}_oracle_hit")))
             lines.append("| " + " | ".join(cells) + " |")
 
@@ -884,13 +1023,13 @@ def _write_markdown(
                 f"{bottlenecks or 'n/a'} |"
             )
 
-    if aggregate["paired_recall_vs_vector"]:
+    if aggregate["paired_group_recall_vs_vector"]:
         lines.append("")
-        lines.append("## Paired Recall Test vs Vector")
+        lines.append("## Paired GroupRecall Test vs Vector")
         lines.append("")
-        lines.append("| Subset | Tool | n | Mean Delta Recall | One-sided p |")
+        lines.append("| Subset | Tool | n | Mean Delta GroupRecall | One-sided p |")
         lines.append("|---|---|---:|---:|---:|")
-        for subset, comparisons in aggregate["paired_recall_vs_vector"].items():
+        for subset, comparisons in aggregate["paired_group_recall_vs_vector"].items():
             for tool_name, row in comparisons.items():
                 lines.append(
                     "| "
@@ -912,9 +1051,10 @@ def _write_markdown(
         lines.append(f"- gold_entities: `{row['gold_entities']}`")
         lines.append(f"- missing_gold_entities: `{row['missing_gold_entities']}`")
         lines.append(f"- gold_chunks: `{row['gold_chunks']}`")
+        lines.append(f"- gold_evidence_groups: `{row.get('gold_evidence_groups', {})}`")
         lines.append("")
-        lines.append("| Tool | Error | Latency | Hit@k | Random Hit@k | Recall@k | MRR@k | Oracle Hit | SeedHit | PPRHit | ChunkMapHit | Bottleneck | Hits | Returned |")
-        lines.append("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---|")
+        lines.append("| Tool | Error | Latency | ChunkHit@k | Random ChunkHit@k | ChunkRecall@k | GroupRecall@k | Answerable@k | MRR@k | Oracle Hit | SeedHit | PPRHit | ChunkMapHit | Bottleneck | Chunk Hits | Group Hits | Returned |")
+        lines.append("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---|---|")
         for tool_name in tools:
             metrics = row["tools"][tool_name]
             stage = metrics.get("stage", {})
@@ -923,16 +1063,19 @@ def _write_markdown(
                 f"{tool_name} | "
                 f"{metrics['error'] or ''} | "
                 f"{metrics['latency_sec']:.3f} | "
-                f"{_fmt(metrics['hit_at_k'])} | "
+                f"{_fmt(metrics['chunk_hit_at_k'])} | "
                 f"{_fmt(metrics['chance_hit_at_k'])} | "
-                f"{_fmt(metrics['recall_at_k'])} | "
+                f"{_fmt(metrics['chunk_recall_at_k'])} | "
+                f"{_fmt(metrics['group_recall_at_k'])} | "
+                f"{_fmt(metrics['answerable_at_k'])} | "
                 f"{_fmt(metrics['mrr_at_k'])} | "
                 f"{_fmt(metrics['oracle_hit'])} | "
                 f"{_fmt(stage.get('seed_hit'))} | "
                 f"{_fmt(stage.get('ppr_hit'))} | "
                 f"{_fmt(stage.get('chunk_map_hit'))} | "
                 f"{stage.get('bottleneck_label', 'n/a')} | "
-                f"`{metrics['hits_at_k']}` | "
+                f"`{metrics['chunk_hits_at_k']}` | "
+                f"`{metrics['group_hits_at_k']}` | "
                 f"`{metrics['returned_chunk_ids']}` |"
             )
 
@@ -1137,10 +1280,13 @@ def main() -> None:
         row = aggregate["overall"][tool_name]
         print(
             f"{tool_name}: scored={row['scored_queries']} "
-            f"errors={row['errors']} hit={row['hit_rate']:.3f} "
+            f"errors={row['errors']} chunk_hit={row['chunk_hit_rate']:.3f} "
             f"random={row['random_hit_baseline']:.3f} "
             f"lift={_fmt(row['hit_lift_vs_random'])} "
-            f"recall={row['avg_recall']:.3f} mrr={row['avg_mrr']:.3f}"
+            f"chunk_recall={row['avg_chunk_recall']:.3f} "
+            f"group_recall={row['avg_group_recall']:.3f} "
+            f"answerable={row['answerable_rate']:.3f} "
+            f"mrr={row['avg_mrr']:.3f}"
         )
 
 
