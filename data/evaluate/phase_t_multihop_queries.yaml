@@ -229,17 +229,69 @@ queries:
     type: supplier_via_product
     gold_tools: ["graph", "hybrid"]
     gold_entities: ["h200", "nvidia", "hbm", "micron", "sk hynix", "samsung"]
-    gold_chunks: []
+    gold_chunks:
+      - NVDA_2026_Item_1_0009_8c403127
+      - NVDA_2026_Item_1A_0022_3d4f4d9b
+      - NVDA_2026_Item_7_0001_485abbd3
+      - NVDA_2025_Item_7_0002_b40db6b2
+      - NVDA_2024_Item_1_0007_bae70036
+      - NVDA_2025_Item_1_0008_a4407f7e
+      - NVDA_2026_Item_1_0007_bf6a51b6
+      - MU_2024_Item_1_0001_90ffbd18
+      - MU_2025_Item_1_0001_b64486b7
+      - MU_2024_Item_1_0003_acd8d0ff
+    gold_evidence_groups:
+      h200_nvidia_anchor:
+        - NVDA_2026_Item_1_0009_8c403127
+        - NVDA_2026_Item_1A_0022_3d4f4d9b
+        - NVDA_2026_Item_7_0001_485abbd3
+        - NVDA_2025_Item_7_0002_b40db6b2
+      nvidia_memory_suppliers:
+        - NVDA_2024_Item_1_0007_bae70036
+        - NVDA_2025_Item_1_0008_a4407f7e
+        - NVDA_2026_Item_1_0007_bf6a51b6
+      micron_hbm_context:
+        - MU_2024_Item_1_0001_90ffbd18
+        - MU_2025_Item_1_0001_b64486b7
+        - MU_2024_Item_1_0003_acd8d0ff
     answer_points:
-      - H200 relates to NVIDIA data center accelerators.
-      - High-bandwidth memory suppliers include memory manufacturers.
+      - H200 is associated with NVIDIA data center accelerator products.
+      - NVIDIA discloses memory suppliers such as Micron, SK Hynix, and Samsung.
+      - Current 10-K evidence does not directly prove which supplier provides the HBM used in H200.
+    notes: >
+      Gold audit 2026-07-08: scored as an inference-ambiguous multi-hop query.
+      H200 chunks establish the NVIDIA product anchor, NVIDIA Item 1 chunks
+      name Micron, SK Hynix, and Samsung as memory suppliers, and Micron chunks
+      establish HBM/high-bandwidth memory context. The audited 10-K chunks do
+      not directly prove that a specific supplier provides the HBM used in H200,
+      so this should be interpreted as supplier-candidate evidence rather than
+      a direct H200 bill-of-materials fact.
 
   - id: T009
     query: "How do export controls affect NVIDIA's data center business?"
     type: risk_via_product
     gold_tools: ["graph", "hybrid", "vector"]
     gold_entities: ["nvidia", "export controls", "data center", "china"]
-    gold_chunks: []
+    gold_chunks: 
+      - NVDA_2025_Item_1_0009_7a56593b
+      - NVDA_2024_Item_1_0008_20833acc
+      - NVDA_2025_Item_1A_0023_67392e5b
+      - NVDA_2026_Item_1A_0020_331dc537   
+      - NVDA_2025_Item_7_0002_b40db6b2
+      - NVDA_2026_Item_1A_0024_b70c7a18
+      - NVDA_2024_Item_1A_0021_3fa26c8d
+      - NVDA_2024_Item_1A_0022_b1d57eb9
+    gold_evidence_groups:
+      export_control_restrictions:
+        - NVDA_2025_Item_1_0009_7a56593b
+        - NVDA_2024_Item_1_0008_20833acc
+        - NVDA_2025_Item_1A_0023_67392e5b
+        - NVDA_2026_Item_1A_0020_331dc537
+      data_center_business_impact:
+        - NVDA_2025_Item_7_0002_b40db6b2
+        - NVDA_2026_Item_1A_0024_b70c7a18
+        - NVDA_2024_Item_1A_0021_3fa26c8d
+        - NVDA_2024_Item_1A_0022_b1d57eb9
     answer_points:
       - Export controls can restrict sales or shipments of advanced chips.
       - NVIDIA data center products are exposed to China/export-control risk.
@@ -251,6 +303,17 @@ queries:
     gold_entities: ["entegris", "materials solutions", "advanced purity solutions"]
     gold_chunks:
       - ENTG_2026_Item_1_0000_a9f06bac
+      - ENTG_2025_Item_1_0000_7efdfd60
+      - ENTG_2025_Item_1_0008_700da46e
+      - ENTG_2026_Item_1_0007_4615acf5
+      - ENTG_2026_Item_7_0002_0ba0c07d
+    gold_evidence_groups:
+      entegis_materials_and_purity_segments:
+        - ENTG_2026_Item_1_0000_a9f06bac
+        - ENTG_2025_Item_1_0000_7efdfd60
+        - ENTG_2025_Item_1_0008_700da46e
+        - ENTG_2026_Item_1_0007_4615acf5
+        - ENTG_2026_Item_7_0002_0ba0c07d
     answer_points:
       - Entegris provides advanced materials and process solutions.
       - Materials Solutions and Advanced Purity Solutions are relevant segments.
@@ -262,6 +325,10 @@ queries:
     gold_entities: ["entegris", "gross margin", "depreciation"]
     gold_chunks:
       - ENTG_2026_Item_7_0003_d6e71ea2
+
+    gold_evidence_groups:
+      useful_life_gross_margin_impact:
+        - ENTG_2026_Item_7_0003_d6e71ea2
     answer_points:
       - Entegris expected reduced depreciation expense.
       - The change was expected to increase gross margin by about $52.4 million.
@@ -273,6 +340,17 @@ queries:
     gold_entities: ["entegris", "materials solutions", "advanced purity solutions"]
     gold_chunks:
       - ENTG_2026_Item_1_0000_a9f06bac
+      - ENTG_2025_Item_1_0000_7efdfd60
+      - ENTG_2025_Item_1_0008_700da46e
+      - ENTG_2026_Item_1_0007_4615acf5
+
+    gold_evidence_groups:
+      entegris_business_segments:
+        - ENTG_2026_Item_1_0000_a9f06bac
+        - ENTG_2025_Item_1_0000_7efdfd60
+        - ENTG_2025_Item_1_0008_700da46e
+        - ENTG_2026_Item_1_0007_4615acf5
+
     answer_points:
       - Materials Solutions.
       - Advanced Purity Solutions.
@@ -301,13 +379,32 @@ queries:
     query: "What is the relationship between KLA yield improvement tools and downstream AMD gross margin risk?"
     type: graph_multihop
     gold_tools: ["graph", "hybrid"]
-    gold_entities: ["kla", "tsmc", "amd", "yield", "gross margin"]
-    gold_chunks: []
+    gold_entities: ["kla", "tsmc", "amd", "failure to achieve expected manufacturing yields", "gross margin"]
+    gold_chunks:
+      - KLAC_2023_Item_1_0000_849299a1
+      - AMD_2025_Item_1A_0011_10eec6d1
+      - AMD_2025_Item_1A_0009_57657610
+      - AMD_2024_Item_1A_0008_027b0f68
+      - AMD_2024_Item_1A_0011_fbb67bc3
+    gold_evidence_groups:
+      kla_yield_improvement_tools:
+        - KLAC_2023_Item_1_0000_849299a1
+      amd_yield_gross_margin_risk:
+        - AMD_2025_Item_1A_0011_10eec6d1
+        - AMD_2025_Item_1A_0009_57657610
+        - AMD_2024_Item_1A_0008_027b0f68
+        - AMD_2024_Item_1A_0011_fbb67bc3
     answer_points:
       - KLA tools support process control/yield improvement.
       - AMD can be affected by foundry yield/cost/margin risks.
-    notes: "Discovery query for newly expanded supplier corpus."
-
+    notes: >
+      Gold audit 2026-07-08: scored as proxy multi-hop evidence. KLA chunks
+      establish process control/yield improvement tools, while AMD chunks establish
+      that manufacturing yield problems can raise unit costs and hurt gross margin.
+      The evidence does not prove a direct KLA-to-AMD supplier relationship.
+      Neo4j entity audit 2026-07-08: use the concrete entity name "failure to
+      achieve expected manufacturing yields" instead of broad "yield" because
+      the corpus stores yield risk as specific manufacturing-yield entities.
   - id: T016
     query: "qwerty zzz random semiconductor nonsense"
     type: off_corpus
@@ -322,13 +419,33 @@ queries:
     query: "Which Taiwanese contract chipmaker fabricates AMD's processors?"
     type: supplier_via_company
     gold_tools: ["graph", "hybrid"]
-    gold_entities: ["amd", "tsmc", "umc"]
+    gold_entities: ["amd", "tsmc"]
     gold_chunks:
+      - AMD_2024_Item_1A_0007_2f2587e1
+      - AMD_2025_Item_1A_0008_27d1b419
+      - AMD_2026_Item_1A_0007_6d154102
+      - AMD_2024_Item_1_0012_9561038a
       - AMD_2025_Item_1_0009_c842eea0
-      - AMD_2026_Item_1A_0008_e84e4130
+      - AMD_2026_Item_1_0010_460dfa17
+    gold_evidence_groups:
+      amd_tsmc_processor_foundry:
+        - AMD_2024_Item_1A_0007_2f2587e1
+        - AMD_2025_Item_1A_0008_27d1b419
+        - AMD_2026_Item_1A_0007_6d154102
+        - AMD_2024_Item_1_0012_9561038a
+        - AMD_2025_Item_1_0009_c842eea0
+        - AMD_2026_Item_1_0010_460dfa17
     answer_points:
       - AMD relies on third-party foundries and manufacturing suppliers.
-      - TSMC and UMC are relevant Taiwanese contract manufacturing entities in the graph.
+      - TSMC is the primary Taiwanese foundry named for AMD processor wafer fabrication.
+      - UMC appears in broader AMD foundry arrangements, but TSMC is the direct answer for processors.
+    notes: >
+      Gold audit 2026-07-08: scored as a single evidence-slot query. Item 1A
+      chunks are the strongest evidence because they directly state that AMD
+      relies on TSMC for microprocessor and GPU wafers at 7nm or smaller nodes.
+      Item 1 manufacturing-arrangement chunks are valid alternatives/supporting
+      evidence. UMC is mentioned in broader IC/programmable-logic manufacturing
+      context, but is not the primary answer to the processor fabrication query.
 
   - id: T018
     query: "Which gaming console makers partner with the Ryzen processor company?"
@@ -338,21 +455,62 @@ queries:
     gold_chunks:
       - AMD_2024_Item_1_0006_e41aed21
       - AMD_2026_Item_1_0004_b5e66359
+      - AMD_2025_Item_1_0004_7a6fa20c
+      - AMD_2024_Item_1_0005_7be264c6
+    gold_evidence_groups:
+      amd_console_partners:
+        - AMD_2024_Item_1_0006_e41aed21
+        - AMD_2026_Item_1_0004_b5e66359
+        - AMD_2025_Item_1_0004_7a6fa20c
+        - AMD_2024_Item_1_0005_7be264c6
     answer_points:
       - Ryzen points to AMD.
-      - AMD semi-custom or gaming products are linked to console or gaming ecosystem partners.
+      - AMD semi-custom products are linked to Sony PlayStation and Microsoft Xbox.
+      - Valve Steam Deck is also named in AMD semi-custom or handheld gaming context.
+    notes: >
+      Gold audit 2026-07-08: single evidence-slot query with multiple
+      alternative chunks. The strongest chunks explicitly name Sony PlayStation,
+      Microsoft Xbox, and Valve Steam Deck in AMD semi-custom gaming context.
 
   - id: T019
     query: "What revenue segments does the developer of EPYC processors disclose?"
     type: segment_via_product
     gold_tools: ["graph", "hybrid"]
-    gold_entities: ["epyc", "amd", "data center", "client segment", "gaming segment", "embedded"]
+    gold_entities: ["epyc", "amd", "data center", "client", "gaming", "embedded"]
     gold_chunks:
       - AMD_2024_Item_1_0003_ee436d61
       - AMD_2024_Item_7_0002_d4114c99
+      - AMD_2025_Item_1_0002_6fadf6e4
+      - AMD_2026_Item_1_0002_9bce02c2
+      - AMD_2025_Item_7_0000_16c93d97
+      - AMD_2026_Item_7_0000_6b145a7b
+      - AMD_2025_Item_7_0005_36426dd3
+      - AMD_2026_Item_7_0005_8ab9ed73
+    gold_evidence_groups:
+      epyc_amd_anchor:
+        - AMD_2024_Item_1_0003_ee436d61
+        - AMD_2025_Item_1_0002_6fadf6e4
+        - AMD_2026_Item_1_0002_9bce02c2
+      amd_reportable_segments:
+        - AMD_2024_Item_1_0003_ee436d61
+        - AMD_2025_Item_1_0002_6fadf6e4
+        - AMD_2026_Item_1_0002_9bce02c2
+      segment_revenue_disclosure:
+        - AMD_2024_Item_7_0002_d4114c99
+        - AMD_2025_Item_7_0000_16c93d97
+        - AMD_2026_Item_7_0000_6b145a7b
+        - AMD_2025_Item_7_0005_36426dd3
+        - AMD_2026_Item_7_0005_8ab9ed73
     answer_points:
       - EPYC is an AMD server CPU product family.
-      - AMD discloses reportable segments such as Data Center, Client, Gaming, and Embedded.
+      - AMD discloses reportable segments such as Data Center, Client/Gaming, and Embedded.
+      - In 2026, AMD combines Client and Gaming into one reportable segment.
+    notes: >
+      Gold audit 2026-07-08: use 2024-2026 evidence because AMD's segment
+      structure changes in fiscal 2025/2026. Older filings list Data Center,
+      Client, Gaming, and Embedded separately; the 2026 filing combines Client
+      and Gaming into one reportable segment. Segment revenue chunks are kept
+      in a separate evidence group from product/segment definition chunks.
 
   - id: T020
     query: "What export controls affect AI chip sales from the maker of Blackwell architecture?"
@@ -360,35 +518,105 @@ queries:
     gold_tools: ["graph", "hybrid"]
     gold_entities: ["blackwell", "nvidia", "export controls", "china", "export administration regulations"]
     gold_chunks:
+      - NVDA_2025_Item_1_0009_7a56593b
+      - NVDA_2024_Item_1_0008_20833acc
       - NVDA_2024_Item_1A_0020_ac4ad7b4
       - NVDA_2024_Item_1A_0022_b1d57eb9
+      - NVDA_2025_Item_1A_0019_46eda166
+      - NVDA_2025_Item_1A_0023_67392e5b
+      - NVDA_2026_Item_1A_0020_331dc537
+      - NVDA_2026_Item_1A_0024_b70c7a18
+    gold_evidence_groups:
+      blackwell_nvidia_anchor:
+        - NVDA_2025_Item_1_0009_7a56593b
+      export_control_restrictions:
+        - NVDA_2025_Item_1_0009_7a56593b
+        - NVDA_2024_Item_1_0008_20833acc
+        - NVDA_2024_Item_1A_0020_ac4ad7b4
+        - NVDA_2024_Item_1A_0022_b1d57eb9
+        - NVDA_2025_Item_1A_0019_46eda166
+        - NVDA_2025_Item_1A_0023_67392e5b
+        - NVDA_2026_Item_1A_0020_331dc537
+        - NVDA_2026_Item_1A_0024_b70c7a18
+      ai_chip_sales_impact:
+        - NVDA_2025_Item_1A_0019_46eda166
+        - NVDA_2025_Item_1A_0023_67392e5b
+        - NVDA_2026_Item_1A_0020_331dc537
+        - NVDA_2026_Item_1A_0024_b70c7a18
     answer_points:
       - Blackwell points to NVIDIA.
       - Export controls can restrict NVIDIA AI/data-center product sales and operations in China or related markets.
+    notes: >
+      Gold audit 2026-07-08: Blackwell is anchored by NVIDIA's 2025 Item 1
+      disclosure, which states that Blackwell systems such as GB200 NVL 72,
+      GB200 NVL 36, and B200 are subject to licensing requirements for shipment
+      to certain entities and to China/country groups. Item 1A chunks capture
+      broader export-control impacts on AI/data-center GPU sales, demand,
+      supply/distribution, and competitive position.
 
   - id: T021
-    query: "Which Asian contract chipmakers fabricate older-generation processors for the developer of Intel 18A?"
+    query: "Which Asian foundries are relevant to third-party foundry risk and mature-node competition for the developer of Intel 18A?"
     type: supplier_via_product
     gold_tools: ["graph", "hybrid"]
     gold_entities: ["intel 18a", "intel", "tsmc", "umc", "smic"]
     gold_chunks:
-      - INTC_2024_Item_1A_0001_f0f6c35c
+      - INTC_2026_Item_1_0004_c01224f1
+      - INTC_2026_Item_1_0015_adfe2316
+      - INTC_2026_Item_1A_0006_820d3c64
+      - INTC_2026_Item_1_0005_f5ba2220
+      - INTC_2026_Item_1_0008_c74f560f
       - INTC_2025_Item_1A_0001_65932be2
+    gold_evidence_groups:
+      intel_18a_anchor:
+        - INTC_2026_Item_1_0004_c01224f1
+        - INTC_2026_Item_1_0015_adfe2316
+      third_party_foundry_risk:
+        - INTC_2026_Item_1A_0006_820d3c64
+        - INTC_2026_Item_1_0005_f5ba2220
+      mature_node_foundry_competitors:
+        - INTC_2026_Item_1_0008_c74f560f
+        - INTC_2025_Item_1A_0001_65932be2
     answer_points:
       - Intel 18A points to Intel.
-      - Intel filings discuss competition and foundry relationships involving Asian foundries such as TSMC.
+      - Intel filings discuss third-party foundry dependence on TSMC for nodes beyond Intel 18A/18A-P.
+      - Intel Foundry competitor context includes mature-node foundries such as UMC and SMIC.
+    notes: >
+      Gold audit 2026-07-08: the previous wording implied that older-generation
+      processors were fabricated for Intel by Asian contract chipmakers, which
+      was not directly supported by the verified chunks. This query now measures
+      a supported multi-hop path: Intel 18A -> Intel -> TSMC third-party foundry
+      risk and UMC/SMIC mature-node foundry competition.
 
   - id: T022
     query: "Which infrastructure investment firms partner with the maker of Xeon Scalable processors on fab financing?"
     type: partner_via_product
     gold_tools: ["graph", "hybrid"]
-    gold_entities: ["xeon scalable", "intel", "brookfield", "apollo", "smart capital"]
+    gold_entities: ["xeon scalable", "intel", "brookfield", "apollo", "smart capital strategy"]
     gold_chunks:
+      - INTC_2026_Item_1_0011_4307b8ad
+      - INTC_2024_Item_1_0004_692d8999
       - INTC_2025_Item_1_0011_b8759c99
       - INTC_2024_Item_1A_0007_6560bf56
+      - INTC_2026_Item_1A_0006_820d3c64
+    gold_evidence_groups:
+      xeon_intel_anchor:
+        - INTC_2026_Item_1_0011_4307b8ad
+        - INTC_2024_Item_1_0004_692d8999
+      smart_capital_financing:
+        - INTC_2025_Item_1_0011_b8759c99
+        - INTC_2024_Item_1A_0007_6560bf56
+      infrastructure_investment_partners:
+        - INTC_2025_Item_1_0011_b8759c99
+        - INTC_2026_Item_1A_0006_820d3c64
     answer_points:
       - Xeon Scalable points to Intel.
-      - Intel's Smart Capital/fab financing context includes infrastructure investment partners such as Brookfield or Apollo.
+      - Intel's Smart Capital/fab financing context includes Brookfield and Apollo.
+    notes: >
+      Gold audit 2026-07-08: INTC_2025_Item_1_0011 contains both Apollo and
+      Brookfield in the SCIP/Smart Capital context. INTC_2024_Item_1A_0007 is a
+      Brookfield/Arizona financing support chunk. Xeon chunks are kept as the
+      product-to-company anchor. Neo4j entity audit 2026-07-08: the extracted
+      entity is "smart capital strategy", not the broad phrase "smart capital".
 
   - id: T023
     query: "Which autonomous driving subsidiary does the developer of Intel Core Ultra operate?"
@@ -396,11 +624,25 @@ queries:
     gold_tools: ["graph", "hybrid"]
     gold_entities: ["intel core ultra", "intel", "mobileye"]
     gold_chunks:
+      - INTC_2026_Item_1_0010_4bfc9726
+      - INTC_2024_Item_7_0000_e2ea081b
       - INTC_2024_Item_1_0010_4835f632
       - INTC_2024_Item_7_0010_3742bdd2
+    gold_evidence_groups:
+      core_ultra_intel_anchor:
+        - INTC_2026_Item_1_0010_4bfc9726
+        - INTC_2024_Item_7_0000_e2ea081b
+      mobileye_autonomous_driving:
+        - INTC_2024_Item_7_0010_3742bdd2
+        - INTC_2024_Item_1_0010_4835f632
     answer_points:
       - Intel Core Ultra points to Intel.
       - Intel is linked to Mobileye in automotive/autonomous driving context.
+    notes: >
+      Gold audit 2026-07-08: INTC_2024_Item_7_0010 is the strongest direct
+      Mobileye/ADAS/autonomous-driving chunk. INTC_2024_Item_1_0010 is useful
+      but more financial/transaction oriented, so it is grouped as alternative
+      Mobileye support rather than the only required evidence.
 
   - id: T024
     query: "Which operating system maker collaborates with the Xeon Scalable processor developer on AI PC platforms?"
@@ -408,23 +650,58 @@ queries:
     gold_tools: ["graph", "hybrid"]
     gold_entities: ["xeon scalable", "intel", "microsoft", "ai pc"]
     gold_chunks:
+      - INTC_2026_Item_1_0011_4307b8ad
+      - INTC_2024_Item_1_0004_692d8999
       - INTC_2024_Item_7_0002_7c82ed88
-      - INTC_2026_Item_1_0008_c74f560f
+      - INTC_2024_Item_7_0001_d1b7bdde
+    gold_evidence_groups:
+      xeon_intel_anchor:
+        - INTC_2026_Item_1_0011_4307b8ad
+        - INTC_2024_Item_1_0004_692d8999
+      microsoft_ai_pc_collaboration:
+        - INTC_2024_Item_7_0002_7c82ed88
+      ai_pc_platform_context:
+        - INTC_2024_Item_7_0002_7c82ed88
+        - INTC_2024_Item_7_0001_d1b7bdde
     answer_points:
       - Xeon Scalable points to Intel.
       - Microsoft is the operating-system ecosystem partner relevant to AI PC/platform collaboration.
+    notes: >
+      Gold audit 2026-07-08: INTC_2026_Item_1_0008 was removed because it
+      mentions Microsoft in custom-silicon/hyperscaler competition, not the AI
+      PC collaboration. INTC_2024_Item_7_0002 directly mentions Microsoft,
+      Windows 11, Intel Core Ultra, and AI on personal computing.
 
   - id: T025
-    query: "In which U.S. states does the developer of the Intel 18A process operate wafer fabrication facilities?"
+    query: "In which U.S. states does the developer of the Intel 18A process operate or expand wafer fabrication facilities?"
     type: geo_via_product
     gold_tools: ["graph", "hybrid"]
-    gold_entities: ["intel 18a", "intel", "arizona", "ohio", "oregon", "new mexico"]
+    gold_entities: ["intel 18a", "intel", "arizona", "ohio", "oregon"]
     gold_chunks:
+      - INTC_2026_Item_1_0004_c01224f1
+      - INTC_2026_Item_1_0015_adfe2316
       - INTC_2025_Item_1_0004_c5a12b11
       - INTC_2024_Item_1_0014_32e0816b
+      - INTC_2026_Item_1_0005_f5ba2220
+    gold_evidence_groups:
+      intel_18a_anchor:
+        - INTC_2026_Item_1_0004_c01224f1
+        - INTC_2026_Item_1_0015_adfe2316
+      us_wafer_fab_locations:
+        - INTC_2025_Item_1_0004_c5a12b11
+        - INTC_2024_Item_1_0014_32e0816b
+      ohio_expansion_context:
+        - INTC_2024_Item_1_0014_32e0816b
+        - INTC_2026_Item_1_0005_f5ba2220
     answer_points:
       - Intel 18A points to Intel.
-      - Intel manufacturing footprint evidence should mention U.S. fab locations such as Arizona, Ohio, Oregon, or New Mexico.
+      - Intel manufacturing footprint evidence supports Arizona and Oregon as U.S. manufacturing states and Ohio as a wafer-fab expansion context.
+      - New Mexico should be treated as advanced packaging evidence, not wafer fabrication evidence.
+    notes: >
+      Gold audit 2026-07-08: New Mexico was removed from gold_entities because
+      the verified chunks describe it as advanced packaging, while the query
+      asks about wafer fabrication. The query wording now allows operated and
+      expansion fab context so Ohio can be measured fairly.
 
   - id: T026
     query: "What U.S. legislative act funds domestic semiconductor manufacturing expansion at the Intel 18A developer?"
@@ -432,11 +709,26 @@ queries:
     gold_tools: ["graph", "hybrid"]
     gold_entities: ["intel 18a", "intel", "chips act"]
     gold_chunks:
+      - INTC_2026_Item_1_0004_c01224f1
+      - INTC_2026_Item_1_0015_adfe2316
       - INTC_2025_Item_1A_0008_80e72e45
       - INTC_2026_Item_1A_0008_662b7d4d
+      - INTC_2024_Item_1A_0007_6560bf56
+    gold_evidence_groups:
+      intel_18a_anchor:
+        - INTC_2026_Item_1_0004_c01224f1
+        - INTC_2026_Item_1_0015_adfe2316
+      chips_act_manufacturing_funding:
+        - INTC_2025_Item_1A_0008_80e72e45
+        - INTC_2026_Item_1A_0008_662b7d4d
+        - INTC_2024_Item_1A_0007_6560bf56
     answer_points:
       - Intel 18A points to Intel.
       - The CHIPS Act is relevant to U.S. domestic semiconductor manufacturing incentives.
+    notes: >
+      Gold audit 2026-07-08: T026 is a two-slot query. Intel 18A chunks anchor
+      the product/process to Intel, while Item 1A chunks mention CHIPS Act
+      funding or incentives for U.S. semiconductor manufacturing expansion.
 
   - id: T027
     query: "What advanced driver assistance product lines come from the autonomous driving subsidiary of the Xeon Scalable developer?"
@@ -444,11 +736,28 @@ queries:
     gold_tools: ["graph", "hybrid"]
     gold_entities: ["xeon scalable", "intel", "mobileye", "mobileye supervision", "mobileye chauffeur", "mobileye drive"]
     gold_chunks:
+      - INTC_2026_Item_1_0011_4307b8ad
+      - INTC_2024_Item_1_0004_692d8999
       - INTC_2024_Item_7_0010_3742bdd2
       - INTC_2024_Item_7_0014_e766ac95
+    gold_evidence_groups:
+      xeon_intel_anchor:
+        - INTC_2026_Item_1_0011_4307b8ad
+        - INTC_2024_Item_1_0004_692d8999
+      mobileye_subsidiary_anchor:
+        - INTC_2024_Item_1_0004_692d8999
+        - INTC_2024_Item_7_0010_3742bdd2
+      mobileye_adas_product_lines:
+        - INTC_2024_Item_7_0010_3742bdd2
+        - INTC_2024_Item_7_0014_e766ac95
     answer_points:
       - Xeon Scalable points to Intel.
       - Intel links to Mobileye, and Mobileye links to product lines such as SuperVision, Chauffeur, or Drive.
+    notes: >
+      Gold audit 2026-07-08: INTC_2024_Item_7_0010 is the strongest direct
+      evidence for Mobileye SuperVision, Chauffeur, and Drive. Xeon chunks are
+      kept as the product-to-company anchor so Answerable@K requires both the
+      Intel anchor and Mobileye product evidence.
 
   - id: T028
     query: "What consumer storage and DRAM brand is sold by the U.S. supplier of HBM3E memory?"
@@ -456,11 +765,24 @@ queries:
     gold_tools: ["graph", "hybrid"]
     gold_entities: ["hbm3e", "micron", "crucial"]
     gold_chunks:
+      - MU_2024_Item_1_0002_473014b9
+      - MU_2025_Item_1_0010_ef8bd774
       - MU_2025_Item_1_0000_6418b9d4
       - MU_2024_Item_1_0000_82417507
+    gold_evidence_groups:
+      hbm3e_micron_anchor:
+        - MU_2024_Item_1_0002_473014b9
+        - MU_2025_Item_1_0010_ef8bd774
+      crucial_brand:
+        - MU_2025_Item_1_0000_6418b9d4
+        - MU_2024_Item_1_0000_82417507
     answer_points:
       - HBM3E points to Micron as a memory supplier.
       - Crucial is Micron's consumer storage and memory brand.
+    notes: >
+      Gold audit 2026-07-08: this query needs both sides of the bridge. HBM3E
+      chunks identify Micron's HBM3E technology, while overview chunks identify
+      Crucial as a Micron consumer memory and storage brand.
 
   - id: T029
     query: "Why has HBM become critical for modern AI training and inference workloads?"
@@ -469,19 +791,40 @@ queries:
     gold_entities: ["hbm", "hbm3e", "ai", "data center"]
     gold_chunks:
       - MU_2025_Item_1_0001_b64486b7
+      - MU_2024_Item_1_0001_90ffbd18
       - MU_2024_Item_1_0003_acd8d0ff
+      - MU_2025_Item_7_0000_aa4240e3
+      - MU_2024_Item_1_0002_473014b9
+    gold_evidence_groups:
+      hbm_architecture_benefit:
+        - MU_2025_Item_1_0001_b64486b7
+        - MU_2024_Item_1_0001_90ffbd18
+      ai_workload_demand:
+        - MU_2024_Item_1_0003_acd8d0ff
+        - MU_2025_Item_7_0000_aa4240e3
+        - MU_2024_Item_1_0002_473014b9
     answer_points:
       - HBM provides high-bandwidth memory needed by AI accelerators.
       - AI training and inference workloads increase demand for high-performance memory.
+    notes: >
+      Gold audit 2026-07-08: HBM architecture chunks explain the technical
+      reason: higher bandwidth and lower power for data-intensive workloads.
+      AI demand chunks explain why training, inference, and hyperscale data
+      center demand make HBM strategically important.
 
   - id: T030
     query: "Which cloud hyperscalers partner with the EPYC processor maker for server CPU deployments in their data centers?"
     type: customer_via_product
-    gold_tools: ["graph", "hybrid"]
-    gold_entities: ["epyc", "amd", "microsoft", "amazon", "google", "meta"]
-    gold_chunks:
-      - AMD_2024_Item_1_0006_e41aed21
-      - AMD_2026_Item_1_0004_b5e66359
+    gold_tools: []
+    gold_entities: ["epyc", "amd", "hyperscale cloud"]
+    gold_chunks: []
     answer_points:
       - EPYC points to AMD.
-      - AMD's server CPU ecosystem should retrieve cloud/data-center customer or partner evidence.
+      - Current 10-K graph evidence supports generic hyperscale/cloud data-center demand, but not named Google/Meta customer evidence.
+    notes: >
+      Neo4j entity audit 2026-07-08: cut from scored retrieval metrics for now.
+      The corpus contains AMD EPYC/data-center and generic hyperscale evidence,
+      but does not contain Google or Meta as usable AMD EPYC customer entities.
+      Previous gold chunks were console/Ryzen AI context and did not answer the
+      named cloud hyperscaler query. With gold_chunks empty, the evaluator treats
+      this as unscored discovery instead of a tuning target.
