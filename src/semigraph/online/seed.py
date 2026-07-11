@@ -177,11 +177,6 @@ def query_to_triple_seeds(
     cfg: Optional[Config] = None,
 ) -> list[dict]:
     """Find seeds via top-k triple cosine search (HippoRAG v2 Query-to-Triple).
-
-    For each of the top-k retrieved triples, emit BOTH head and tail entity
-    as candidate seeds. Deduplicate by `(name, type)`, keeping the highest
-    similarity across triples in which the entity appears.
-
     Args:
         query: Natural-language input.
         top_k_triples: Number of nearest-triple to consider (each yields

@@ -29,9 +29,6 @@ from semigraph.config import Config, get_config
 from semigraph.connections import get_neo4j_driver
 
 
-# All Entity↔Entity domain relationship types. MENTIONS / HAS_* (provenance)
-# and SYNONYM_OF (linkage) are intentionally excluded so the signal reflects
-# actual knowledge density, not corpus chatter.
 INFORMATIVE_REL_TYPES: list[str] = [
     "ANNOUNCES",
     "CAUSES_SHORTAGE_OF",

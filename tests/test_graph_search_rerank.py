@@ -1,5 +1,6 @@
 from semigraph.online.graph_search import (
     MetadataRerankParams,
+    _collapse_clusters,
     _rerank_chunks,
     _section_boosts_for_query,
 )
@@ -208,3 +209,24 @@ def test_broad_chunk_penalty():
     )
 
     assert ranked[0]["chunk_id"] == "B"
+
+
+def test_collapse_clusters_uses_max_for_duplicate_entity_names():
+    ppr_entities = [
+        {"name": "amd", "type": "ORG", "score": 1.2},
+        {"name": "advanced micro devices", "type": "ORG", "score": 0.5},
+        {"name": "amd", "type": "COMP", "score": 0.3},
+        {"name": "nvidia", "type": "ORG", "score": 0.7},
+    ]
+    cluster_map = {
+        "amd": ["amd", "advanced micro devices", "amd"],
+        "advanced micro devices": ["amd", "advanced micro devices"],
+        "nvidia": ["nvidia"],
+    }
+
+    collapsed = _collapse_clusters(ppr_entities, cluster_map)
+
+    assert collapsed[0]["aliases"] == ["amd", "advanced micro devices", "amd"]
+    assert collapsed[0]["score"] == 1.7
+    assert collapsed[1]["aliases"] == ["nvidia"]
+    assert collapsed[1]["score"] == 0.7

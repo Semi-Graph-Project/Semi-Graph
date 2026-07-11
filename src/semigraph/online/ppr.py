@@ -1,28 +1,8 @@
-"""
-Personalized PageRank walker for Phase C1b — seeds → ranked entities.
 
-Receives seeds from `query_to_seeds()` (Phase C1a) and runs Personalized
-PageRank via GDS, biasing the walk toward seed neighborhoods so the top-k
-reflects query-relevant entities rather than global graph hubs.
-
-Only informative domain (Entity↔Entity) relationships are projected — see
-`INFORMATIVE_REL_TYPES` in `offline/specificity.py`. Provenance edges
-(`MENTIONS`, `HAS_CHUNK`, `HAS_SECTION`) and linkage edges (`SYNONYM_OF`)
-are excluded. Including provenance would let mass leak into Chunk/Section
-nodes and flatten entity rankings within a few power-iteration rounds.
-
-GDS 2.x requires a named projection — `gds.pageRank.stream(graphName, config)`
-does NOT accept anonymous `nodeQuery`/`relationshipQuery` in its config map.
-Each call creates a uniquely-named ephemeral projection and drops it in a
-`finally` block so a failed PPR run does not leak in-memory graphs.
-
-Output of `run_ppr()` is the input to Phase C1c, which maps ranked entities
-back to chunks.
-"""
 from __future__ import annotations
 
 import uuid
-from typing import Optional
+from typing import Literal, Optional
 
 from neo4j import Driver
 
@@ -44,10 +24,14 @@ ORDER BY cnt DESC
 """
 
 _CYPHER_MAP_ID = """
+UNWIND $seeds AS seed
 MATCH (e:Entity)
-WHERE e.name IN $names
-RETURN id(e) AS id, e.name AS name, e.specificity AS specificity
+WHERE e.name = seed.name AND e.type = seed.type
+RETURN id(e) AS id,
+       e.name AS name,
+       e.type AS type
 """
+
 
 _CYPHER_MAP_NAME = """
 MATCH (e:Entity)
@@ -82,7 +66,46 @@ YIELD graphName
 RETURN graphName
 """
 
+SeedWeightMode = Literal[
+    "uniform",
+    "similarity",
+    "similarity_specificity",
+]
 
+PPRGraphMode = Literal[
+    "entity_only", 
+    "entity_chunk",
+]
+
+def _seed_weight(seed: dict, mode: SeedWeightMode) -> float:
+    similarity = max(float(seed.get("similarity", 0)), 0.0)
+    specificity = max(float(seed.get("specificity", 1.0)), 0.0)
+
+    if mode == "uniform":
+        return 1.0
+    if mode == "similarity":
+        return similarity
+    if mode == "similarity_specificity":
+        return similarity * specificity
+
+    raise ValueError(f"Unknown seed weight mode: {mode}")
+
+def _normalize_seed_weights(
+    weight_seeds: list[tuple[int, float]],
+) -> list[tuple[int, float]]:
+    if not weight_seeds:
+        return []
+
+    total_weight = sum(weight for _, weight in weight_seeds)
+
+    if total_weight <= 0:
+        uniform = 1.0 / len(weight_seeds)
+        return [(node_id, uniform) for node_id, _ in weight_seeds]
+
+    return [
+        (node_id, weight / total_weight)
+        for node_id, weight in weight_seeds
+    ]
 def _sanity_check_rel_types(cfg: Optional[Config] = None) -> None:
     """Verify every PPR_REL_TYPE actually exists in the graph.
 
@@ -125,49 +148,44 @@ def _build_rel_query() -> str:
         f"RETURN id(s) AS source, id(t) AS target"
     )
 
+def _build_node_query(graph_mode: PPRGraphMode) -> str:
+    """
+     Cypher Slec
+    """
+    if graph_mode == "entity_only":
+        return "MATCH (n:Entity) RETURN id(n) AS id"
+
+    if graph_mode == "entity_chunk":
+        return (
+            "MATCH (n) "
+            "WHERE n:Entity OR n:Chunk "
+            "RETURN id(n) AS id"
+        )
+
+    raise ValueError(f"Unknown PPR graph mode: {graph_mode}")
+
 
 def run_ppr(
     seeds: list[dict],
     top_k: int = 20,
     damping: float = 0.85,
     max_iterations: int = 20,
-    use_specificity_teleport: bool = False,
+    seed_weight_mode: SeedWeightMode = "uniform",
+    graph_mode: str = "entity_only",
     cfg: Optional[Config] = None,
 ) -> list[dict]:
     """Run Personalized PageRank from `seeds` and return top-k entities.
 
-    Teleport distribution — two modes:
-      * `use_specificity_teleport=False` (default): uniform 1/k per seed.
-        Empirically best on this corpus — see ablation below.
-      * `use_specificity_teleport=True` (HippoRAG v1 paper recipe): teleport
-        probability ∝ entity specificity. Low-spec hubs (`intel`, `china`)
-        get small weight; specific leaves get large weight. Implemented via
-        multi-set seed list (cap=2) since GDS 2.x `sourceNodes` accepts
-        only flat lists.
-
-    Ablation result on dev N=50 (logged in analytics/):
-      | Mode               | Graph R@5 | Gph vs Vec p (Wilcoxon)        |
-      |--------------------|-----------|--------------------------------|
-      | uniform (default)  | 0.492     | 0.028 ✓ significant            |
-      | spec-weighted cap=2| 0.448     | 0.185 ✗ not sig                |
-      | spec-weighted cap=10|0.448     | 0.206 ✗ not sig                |
-    Why uniform wins: ticker hubs (`intel`/`nvidia`/`united_states`) in our
-    KG act as routing *bridges* in multi-hop chains — de-weighting them
-    breaks 1-2 hop traversal (e.g. Q25 "US states of Intel 18A maker"
-    crashed 1.00→0.00 because walker stops starting at the intel hub).
-
     Args:
         seeds: Output of `query_to_seeds()` / `query_to_triple_seeds()`.
-               Each dict requires `name`; `specificity` is read when
-               `use_specificity_teleport=True` (fallback 1.0 if absent).
+               Each dict requires `name`.
         top_k: Number of top-scoring entities to return.
         damping: PageRank damping factor (0.85 = HippoRAG default).
         max_iterations: Power-iteration cap.
-        use_specificity_teleport: see "Teleport distribution" above.
         cfg: Optional Config; defaults to cached singleton.
 
     Returns:
-        List of dicts sorted by PPR score desc, each: `{name, type, score}`.
+        List of dicts sorted by PPR score desc, each: [`{name, type, score}`, ...].
         Empty list if seeds is empty or no seed name maps to a graph entity.
 
     Raises:
@@ -186,63 +204,31 @@ def run_ppr(
 
     try:
         with driver.session() as session:
-            # Map Seed to ID + pull specificity for teleport weighting
-            id_rows = list(session.run(_CYPHER_MAP_ID, names=seed_names))
-            seed_ids: list[int] = [row["id"] for row in id_rows]
-            id_to_spec: dict[int, float] = {
-                row["id"]: (row["specificity"] if row["specificity"] is not None else 1.0)
-                for row in id_rows
-            }
-            found_names = {row["name"] for row in id_rows}
-            missing = sorted(set(seed_names) - found_names)
-            if missing:
-                print(f"[run_ppr] {len(missing)} seed(s) not in graph: {missing}")
-
-            if not seed_ids:
-                print("[run_ppr] No valid seed IDs — aborting walk.")
-                return []
-
-            # Build source-node ID list for GDS PageRank.
-            # GDS 2.x `sourceNodes` accepts ONLY a flat list of node IDs
-            # (no `{nodeId,weight}` map form). Weighted-teleport workaround:
-            # repeat each seed ID proportional to its specificity, then GDS's
-            # uniform teleport over the multi-set yields the weighted
-            # distribution we want.
-            #
-            # Multiplicity = round(spec_i / min_spec), capped at MULT_CAP=2
-            # — *intentionally mild*. A previous run at cap=10 (full 10:1
-            # leaf:hub spread) crashed Graph Recall@5 from 0.49 → 0.45 on
-            # this corpus because de-weighting hub seeds (intel, nvidia,
-            # united_states) broke their role as routing bridges in 1-2 hop
-            # queries (e.g. Q25 "US states of Intel 18A maker" needs to walk
-            # through intel-hub to reach Arizona/Ohio/Oregon). cap=2 keeps
-            # the de-emphasis subtle: leaf gets at most 2× the teleport
-            # weight of a hub, not 10×, preserving bridge functionality.
-            #
-            # min_spec floor of 0.05 guards against any zero/None spec.
-            MULT_CAP = 2
-            if use_specificity_teleport:
-                weights = [max(0.05, id_to_spec[nid]) for nid in seed_ids]
-                min_w = min(weights)
-                multiplicities = [
-                    min(MULT_CAP, max(1, round(w / min_w))) for w in weights
+            # Map each seed to its typed Entity node id.
+            id_rows = list(session.run(
+                _CYPHER_MAP_ID,
+                seeds=[
+                    {
+                        "name": seed["name"],
+                        "type": seed["type"],
+                    }
+                    for seed in seeds
                 ]
-                source_ids: list[int] = []
-                for nid, mult in zip(seed_ids, multiplicities):
-                    source_ids.extend([nid] * mult)
-                weights_preview = ", ".join(
-                    f"{id_to_spec[nid]:.2f}×{mult}"
-                    for nid, mult in zip(seed_ids[:5], multiplicities[:5])
-                )
-                mode_str = (
-                    f"specificity-weighted "
-                    f"(unique={len(seed_ids)}, repeated={len(source_ids)}, "
-                    f"sample: {weights_preview}...)"
-                )
-            else:
-                # Uniform ablation path — each seed exactly once.
-                source_ids = list(seed_ids)
-                mode_str = f"uniform ({len(seed_ids)} seeds)"
+            ))
+            seed_lookup = {
+               (seed["name"], seed["type"]): seed
+                for seed in seeds
+            }
+            weighted_seed_ids = []
+            for row in id_rows:
+                seed = seed_lookup[(row["name"], row["type"])]
+                weight = _seed_weight(seed, seed_weight_mode)
+                weighted_seed_ids.append((row["id"], weight))
+
+            if not weighted_seed_ids:
+                print("[run_ppr] No valid seed IDs - aborting walk.")
+                return []
+            weighted_seed_ids = _normalize_seed_weights(weighted_seed_ids)
 
             try:
                 proj = session.run(
@@ -254,15 +240,42 @@ def run_ppr(
                       f"{proj['nodeCount']} nodes, "
                       f"{proj['relationshipCount']} relationships")
 
-                print(f"[run_ppr] PPR over {len(seed_ids)} seeds "
-                      f"(damping={damping}, max_iter={max_iterations}, teleport={mode_str})")
-                ppr_rows = list(session.run(
-                    _CYPHER_PPR,
-                    graph_name=graph_name,
-                    source_ids=source_ids,
-                    damping=damping,
-                    max_iter=max_iterations,
-                ))
+
+                # print(f"[run_ppr] PPR over {len(seed_ids)} seeds "
+                #       f"(damping={damping}, max_iter={max_iterations}, teleport=uniform)")
+                if seed_weight_mode == "uniform":
+                    source_ids = [node_id for node_id, _ in weighted_seed_ids]
+                    ppr_rows = list(session.run(
+                        _CYPHER_PPR,
+                        graph_name=graph_name,
+                        source_ids=source_ids,
+                        damping=damping,
+                        max_iter=max_iterations,
+                    ))
+                else:
+                    combined_scores: dict[int, float] = {}
+                    for seed_id, seed_weight in weighted_seed_ids:
+                        rows = session.run(
+                            _CYPHER_PPR,
+                            graph_name=graph_name,
+                            source_ids=[seed_id],
+                            damping=damping,
+                            max_iter=max_iterations,
+                        )
+                        for row in rows:
+                            node_id = row["nodeId"]
+                            weighted_score = float(row["score"]) * seed_weight
+                            combined_scores[node_id] = (
+                                combined_scores.get(node_id, 0) + weighted_score
+                            )
+                    ppr_rows = [
+                        {"nodeId": node_id, "score": score}
+                        for node_id, score in combined_scores.items()
+                    ]
+                    ppr_rows.sort(key=lambda row: row["score"], reverse=True)
+                    
+
+
             finally:
                 session.run(_CYPHER_DROP, graph_name=graph_name).consume()
 

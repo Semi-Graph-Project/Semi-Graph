@@ -737,7 +737,13 @@ def _collapse_clusters(
         `[{aliases: [...], score: float}, ...]` ready for `_map_chunks`.
         Order: highest cluster score first (deterministic).
     """
-    name_to_score = {e["name"]: e["score"] for e in ppr_entities}
+    name_to_score: dict[str, float] = {}
+    for entity in ppr_entities:
+        name = str(entity.get("name", ""))
+        if not name:
+            continue
+        score = float(entity.get("score") or 0.0)
+        name_to_score[name] = max(name_to_score.get(name, 0.0), score)
     seen_clusters: set[frozenset] = set()
     entries: list[dict] = []
 
@@ -755,7 +761,7 @@ def _collapse_clusters(
         # SUM scores of every alias that ranks in PPR top-k. Aliases outside
         # top-k aren't penalized — they simply contribute 0 (their mass is
         # already low or they fell outside the cap).
-        cluster_score = sum(name_to_score.get(a, 0.0) for a in aliases)
+        cluster_score = sum(name_to_score.get(a, 0.0) for a in set(aliases))
         entries.append({"aliases": list(aliases), "score": cluster_score})
 
     entries.sort(key=lambda c: c["score"], reverse=True)
@@ -804,6 +810,7 @@ def trace_graph_search(
     rerank_mode: str = "legacy",
     candidate_pool_k: int = 100,
     metadata_rerank_params: Optional[MetadataRerankParams] = None,
+    ppr_seed_weight_mode: str = "uniform",
     cfg: Optional[Config] = None,
 ) -> dict:
     """Run graph retrieval and return both chunks and stage-level trace.
@@ -834,6 +841,8 @@ def trace_graph_search(
         "chunk_candidates": [],
         "chunks": [],
         "abort_reason": None,
+        "ppr_seed_weight_mode": ppr_seed_weight_mode,
+
     }
 
     seeds = _select_seed_entities(
@@ -852,6 +861,7 @@ def trace_graph_search(
         seeds,
         top_k=top_k_entities,
         damping=damping,
+        seed_weight_mode=ppr_seed_weight_mode,
         cfg=cfg,
     )
     trace["ppr_entities"] = ppr_entities
@@ -872,13 +882,16 @@ def trace_graph_search(
 
     chunk_candidates = _map_chunks(cluster_entries, top_k=candidate_pool_k, cfg=cfg)
     trace["chunk_candidates"] = chunk_candidates
-    chunks = _rerank_chunks(
-        effective_query,
-        chunk_candidates,
-        rerank_mode=rerank_mode,
-        metadata_rerank_params=metadata_rerank_params,
-        cfg=cfg,
-    )[:top_k_chunks]
+    # chunks = _rerank_chunks(
+    #     effective_query,
+    #     chunk_candidates,
+    #     rerank_mode=rerank_mode,
+    #     metadata_rerank_params=metadata_rerank_params,
+    #     cfg=cfg,
+    # )[:top_k_chunks]
+    
+    # No Rerank Mode
+    chunks = chunk_candidates[:top_k_chunks]
     trace["chunks"] = chunks
     print(f"[graph_search] returning {len(chunks)} chunks")
     return trace
@@ -895,6 +908,7 @@ def graph_search(
     rerank_mode: str = "legacy",
     candidate_pool_k: int = 100,
     metadata_rerank_params: Optional[MetadataRerankParams] = None,
+    ppr_seed_weight_mode: str = "uniform",
     cfg: Optional[Config] = None,
 ) -> list[dict]:
     """Full graph_search pipeline: query → top-k chunks ranked by PPR mass.
@@ -943,6 +957,7 @@ def graph_search(
         rerank_mode=rerank_mode,
         candidate_pool_k=candidate_pool_k,
         metadata_rerank_params=metadata_rerank_params,
+        ppr_seed_weight_mode=ppr_seed_weight_mode,
         cfg=cfg,
     )
     return trace["chunks"]

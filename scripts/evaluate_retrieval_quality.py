@@ -113,7 +113,7 @@ def _get_tool(
     candidate_pool_k: int = 100,
     graph_top_k_entities: int = 20,
     graph_top_k_triples: int = 8,
-    graph_damping: float = 0.7,
+    graph_damping: float = 0.5,
     metadata_rerank_params=None,
 ):
     if tool_name == "vector":
@@ -173,11 +173,48 @@ def _normalize_entity(name: str) -> str:
     return " ".join(str(name).strip().lower().split())
 
 
-def _gold_entities(item: dict) -> list[str]:
+def _reference_gold_entities(item: dict) -> list[str]:
     return [
         _normalize_entity(name)
         for name in item.get("gold_entities", [])
         if _normalize_entity(name)
+    ]
+
+
+def _gold_entity_alias_groups(item: dict) -> dict[str, set[str]]:
+    """Return each reference entity with its accepted graph-name aliases."""
+    raw_aliases = item.get("gold_entity_aliases") or {}
+    groups: dict[str, set[str]] = {}
+    for reference in _reference_gold_entities(item):
+        alternatives = {reference}
+        if isinstance(raw_aliases, dict):
+            alternatives.update(
+                _normalize_entity(alias)
+                for alias in raw_aliases.get(reference, [])
+                if _normalize_entity(alias)
+            )
+        groups[reference] = alternatives
+    return groups
+
+
+def _gold_entities(item: dict) -> list[str]:
+    """Flatten reference entities and verified aliases for hit diagnostics."""
+    return sorted({
+        entity
+        for alternatives in _gold_entity_alias_groups(item).values()
+        for entity in alternatives
+    })
+
+
+def _missing_gold_entity_groups(
+    item: dict,
+    existing_entities: set[str],
+) -> list[str]:
+    """A reference is missing only when none of its alternatives exist."""
+    return [
+        reference
+        for reference, alternatives in _gold_entity_alias_groups(item).items()
+        if not alternatives & existing_entities
     ]
 
 
@@ -459,6 +496,7 @@ def _run_tool(
     graph_top_k_entities: int,
     graph_top_k_triples: int,
     graph_damping: float,
+    seed_weight_mode: str,
     metadata_rerank_params,
 ) -> tuple[list[dict], str | None, float, dict | None]:
     started = time.time()
@@ -477,6 +515,7 @@ def _run_tool(
                 damping=graph_damping,
                 rerank_mode=graph_rerank_mode,
                 candidate_pool_k=candidate_pool_k,
+                ppr_seed_weight_mode=seed_weight_mode,
                 metadata_rerank_params=metadata_rerank_params,
             )
             return trace["chunks"], None, time.time() - started, trace
@@ -514,15 +553,14 @@ def _evaluate_query(
     graph_top_k_entities: int,
     graph_top_k_triples: int,
     graph_damping: float,
+    seed_weight_mode: str,
     metadata_rerank_params,
 ) -> dict:
     query = str(item.get("query", "")).strip()
     gold_chunks = [str(cid) for cid in item.get("gold_chunks", []) if cid]
     evidence_groups = _gold_evidence_groups(item, gold_chunks)
     gold_entities = _gold_entities(item)
-    missing_gold_entities = [
-        entity for entity in gold_entities if entity not in existing_entities
-    ]
+    missing_gold_entities = _missing_gold_entity_groups(item, existing_entities)
     if not gold_chunks:
         corpus_status = "unscored_discovery"
     elif missing_gold_entities:
@@ -537,6 +575,8 @@ def _evaluate_query(
         "subset": subset,
         "gold_tools": item.get("gold_tools", []),
         "gold_entities": gold_entities,
+        "reference_gold_entities": _reference_gold_entities(item),
+        "gold_entity_aliases": item.get("gold_entity_aliases", {}),
         "missing_gold_entities": missing_gold_entities,
         "corpus_status": corpus_status,
         "gold_chunks": gold_chunks,
@@ -571,6 +611,7 @@ def _evaluate_query(
                 graph_top_k_entities=graph_top_k_entities,
                 graph_top_k_triples=graph_top_k_triples,
                 graph_damping=graph_damping,
+                seed_weight_mode=seed_weight_mode,
                 metadata_rerank_params=metadata_rerank_params,
             )
 
@@ -895,6 +936,7 @@ def _write_markdown(
     graph_top_k_entities: int,
     graph_top_k_triples: int,
     graph_damping: float,
+    ppr_seed_weight_mode: str,
     metadata_rerank_params,
     run_config: dict | None = None,
 ) -> None:
@@ -922,6 +964,7 @@ def _write_markdown(
         "graph_top_k_entities": graph_top_k_entities,
         "graph_top_k_triples": graph_top_k_triples,
         "graph_damping": graph_damping,
+        "ppr_seed_weight_mode": ppr_seed_weight_mode,
         "metadata_rerank_params": (
             metadata_rerank_params.to_dict()
             if hasattr(metadata_rerank_params, "to_dict")
@@ -1135,6 +1178,11 @@ def main() -> None:
             "for historical comparisons."
         ),
     )
+    parser.add_argument(
+        "--ppr-seed-weight-mode",
+        choices=["uniform", "similarity", "similarity_specificity"],
+        default="uniform",
+    )
 
     parser.add_argument(
         "--version-name",
@@ -1157,7 +1205,7 @@ def main() -> None:
     )
     parser.add_argument("--graph-top-k-entities", type=int, default=20)
     parser.add_argument("--graph-top-k-triples", type=int, default=8)
-    parser.add_argument("--graph-damping", type=float, default=0.7)
+    parser.add_argument("--graph-damping", type=float, default=0.5)
     parser.add_argument("--metadata-risk-section-boost", type=float, default=1.35)
     parser.add_argument("--metadata-business-section-boost", type=float, default=1.18)
     parser.add_argument("--metadata-financial-section-boost", type=float, default=1.28)
@@ -1236,6 +1284,7 @@ def main() -> None:
             graph_top_k_entities=args.graph_top_k_entities,
             graph_top_k_triples=args.graph_top_k_triples,
             graph_damping=args.graph_damping,
+            seed_weight_mode=args.ppr_seed_weight_mode,
             metadata_rerank_params=metadata_rerank_params,
         )
         for item in queries
@@ -1259,6 +1308,7 @@ def main() -> None:
         graph_top_k_entities=args.graph_top_k_entities,
         graph_top_k_triples=args.graph_top_k_triples,
         graph_damping=args.graph_damping,
+        ppr_seed_weight_mode=args.ppr_seed_weight_mode,
         metadata_rerank_params=metadata_rerank_params,
         run_config={
             "version_name": args.version_name,

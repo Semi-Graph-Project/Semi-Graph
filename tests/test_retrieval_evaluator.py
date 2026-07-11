@@ -1,6 +1,38 @@
 from scripts import evaluate_retrieval_quality as ev
 
 
+def test_gold_entity_aliases_are_alternatives_for_diagnostics():
+    item = {
+        "gold_entities": ["intc", "operating income"],
+        "gold_entity_aliases": {
+            "intc": ["intel"],
+            "operating income": ["operate income"],
+        },
+    }
+
+    assert ev._gold_entities(item) == [
+        "intc",
+        "intel",
+        "operate income",
+        "operating income",
+    ]
+    assert ev._missing_gold_entity_groups(
+        item,
+        existing_entities={"intel", "operate income"},
+    ) == []
+
+
+def test_gold_entity_group_is_missing_when_no_alias_exists_in_graph():
+    item = {
+        "gold_entities": ["intc"],
+        "gold_entity_aliases": {"intc": ["intel"]},
+    }
+
+    assert ev._missing_gold_entity_groups(item, existing_entities={"amd"}) == [
+        "intc"
+    ]
+
+
 def test_classify_subset_reextract_only():
     item = {
         "query": "How exposed is AMD to TSMC supply risk?",

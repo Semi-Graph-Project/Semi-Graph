@@ -28,6 +28,7 @@ dependencies = [
     "pydantic>=2.0",
     "pydantic-settings",
     "pandas",
+    "pyarrow>=14.0",
     "gliner",
     "sentence-transformers>=3.0",
     "rapidfuzz>=3.0",
