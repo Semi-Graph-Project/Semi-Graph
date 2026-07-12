@@ -12,7 +12,7 @@ from semigraph.offline.specificity import INFORMATIVE_REL_TYPES
 from semigraph.online.seed import query_to_seeds
 
 
-# Re-export from Phase B3 (single source of truth in specificity.py).
+# Re-export the YAML-backed graph configuration from the shared module.
 PPR_REL_TYPES: list[str] = INFORMATIVE_REL_TYPES
 
 
@@ -42,7 +42,7 @@ RETURN id(e) AS id, e.name AS name, e.type AS type
 _CYPHER_PROJECT = """
 CALL gds.graph.project.cypher(
     $graph_name,
-    'MATCH (n:Entity) RETURN id(n) AS id',
+    $node_query,
     $rel_query
 )
 YIELD graphName, nodeCount, relationshipCount
@@ -53,7 +53,8 @@ _CYPHER_PPR = """
 CALL gds.pageRank.stream($graph_name, {
     sourceNodes: $source_ids,
     dampingFactor: $damping,
-    maxIterations: $max_iter
+    maxIterations: $max_iter,
+    relationshipWeightProperty: 'weight'
 })
 YIELD nodeId, score
 RETURN nodeId, score
@@ -66,6 +67,23 @@ YIELD graphName
 RETURN graphName
 """
 
+
+_CYPHER_CHUNK_NODE_IDS = """
+MATCH (c:Chunk)
+RETURN id(c) AS id
+"""
+
+_CYPHER_MAP_CHUNKS = """
+MATCH (c:Chunk)
+WHERE id(c) IN $ids
+RETURN id(c) AS id,
+       c.chunk_id AS chunk_id,
+       c.text AS text,
+       c.ticker AS ticker,
+       c.fiscal_year AS fiscal_year,
+       c.section AS section
+"""
+
 SeedWeightMode = Literal[
     "uniform",
     "similarity",
@@ -73,9 +91,18 @@ SeedWeightMode = Literal[
 ]
 
 PPRGraphMode = Literal[
-    "entity_only", 
+    "entity_only",
     "entity_chunk",
 ]
+
+
+def _empty_passage_result() -> dict:
+    return {
+        "chunks": [],
+        "ppr_entities": [],
+        "projection": {"node_count": 0, "relationship_count": 0},
+    }
+
 
 def _seed_weight(seed: dict, mode: SeedWeightMode) -> float:
     similarity = max(float(seed.get("similarity", 0)), 0.0)
@@ -89,6 +116,7 @@ def _seed_weight(seed: dict, mode: SeedWeightMode) -> float:
         return similarity * specificity
 
     raise ValueError(f"Unknown seed weight mode: {mode}")
+
 
 def _normalize_seed_weights(
     weight_seeds: list[tuple[int, float]],
@@ -106,6 +134,25 @@ def _normalize_seed_weights(
         (node_id, weight / total_weight)
         for node_id, weight in weight_seeds
     ]
+
+
+def _top_chunk_score_rows(
+    ppr_rows: list[dict],
+    chunk_node_ids: set[int],
+    top_k: int,
+) -> list[dict]:
+    """Filter PPR results to Chunk nodes before selecting top-k."""
+    chunk_rows = [
+        row for row in ppr_rows
+        if row["nodeId"] in chunk_node_ids
+    ]
+    return sorted(
+        chunk_rows,
+        key=lambda row: row["score"],
+        reverse=True,
+    )[:top_k]
+
+
 def _sanity_check_rel_types(cfg: Optional[Config] = None) -> None:
     """Verify every PPR_REL_TYPE actually exists in the graph.
 
@@ -137,21 +184,48 @@ def _sanity_check_rel_types(cfg: Optional[Config] = None) -> None:
         driver.close()
 
 
-def _build_rel_query() -> str:
+def _build_rel_query(graph_mode: PPRGraphMode) -> str:
     # Inner Cypher of `gds.graph.project.cypher` is parsed in its own context
     # and cannot reference outer parameters, so rel types are inlined.
     # PPR_REL_TYPES is a module constant (not user input) — safe.
     rels_inline = ", ".join(f'"{t}"' for t in PPR_REL_TYPES)
-    return (
-        f"MATCH (s:Entity)-[r]-(t:Entity) "
+    entity_edges = (
+        "MATCH (s:Entity)-[r]->(t:Entity) "
         f"WHERE type(r) IN [{rels_inline}] "
-        f"RETURN id(s) AS source, id(t) AS target"
+        "RETURN id(s) AS source, id(t) AS target, 1.0 AS weight "
+        "UNION ALL "
+        "MATCH (s:Entity)-[r]->(t:Entity) "
+        f"WHERE type(r) IN [{rels_inline}] "
+        "RETURN id(t) AS source, id(s) AS target, 1.0 AS weight"
     )
 
+    if graph_mode == "entity_only":
+        return entity_edges
+
+    if graph_mode != "entity_chunk":
+        raise ValueError(f"Unknown PPR graph mode: {graph_mode}")
+
+    context_edges = (
+        " UNION ALL "
+        "MATCH (c:Chunk)-[:MENTIONS]->(e:Entity) "
+        "RETURN id(c) AS source, id(e) AS target, 1.0 AS weight "
+        "UNION ALL "
+        "MATCH (c:Chunk)-[:MENTIONS]->(e:Entity) "
+        "RETURN id(e) AS source, id(c) AS target, 1.0 AS weight "
+        "UNION ALL "
+        "MATCH (a:Entity)-[r:SYNONYM_OF]->(b:Entity) "
+        "RETURN id(a) AS source, id(b) AS target, "
+        "       coalesce(r.score, 1.0) AS weight "
+        "UNION ALL "
+        "MATCH (a:Entity)-[r:SYNONYM_OF]->(b:Entity) "
+        "RETURN id(b) AS source, id(a) AS target, "
+        "       coalesce(r.score, 1.0) AS weight"
+    )
+    return entity_edges + context_edges
+
+
 def _build_node_query(graph_mode: PPRGraphMode) -> str:
-    """
-     Cypher Slec
-    """
+    """Build the node projection query for the requested graph mode."""
     if graph_mode == "entity_only":
         return "MATCH (n:Entity) RETURN id(n) AS id"
 
@@ -161,8 +235,165 @@ def _build_node_query(graph_mode: PPRGraphMode) -> str:
             "WHERE n:Entity OR n:Chunk "
             "RETURN id(n) AS id"
         )
-
     raise ValueError(f"Unknown PPR graph mode: {graph_mode}")
+
+
+def run_passage_ppr(
+    seeds: list[dict],
+    top_k_chunks: int = 5,
+    top_k_entities: int = 40,
+    damping: float = 0.5,
+    max_iterations: int = 20,
+    seed_weight_mode: SeedWeightMode = "uniform",
+    cfg: Optional[Config] = None,
+) -> dict:
+    """Run PPR over Entity and Chunk nodes and return ranked passages."""
+    if not seeds:
+        print("[run_passage_ppr] No seeds provided.")
+        return _empty_passage_result()
+
+    cfg = cfg or get_config()
+    driver: Driver = get_neo4j_driver(cfg)
+    graph_name = f"ppr_{uuid.uuid4().hex[:8]}"
+
+    try:
+        with driver.session() as session:
+            id_rows = list(session.run(
+                _CYPHER_MAP_ID,
+                seeds=[
+                    {
+                        "name": seed["name"],
+                        "type": seed["type"],
+                    }
+                    for seed in seeds
+                ]
+            ))
+
+            seed_lookup = {
+                (seed["name"], seed["type"]): seed
+                for seed in seeds
+            }
+
+            weighted_seed_ids = []
+            for row in id_rows:
+                seed = seed_lookup[(row["name"], row["type"])]
+                weight = _seed_weight(seed, seed_weight_mode)
+                weighted_seed_ids.append((row["id"], weight))
+
+            if not weighted_seed_ids:
+                print("[run_passage_ppr] No valid seed IDs - aborting walk.")
+                return _empty_passage_result()
+            weighted_seed_ids = _normalize_seed_weights(weighted_seed_ids)
+
+            try:
+                proj = session.run(
+                    _CYPHER_PROJECT,
+                    graph_name=graph_name,
+                    node_query=_build_node_query("entity_chunk"),
+                    rel_query=_build_rel_query("entity_chunk"),
+                ).single()
+                print(f"[run_passage_ppr] Projected '{graph_name}': "
+                      f"{proj['nodeCount']} nodes, "
+                      f"{proj['relationshipCount']} relationships")
+
+                if seed_weight_mode == "uniform":
+                    source_ids = [node_id for node_id, _ in weighted_seed_ids]
+                    ppr_rows = list(session.run(
+                        _CYPHER_PPR,
+                        graph_name=graph_name,
+                        source_ids=source_ids,
+                        damping=damping,
+                        max_iter=max_iterations,
+                    ))
+                else:
+                    combined_scores: dict[int, float] = {}
+                    for seed_id, seed_weight in weighted_seed_ids:
+                        rows = session.run(
+                            _CYPHER_PPR,
+                            graph_name=graph_name,
+                            source_ids=[seed_id],
+                            damping=damping,
+                            max_iter=max_iterations,
+                        )
+                        for row in rows:
+                            node_id = row["nodeId"]
+                            weighted_score = float(row["score"]) * seed_weight
+                            combined_scores[node_id] = (
+                                combined_scores.get(node_id, 0) + weighted_score
+                            )
+                    ppr_rows = [
+                        {"nodeId": node_id, "score": score}
+                        for node_id, score in combined_scores.items()
+                    ]
+                    ppr_rows.sort(key=lambda row: row["score"], reverse=True)
+            finally:
+                session.run(_CYPHER_DROP, graph_name=graph_name).consume()
+            chunk_node_ids = {
+                row["id"]
+                for row in session.run(_CYPHER_CHUNK_NODE_IDS)
+            }
+
+            top_chunk_rows = _top_chunk_score_rows(
+                ppr_rows,
+                chunk_node_ids,
+                top_k_chunks,
+            )
+
+            entity_score_rows = sorted(
+                (
+                    row for row in ppr_rows
+                    if row["nodeId"] not in chunk_node_ids
+                ),
+                key=lambda row: row["score"],
+                reverse=True,
+            )[:top_k_entities]
+            entity_ids = [row["nodeId"] for row in entity_score_rows]
+            entity_property_rows = list(session.run(
+                _CYPHER_MAP_NAME,
+                ids=entity_ids,
+            ))
+            id_to_entity = {
+                row["id"]: {"name": row["name"], "type": row["type"]}
+                for row in entity_property_rows
+            }
+            top_entities = [
+                {
+                    **id_to_entity[row["nodeId"]],
+                    "score": float(row["score"]),
+                }
+                for row in entity_score_rows
+                if row["nodeId"] in id_to_entity
+            ]
+
+            chunk_ids = [row["nodeId"] for row in top_chunk_rows]
+            property_rows = list(session.run(_CYPHER_MAP_CHUNKS, ids=chunk_ids))
+            id_to_chunk = {row["id"]: dict(row) for row in property_rows}
+
+            chunks = [
+                {
+                    "chunk_id": id_to_chunk[row["nodeId"]]["chunk_id"],
+                    "text": id_to_chunk[row["nodeId"]]["text"],
+                    "ticker": id_to_chunk[row["nodeId"]]["ticker"],
+                    "fiscal_year": id_to_chunk[row["nodeId"]]["fiscal_year"],
+                    "section": id_to_chunk[row["nodeId"]]["section"],
+                    "score": float(row["score"]),
+                }
+                for row in top_chunk_rows
+                if row["nodeId"] in id_to_chunk
+            ]
+
+            return {
+                "chunks": chunks,
+                "ppr_entities": top_entities,
+                "projection": {
+                    "node_count": proj["nodeCount"],
+                    "relationship_count": proj["relationshipCount"],
+                },
+            }
+
+
+    finally:
+        driver.close()
 
 
 def run_ppr(
@@ -171,7 +402,6 @@ def run_ppr(
     damping: float = 0.85,
     max_iterations: int = 20,
     seed_weight_mode: SeedWeightMode = "uniform",
-    graph_mode: str = "entity_only",
     cfg: Optional[Config] = None,
 ) -> list[dict]:
     """Run Personalized PageRank from `seeds` and return top-k entities.
@@ -234,7 +464,8 @@ def run_ppr(
                 proj = session.run(
                     _CYPHER_PROJECT,
                     graph_name=graph_name,
-                    rel_query=_build_rel_query(),
+                    node_query=_build_node_query("entity_only"),
+                    rel_query=_build_rel_query("entity_only"),
                 ).single()
                 print(f"[run_ppr] Projected '{graph_name}': "
                       f"{proj['nodeCount']} nodes, "

@@ -79,6 +79,32 @@ kg:
   max_workers: 16
   batch_size: 5
 
+# Domain edges used by graph retrieval and triple embedding.  Provenance edges
+# such as MENTIONS and HAS_CHUNK are intentionally excluded.
+graph:
+  informative_rel_types:
+    - ANNOUNCES
+    - CAUSES_SHORTAGE_OF
+    - COMPETES_WITH
+    - DEPENDS_ON
+    - DISCLOSES
+    - FACES
+    - GUIDES_ON
+    - HAS_STAKE_IN
+    - IMPACTED_BY
+    - IMPACTS
+    - INTRODUCES
+    - INVESTS_IN
+    - INVOLVED_IN
+    - LISTED_ON
+    - NEGATIVELY_IMPACTS
+    - OPERATES_IN
+    - PARTNERS_WITH
+    - POSITIVELY_IMPACTS
+    - PRODUCES
+    - SUBJECT_TO
+    - SUPPLIES
+
 # Evidence-grounded graph repair runs after KG extraction and before triple
 # embedding/specificity. It asks the LLM to create only relationships supported
 # by an exact evidence sentence, then prunes entities that remain mention-only.

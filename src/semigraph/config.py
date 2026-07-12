@@ -110,6 +110,13 @@ class Config:
         self.kg_max_workers: int = kg.get("max_workers", 16)
         self.kg_batch_size: int = kg.get("batch_size", 5)
 
+        # --- Graph retrieval ---
+        graph = data.get("graph", {})
+        self.informative_rel_types: list[str] = [
+            str(rel_type).upper()
+            for rel_type in graph.get("informative_rel_types", [])
+        ]
+
         # --- Evidence-grounded graph repair ---
         repair = data.get("graph_repair", {})
         self.graph_repair_enabled: bool = repair.get("enabled", True)

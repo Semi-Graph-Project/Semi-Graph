@@ -29,29 +29,9 @@ from semigraph.config import Config, get_config
 from semigraph.connections import get_neo4j_driver
 
 
-INFORMATIVE_REL_TYPES: list[str] = [
-    "ANNOUNCES",
-    "CAUSES_SHORTAGE_OF",
-    "COMPETES_WITH",
-    "DEPENDS_ON",
-    "DISCLOSES",
-    "FACES",
-    "GUIDES_ON",
-    "HAS_STAKE_IN",
-    "IMPACTED_BY",
-    "IMPACTS",
-    "INTRODUCES",
-    "INVESTS_IN",
-    "INVOLVED_IN",
-    "LISTED_ON",
-    "NEGATIVELY_IMPACTS",
-    "OPERATES_IN",
-    "PARTNERS_WITH",
-    "POSITIVELY_IMPACTS",
-    "PRODUCES",
-    "SUBJECT_TO",
-    "SUPPLIES",
-]
+# Shared by PPR, triple embedding, and graph repair.  The list lives in YAML
+# so experiments can change the retrieval graph without editing source code.
+INFORMATIVE_REL_TYPES: list[str] = get_config().informative_rel_types
 
 
 def compute_specificity(
