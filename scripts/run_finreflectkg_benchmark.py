@@ -28,6 +28,17 @@ def main() -> None:
     parser.add_argument("--candidate-pool-k", type=int, default=100)
     parser.add_argument("--graph-top-k-entities", type=int, default=40)
     parser.add_argument("--graph-damping", type=float, default=0.5)
+    parser.add_argument(
+        "--graph-ppr-mode",
+        choices=("entity_only", "entity_chunk"),
+        default="entity_only",
+    )
+    parser.add_argument(
+        "--graph-triple-filter",
+        choices=("none", "llm"),
+        default="none",
+        help="Filter query-to-triple candidates with the LLM or keep all.",
+    )
     parser.add_argument("--version-name", default="finreflectkg_smoke_node_ppr")
     parser.add_argument("--ticker-scope", required=True)
     parser.add_argument(
@@ -58,6 +69,8 @@ def main() -> None:
         "--candidate-pool-k", str(args.candidate_pool_k),
         "--graph-top-k-entities", str(args.graph_top_k_entities),
         "--graph-damping", str(args.graph_damping),
+        "--graph-ppr-mode", args.graph_ppr_mode,
+        "--graph-triple-filter", args.graph_triple_filter,
         "--reextract-tickers", args.ticker_scope,
         "--version-name", args.version_name,
         "--ppr-seed-weight-mode", args.ppr_seed_weight_mode,
@@ -67,4 +80,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

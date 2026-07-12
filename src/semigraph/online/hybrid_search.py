@@ -46,6 +46,8 @@ def hybrid_search(
     graph_top_k_triples: int = 8,
     graph_damping: float = 0.7,
     metadata_rerank_params: Optional[MetadataRerankParams] = None,
+    ppr_graph_mode: str = "entity_only",
+    graph_triple_filter: str = "none",
 ) -> list[dict]:
     """Reciprocal Rank Fusion of vector_search and graph_search.
 
@@ -91,6 +93,8 @@ def hybrid_search(
         top_k_entities=graph_top_k_entities,
         top_k_triples=graph_top_k_triples,
         damping=graph_damping,
+        ppr_graph_mode=ppr_graph_mode,
+        graph_triple_filter=graph_triple_filter,
         cfg=cfg,
         rerank_mode=graph_rerank_mode,
         candidate_pool_k=candidate_pool_k,

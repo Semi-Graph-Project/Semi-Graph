@@ -147,6 +147,31 @@ def test_graph_stage_metrics_detect_rerank_loss():
     assert stage["bottleneck_label"] == "rerank_loss"
 
 
+def test_graph_stage_metrics_direct_ppr_uses_direct_chunk_hit():
+    trace = {
+        "ppr_graph_mode": "entity_chunk",
+        "seeds": [{"name": "amd"}],
+        "ppr_entities": [{"name": "amd"}],
+        "chunk_candidates": [],
+        "abort_reason": None,
+    }
+
+    stage = ev._graph_stage_metrics(
+        trace=trace,
+        gold_entities=["amd"],
+        gold_chunks=["AMD_gold"],
+        missing_gold_entities=[],
+        score_at_k={"hit": 0},
+        score_at_oracle={"hit": 0},
+        error=None,
+        returned_chunk_ids=["AMD_other"],
+    )
+
+    assert stage["chunk_map_hit"] is None
+    assert stage["direct_ppr_chunk_hit"] == 0
+    assert stage["bottleneck_label"] == "direct_ppr_chunk_loss"
+
+
 def test_aggregate_reports_subset_and_graph_stage():
     rows = [
         {

@@ -30,13 +30,16 @@ from neo4j import Driver
 
 from semigraph.config import Config, get_config
 from semigraph.connections import get_neo4j_driver
-from semigraph.online.ppr import run_ppr
+from semigraph.online.ppr import run_passage_ppr, run_ppr
 from semigraph.online.query_expand import expand_query
 from semigraph.online.seed import (
+    query_to_triple_candidates,
     query_to_hybrid_seeds,
     query_to_seeds,
     query_to_triple_seeds,
+    triple_candidates_to_seeds,
 )
+from semigraph.online.triple_filter import filter_triple_candidates
 
 
 @dataclass(frozen=True)
@@ -772,30 +775,51 @@ def _select_seed_entities(
     query: str,
     seed_mode: str,
     top_k_triples: int,
+    triple_filter_mode: str = "none",
     cfg: Optional[Config] = None,
-) -> list[dict]:
+) -> tuple[list[dict], dict]:
     """Select seed entities for graph retrieval diagnostics.
 
     """
+    if triple_filter_mode not in {"none", "llm"}:
+        raise ValueError(f"Unknown triple filter mode: {triple_filter_mode}")
+
     if seed_mode == "triple":
-        return query_to_triple_seeds(
+        if triple_filter_mode == "none":
+            return query_to_triple_seeds(
+                query,
+                top_k_candidates=top_k_triples,
+                cfg=cfg,
+            ), {"mode": "none", "applied": False}
+
+        candidates = query_to_triple_candidates(
             query,
-            top_k_triples=top_k_triples,
+            top_k_candidates=top_k_triples,
             cfg=cfg,
         )
+        selected, filter_trace = filter_triple_candidates(
+            query,
+            candidates,
+            cfg=cfg,
+        )
+        return triple_candidates_to_seeds(selected), {
+            "mode": "llm",
+            "applied": True,
+            **filter_trace,
+        }
     if seed_mode == "node":
         return query_to_seeds(
             query,
             top_k=top_k_triples,
             cfg=cfg,
-        )
+        ), {"mode": triple_filter_mode, "applied": False, "reason": "node_mode"}
     if seed_mode == "hybrid":
         return query_to_hybrid_seeds(
             query,
             top_k_nodes=top_k_triples,
             top_k_triples=top_k_triples,
             cfg=cfg,
-        )
+        ), {"mode": triple_filter_mode, "applied": False, "reason": "hybrid_mode"}
     raise ValueError(f"Unknown graph seed_mode: {seed_mode}")
 
 
@@ -804,13 +828,15 @@ def trace_graph_search(
     top_k_chunks: int = 5,
     top_k_entities: int = 20,
     damping: float = 0.7,
-    top_k_triples: int = 8,
+    top_k_triples: int = 10,
     use_expansion: bool = True,
     seed_mode: str = "triple",
     rerank_mode: str = "legacy",
     candidate_pool_k: int = 100,
     metadata_rerank_params: Optional[MetadataRerankParams] = None,
     ppr_seed_weight_mode: str = "uniform",
+    ppr_graph_mode: str = "entity_only",
+    graph_triple_filter: str = "none",
     cfg: Optional[Config] = None,
 ) -> dict:
     """Run graph retrieval and return both chunks and stage-level trace.
@@ -841,20 +867,41 @@ def trace_graph_search(
         "chunk_candidates": [],
         "chunks": [],
         "abort_reason": None,
+        "ppr_graph_mode": ppr_graph_mode,
         "ppr_seed_weight_mode": ppr_seed_weight_mode,
+        "graph_triple_filter": graph_triple_filter,
 
     }
 
-    seeds = _select_seed_entities(
+    seeds, triple_filter_trace = _select_seed_entities(
         effective_query,
         seed_mode=seed_mode,
         top_k_triples=top_k_triples,
+        triple_filter_mode=graph_triple_filter,
         cfg=cfg,
     )
     trace["seeds"] = seeds
+    trace["triple_filter_trace"] = triple_filter_trace
     if not seeds:
         trace["abort_reason"] = "no_seeds"
         print("[graph_search] no seeds — aborting")
+        return trace
+
+    if ppr_graph_mode == "entity_chunk":
+        passage_result = run_passage_ppr(
+            seeds,
+            top_k_chunks=candidate_pool_k,
+            top_k_entities=top_k_entities,
+            damping=damping,
+            seed_weight_mode=ppr_seed_weight_mode,
+            cfg=cfg,
+        )
+
+        trace["ppr_entities"] = passage_result["ppr_entities"]
+        trace["chunk_candidates"] = passage_result["chunks"]
+        trace["chunks"] = passage_result["chunks"][:top_k_chunks]
+        trace["projection"] = passage_result["projection"]
+        trace["direct_chunk_ppr"] = True
         return trace
 
     ppr_entities = run_ppr(
@@ -901,7 +948,7 @@ def graph_search(
     query: str,
     top_k_chunks: int = 5,
     top_k_entities: int = 20,
-    damping: float = 0.7,
+    damping: float = 0.5,
     top_k_triples: int = 8,
     use_expansion: bool = True,
     seed_mode: str = "triple",
@@ -909,6 +956,8 @@ def graph_search(
     candidate_pool_k: int = 100,
     metadata_rerank_params: Optional[MetadataRerankParams] = None,
     ppr_seed_weight_mode: str = "uniform",
+    ppr_graph_mode: str = "entity_only",
+    graph_triple_filter: str = "none",
     cfg: Optional[Config] = None,
 ) -> list[dict]:
     """Full graph_search pipeline: query → top-k chunks ranked by PPR mass.
@@ -958,6 +1007,8 @@ def graph_search(
         candidate_pool_k=candidate_pool_k,
         metadata_rerank_params=metadata_rerank_params,
         ppr_seed_weight_mode=ppr_seed_weight_mode,
+        ppr_graph_mode=ppr_graph_mode,
+        graph_triple_filter=graph_triple_filter,
         cfg=cfg,
     )
     return trace["chunks"]

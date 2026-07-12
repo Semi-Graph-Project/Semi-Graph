@@ -1,34 +1,8 @@
-"""
-Query → seed entities — Phase C1a (Query-to-Node) and C1b+ (Query-to-Triple).
 
-Two seed-selection strategies, both returning the same dict shape so they
-are drop-in interchangeable downstream (`run_ppr` consumes either):
-
-  • `query_to_seeds()` — Query-to-Node (HippoRAG v1 style)
-        embed query → cosine search on `entity_embedding` vector index →
-        return top-k entities whose own embedding is closest to the query.
-
-  • `query_to_triple_seeds()` — Query-to-Triple (HippoRAG v2 style, ICML '25
-        Table 4: +12.5% R@5 over Query-to-Node averaged across 3 multi-hop
-        QA benchmarks). Embed query → cosine search over precomputed
-        relationship triples ("<head> <rel> <tail>") → emit head and tail
-        of each top triple as seeds, deduplicated by (name, type).
-
-Why two paths, not a replacement:
-  v1 still wins single-hop benchmarks (NQ-style) where the answer entity
-  matches the query phrase verbatim. Keeping both lets Phase E ablation
-  measure the gain on our finance multi-hop set without touching call sites.
-
-Why in-memory cosine for triples (not a Neo4j vector index):
-  Neo4j 5.26 rejects wildcard relationship vector indexes (`FOR ()-[r]-()`
-  requires an explicit `:TYPE`). Creating 21 separate per-type indexes
-  would force UNION queries at retrieval. At 4,278 triples × 768 dims × 4B
-  ≈ 13 MB, an `@lru_cache`'d numpy matrix + dot product is sub-millisecond.
-"""
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Optional
+from typing import Optional, TypedDict
 
 import numpy as np
 from neo4j import Driver
@@ -52,6 +26,92 @@ RETURN node.name AS name,
        score AS similarity
 ORDER BY score DESC
 """
+
+class TripleCandidate(TypedDict):
+    candidate_id: int
+    head: str
+    head_type: str
+    relation: str
+    tail: str
+    tail_type: str
+    similarity: float
+    head_specificity: float
+    tail_specificity: float
+
+def triple_candidates_to_seeds(
+    candidates: list[TripleCandidate],
+) -> list[dict]:
+    seeds: dict[tuple[str, str], dict] = {}
+
+    for candidate in candidates:
+        for role in ("head", "tail"):
+            name = candidate[role]
+            entity_type = candidate[f"{role}_type"]
+            specificity = candidate[f"{role}_specificity"]
+            key = (name, entity_type)
+
+            current = seeds.get(key)
+            if current is None or current["similarity"] < candidate["similarity"]:
+                seeds[key] = {
+                    "name": name,
+                    "type": entity_type,
+                    "similarity": candidate["similarity"],
+                    "specificity": specificity,
+                }
+
+    return sorted(seeds.values(), key=lambda seed: -seed["similarity"])
+
+
+def query_to_triple_candidates(
+        query: str,
+        top_k_candidates: int = 10,
+        min_similarity: float = 0.6,
+        cfg: Optional[Config] = None,
+    ) -> list[TripleCandidate]:
+
+    if not query.strip():
+        return []
+
+    cfg = cfg or get_config()
+    model = get_embedding_model()
+    q_vec = model.encode([query])[0].astype(np.float32)
+
+    vectors, metadata = _load_triple_index() 
+    
+    if vectors.shape[0] == 0:
+        return []
+
+    sims = vectors @ q_vec  # (N,) cosine similarities
+    order = np.argsort(-sims)
+
+    candidates: list[TripleCandidate] = []
+    # Dedup head/tail across selected triples, keeping max similarity.
+    seeds: dict[tuple[str, str], dict] = {}
+
+
+    triples_kept = 0
+    for idx in order:
+        sim = float(sims[idx])
+        if sim < min_similarity:
+            break  # sorted desc — can stop
+        if triples_kept >= top_k_candidates:
+            break
+        triples_kept += 1
+        m = metadata[idx]
+
+        candidates.append({
+            "candidate_id": len(candidates),
+            "head": metadata[idx]["head"],
+            "head_type": metadata[idx]["head_type"],
+            "relation": metadata[idx]["rel_type"],
+            "tail": metadata[idx]["tail"],
+            "tail_type": metadata[idx]["tail_type"],
+            "similarity": float(sims[idx]),
+            "head_specificity": metadata[idx]["head_spec"],
+            "tail_specificity": metadata[idx]["tail_spec"],
+        })
+    return candidates
+
 
 
 def query_to_seeds(
@@ -129,11 +189,6 @@ RETURN s.name AS head,
 def _load_triple_index(cfg_id: int = 0) -> tuple[np.ndarray, list[dict]]:
     """Load all relationship triples + embeddings into memory once per process.
 
-    The `cfg_id` arg is a hack: `Config` objects aren't hashable so we can't
-    cache on `cfg` directly. In practice we always use the singleton config,
-    so a constant `0` is fine — pass a different int to bust the cache in
-    tests.
-
     Returns:
         (vectors, metadata) where:
           vectors  — (N, 768) float32, L2-normalized (BGE output)
@@ -172,77 +227,19 @@ def _load_triple_index(cfg_id: int = 0) -> tuple[np.ndarray, list[dict]]:
 
 def query_to_triple_seeds(
     query: str,
-    top_k_triples: int = 5,
+    top_k_candidates: int = 10,
     min_similarity: float = 0.6,
     cfg: Optional[Config] = None,
 ) -> list[dict]:
-    """Find seeds via top-k triple cosine search (HippoRAG v2 Query-to-Triple).
-    Args:
-        query: Natural-language input.
-        top_k_triples: Number of nearest-triple to consider (each yields
-            up to 2 seeds → final count is 1 to 2 x top_k_triples).
-        min_similarity: Cosine threshold; triples below this are dropped.
-        cfg: Optional config override; defaults to the cached singleton.
+    candidates = query_to_triple_candidates(
+        query, 
+        top_k_candidates=top_k_candidates, 
+        min_similarity=min_similarity, 
+        cfg=cfg
+    )
+    return triple_candidates_to_seeds(candidates)
 
-    Returns:
-        List of dicts sorted by similarity descending, each:
-        `{name, type, specificity, similarity}` — same shape as
-        `query_to_seeds()` so the result is drop-in for `run_ppr`.
 
-    Raises:
-        neo4j.exceptions.* — DB errors from the initial triple load.
-    """
-    if not query.strip():
-        return []
-
-    cfg = cfg or get_config()
-    model = get_embedding_model()
-
-    # BGE outputs L2-normalized vectors -> cosine = dot product. float32 for
-    # numpy parity with the stored triple matrix.
-    q_vec = model.encode([query])[0].astype(np.float32)
-
-    vectors, metadata = _load_triple_index() 
-    # metadata = set of dicts with head, tail, rel_type, etc. 
-    
-    if vectors.shape[0] == 0:
-        return []
-
-    sims = vectors @ q_vec  # (N,) cosine similarities
-
-    # Sort all triples by similarity descending — we keep only those passing
-    # the threshold AND within top_k_triples. argsort is fine at 4k rows.
-    order = np.argsort(-sims)
-
-    # Dedup head/tail across selected triples, keeping max similarity.
-    seeds: dict[tuple[str, str], dict] = {}
-    triples_kept = 0
-    for idx in order:
-        sim = float(sims[idx])
-        if sim < min_similarity:
-            break  # sorted desc — can stop
-        if triples_kept >= top_k_triples:
-            break
-        triples_kept += 1
-        m = metadata[idx]
-        for role in ("head", "tail"):
-            name = m[role]
-            etype = m[f"{role}_type"]
-            spec = m[f"{role}_spec"]
-            key = (name, etype)
-            existing = seeds.get(key)
-            if existing is None or existing["similarity"] < sim:
-                seeds[key] = {
-                    "name": name,
-                    "type": etype,
-                    "specificity": spec,
-                    "similarity": sim,
-                }
-
-    print(f"[triple_seed] query='{query}' top_k_triples={top_k_triples} "
-          f"min_sim={min_similarity} → kept {triples_kept} triples → "
-          f"{len(seeds)} unique seeds")
-    return sorted(seeds.values(), key=lambda s: -s["similarity"])
 
 
 def query_to_hybrid_seeds(

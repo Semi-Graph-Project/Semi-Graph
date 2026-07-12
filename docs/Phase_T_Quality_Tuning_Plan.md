@@ -392,7 +392,7 @@ Create:
 ```text
 data/evaluate/phase_t_multihop_queries.yaml
 scripts/evaluate_retrieval_quality.py
-analytics/phase_t_retrieval_baseline.md
+analytics/Report Experiment/baseline_<version>_<timestamp>.md
 ```
 
 Evaluator behavior:
