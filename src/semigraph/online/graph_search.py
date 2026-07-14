@@ -32,6 +32,7 @@ from semigraph.config import Config, get_config
 from semigraph.connections import get_neo4j_driver
 from semigraph.online.ppr import run_passage_ppr, run_ppr
 from semigraph.online.query_expand import expand_query
+from semigraph.online.rerank import rerank_chunks
 from semigraph.online.seed import (
     query_to_triple_candidates,
     query_to_hybrid_seeds,
@@ -823,6 +824,40 @@ def _select_seed_entities(
     raise ValueError(f"Unknown graph seed_mode: {seed_mode}")
 
 
+def _apply_final_rerank(
+    query: str,
+    candidate_chunks: list[dict],
+    top_k_chunks: int,
+    final_rerank: str,
+    cfg: Optional[Config] = None,
+) -> tuple[list[dict], dict]:
+    """Apply the optional external reranker after graph candidates exist."""
+    if final_rerank == "none":
+        return candidate_chunks[:top_k_chunks], {
+            "enabled": False,
+            "fallback": False,
+            "status": "disabled",
+            "candidate_count": len(candidate_chunks),
+            "returned_count": min(top_k_chunks, len(candidate_chunks)),
+        }
+
+    if final_rerank != "cohere":
+        raise ValueError(f"Unknown final_rerank: {final_rerank}")
+
+    ranked_chunks, reranker_trace = rerank_chunks(
+        query=query,
+        chunks=candidate_chunks[:20],
+        top_n=top_k_chunks,
+        cfg=cfg,
+        fail_open=True,
+    )
+    return ranked_chunks, {
+        "enabled": True,
+        "fallback": reranker_trace.get("status") == "fallback",
+        **reranker_trace,
+    }
+
+
 def trace_graph_search(
     query: str,
     top_k_chunks: int = 5,
@@ -834,6 +869,7 @@ def trace_graph_search(
     rerank_mode: str = "legacy",
     candidate_pool_k: int = 100,
     metadata_rerank_params: Optional[MetadataRerankParams] = None,
+    final_rerank: str = "none",
     ppr_seed_weight_mode: str = "uniform",
     ppr_graph_mode: str = "entity_only",
     graph_triple_filter: str = "none",
@@ -842,7 +878,7 @@ def trace_graph_search(
     """Run graph retrieval and return both chunks and stage-level trace.
 
     query expansion -> seeds -> PPR entities -> alias clusters -> chunk
-    candidates -> intent reranked chunks.
+    candidates -> optional external reranker -> final chunks.
     """
     print(f"[graph_search] query={query!r} "
           f"top_k_chunks={top_k_chunks} top_k_entities={top_k_entities}")
@@ -855,6 +891,7 @@ def trace_graph_search(
         "use_expansion": use_expansion,
         "seed_mode": seed_mode,
         "rerank_mode": rerank_mode,
+        "final_rerank": final_rerank,
         "candidate_pool_k": candidate_pool_k,
         "metadata_rerank_params": metadata_rerank_params.to_dict(),
         "top_k_chunks": top_k_chunks,
@@ -865,12 +902,18 @@ def trace_graph_search(
         "ppr_entities": [],
         "cluster_entries": [],
         "chunk_candidates": [],
+        "raw_chunk_candidates": [],
+        "reranked_chunks": [],
+        "reranker_trace": {
+            "enabled": final_rerank != "none",
+            "fallback": False,
+            "status": "not_run",
+        },
         "chunks": [],
         "abort_reason": None,
         "ppr_graph_mode": ppr_graph_mode,
         "ppr_seed_weight_mode": ppr_seed_weight_mode,
         "graph_triple_filter": graph_triple_filter,
-
     }
 
     seeds, triple_filter_trace = _select_seed_entities(
@@ -899,7 +942,16 @@ def trace_graph_search(
 
         trace["ppr_entities"] = passage_result["ppr_entities"]
         trace["chunk_candidates"] = passage_result["chunks"]
-        trace["chunks"] = passage_result["chunks"][:top_k_chunks]
+        trace["raw_chunk_candidates"] = trace["chunk_candidates"]
+        trace["reranked_chunks"], trace["reranker_trace"] = _apply_final_rerank(
+            query=query,
+            candidate_chunks=trace["raw_chunk_candidates"],
+            top_k_chunks=top_k_chunks,
+            final_rerank=final_rerank,
+            cfg=cfg,
+        )
+        trace["chunks"] = trace["reranked_chunks"]
+
         trace["projection"] = passage_result["projection"]
         trace["direct_chunk_ppr"] = True
         return trace
@@ -929,18 +981,16 @@ def trace_graph_search(
 
     chunk_candidates = _map_chunks(cluster_entries, top_k=candidate_pool_k, cfg=cfg)
     trace["chunk_candidates"] = chunk_candidates
-    # chunks = _rerank_chunks(
-    #     effective_query,
-    #     chunk_candidates,
-    #     rerank_mode=rerank_mode,
-    #     metadata_rerank_params=metadata_rerank_params,
-    #     cfg=cfg,
-    # )[:top_k_chunks]
-    
-    # No Rerank Mode
-    chunks = chunk_candidates[:top_k_chunks]
-    trace["chunks"] = chunks
-    print(f"[graph_search] returning {len(chunks)} chunks")
+    trace["raw_chunk_candidates"] = chunk_candidates
+    trace["reranked_chunks"], trace["reranker_trace"] = _apply_final_rerank(
+        query=query,
+        candidate_chunks=trace["raw_chunk_candidates"],
+        top_k_chunks=top_k_chunks,
+        final_rerank=final_rerank,
+        cfg=cfg,
+    )
+    trace["chunks"] = trace["reranked_chunks"]
+    print(f"[graph_search] returning {len(trace['chunks'])} chunks")
     return trace
 
 
@@ -955,6 +1005,7 @@ def graph_search(
     rerank_mode: str = "legacy",
     candidate_pool_k: int = 100,
     metadata_rerank_params: Optional[MetadataRerankParams] = None,
+    final_rerank: str = "none",
     ppr_seed_weight_mode: str = "uniform",
     ppr_graph_mode: str = "entity_only",
     graph_triple_filter: str = "none",
@@ -962,38 +1013,6 @@ def graph_search(
 ) -> list[dict]:
     """Full graph_search pipeline: query → top-k chunks ranked by PPR mass.
 
-    Composes Phase C1a/C1b/C1b+ + this module's C1/C2 + Tier 1 augmentation:
-
-        query
-          → expand_query                (Tier 1 A — LLM entity hints)
-          → query_to_triple_seeds       (HippoRAG v2 linker, top_k_triples=8)
-          → run_ppr                     (Personalized PageRank, damping=0.7)
-          → _cluster_aliases            (collapse SYNONYM_OF cluster)
-          → _collapse_clusters          (SUM PPR scores per cluster)
-          → _map_chunks                 (MENTIONS → chunk + SUM cluster scores)
-
-    Args:
-        query:          Natural-language question.
-        top_k_chunks:   Number of chunks to return for downstream LLM context.
-        top_k_entities: PPR top-k cap. Pick 3-5x `top_k_chunks` so each chunk
-                        receives signal from multiple entities (multi-hop).
-        damping:        PageRank damping. 0.7 (tuned for our sparse KG, avg
-                        degree 2.37) narrows walk closer to seeds and reduces
-                        hub leakage vs HippoRAG default 0.85.
-        top_k_triples:  Number of triples retrieved at seed step. 8 (vs 5
-                        default) widens the seed funnel after query expansion
-                        — expanded query surfaces more relevant entities and
-                        we want their triples to all reach PPR.
-        use_expansion:  Toggle LLM query expansion. Set False for ablation
-                        ("does the LLM call actually help?").
-        seed_mode:      `triple` default, with `node` and `hybrid` available
-                        for Phase T-R seed ablations.
-        cfg:            Optional Config; defaults to cached singleton.
-
-    Returns:
-        `[{chunk_id, text, ticker, fiscal_year, section, score}, ...]`
-        Empty list if seeds is empty, PPR returns nothing, or no chunk
-        mentions any retrieved entity.
     """
     trace = trace_graph_search(
         query,
@@ -1009,6 +1028,7 @@ def graph_search(
         ppr_seed_weight_mode=ppr_seed_weight_mode,
         ppr_graph_mode=ppr_graph_mode,
         graph_triple_filter=graph_triple_filter,
+        final_rerank=final_rerank,
         cfg=cfg,
     )
     return trace["chunks"]

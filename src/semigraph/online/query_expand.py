@@ -1,21 +1,4 @@
-"""
-Phase C1c-bis — LLM Query Expansion (Tier 1 fix for seed-step failure).
 
-Problem (diagnosed from multi-hop benchmark, Phase C2-bis):
-  BGE embeddings cannot bridge abstract query descriptors ("leading
-  pure-play foundry") to short entity names ("tsmc"). Cosine similarity
-  is low even though the answer is structurally reachable in the KG via
-  a SUPPLIES/PRODUCES edge.
-
-Fix:
-  Pre-process query with DeepSeek. LLM uses world knowledge of the
-  semiconductor industry to surface specific entity names that the
-  semantic search should hit (TSMC, Taiwan, Santa Clara, etc.). The
-  hints are appended to the original query so both abstract and
-  specific signals reach the BGE encoder.
-
-Cost: 1 DeepSeek call per query (~100 input + 30 output tokens ≈ $0.0005).
-"""
 from __future__ import annotations
 
 from typing import Optional

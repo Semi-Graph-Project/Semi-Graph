@@ -74,6 +74,38 @@ llm:
   temperature: 0.0
   base_url: "https://api.deepseek.com"
 
+openrouter_llm:
+  provider: "openrouter"
+  model: "deepseek/deepseek-v4-flash"
+  temperature: 0.0
+  base_url: "https://openrouter.ai/api/v1"
+
+reranker:
+  provider: "openrouter"
+  model: "cohere/rerank-4-fast"
+  base_url: "https://openrouter.ai/api/v1"
+  timeout_seconds: 60
+  max_retries: 2
+
+# Retriever profile used by the LangGraph agent. These values are the winning
+# Phase T configuration; standalone evaluation scripts can still override them.
+agent_retrieval:
+  vector:
+    candidate_pool_k: 100
+    final_rerank: "cohere"
+  graph:
+    top_k_entities: 20
+    top_k_triples: 10
+    damping: 0.5
+    use_expansion: false
+    seed_mode: "triple"
+    rerank_mode: "legacy"
+    candidate_pool_k: 100
+    final_rerank: "cohere"
+    ppr_seed_weight_mode: "uniform"
+    ppr_graph_mode: "entity_chunk"
+    triple_filter: "llm"
+
 # KG Extraction
 kg:
   max_workers: 16

@@ -7,9 +7,9 @@ from langchain_core.messages import HumanMessage, SystemMessage
 load_dotenv()
 
 llm = ChatOpenAI(
-    model="deepseek-v4-pro",
-    api_key=os.getenv("DEEPSEEK_API_KEY"),
-    base_url="https://api.deepseek.com",
+    model="deepseek/deepseek-v4-flash",
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    base_url="https://openrouter.ai/api/v1",
     temperature=0.7
 )
 messages = [

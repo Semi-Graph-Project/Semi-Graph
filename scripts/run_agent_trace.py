@@ -68,6 +68,32 @@ def _compact_text(value: object, limit: int = 220) -> str:
     return f"{text[: limit - 3]}..."
 
 
+def _summarize_retrieval_trace(trace: dict) -> str:
+    if not trace:
+        return "trace=missing"
+    if trace.get("status") == "error":
+        return f"trace_error={trace.get('error_type', 'Error')}"
+
+    parameters = trace.get("parameters") or {}
+    parts = [f"profile={trace.get('profile', 'default')}"]
+    if trace.get("latency_sec") is not None:
+        parts.append(f"latency={trace['latency_sec']}s")
+    if trace.get("retriever") == "graph":
+        parts.extend([
+            f"ppr={parameters.get('ppr_graph_mode')}",
+            f"seeds={trace.get('seed_count', 0)}",
+            f"candidates={trace.get('candidate_count', 0)}",
+            f"filter={parameters.get('triple_filter')}",
+        ])
+    elif trace.get("retriever") == "vector":
+        parts.append(f"candidates={trace.get('candidate_count', 0)}")
+
+    reranker = trace.get("reranker") or {}
+    if reranker:
+        parts.append(f"reranker={reranker.get('status', 'unknown')}")
+    return " ".join(parts)
+
+
 def _summarize_update(update: dict) -> str:
     if "subqueries" in update:
         return f"subqueries={update['subqueries']}"
@@ -75,10 +101,11 @@ def _summarize_update(update: dict) -> str:
         return f"next_tool={update['next_tool']}"
     if "latest_chunks" in update:
         log = (update.get("tool_call_log") or [{}])[-1]
+        trace = (update.get("retrieval_trace_history") or [{}])[-1]
         return (
             f"tool={log.get('tool')} status={log.get('status')} "
             f"n_chunks={len(update.get('latest_chunks') or [])} "
-            f"query={log.get('query')!r}"
+            f"query={log.get('query')!r} {_summarize_retrieval_trace(trace)}"
         )
     if "observation_text" in update:
         return f"observation={_compact_text(update.get('observation_text'))}"
@@ -143,6 +170,11 @@ def main() -> None:
         help="Print a compact citation map after the run",
     )
     parser.add_argument(
+        "--show-retrieval-traces",
+        action="store_true",
+        help="Print the structured retrieval trace after each tool execution",
+    )
+    parser.add_argument(
         "--no-color",
         action="store_true",
         help="Disable ANSI colors in trace output",
@@ -170,6 +202,10 @@ def main() -> None:
                 c_print(f"[{elapsed:7.2f}s]", color="magenta", dim=True, end=" ")
                 c_print(f"{node_name}:", color=_node_color(node_name), bold=True, end=" ")
                 c_print(_summarize_update(update), color="white")
+                if args.show_retrieval_traces and "retrieval_trace_history" in update:
+                    traces = update.get("retrieval_trace_history") or []
+                    if traces:
+                        _print_json("RETRIEVAL_TRACE", traces[-1])
                 print("\n\n--------------------------------")
     except Exception as exc:
         elapsed = time.time() - started

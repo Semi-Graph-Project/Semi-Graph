@@ -50,6 +50,24 @@ class AgentState(TypedDict, total=False):
                     "status": "ok"
                 }
             ],
+            "retrieval_trace_history": [
+                {
+                    "round": 1,
+                    "subquery": "What is the supplier relationship between AMD and TSMC?",
+                    "tool": "graph",
+                    "query": "AMD TSMC supplier relationship",
+                    "status": "ok",
+                    "profile": "phase_t",
+                    "parameters": {
+                        "ppr_graph_mode": "entity_chunk",
+                        "triple_filter": "llm",
+                        "final_rerank": "cohere"
+                    },
+                    "seed_count": 5,
+                    "candidate_count": 100,
+                    "returned_chunk_ids": ["AMD_2025_Item_1A_0008"]
+                }
+            ],
             "observation_text": "The retrieved chunks mention AMD's reliance on external foundries.",
             "observation_history": [
                 {
@@ -99,6 +117,7 @@ class AgentState(TypedDict, total=False):
     chunks_history: list[dict]
     latest_chunks: list[dict]
     tool_call_log: list[dict]
+    retrieval_trace_history: list[dict]
     observation_text: str
     observation_history: list[dict]
     round: int

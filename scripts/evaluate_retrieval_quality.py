@@ -24,6 +24,7 @@ SEED_MODE_CHOICES = ("triple", "node", "hybrid")
 RERANK_MODE_CHOICES = ("legacy", "metadata")
 PPR_GRAPH_MODE_CHOICES = ("entity_only", "entity_chunk")
 TRIPLE_FILTER_CHOICES = ("none", "llm")
+FINAL_RERANK_CHOICES = ("none", "cohere")
 DEFAULT_TICKER_SCOPE = (
     "AMAT",
     "AMD",
@@ -284,6 +285,25 @@ def _chunk_ids(chunks: list[dict], k: int) -> list[str]:
     ]
 
 
+def _retrieval_trace_summary(trace: dict | None, top_k: int) -> dict | None:
+    """Keep comparable raw/reranked IDs without duplicating chunk text."""
+    if trace is None:
+        return None
+
+    candidates = trace.get(
+        "raw_chunk_candidates",
+        trace.get("chunk_candidates", []),
+    )
+    return {
+        "candidate_pool_count": len(candidates),
+        "candidate_pool_ids": _chunk_ids(candidates, len(candidates)),
+        "raw_top_k_ids": _chunk_ids(candidates, top_k),
+        "reranked_ids": _chunk_ids(trace.get("reranked_chunks", []), top_k),
+        "final_rerank": trace.get("final_rerank", "none"),
+        "reranker_trace": trace.get("reranker_trace", {}),
+    }
+
+
 def _score_result(returned_ids: list[str], gold_ids: list[str]) -> dict:
     if not gold_ids:
         return {
@@ -520,9 +540,22 @@ def _run_tool(
     metadata_rerank_params,
     graph_ppr_mode: str,
     graph_triple_filter: str,
+    final_rerank: str,
 ) -> tuple[list[dict], str | None, float, dict | None]:
     started = time.time()
     try:
+        if tool_name == "vector":
+            from semigraph.online.vector_search import trace_vector_search
+
+            trace = trace_vector_search(
+                query,
+                top_k_chunks=top_k,
+                candidate_pool_k=candidate_pool_k,
+                final_rerank=final_rerank,
+                cfg=cfg,
+            )
+            return trace["chunks"], None, time.time() - started, trace
+
         if tool_name == "graph":
             from semigraph.online.graph_search import trace_graph_search
 
@@ -541,6 +574,7 @@ def _run_tool(
                 metadata_rerank_params=metadata_rerank_params,
                 ppr_graph_mode=graph_ppr_mode,
                 graph_triple_filter=graph_triple_filter,
+                final_rerank=final_rerank,
             )
             return trace["chunks"], None, time.time() - started, trace
 
@@ -583,6 +617,7 @@ def _evaluate_query(
     metadata_rerank_params,
     graph_ppr_mode: str,
     graph_triple_filter: str,
+    final_rerank: str,
 ) -> dict:
     query = str(item.get("query", "")).strip()
     gold_chunks = [str(cid) for cid in item.get("gold_chunks", []) if cid]
@@ -643,6 +678,7 @@ def _evaluate_query(
                 metadata_rerank_params=metadata_rerank_params,
                 graph_ppr_mode=graph_ppr_mode,
                 graph_triple_filter=graph_triple_filter,
+                final_rerank=final_rerank,
             )
 
         returned_at_k = _chunk_ids(chunks, top_k)
@@ -665,7 +701,7 @@ def _evaluate_query(
             )
 
         stage = _graph_stage_metrics(
-            trace=trace,
+            trace=trace if tool_name == "graph" else None,
             gold_entities=gold_entities,
             gold_chunks=gold_chunks,
             missing_gold_entities=missing_gold_entities,
@@ -701,6 +737,7 @@ def _evaluate_query(
             "oracle_recall": score_at_oracle["recall"],
             "oracle_hits": score_at_oracle["hits"],
             "chance_oracle_hit": chance_hit_at_oracle if score_at_oracle["scored"] else None,
+            "retrieval_trace": _retrieval_trace_summary(trace, top_k),
             "stage": stage,
         }
 
@@ -987,6 +1024,7 @@ def _write_markdown(
     ppr_seed_weight_mode: str,
     graph_ppr_mode: str,
     graph_triple_filter: str,
+    final_rerank: str,
     metadata_rerank_params,
     run_config: dict | None = None,
 ) -> None:
@@ -1017,6 +1055,7 @@ def _write_markdown(
         "ppr_seed_weight_mode": ppr_seed_weight_mode,
         "graph_ppr_mode": graph_ppr_mode,
         "graph_triple_filter": graph_triple_filter,
+        "final_rerank": final_rerank,
         "metadata_rerank_params": (
             metadata_rerank_params.to_dict()
             if hasattr(metadata_rerank_params, "to_dict")
@@ -1263,6 +1302,12 @@ def main() -> None:
         choices=RERANK_MODE_CHOICES,
         default="legacy",
     )
+    parser.add_argument(
+        "--final-rerank",
+        choices=FINAL_RERANK_CHOICES,
+        default="none",
+        help="External reranker for vector/graph retrieval; use cohere for control runs.",
+    )
 
     parser.add_argument(
         "--candidate-pool-k",
@@ -1298,6 +1343,7 @@ def main() -> None:
             expansion_label = "no_expansion"
         args.version_name = (
             f"{expansion_label}_{args.graph_rerank_mode}"
+            f"_final{args.final_rerank}"
             f"_{args.graph_ppr_mode}"
             f"_filter{args.graph_triple_filter}"
             f"_pool{args.candidate_pool_k}"
@@ -1355,6 +1401,7 @@ def main() -> None:
             metadata_rerank_params=metadata_rerank_params,
             graph_ppr_mode=args.graph_ppr_mode,
             graph_triple_filter=args.graph_triple_filter,
+            final_rerank=args.final_rerank,
         )
         for item in queries
     ]
@@ -1380,9 +1427,11 @@ def main() -> None:
         ppr_seed_weight_mode=args.ppr_seed_weight_mode,
         graph_ppr_mode=args.graph_ppr_mode,
         graph_triple_filter=args.graph_triple_filter,
+        final_rerank=args.final_rerank,
         metadata_rerank_params=metadata_rerank_params,
         run_config={
             "version_name": args.version_name,
+            "final_rerank": args.final_rerank,
             "details_jsonl": str(jsonl_path),
             "reextract_tickers_arg": args.reextract_tickers,
             "resolved_ticker_scope": sorted(reextract_tickers),

@@ -4,6 +4,7 @@ from semigraph.config import get_config
 from semigraph.connections import get_llm
 import json
 import re
+import time
 
 from semigraph.agent.prompts import (
     OBSERVE_SYSTEM_PROMPT,
@@ -204,6 +205,7 @@ def execute_node(state: AgentState) -> dict:
             "chunks_history": list[dict],  # all chunks seen so far
             "latest_chunks": list[dict],   # chunks returned by this tool call
             "tool_call_log": list[dict],   # compact trace of tool calls
+            "retrieval_trace_history": list[dict],  # stage-level debug traces
         }
     """
     print(f"Node : Execute Node")
@@ -214,6 +216,7 @@ def execute_node(state: AgentState) -> dict:
     tool_args = next_tool.get("args") or {}
     chunks_history = list(state.get("chunks_history") or [])
     tool_call_log = list(state.get("tool_call_log") or [])
+    retrieval_trace_history = list(state.get("retrieval_trace_history") or [])
 
     current_idx = state.get("current_subquery_idx", 0)
     subqueries = state.get("subqueries") or []
@@ -240,20 +243,56 @@ def execute_node(state: AgentState) -> dict:
             "status": "error",
             "error": error_msg,
         })
+        retrieval_trace_history.append({
+            "round": state.get("round", 0),
+            "subquery": current_subquery,
+            "tool": tool_name,
+            "query": query,
+            "status": "error",
+            "error": error_msg,
+        })
         return {
             "chunks_history": chunks_history,
             "latest_chunks": [],
             "tool_call_log": tool_call_log,
+            "retrieval_trace_history": retrieval_trace_history,
         }
 
     try:
-        raw_chunks = retriever(
+        retrieval_started = time.perf_counter()
+        retriever_result = retriever(
             query=query,
             top_k_chunks=top_k_chunks,
             cfg=cfg,
         )
+        if isinstance(retriever_result, dict) and "chunks" in retriever_result:
+            raw_chunks = retriever_result.get("chunks") or []
+            retriever_trace = dict(retriever_result.get("trace") or {})
+        else:
+            raw_chunks = retriever_result or []
+            retriever_trace = {
+                "retriever": tool_name,
+                "profile": "default",
+                "parameters": {"top_k_chunks": top_k_chunks},
+            }
+
         chunks = [c for c in (raw_chunks or []) if isinstance(c, dict)]
         chunks_history.extend(chunks)
+        retrieval_trace_history.append({
+            "round": state.get("round", 0),
+            "subquery": current_subquery,
+            "tool": tool_name,
+            "query": query,
+            "status": "ok",
+            "latency_sec": round(time.perf_counter() - retrieval_started, 3),
+            **retriever_trace,
+            "returned_count": len(chunks),
+            "returned_chunk_ids": [
+                str(chunk["chunk_id"])
+                for chunk in chunks
+                if chunk.get("chunk_id")
+            ],
+        })
         tool_call_log.append({
             "round": state.get("round", 0),
             "subquery": current_subquery,
@@ -267,6 +306,7 @@ def execute_node(state: AgentState) -> dict:
             "chunks_history": chunks_history,
             "latest_chunks": chunks,
             "tool_call_log": tool_call_log,
+            "retrieval_trace_history": retrieval_trace_history,
         }
     except Exception as e:
         print(f"Error during execution of tool '{tool_name}': {e}")
@@ -280,10 +320,21 @@ def execute_node(state: AgentState) -> dict:
             "status": "error",
             "error": str(e),
         })
+        retrieval_trace_history.append({
+            "round": state.get("round", 0),
+            "subquery": current_subquery,
+            "tool": tool_name,
+            "query": query,
+            "status": "error",
+            "latency_sec": round(time.perf_counter() - retrieval_started, 3),
+            "error_type": type(e).__name__,
+            "error": str(e),
+        })
         return {
             "chunks_history": chunks_history,
             "latest_chunks": [],
             "tool_call_log": tool_call_log,
+            "retrieval_trace_history": retrieval_trace_history,
         }
 
 
@@ -561,10 +612,10 @@ def _format_chunks_for_observation(
         formatted.append(
             (
                 f"[{chunk.get('chunk_id', 'unknown_chunk')}] "
-                f"ticker: {chunk.get('ticker', 'UNKNOWN')} "
-                f"FY: {chunk.get('fiscal_year', 'unknown')} "
-                f"section: {chunk.get('section', 'unknown_section')}\n"
-                f"text: {text}"
+                f"{chunk.get('ticker', 'UNKNOWN')} "
+                f"FY{chunk.get('fiscal_year', 'unknown')} "
+                f"{chunk.get('section', 'unknown_section')}\n"
+                f"{text}"
             )
         )
 
@@ -989,7 +1040,4 @@ if __name__ == "__main__":
 
 
     print("-----------\n\n")
-
-
-
 

@@ -150,6 +150,41 @@ class TestExecuteNode:
             "error": "boom",
         }]
 
+    def test_execute_persists_structured_retrieval_trace(self, monkeypatch):
+        def fake_retriever(query: str, top_k_chunks: int, cfg):
+            return {
+                "chunks": [{"chunk_id": "c1", "text": "evidence"}],
+                "trace": {
+                    "retriever": "graph",
+                    "profile": "phase_t",
+                    "parameters": {"ppr_graph_mode": "entity_chunk"},
+                    "seed_count": 3,
+                    "candidate_count": 100,
+                    "reranker": {"status": "ok"},
+                },
+            }
+
+        monkeypatch.setattr(nodes, "get_config", lambda: "cfg-sentinel")
+        monkeypatch.setitem(nodes.RETRIEVERS, "graph", fake_retriever)
+
+        result = nodes.execute_node({
+            "subqueries": ["How does AMD depend on TSMC?"],
+            "current_subquery_idx": 0,
+            "next_tool": {
+                "name": "graph",
+                "args": {"query": "AMD TSMC dependency"},
+            },
+            "round": 1,
+        })
+
+        trace = result["retrieval_trace_history"][-1]
+        assert trace["status"] == "ok"
+        assert trace["profile"] == "phase_t"
+        assert trace["parameters"]["ppr_graph_mode"] == "entity_chunk"
+        assert trace["seed_count"] == 3
+        assert trace["candidate_count"] == 100
+        assert trace["returned_chunk_ids"] == ["c1"]
+
 
 class _FakeResponse:
     def __init__(self, content: str):

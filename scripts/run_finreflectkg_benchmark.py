@@ -22,7 +22,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--queries", type=Path, required=True)
     parser.add_argument("--neo4j-uri", default=os.getenv("FINREFLECTKG_NEO4J_URI", "bolt://localhost:7688"))
-    parser.add_argument("--tools", nargs="+", choices=("vector", "graph", "hybrid"), default=["vector", "graph"])
+    parser.add_argument(
+        "--tools",
+        nargs="+",
+        choices=("vector", "graph", "hybrid"),
+        default=["vector", "graph", "hybrid"],
+    )
     parser.add_argument("--top-k", type=int, default=5)
     parser.add_argument("--oracle-k", type=int, default=20)
     parser.add_argument("--candidate-pool-k", type=int, default=100)
@@ -41,6 +46,16 @@ def main() -> None:
     )
     parser.add_argument("--version-name", default="finreflectkg_smoke_node_ppr")
     parser.add_argument("--ticker-scope", required=True)
+    parser.add_argument(
+        "--no-llm-expansion",
+        action="store_true",
+        help="Disable query expansion for graph and hybrid retrieval.",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate inputs and write reports without calling retrievers.",
+    )
     parser.add_argument(
         "--ppr-seed-weight-mode",
         choices=["uniform", "similarity", "similarity_specificity"],
@@ -64,7 +79,6 @@ def main() -> None:
         "--tools", *args.tools,
         "--top-k", str(args.top_k),
         "--oracle-k", str(args.oracle_k),
-        "--no-llm-expansion",
         "--graph-seed-mode", "triple",
         "--candidate-pool-k", str(args.candidate_pool_k),
         "--graph-top-k-entities", str(args.graph_top_k_entities),
@@ -75,6 +89,10 @@ def main() -> None:
         "--version-name", args.version_name,
         "--ppr-seed-weight-mode", args.ppr_seed_weight_mode,
     ]
+    if args.no_llm_expansion:
+        sys.argv.append("--no-llm-expansion")
+    if args.dry_run:
+        sys.argv.append("--dry-run")
     evaluator.main()
 
 
