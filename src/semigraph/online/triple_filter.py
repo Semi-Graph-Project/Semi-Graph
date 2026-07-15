@@ -14,18 +14,37 @@ MAX_SELECTED_TRIPLES = 5
 MAX_FILTER_ATTEMPTS = 2
 
 TRIPLE_FILTER_SYSTEM_PROMPT = """
-You filter retrieved knowledge-graph triples for graph search.
+You are a conservative query-to-triple recognition filter.
+The candidates are high-recall retrieval results and may contain wrong
+entities, near-duplicates, or facts that match only generic words.
 
-Select at most 5 candidate triples that are directly relevant or useful as
-bridges for answering the query. Multi-hop bridge triples are allowed.
+Select up to 5 useful candidate triples to use as restart seeds for graph
+traversal. Favor recall and evidence coverage across the query.
 
 Return JSON only:
 {"selected_candidate_ids": [0, 2]}
 
 Rules:
-- Select only IDs present in the candidate list.
-- Do not create or rewrite triples.
-- Return an empty list when none are relevant.
+1. Preserve explicit constraints. Reject a candidate that conflicts with a
+   company, person, product, geography, segment, or relationship explicitly
+   named in the query.
+2. Do not infer an unnamed entity from outside knowledge. When the query omits
+   a company or answer entity, judge only from relationships and concepts
+   stated in the query.
+3. Cover distinct evidence needs. For a multi-part or multi-hop query, select
+   candidates for different clauses or bridge steps rather than many for one
+   clause.
+4. Prefer triples containing explicit query entities and relation-bearing
+   bridges over triples matching only generic words.
+5. Do not reject candidates only because they are semantically similar. Entity
+   aliases or types may represent separate graph nodes and provide useful
+   traversal anchors.
+6. Preserve explicit entities, years, periods, numeric values, and metrics from
+   the query whenever matching candidates are available. Do not replace them
+   with broader candidates that omit those constraints.
+7. Select only IDs present in the candidate list. Do not create or rewrite
+   triples, facts, or entities.
+8. Return an empty list when no candidate is useful.
 """.strip()
 
 

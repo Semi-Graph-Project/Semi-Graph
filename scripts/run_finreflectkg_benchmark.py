@@ -44,6 +44,12 @@ def main() -> None:
         default="none",
         help="Filter query-to-triple candidates with the LLM or keep all.",
     )
+    parser.add_argument(
+        "--final-rerank",
+        choices=("none", "cohere"),
+        default="none",
+        help="External reranker applied to final vector/graph candidates.",
+    )
     parser.add_argument("--version-name", default="finreflectkg_smoke_node_ppr")
     parser.add_argument("--ticker-scope", required=True)
     parser.add_argument(
@@ -85,6 +91,7 @@ def main() -> None:
         "--graph-damping", str(args.graph_damping),
         "--graph-ppr-mode", args.graph_ppr_mode,
         "--graph-triple-filter", args.graph_triple_filter,
+        "--final-rerank", args.final_rerank,
         "--reextract-tickers", args.ticker_scope,
         "--version-name", args.version_name,
         "--ppr-seed-weight-mode", args.ppr_seed_weight_mode,

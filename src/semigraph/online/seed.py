@@ -85,30 +85,35 @@ def query_to_triple_candidates(
     order = np.argsort(-sims)
 
     candidates: list[TripleCandidate] = []
-    # Dedup head/tail across selected triples, keeping max similarity.
-    seeds: dict[tuple[str, str], dict] = {}
-
-
-    triples_kept = 0
+    seen_triples: set[tuple[str, str, str, str, str]] = set()
     for idx in order:
         sim = float(sims[idx])
         if sim < min_similarity:
             break  # sorted desc — can stop
-        if triples_kept >= top_k_candidates:
+        if len(candidates) >= top_k_candidates:
             break
-        triples_kept += 1
         m = metadata[idx]
+        triple_key = (
+            m["head"],
+            m["head_type"],
+            m["rel_type"],
+            m["tail"],
+            m["tail_type"],
+        )
+        if triple_key in seen_triples:
+            continue
+        seen_triples.add(triple_key)
 
         candidates.append({
             "candidate_id": len(candidates),
-            "head": metadata[idx]["head"],
-            "head_type": metadata[idx]["head_type"],
-            "relation": metadata[idx]["rel_type"],
-            "tail": metadata[idx]["tail"],
-            "tail_type": metadata[idx]["tail_type"],
-            "similarity": float(sims[idx]),
-            "head_specificity": metadata[idx]["head_spec"],
-            "tail_specificity": metadata[idx]["tail_spec"],
+            "head": m["head"],
+            "head_type": m["head_type"],
+            "relation": m["rel_type"],
+            "tail": m["tail"],
+            "tail_type": m["tail_type"],
+            "similarity": sim,
+            "head_specificity": m["head_spec"],
+            "tail_specificity": m["tail_spec"],
         })
     return candidates
 

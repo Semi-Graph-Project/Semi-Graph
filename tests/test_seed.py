@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from semigraph.online import seed as seed_module
 
@@ -126,6 +127,66 @@ def test_query_to_triple_candidates_returns_ranked_triples(monkeypatch):
     assert candidates[0]["tail_type"] == "PRODUCT"
     assert candidates[0]["similarity"] > candidates[1]["similarity"]
     assert "embedding" not in candidates[0]
+
+
+def test_query_to_triple_candidates_deduplicates_typed_triples(monkeypatch):
+    class FakeEmbeddingModel:
+        def encode(self, queries):
+            return np.asarray([[1.0, 0.0]], dtype=np.float32)
+
+    base = {
+        "head": "intel",
+        "head_type": "ORG",
+        "rel_type": "HAS_STAKE_IN",
+        "tail": "mobileye",
+        "head_spec": 0.8,
+        "tail_spec": 0.7,
+    }
+    metadata = [
+        {**base, "tail_type": "COMP"},
+        {**base, "tail_type": "COMP"},
+        {**base, "tail_type": "SEGMENT"},
+        {
+            **base,
+            "rel_type": "DISCLOSES",
+            "tail": "revenue",
+            "tail_type": "FIN_METRIC",
+        },
+    ]
+
+    monkeypatch.setattr(seed_module, "get_embedding_model", lambda: FakeEmbeddingModel())
+    monkeypatch.setattr(
+        seed_module,
+        "_load_triple_index",
+        lambda: (
+            np.asarray([
+                [0.95, 0.05],
+                [0.94, 0.06],
+                [0.93, 0.07],
+                [0.92, 0.08],
+            ], dtype=np.float32),
+            metadata,
+        ),
+    )
+
+    candidates = seed_module.query_to_triple_candidates(
+        "intel mobileye revenue",
+        top_k_candidates=3,
+        min_similarity=0.6,
+        cfg=object(),
+    )
+
+    assert [candidate["candidate_id"] for candidate in candidates] == [0, 1, 2]
+    assert [candidate["tail_type"] for candidate in candidates] == [
+        "COMP",
+        "SEGMENT",
+        "FIN_METRIC",
+    ]
+    assert [candidate["similarity"] for candidate in candidates] == [
+        pytest.approx(0.95),
+        pytest.approx(0.93),
+        pytest.approx(0.92),
+    ]
 
 
 def test_query_to_triple_seeds_is_compatibility_wrapper(monkeypatch):
