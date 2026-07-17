@@ -184,14 +184,64 @@ def agent_graph_search(query: str, top_k_chunks: int, cfg) -> RetrieverResult:
     return {"chunks": trace["chunks"], "trace": _compact_graph_trace(trace)}
 
 
-# Graph and vector use agent-specific adapters so their Phase T parameters and
-# stage traces cannot drift from the evaluated configuration. Other tools keep
-# their existing list-of-chunks contract.
+def _compact_financial_trace(
+    trace: dict,
+    chunks: list[dict],
+    *,
+    top_k_chunks: int,
+) -> dict:
+    """Keep financial lineage useful for evaluation without copying chunks."""
+
+    compact = {
+        "retriever": "financial",
+        "profile": trace.get("profile", "postgresql_typed_v1"),
+        "parameters": {
+            "top_k_chunks": top_k_chunks,
+            "template_id": trace.get("template_id"),
+            "bound_params": dict(trace.get("bound_params") or {}),
+        },
+        "query_spec": dict(trace.get("query_spec") or {}),
+        "backend_latency_sec": trace.get("latency_sec"),
+        "missing_count": trace.get("missing_count", 0),
+        "returned_chunk_ids": _chunk_ids(chunks),
+    }
+    for key in ("status", "reason", "stage", "error_type", "error"):
+        if trace.get(key) is not None:
+            compact[key] = trace[key]
+    return compact
+
+
+def agent_financial_search(
+    query: str,
+    top_k_chunks: int,
+    cfg,
+) -> RetrieverResult:
+    """Let the Financial Tool own ticker/spec parsing; compact only its trace."""
+
+    result = financial_search(
+        query=query,
+        top_k_chunks=top_k_chunks,
+        cfg=cfg,
+    )
+    chunks = list(result.get("chunks") or [])
+    trace = dict(result.get("trace") or {})
+    return {
+        "chunks": chunks,
+        "trace": _compact_financial_trace(
+            trace,
+            chunks,
+            top_k_chunks=top_k_chunks,
+        ),
+    }
+
+
+# Graph, vector, and financial use agent-specific adapters so retrieval traces
+# stay compact and evaluation-ready. Other tools keep their existing contract.
 RETRIEVERS: dict[str, Callable] = {
     "vector": agent_vector_search,
     "graph": agent_graph_search,
     "hybrid": hybrid_search,
-    "financial": financial_search,
+    "financial": agent_financial_search,
     "news": news_search,
 }
 
@@ -234,21 +284,28 @@ TOOL_SCHEMAS: list[dict] = [
     },
 
     {
-        "type" : "function",
+        "type": "function",
         "function": {
             "name": "financial",
-            "description": "Retrieve financial data and insights based on a natural language query. This tool can access financial databases and APIs to provide relevant information such as stock prices, financial statements, market trends, and other financial metrics.",
+            "description": (
+                "Query structured financial facts and deterministic metrics "
+                "from local PostgreSQL. Use for revenue, profit, margins, "
+                "growth, ratios, cash flow, valuation snapshots, and comparisons."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "A natural language question to retrieve financial data and insights.",
-                    }
+                        "description": (
+                            "Natural-language financial question. The Financial "
+                            "Tool resolves ticker, metric, period, and operation."
+                        ),
+                    },
                 },
                 "required": ["query"],
-            }
-        }
+            },
+        },
     },
 
     {

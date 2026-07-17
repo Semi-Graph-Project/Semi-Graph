@@ -1,7 +1,7 @@
 """Shared ticker resolution for online retrieval tools.
 
-Extracted from `financial_search.py` so multiple consumers (financial_search,
-news_search, future agent router) share one implementation.
+Extracted from `financial_search.py` so the financial and news tools can reuse
+the same low-level extraction utility without duplicating regex/expansion code.
 
 `CORPUS_TICKERS` is **derived from config** (`tickers:` in default.yaml), which
 `scripts/pilot.py` keeps synced to Neo4j reality. Source-of-truth chain:

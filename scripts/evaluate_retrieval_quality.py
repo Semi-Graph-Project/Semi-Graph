@@ -17,7 +17,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 
-DEFAULT_QUERY_FILE = ROOT / "data" / "evaluate" / "phase_t_multihop_queries.yaml"
+DEFAULT_QUERY_FILE = ROOT / "benchmark" / "datasets" / "phase_t_multihop_queries.yaml"
 DEFAULT_OUTPUT_DIR = ROOT / "analytics" / "Report Experiment"
 TOOL_CHOICES = ("vector", "graph", "hybrid")
 SEED_MODE_CHOICES = ("triple", "node", "hybrid")

@@ -15,9 +15,12 @@ data/raw/
 data/processed/
 data/news/
 data/schemas/
-data/evaluate/
 data/neo4j/
 backups/
+
+# Benchmark inputs are versioned; generated benchmark runs stay outside this folder.
+benchmark/runs/
+benchmark/cache/
 
 # Reference datasets — large, downloadable from public source
 data/*.parquet

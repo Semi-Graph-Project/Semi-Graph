@@ -60,7 +60,7 @@ Build benchmark slice
 
 | Task | Code Target | Output |
 |---|---|---|
-| T0.1 Create benchmark file | `data/evaluate/phase_t_multihop_queries.yaml` | query, expected evidence, expected answer points, gold tool hint |
+| T0.1 Create benchmark file | `benchmark/datasets/phase_t_multihop_queries.yaml` | query, expected evidence, expected answer points, gold tool hint |
 | T0.2 Add retrieval evaluator | `scripts/evaluate_retrieval_quality.py` | compare `vector`, `graph`, `hybrid` on same queries |
 | T0.3 Add agent trace persistence | extend `scripts/run_agent_trace.py` or new `scripts/evaluate_agent_quality.py` | JSONL trace per query |
 | T0.4 Freeze current scores | `analytics/phase_t_baseline_YYYYMMDD.md` | baseline table before tuning |
@@ -390,7 +390,7 @@ Do this order to avoid wasting time:
 Create:
 
 ```text
-data/evaluate/phase_t_multihop_queries.yaml
+benchmark/datasets/phase_t_multihop_queries.yaml
 scripts/evaluate_retrieval_quality.py
 analytics/Report Experiment/baseline_<version>_<timestamp>.md
 ```

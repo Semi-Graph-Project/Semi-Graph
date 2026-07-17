@@ -67,7 +67,7 @@ class Config:
         self.log_dir = _PROJECT_ROOT / paths.get("logs", "log")
         self.news_dir = _PROJECT_ROOT / paths.get("news", "data/news")
         self.schemas_dir = _PROJECT_ROOT / paths.get("schemas", "data/schemas")
-        self.evaluate_dir = _PROJECT_ROOT / paths.get("evaluate", "data/evaluate")
+        self.evaluate_dir = _PROJECT_ROOT / paths.get("evaluate", "benchmark/datasets")
 
         # --- Preprocessing ---
         pre = data.get("preprocess", {})
@@ -155,6 +155,38 @@ class Config:
             "vector": dict(agent_retrieval.get("vector", {})),
             "graph": dict(agent_retrieval.get("graph", {})),
         }
+
+        # --- Financial PostgreSQL (Phase F.v2) ---
+        financial = data.get("financial", {})
+        self.financial_backend: str = financial.get("backend", "postgresql")
+        self.financial_expected_company_count: int = int(
+            financial.get("expected_company_count", 14)
+        )
+        self.financial_annual_reports: int = int(
+            financial.get("annual_reports", 3)
+        )
+        self.financial_quarterly_reports: int = int(
+            financial.get("quarterly_reports", 8)
+        )
+        self.financial_request_interval_seconds: float = float(
+            financial.get("request_interval_seconds", 1.1)
+        )
+        self.financial_max_retries: int = int(financial.get("max_retries", 3))
+        self.financial_query_timeout_ms: int = int(
+            financial.get("query_timeout_ms", 5000)
+        )
+        self.financial_max_query_rows: int = int(
+            financial.get("max_query_rows", 50)
+        )
+
+        self.postgres_admin_dsn: str = os.environ.get("POSTGRES_ADMIN_DSN", "")
+        self.postgres_agent_dsn: str = os.environ.get("POSTGRES_AGENT_DSN", "")
+        self.postgres_agent_user: str = os.environ.get(
+            "POSTGRES_AGENT_USER", "semigraph_agent"
+        )
+        self.postgres_agent_password: str = os.environ.get(
+            "POSTGRES_AGENT_PASSWORD", ""
+        )
 
     @property
     def project_root(self) -> Path:

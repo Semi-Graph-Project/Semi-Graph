@@ -47,7 +47,7 @@ paths:
   logs: "log"
   news: "data/news"
   schemas: "data/schemas"
-  evaluate: "data/evaluate"
+  evaluate: "benchmark/datasets"
 
 # Preprocessing
 preprocess:
@@ -172,3 +172,14 @@ embeddings:
   batch_size: 32                    # CPU-friendly; raise on GPU
   device: "cpu"                     # "cpu" | "cuda" | "mps"
   normalize: true                   # L2-normalize → cosine sim works as dot product
+
+
+financial:
+  backend: "postgresql"
+  expected_company_count: 14
+  annual_reports: 3
+  quarterly_reports: 8
+  request_interval_seconds: 1.1
+  max_retries: 3
+  query_timeout_ms: 5000
+  max_query_rows: 50

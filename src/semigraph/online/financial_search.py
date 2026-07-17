@@ -1,29 +1,29 @@
-"""
-Phase F.v1 — financial_search: numeric-data retrieval via Finnhub API.
+"""Compatibility wrapper for typed PostgreSQL financial retrieval.
 
-Phased architecture (Direct API v1 → SQL v2):
-  - v1 (this file): `FinnhubAPIBackend` calls Finnhub on every query, returns 3
-    snapshot kinds (financials_annual, key_metrics, quote) wrapped in the
-    standard 6-key chunk shape used by vector_search / graph_search / hybrid_search.
-  - v2 (future): `SQLBackend` (separate module) reads from SQLite populated via
-    ETL, generates SQL through text-to-SQL LLM prompt. Same `FinancialBackend`
-    Protocol → `_get_backend()` factory swap is the only change at runtime.
-
-The orchestrator (`financial_search`) keeps a stable external contract — all
-downstream code (RETRIEVERS dispatch, demo_rag prompt, app.py UI) is backend-
-agnostic.
-
-Output shape matches the other three retrievers exactly:
-    [{chunk_id, text, ticker, fiscal_year, section, score}, ...]
-
-No DB hits; no embeddings; no Neo4j. Only Finnhub HTTP calls.
+The default path turns natural language into a validated ``FinancialQuerySpec``.
+Only the deterministic compiler may create SQL.  The old direct Finnhub backend
+is retained as an explicitly configured migration fallback.
 """
 from __future__ import annotations
 
-from typing import Optional, Protocol
+import json
+from typing import Any, Optional
+
+from pydantic import ValidationError
 
 from semigraph.config import Config, get_config
-from semigraph.online._ticker import CORPUS_TICKERS, resolve_tickers
+from semigraph.connections import get_llm
+from semigraph.financial.backend import (
+    FinancialBackend,
+    FinancialQueryResult,
+    PostgreSQLBackend,
+)
+from semigraph.financial.query_spec import (
+    FinancialQuerySpec,
+    PERIODIC_METRICS,
+    SNAPSHOT_METRICS,
+)
+from semigraph.online._ticker import resolve_tickers
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -45,6 +45,10 @@ FINANCIAL_KEYWORDS: frozenset[str] = frozenset({
 })
 
 SNAPSHOT_KINDS: tuple[str, ...] = ("financials_annual", "key_metrics", "quote")
+
+
+class FinancialIntentParseError(ValueError):
+    """Raised after both financial-intent parsing attempts fail validation."""
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -76,27 +80,145 @@ def _make_chunk(ticker: str, kind: str, text: str, fiscal_year: int) -> dict:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Backend Protocol — v1 (API) and v2 (SQL) both implement this
+# Natural-language query -> validated spec
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class FinancialBackend(Protocol):
-    """Stable interface — `_get_backend()` returns a concrete implementation.
+def _response_text(response: Any) -> str:
+    content = response.content if hasattr(response, "content") else response
+    if not isinstance(content, str):
+        raise ValueError("LLM response content must be a string")
+    return content.strip()
 
-    v1: FinnhubAPIBackend (direct API per snapshot kind)
-    v2 (TODO after Phase E, deadline 2 weeks before defense): SQLBackend with
-        SQLite + text-to-SQL — same `.search()` signature so call sites stay
-        identical.
-    """
 
-    def search(
-        self,
-        query: str,
-        tickers: list[str],
-        top_k: int = 5,
-    ) -> list[dict]:
-        """Return 6-key chunks for the given query and resolved tickers."""
-        ...
+def _decode_json_object(text: str) -> dict[str, Any]:
+    """Accept plain JSON and tolerate a surrounding Markdown code fence."""
+
+    candidate = text.strip()
+    if candidate.startswith("```"):
+        lines = candidate.splitlines()
+        if len(lines) >= 3 and lines[-1].strip() == "```":
+            candidate = "\n".join(lines[1:-1]).strip()
+
+    try:
+        value = json.loads(candidate)
+    except json.JSONDecodeError:
+        start = candidate.find("{")
+        end = candidate.rfind("}")
+        if start < 0 or end <= start:
+            raise ValueError("LLM response does not contain a JSON object")
+        value = json.loads(candidate[start : end + 1])
+
+    if not isinstance(value, dict):
+        raise ValueError("LLM response must be one JSON object")
+    return value
+
+
+def _financial_intent_schema() -> dict[str, Any]:
+    """Expose only fields the LLM owns; ticker and query belong to the tool."""
+
+    schema = FinancialQuerySpec.model_json_schema()
+    schema["properties"] = {
+        name: definition
+        for name, definition in schema["properties"].items()
+        if name not in {"query", "tickers"}
+    }
+    schema["required"] = [
+        name
+        for name in schema.get("required", [])
+        if name not in {"query", "tickers"}
+    ]
+    return schema
+
+
+def _intent_messages(
+    query: str,
+    *,
+    tickers: list[str],
+    validation_feedback: str | None,
+) -> list[dict[str, str]]:
+    schema = json.dumps(_financial_intent_schema(), ensure_ascii=False)
+    feedback = (
+        f"\nThe previous output failed validation:\n{validation_feedback}\n"
+        if validation_feedback
+        else ""
+    )
+    system = f"""You translate a financial question into one JSON intent object.
+Never write SQL. Do not output query or tickers; the Financial Tool owns them.
+Output JSON only, with no explanation.
+
+Allowed periodic metrics: {sorted(PERIODIC_METRICS)}
+Allowed snapshot metrics: {sorted(SNAPSHOT_METRICS)}
+
+frequency meanings:
+- annual: one value per fiscal year
+- quarterly: one value per fiscal quarter
+- snapshot: latest market/vendor observation without a fiscal period
+
+operation meanings:
+- lookup: retrieve a metric
+- compare: compare at least two companies
+- trend: retrieve an ordered time series
+- rank: order companies by exactly one metric
+- aggregate: avg/min/max/sum of exactly one periodic metric
+
+Financial intent JSON schema:
+{schema}
+{feedback}"""
+    user = json.dumps(
+        {
+            "query": query,
+            "resolved_tickers": tickers,
+            "instruction": (
+                "Return only the intent fields. Do not return query or tickers."
+            ),
+        },
+        ensure_ascii=False,
+    )
+    return [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user},
+    ]
+
+
+def _build_financial_query_spec(
+    query: str,
+    *,
+    tickers: list[str],
+    cfg: Config,
+) -> FinancialQuerySpec:
+    """Resolve LLM-owned intent fields and assemble the tool-owned query spec."""
+
+    llm = get_llm(cfg)
+    feedback: str | None = None
+    errors: list[str] = []
+
+    for _ in range(2):
+        try:
+            response = llm.invoke(
+                _intent_messages(
+                    query,
+                    tickers=tickers,
+                    validation_feedback=feedback,
+                )
+            )
+            intent = _decode_json_object(_response_text(response))
+            forbidden = sorted({"query", "tickers"} & intent.keys())
+            if forbidden:
+                raise ValueError(
+                    f"LLM must not provide tool-owned fields: {forbidden}"
+                )
+            return FinancialQuerySpec.model_validate(
+                {"query": query, "tickers": tickers, **intent}
+            )
+        except (ValidationError, ValueError) as exc:
+            feedback = str(exc)
+            errors.append(feedback)
+
+    raise FinancialIntentParseError(
+        "Could not produce a valid FinancialQuerySpec after 2 attempts: "
+        + " | ".join(errors)
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -274,14 +396,50 @@ class FinnhubAPIBackend:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Backend factory — single swap point for v1 → v2 migration
+# Backend factory — single swap point during the v1 -> v2 migration
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _get_backend(cfg: Optional[Config] = None) -> FinancialBackend:
-    """v1: always Finnhub. v2 will branch on `cfg.financial_backend`."""
+def _get_backend(
+    cfg: Optional[Config] = None,
+) -> FinancialBackend | FinnhubAPIBackend:
+    """Select PostgreSQL by default; Finnhub must be opted into explicitly."""
+
     cfg = cfg or get_config()
-    return FinnhubAPIBackend(api_key=cfg.finnhub_api_key)
+    backend_name = cfg.financial_backend.strip().lower()
+    if backend_name == "postgresql":
+        return PostgreSQLBackend(cfg)
+    if backend_name == "finnhub":
+        return FinnhubAPIBackend(api_key=cfg.finnhub_api_key)
+    raise ValueError(f"Unsupported financial backend: {cfg.financial_backend!r}")
+
+
+def _empty_result(reason: str) -> dict[str, Any]:
+    return {
+        "chunks": [],
+        "trace": {
+            "retriever": "financial",
+            "profile": "financial_compatibility_v2",
+            "status": "skipped",
+            "reason": reason,
+            "returned_count": 0,
+        },
+    }
+
+
+def _error_result(exc: Exception, *, stage: str) -> dict[str, Any]:
+    return {
+        "chunks": [],
+        "trace": {
+            "retriever": "financial",
+            "profile": "financial_compatibility_v2",
+            "status": "error",
+            "stage": stage,
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+            "returned_count": 0,
+        },
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -294,51 +452,74 @@ def financial_search(
     top_k_chunks: int = 5,
     cfg: Optional[Config] = None,
     use_expansion: bool = True,
-) -> list[dict]:
-    """Return top-k financial-snapshot chunks for the given query.
+) -> dict[str, Any]:
+    """Resolve a natural-language query entirely inside the Financial Tool.
 
-    Three early-exit guards keep API calls cheap and false-positive-free:
-      1. Empty / intent-less query → []
-      2. No corpus ticker resolved (regex + optional LLM expansion both empty)
-         [] (Finnhub free tier is US-only and the financial tool is scoped
-         to the 10-company semiconductor corpus)
-      3. Missing API key → single error chunk (graceful, not exception)
-
-    Args:
-        query: Natural-language question. May be Thai or English.
-        top_k_chunks: Max chunks returned. Each ticker contributes ≤ 3 snapshots,
-            so multi-ticker queries are truncated here.
-        cfg: Optional Config override; defaults to the cached singleton.
-        use_expansion: If True (default), fall back to LLM query expansion
-            when regex finds no ticker. Set False to disable LLM cost in
-            batch evaluation or when latency matters more than coverage.
-
-    Returns:
-        `[{chunk_id, text, ticker, fiscal_year, section, score}, ...]` —
-        identical shape to `vector_search()` / `graph_search()` /
-        `hybrid_search()`. Empty list on miss (no exception).
+    The caller supplies only a query.  This function owns ticker resolution and
+    spec construction; the LLM supplies only financial intent fields.  The
+    function always returns ``{"chunks": ..., "trace": ...}``.
     """
+
     if not query.strip():
-        return []
+        return _empty_result("empty_query")
     if not _has_financial_intent(query):
-        return []
-    tickers = resolve_tickers(query, cfg=cfg, use_expansion=use_expansion)
-    if not tickers:
-        return []
+        return _empty_result("no_financial_intent")
+
+    cfg = cfg or get_config()
+    if isinstance(top_k_chunks, bool) or not isinstance(top_k_chunks, int):
+        return _error_result(
+            TypeError("top_k_chunks must be an integer"),
+            stage="request_validation",
+        )
+    if top_k_chunks < 1:
+        return _error_result(
+            ValueError("top_k_chunks must be positive"),
+            stage="request_validation",
+        )
+
+    try:
+        tickers = resolve_tickers(
+            query,
+            cfg=cfg,
+            use_expansion=use_expansion,
+        )
+        if not tickers:
+            return _empty_result("no_corpus_ticker")
+        parsed_spec = _build_financial_query_spec(
+            query,
+            tickers=tickers,
+            cfg=cfg,
+        )
+    except (ValidationError, TypeError, ValueError) as exc:
+        return _error_result(exc, stage="query_spec_validation")
+    except Exception as exc:  # noqa: BLE001 - external LLM failures are traced
+        return _error_result(exc, stage="query_spec_parsing")
+
     try:
         backend = _get_backend(cfg)
-    except RuntimeError as exc:
-        # Missing API key — surface a single info chunk so the demo doesn't
-        # silently produce empty answers when the user forgets to set the key.
-        return [{
-            "chunk_id": "fin_unavailable",
-            "text": f"Financial backend unavailable: {exc}",
-            "ticker": tickers[0],
-            "fiscal_year": 0,
-            "section": "Financial_error",
-            "score": 0.0,
-        }]
-    return backend.search(query, tickers, top_k=top_k_chunks)
+        if cfg.financial_backend.strip().lower() == "finnhub":
+            chunks = backend.search(  # type: ignore[union-attr]
+                query,
+                parsed_spec.tickers,
+                top_k=top_k_chunks,
+            )
+            return FinancialQueryResult(
+                chunks=chunks,
+                trace={
+                    "retriever": "financial",
+                    "profile": "finnhub_legacy_v1",
+                    "query_spec": parsed_spec.model_dump(mode="json"),
+                    "returned_count": len(chunks),
+                },
+            ).model_dump(mode="json")
+
+        result = backend.query(  # type: ignore[union-attr]
+            parsed_spec,
+            top_k=top_k_chunks,
+        )
+        return result.model_dump(mode="json")
+    except Exception as exc:  # noqa: BLE001 - retrieval failures are traced
+        return _error_result(exc, stage="backend_execution")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -346,23 +527,66 @@ def financial_search(
 # ─────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    for q in [
-        # Hot path — regex hits, no LLM call
-        "What is NVDA latest annual revenue and gross margin?",
-        "Compare AMD and NVDA operating margin.",
-        # Cold path — natural language, LLM expansion required
-        "What is Nvidia's current stock price?",
-        "Where is the developer of Ryzen processors and what is its P/E?",
-        "ราคาหุ้น Qualcomm ตอนนี้",
-        # Guards
-        "What is the semiconductor market outlook?",  # no ticker even after expand → []
-        "we use INTC platform internally",            # no financial intent → []
-    ]:
-        print(f"\n--- {q!r} ---")
-        chunks = financial_search(q, top_k_chunks=6)
-        if not chunks:
-            print("  (empty — guard tripped or no data)")
+    demo_queries = [
+        "Show NVDA annual revenue trend",
+        "Compare AMD and NVDA gross margin",
+        "What is NVDA current stock price?",
+    ]
+
+    for demo_number, demo_query in enumerate(demo_queries, start=1):
+        print("\n" + "=" * 88)
+        print(f"FINANCIAL SEARCH DEMO #{demo_number}")
+        print("=" * 88)
+        print(f"Query: {demo_query}")
+
+        demo_result = financial_search(
+            query=demo_query,
+            top_k_chunks=6,
+        )
+        demo_trace = demo_result["trace"]
+        demo_chunks = demo_result["chunks"]
+
+        print("\nTRACE")
+        print("-" * 88)
+        print(
+            json.dumps(
+                demo_trace,
+                ensure_ascii=False,
+                indent=2,
+                default=str,
+            )
+        )
+
+        print(f"\nCHUNKS ({len(demo_chunks)} returned)")
+        if not demo_chunks:
+            print("-" * 88)
+            print("No financial evidence was returned.")
             continue
-        for i, c in enumerate(chunks, start=1):
-            print(f"  #{i} [{c['ticker']} {c['section']}]")
-            print(f"     {c['text']}")
+
+        for rank, chunk in enumerate(demo_chunks, start=1):
+            fiscal_year = chunk.get("fiscal_year") or "snapshot"
+            value = chunk.get("value")
+            unit = chunk.get("unit") or ""
+
+            print("-" * 88)
+            print(
+                f"#{rank}  {chunk['ticker']} | {chunk.get('metric', 'n/a')} "
+                f"| period={fiscal_year} | value={value} {unit}".rstrip()
+            )
+            print(f"chunk_id   : {chunk['chunk_id']}")
+            print(f"section    : {chunk['section']}")
+            print(f"period_end : {chunk.get('period_end') or 'n/a'}")
+            print(
+                f"source      : {chunk.get('source_kind', 'n/a')} "
+                f"(status={chunk.get('status', 'n/a')})"
+            )
+            print(f"text        : {chunk['text']}")
+            print("provenance  :")
+            print(
+                json.dumps(
+                    chunk.get("provenance", {}),
+                    ensure_ascii=False,
+                    indent=2,
+                    default=str,
+                )
+            )

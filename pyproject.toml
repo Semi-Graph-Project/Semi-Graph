@@ -38,6 +38,7 @@ dependencies = [
     "newspaper3k",
     # Financial data
     "finnhub-python",
+    "psycopg[binary]>=3.2",
     # Agent (Phase D)
     "langgraph>=0.2.0",
     "pyvis>=0.3.2",
@@ -46,6 +47,7 @@ dependencies = [
     "python-dotenv",
     # CLI
     "typer",
+    
 ]
 
 [project.scripts]

@@ -32,6 +32,12 @@ def main() -> None:
     parser.add_argument("--oracle-k", type=int, default=20)
     parser.add_argument("--candidate-pool-k", type=int, default=100)
     parser.add_argument("--graph-top-k-entities", type=int, default=40)
+    parser.add_argument(
+        "--graph-top-k-triples",
+        type=int,
+        default=10,
+        help="Number of query-to-triple candidates passed to the graph seed stage.",
+    )
     parser.add_argument("--graph-damping", type=float, default=0.5)
     parser.add_argument(
         "--graph-ppr-mode",
@@ -88,6 +94,7 @@ def main() -> None:
         "--graph-seed-mode", "triple",
         "--candidate-pool-k", str(args.candidate_pool_k),
         "--graph-top-k-entities", str(args.graph_top_k_entities),
+        "--graph-top-k-triples", str(args.graph_top_k_triples),
         "--graph-damping", str(args.graph_damping),
         "--graph-ppr-mode", args.graph_ppr_mode,
         "--graph-triple-filter", args.graph_triple_filter,

@@ -1,18 +1,25 @@
-"""Unit tests for Phase F.v1 financial_search.
+"""Unit tests for the financial_search compatibility wrapper.
 
 Focus: orchestrator pure-function logic + Protocol contract. Backend API calls
 are mocked — real Finnhub hits live in integration scripts, not unit tests.
 """
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
+from semigraph.financial.backend import FinancialQueryResult
+from semigraph.financial.query_spec import FinancialQuerySpec
 from semigraph.online._ticker import CORPUS_TICKERS, extract_tickers, resolve_tickers
 from semigraph.online.financial_search import (
     FINANCIAL_KEYWORDS,
     SNAPSHOT_KINDS,
     FinancialBackend,
+    FinancialIntentParseError,
+    _build_financial_query_spec,
     _has_financial_intent,
+    _get_backend,
     _make_chunk,
     financial_search,
 )
@@ -44,7 +51,7 @@ class TestExtractTickers:
         # ticker regex is uppercase-only — Finnhub expects uppercase symbols
         assert extract_tickers("what is nvda doing") == []
 
-    def test_all_ten_corpus_tickers_detected(self):
+    def test_all_corpus_tickers_detected(self):
         q = " ".join(sorted(CORPUS_TICKERS))
         out = extract_tickers(q)
         assert set(out) == CORPUS_TICKERS
@@ -201,40 +208,64 @@ class TestResolveTickers:
 
 
 class FakeBackend:
-    """Concrete `FinancialBackend` for unit tests — no Finnhub dependency."""
+    """Concrete v2 `FinancialBackend` with no PostgreSQL dependency."""
 
     def __init__(self, chunks_per_ticker: int = 3):
         self.chunks_per_ticker = chunks_per_ticker
-        self.calls: list[tuple[str, tuple[str, ...]]] = []
+        self.calls: list[FinancialQuerySpec] = []
 
-    def search(self, query: str, tickers: list[str], top_k: int = 5) -> list[dict]:
-        self.calls.append((query, tuple(tickers)))
+    def query(
+        self,
+        spec: FinancialQuerySpec,
+        *,
+        top_k: int = 5,
+    ) -> FinancialQueryResult:
+        self.calls.append(spec)
         out: list[dict] = []
-        for t in tickers:
+        for t in spec.tickers:
             for kind in SNAPSHOT_KINDS[: self.chunks_per_ticker]:
                 out.append(_make_chunk(t, kind, f"{t} {kind} fake", 2025))
-        return out[:top_k]
+        chunks = out[:top_k]
+        return FinancialQueryResult(
+            chunks=chunks,
+            trace={"profile": "fake", "returned_count": len(chunks)},
+        )
 
 
 @pytest.fixture
 def patch_backend(monkeypatch):
-    """Replace `_get_backend` with a FakeBackend so tests never call Finnhub."""
+    """Replace the parser and backend so tests call neither LLM nor Postgres."""
     fake = FakeBackend()
     monkeypatch.setattr(
         "semigraph.online.financial_search._get_backend",
         lambda cfg=None: fake,
+    )
+
+    def fake_parser(query, *, tickers, cfg):
+        return FinancialQuerySpec(
+            query=query,
+            tickers=tickers,
+            metrics=["revenue"],
+            frequency="annual",
+            operation="compare" if len(tickers) > 1 else "lookup",
+        )
+
+    monkeypatch.setattr(
+        "semigraph.online.financial_search._build_financial_query_spec",
+        fake_parser,
     )
     return fake
 
 
 class TestOrchestrator:
     def test_empty_query_returns_empty(self):
-        assert financial_search("") == []
-        assert financial_search("   ") == []
+        assert financial_search("")["chunks"] == []
+        assert financial_search("   ")["chunks"] == []
+        assert financial_search("")["trace"]["reason"] == "empty_query"
 
     def test_no_financial_intent_returns_empty(self, patch_backend):
         # Has ticker but no keyword → backend never invoked
-        assert financial_search("we use INTC for our research") == []
+        assert financial_search("we use INTC for our research")["chunks"] == []
         assert patch_backend.calls == []
 
     def test_no_ticker_returns_empty(self, patch_backend, monkeypatch):
@@ -244,19 +275,21 @@ class TestOrchestrator:
             "semigraph.online._ticker.expand_query",
             lambda q, cfg=None: q,
         )
-        assert financial_search("What is the market revenue trend?") == []
+        result = financial_search("What is the market revenue trend?")
+        assert result["chunks"] == []
+        assert result["trace"]["reason"] == "no_corpus_ticker"
         assert patch_backend.calls == []
 
     def test_natural_language_ticker_via_expansion(self, patch_backend, monkeypatch):
-        """End-to-end: "Nvidia revenue" → LLM expand → backend.search(["NVDA"])."""
+        """End-to-end: natural name resolves to NVDA before backend query."""
         monkeypatch.setattr(
             "semigraph.online._ticker.expand_query",
             lambda q, cfg=None: f"{q} NVDA",
         )
         out = financial_search("What is Nvidia's revenue?", top_k_chunks=5)
         assert len(patch_backend.calls) == 1
-        assert patch_backend.calls[0][1] == ("NVDA",)
-        assert len(out) == 3
+        assert patch_backend.calls[0].tickers == ["NVDA"]
+        assert len(out["chunks"]) == 3
 
     def test_use_expansion_false_blocks_natural_language(self, patch_backend, monkeypatch):
         """use_expansion=False should NOT call expand_query at all."""
@@ -271,30 +304,147 @@ class TestOrchestrator:
             fake_expand,
         )
         out = financial_search("Nvidia revenue", use_expansion=False)
-        assert out == []
+        assert out["chunks"] == []
         assert called["flag"] is False
 
     def test_single_ticker_dispatches_backend(self, patch_backend):
         out = financial_search("What is NVDA latest revenue?", top_k_chunks=5)
         assert len(patch_backend.calls) == 1
-        assert patch_backend.calls[0][1] == ("NVDA",)
-        assert len(out) == 3  # 3 snapshot kinds
+        assert patch_backend.calls[0].tickers == ["NVDA"]
+        assert len(out["chunks"]) == 3  # 3 snapshot kinds
 
     def test_multi_ticker_passes_all(self, patch_backend):
         out = financial_search("Compare AMD and NVDA gross margin", top_k_chunks=10)
-        assert patch_backend.calls[0][1] == ("AMD", "NVDA")
-        assert len(out) == 6  # 2 tickers × 3 kinds
+        assert patch_backend.calls[0].tickers == ["AMD", "NVDA"]
+        assert len(out["chunks"]) == 6  # 2 tickers × 3 kinds
 
     def test_top_k_truncation_applied(self, patch_backend):
         out = financial_search("Compare AMD and NVDA revenue", top_k_chunks=4)
         # Backend returns 6, orchestrator should truncate to 4
-        assert len(out) == 4
+        assert len(out["chunks"]) == 4
 
     def test_six_key_shape_enforced(self, patch_backend):
         out = financial_search("NVDA revenue", top_k_chunks=5)
         required = {"chunk_id", "text", "ticker", "fiscal_year", "section", "score"}
-        for c in out:
-            assert set(c.keys()) == required
+        for c in out["chunks"]:
+            assert required <= set(c.keys())
+
+    def test_legacy_finnhub_branch_is_kept_as_fallback(self, monkeypatch):
+        class FakeLegacyBackend:
+            def search(self, query, tickers, top_k=5):
+                return [_make_chunk(tickers[0], "quote", "fake quote", 0)]
+
+        cfg = SimpleNamespace(
+            financial_backend="finnhub",
+            tickers=["NVDA"],
+        )
+        monkeypatch.setattr(
+            "semigraph.online.financial_search._get_backend",
+            lambda cfg=None: FakeLegacyBackend(),
+        )
+        monkeypatch.setattr(
+            "semigraph.online.financial_search._build_financial_query_spec",
+            lambda query, *, tickers, cfg: FinancialQuerySpec(
+                query=query,
+                tickers=tickers,
+                metrics=["current_price"],
+                frequency="snapshot",
+                operation="lookup",
+            ),
+        )
+
+        out = financial_search(
+            "NVDA stock price",
+            cfg=cfg,
+        )
+
+        assert len(out["chunks"]) == 1
+        assert out["trace"]["profile"] == "finnhub_legacy_v1"
+
+
+class TestFinancialToolSpecBuilder:
+    @staticmethod
+    def _valid_json():
+        return """{
+            "metrics": ["revenue"],
+            "frequency": "annual",
+            "operation": "trend",
+            "limit": 10
+        }"""
+
+    def test_valid_json_becomes_typed_spec(self, monkeypatch):
+        class FakeLLM:
+            def invoke(self, messages):
+                assert "Never write SQL" in messages[0]["content"]
+                assert "Financial Tool owns them" in messages[0]["content"]
+                return SimpleNamespace(
+                    content=TestFinancialToolSpecBuilder._valid_json()
+                )
+
+        monkeypatch.setattr(
+            "semigraph.online.financial_search.get_llm",
+            lambda cfg: FakeLLM(),
+        )
+
+        spec = _build_financial_query_spec(
+            "NVDA annual revenue trend",
+            tickers=["NVDA"],
+            cfg=SimpleNamespace(),
+        )
+
+        assert spec.query == "NVDA annual revenue trend"
+        assert spec.tickers == ["NVDA"]
+        assert spec.operation.value == "trend"
+        assert spec.metrics == ["revenue"]
+
+    def test_invalid_first_response_is_retried_with_feedback(self, monkeypatch):
+        class FakeLLM:
+            def __init__(self):
+                self.calls = []
+
+            def invoke(self, messages):
+                self.calls.append(messages)
+                content = (
+                    "{\"tickers\": [\"AMD\"], \"metrics\": [\"revenue\"], "
+                    "\"frequency\": \"annual\", \"operation\": \"trend\"}"
+                    if len(self.calls) == 1
+                    else TestFinancialToolSpecBuilder._valid_json()
+                )
+                return SimpleNamespace(content=content)
+
+        fake = FakeLLM()
+        monkeypatch.setattr(
+            "semigraph.online.financial_search.get_llm",
+            lambda cfg: fake,
+        )
+
+        spec = _build_financial_query_spec(
+            "NVDA annual revenue trend",
+            tickers=["NVDA"],
+            cfg=SimpleNamespace(),
+        )
+
+        # The LLM attempted to replace NVDA with AMD, but the tool stayed owner.
+        assert spec.tickers == ["NVDA"]
+        assert len(fake.calls) == 2
+        assert "previous output failed validation" in fake.calls[1][0]["content"]
+
+    def test_two_invalid_responses_raise_clear_error(self, monkeypatch):
+        class FakeLLM:
+            def invoke(self, messages):
+                return SimpleNamespace(content="not json")
+
+        monkeypatch.setattr(
+            "semigraph.online.financial_search.get_llm",
+            lambda cfg: FakeLLM(),
+        )
+
+        with pytest.raises(FinancialIntentParseError, match="2 attempts"):
+            _build_financial_query_spec(
+                "NVDA revenue",
+                tickers=["NVDA"],
+                cfg=SimpleNamespace(),
+            )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -304,18 +454,31 @@ class TestOrchestrator:
 
 class TestProtocolContract:
     def test_fake_backend_satisfies_protocol(self):
-        # typing.Protocol is structural — FakeBackend has `.search()` so the
-        # isinstance check via runtime_checkable would pass. We assert by
-        # assignment instead (runtime-checkable Protocol not required for v1).
+        # Protocol is structural; assignment catches drift during type checking.
         backend: FinancialBackend = FakeBackend()
-        result = backend.search("q", ["NVDA"], top_k=5)
-        assert isinstance(result, list)
+        result = backend.query(
+            FinancialQuerySpec(
+                query="NVDA revenue",
+                tickers=["NVDA"],
+                metrics=["revenue"],
+                frequency="annual",
+                operation="lookup",
+            ),
+            top_k=5,
+        )
+        assert isinstance(result, FinancialQueryResult)
 
     def test_finnhub_backend_has_search_method(self):
         # Don't instantiate (needs real API key) — just verify class shape
         from semigraph.online.financial_search import FinnhubAPIBackend
         assert hasattr(FinnhubAPIBackend, "search")
         assert callable(FinnhubAPIBackend.search)
+
+    def test_factory_defaults_to_postgresql_backend(self):
+        from semigraph.financial.backend import PostgreSQLBackend
+
+        cfg = SimpleNamespace(financial_backend="postgresql")
+        assert isinstance(_get_backend(cfg), PostgreSQLBackend)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

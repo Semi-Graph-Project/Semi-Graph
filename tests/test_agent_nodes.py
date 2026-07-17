@@ -1,6 +1,69 @@
 import semigraph.agent.nodes as nodes
 
 
+def _financial_chunk(**overrides):
+    chunk = {
+        "chunk_id": "fin-29-1",
+        "text": "NVDA revenue raw financial text",
+        "ticker": "NVDA",
+        "fiscal_year": 2024,
+        "fiscal_quarter": None,
+        "frequency": "annual",
+        "section": "Financial_revenue",
+        "score": 1.0,
+        "metric": "revenue",
+        "value": "60922000000",
+        "unit": "usd",
+        "period_end": "2024-01-28",
+        "observed_at": None,
+        "status": "ok",
+        "source_kind": "reported",
+        "provenance": {
+            "fact_id": 29,
+            "accession": "0001045810-24-000029",
+            "source_concept": "us-gaap_Revenues",
+            "debug_blob": "must not enter prompt",
+        },
+    }
+    chunk.update(overrides)
+    return chunk
+
+
+def test_financial_chunk_format_is_readable_and_exact_for_observation():
+    formatted = nodes._format_chunks_for_observation([_financial_chunk()])
+
+    assert "FINANCIAL" in formatted
+    assert "metric=revenue" in formatted
+    assert "period=FY2024 (as of 2024-01-28)" in formatted
+    assert "value=$60.92B (exact=60922000000 usd)" in formatted
+    assert '"fact_id": 29' in formatted
+    assert "debug_blob" not in formatted
+
+
+def test_financial_chunk_format_uses_percent_and_keeps_full_citation_data():
+    chunk = _financial_chunk(
+        metric="gross_margin",
+        section="Financial_gross_margin",
+        value="0.5425",
+        unit="ratio",
+        source_kind="derived",
+        provenance={
+            "derived_id": 7,
+            "input_fact_ids": [29, 30],
+            "formula_version": "v1",
+            "debug_blob": "kept outside prompt",
+        },
+    )
+
+    formatted, citation_lookup = nodes._format_chunks_for_synthesis([chunk])
+
+    assert "evidence_type=financial" in formatted
+    assert "value=54.25% (exact=0.5425 ratio)" in formatted
+    assert '"input_fact_ids": [29, 30]' in formatted
+    assert "debug_blob" not in formatted
+    assert citation_lookup[1]["provenance"]["debug_blob"] == "kept outside prompt"
+
+
 class TestExecuteNode:
 
     def test_execute_dispatches_selected_retriever_and_updates_state(

@@ -35,7 +35,7 @@ def main() -> None:
     parser.add_argument(
         "--output",
         type=Path,
-        default=ROOT / "data" / "evaluate" / "finreflectkg_multihop.yaml",
+        default=ROOT / "benchmark" / "datasets" / "finreflectkg_multihop.yaml",
     )
     parser.add_argument("--limit", type=int)
     parser.add_argument(

@@ -128,3 +128,63 @@ def test_agent_graph_search_uses_phase_t_profile(monkeypatch):
     assert result["trace"]["seed_count"] == 1
     assert result["trace"]["triple_filter"]["reason"] == "llm_selection"
     assert result["trace"]["returned_chunk_ids"] == ["graph-1"]
+
+
+def test_agent_financial_search_passes_query_only_and_compacts_trace(monkeypatch):
+    captured = {}
+    chunks = [{"chunk_id": "fin-1", "metric": "revenue", "value": "100"}]
+
+    def fake_financial_search(**kwargs):
+        captured.update(kwargs)
+        return {
+            "chunks": chunks,
+            "trace": {
+                "retriever": "financial",
+                "profile": "postgresql_typed_v1",
+                "query_spec": {
+                    "tickers": ["NVDA"],
+                    "metrics": ["revenue"],
+                    "operation": "lookup",
+                },
+                "template_id": "periodic.lookup.latest.v1",
+                "bound_params": {
+                    "tickers": ["NVDA"],
+                    "metrics": ["revenue"],
+                },
+                "returned_count": 1,
+                "latency_sec": 0.12,
+                "missing_count": 0,
+            },
+        }
+
+    monkeypatch.setattr(agent_tools, "financial_search", fake_financial_search)
+
+    result = agent_tools.agent_financial_search("NVDA revenue", 5, "cfg")
+
+    assert captured == {
+        "query": "NVDA revenue",
+        "top_k_chunks": 5,
+        "cfg": "cfg",
+    }
+    assert result["chunks"] == chunks
+    assert result["trace"]["parameters"] == {
+        "top_k_chunks": 5,
+        "template_id": "periodic.lookup.latest.v1",
+        "bound_params": {
+            "tickers": ["NVDA"],
+            "metrics": ["revenue"],
+        },
+    }
+    assert result["trace"]["backend_latency_sec"] == 0.12
+    assert result["trace"]["returned_chunk_ids"] == ["fin-1"]
+
+
+def test_financial_tool_schema_exposes_query_only():
+    schema = next(
+        item["function"]
+        for item in agent_tools.TOOL_SCHEMAS
+        if item["function"]["name"] == "financial"
+    )
+
+    assert set(schema["parameters"]["properties"]) == {"query"}
+    assert schema["parameters"]["required"] == ["query"]
