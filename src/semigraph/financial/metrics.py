@@ -19,6 +19,7 @@ METRICS: tuple[MetricDefinition, ...] = (
             "RevenueFromContractWithCustomerExcludingAssessedTax",
             "Revenues",
             "SalesRevenueNet",
+            "RevenueFromContractWithCustomerIncludingAssessedTax"
         ),
         "USD",
     ),
@@ -41,7 +42,7 @@ METRICS: tuple[MetricDefinition, ...] = (
         ("OperatingIncomeLoss",),
         "USD",
     ),
-    MetricDefinition("net_income", "income", ("NetIncomeLoss",), "USD"),
+    MetricDefinition("net_income", "income", ("NetIncomeLoss","ProfitLoss"), "USD"),
     MetricDefinition(
         "diluted_eps",
         "income",

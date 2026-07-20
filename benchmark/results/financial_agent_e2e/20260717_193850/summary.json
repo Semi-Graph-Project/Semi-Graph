@@ -1,0 +1,44 @@
+{
+  "dataset": "benchmark/datasets/financial_agent_e2e_60.yaml",
+  "evaluated_at": "2026-07-17T20:00:31.047810+00:00",
+  "query_count": 60,
+  "answerable_count": 48,
+  "unsupported_count": 12,
+  "error_count": 0,
+  "tool_selection_accuracy": 1.0,
+  "query_spec_accuracy": 0.9375,
+  "sql_execution_success_rate": 1.0,
+  "retrieval_exact_rate": 0.958333,
+  "retrieval_micro_recall": 0.952381,
+  "final_answer_accuracy": 0.9375,
+  "abstention_accuracy": 1.0,
+  "citation_valid_rate": 1.0,
+  "overall_pass_rate": 0.933333,
+  "latency_sec": {
+    "mean": 21.664,
+    "median": 16.741,
+    "max": 149.097
+  },
+  "by_category": {
+    "derived_metric": {
+      "count": 12,
+      "overall_pass_rate": 1.0
+    },
+    "multi_company_comparison": {
+      "count": 12,
+      "overall_pass_rate": 0.833333
+    },
+    "multi_year_trend": {
+      "count": 12,
+      "overall_pass_rate": 0.916667
+    },
+    "single_company_lookup": {
+      "count": 12,
+      "overall_pass_rate": 0.916667
+    },
+    "unsupported_abstention": {
+      "count": 12,
+      "overall_pass_rate": 1.0
+    }
+  }
+}

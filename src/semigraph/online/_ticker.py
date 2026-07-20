@@ -28,6 +28,26 @@ CORPUS_TICKERS: frozenset[str] = frozenset(
 
 TICKER_RE = re.compile(r"\b[A-Z]{2,5}\b")
 
+# Uppercase domain terms that match TICKER_RE but are not stock symbols. This
+# keeps queries such as "NVDA ROA in FY2025" from being rejected as containing
+# an out-of-corpus ticker.
+NON_TICKER_TOKENS: frozenset[str] = frozenset({
+    "AI", "API", "CAGR", "CEO", "CFO", "EPS", "ETF", "FCF", "FY",
+    "GAAP", "GPU", "HBM", "IFRS", "LLM", "PDF", "PE", "PPR", "QA",
+    "RAG", "RAM", "ROA", "ROE", "SEC", "SQL", "TTM", "USA", "USD",
+    "YTD", "YOY",
+})
+
+
+def _out_of_corpus_tickers(query: str) -> list[str]:
+    """Return explicit ticker-like tokens that are outside this corpus."""
+
+    seen: dict[str, None] = {}
+    for token in TICKER_RE.findall(query):
+        if token not in CORPUS_TICKERS and token not in NON_TICKER_TOKENS:
+            seen.setdefault(token, None)
+    return list(seen)
+
 
 def extract_tickers(query: str) -> list[str]:
     """Return corpus tickers mentioned in query, preserving first-seen order.
@@ -51,8 +71,10 @@ def resolve_tickers(
 ) -> list[str]:
     """Two-stage ticker resolution: regex first, LLM expansion as fallback.
 
-    Stage 1 (always): regex over the original query. ~10 µs, $0 — catches the
-    hot path "What is NVDA revenue?" before any LLM cost.
+    Stage 1 (always): reject explicit out-of-corpus symbols, then regex over the
+    original query. ~10 µs, $0 — catches the hot path "What is NVDA revenue?"
+    before any LLM cost. Rejecting first prevents an explicit AAPL query from
+    being expanded into an unrelated in-corpus ticker.
 
     Stage 2 (only if Stage 1 returned empty AND `use_expansion`): call
     `expand_query()` which adds entity hints from LLM world knowledge
@@ -60,6 +82,9 @@ def resolve_tickers(
     regex again on the expanded string. Tokens are anti-hallucination-filtered
     against CORPUS_TICKERS so out-of-scope tickers can never reach a backend.
     """
+    if _out_of_corpus_tickers(query):
+        return []
+
     tickers = extract_tickers(query)
     if tickers or not use_expansion:
         return tickers

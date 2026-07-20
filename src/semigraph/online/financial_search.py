@@ -30,20 +30,6 @@ from semigraph.online._ticker import resolve_tickers
 # Constants
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Lowercase keywords that signal a financial / numeric intent. Used to gate
-# ticker extraction so phrases like "we use INTC platform" don't trigger an
-# expensive API call.
-FINANCIAL_KEYWORDS: frozenset[str] = frozenset({
-    # English
-    "revenue", "margin", "earnings", "growth", "valuation", "stock", "share",
-    "eps", "p/e", "pe ratio", "price", "quote", "income", "profit", "ratio",
-    "ebitda", "cash flow", "fcf", "operating", "gross", "roe", "market cap",
-    # Thai — let queries like "ราคาหุ้น Qualcomm" pass the intent gate so the
-    # LLM expansion fallback can resolve the company name → ticker.
-    "ราคา", "ราคาหุ้น", "หุ้น", "รายได้", "กำไร", "ขาดทุน",
-    "มาร์จิ้น", "มาร์จิน", "อัตรากำไร", "มูลค่า", "เงินปันผล", "งบการเงิน",
-})
-
 SNAPSHOT_KINDS: tuple[str, ...] = ("financials_annual", "key_metrics", "quote")
 
 
@@ -51,15 +37,13 @@ class FinancialIntentParseError(ValueError):
     """Raised after both financial-intent parsing attempts fail validation."""
 
 
+class UnsupportedFinancialQuery(ValueError):
+    """Raised when the requested metric is outside the configured registry."""
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers (pure functions — used by tests directly)
 # ─────────────────────────────────────────────────────────────────────────────
-
-
-def _has_financial_intent(query: str) -> bool:
-    """True iff query contains at least one financial keyword (case-insensitive)."""
-    q = query.lower()
-    return any(kw in q for kw in FINANCIAL_KEYWORDS)
 
 
 def _make_chunk(ticker: str, kind: str, text: str, fiscal_year: int) -> dict:
@@ -115,20 +99,43 @@ def _decode_json_object(text: str) -> dict[str, Any]:
 
 
 def _financial_intent_schema() -> dict[str, Any]:
-    """Expose only fields the LLM owns; ticker and query belong to the tool."""
+    """Describe supported-spec and unsupported decision response shapes."""
 
     schema = FinancialQuerySpec.model_json_schema()
-    schema["properties"] = {
+    intent_properties = {
         name: definition
         for name, definition in schema["properties"].items()
         if name not in {"query", "tickers"}
     }
-    schema["required"] = [
+    intent_required = [
         name
         for name in schema.get("required", [])
         if name not in {"query", "tickers"}
     ]
-    return schema
+    return {
+        "$defs": schema.get("$defs", {}),
+        "oneOf": [
+            {
+                "type": "object",
+                "properties": {
+                    "supported": {"const": True},
+                    "unsupported_reason": {"type": "null"},
+                    **intent_properties,
+                },
+                "required": ["supported", *intent_required],
+                "additionalProperties": False,
+            },
+            {
+                "type": "object",
+                "properties": {
+                    "supported": {"const": False},
+                    "unsupported_reason": {"type": "string", "minLength": 1},
+                },
+                "required": ["supported", "unsupported_reason"],
+                "additionalProperties": False,
+            },
+        ]
+    }
 
 
 def _intent_messages(
@@ -150,6 +157,15 @@ Output JSON only, with no explanation.
 Allowed periodic metrics: {sorted(PERIODIC_METRICS)}
 Allowed snapshot metrics: {sorted(SNAPSHOT_METRICS)}
 
+Metric rules:
+- Return supported=true only when every requested metric exists in the allowed
+  registry and can be answered with the available frequency semantics.
+- With supported=true, select only the exact metric requested by the user and
+  set unsupported_reason=null or omit it.
+- Never substitute a missing metric with a similar metric or its components.
+- If any requested metric is unavailable, return only supported=false and a
+  concise unsupported_reason. Do not return substitute metrics.
+
 frequency meanings:
 - annual: one value per fiscal year
 - quarterly: one value per fiscal quarter
@@ -161,6 +177,13 @@ operation meanings:
 - trend: retrieve an ordered time series
 - rank: order companies by exactly one metric
 - aggregate: avg/min/max/sum of exactly one periodic metric
+
+fiscal period rules:
+- exact FY2025: start_year=2025 and end_year=2025
+- FY2023 through FY2025: start_year=2023 and end_year=2025
+- since/from FY2025: start_year=2025, end_year=null, operation=trend
+- through/until FY2025: start_year=null, end_year=2025, operation=trend
+- latest available period: start_year=null and end_year=null
 
 Financial intent JSON schema:
 {schema}
@@ -208,9 +231,34 @@ def _build_financial_query_spec(
                 raise ValueError(
                     f"LLM must not provide tool-owned fields: {forbidden}"
                 )
+
+            supported = intent.pop("supported", None)
+            unsupported_reason = intent.pop("unsupported_reason", None)
+            if supported is False:
+                if intent:
+                    raise ValueError(
+                        "Unsupported intent must not include query-spec fields"
+                    )
+                if (
+                    not isinstance(unsupported_reason, str)
+                    or not unsupported_reason.strip()
+                ):
+                    raise ValueError(
+                        "Unsupported intent requires unsupported_reason"
+                    )
+                raise UnsupportedFinancialQuery(unsupported_reason.strip())
+            if supported is not True:
+                raise ValueError("Intent must include boolean supported")
+            if unsupported_reason not in (None, ""):
+                raise ValueError(
+                    "Supported intent cannot include unsupported_reason"
+                )
+
             return FinancialQuerySpec.model_validate(
                 {"query": query, "tickers": tickers, **intent}
             )
+        except UnsupportedFinancialQuery:
+            raise
         except (ValidationError, ValueError) as exc:
             feedback = str(exc)
             errors.append(feedback)
@@ -414,8 +462,12 @@ def _get_backend(
     raise ValueError(f"Unsupported financial backend: {cfg.financial_backend!r}")
 
 
-def _empty_result(reason: str) -> dict[str, Any]:
-    return {
+def _empty_result(
+    reason: str,
+    *,
+    unsupported_reason: str | None = None,
+) -> dict[str, Any]:
+    result = {
         "chunks": [],
         "trace": {
             "retriever": "financial",
@@ -425,6 +477,9 @@ def _empty_result(reason: str) -> dict[str, Any]:
             "returned_count": 0,
         },
     }
+    if unsupported_reason:
+        result["trace"]["unsupported_reason"] = unsupported_reason
+    return result
 
 
 def _error_result(exc: Exception, *, stage: str) -> dict[str, Any]:
@@ -462,8 +517,6 @@ def financial_search(
 
     if not query.strip():
         return _empty_result("empty_query")
-    if not _has_financial_intent(query):
-        return _empty_result("no_financial_intent")
 
     cfg = cfg or get_config()
     if isinstance(top_k_chunks, bool) or not isinstance(top_k_chunks, int):
@@ -489,6 +542,11 @@ def financial_search(
             query,
             tickers=tickers,
             cfg=cfg,
+        )
+    except UnsupportedFinancialQuery as exc:
+        return _empty_result(
+            "unsupported_metric",
+            unsupported_reason=str(exc),
         )
     except (ValidationError, TypeError, ValueError) as exc:
         return _error_result(exc, stage="query_spec_validation")

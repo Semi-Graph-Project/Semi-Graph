@@ -1,0 +1,288 @@
+{
+  "scope": {
+    "tickers": [
+      "ADI",
+      "ALAB",
+      "AMAT",
+      "AMD",
+      "ARM",
+      "AVGO",
+      "COHR",
+      "CRDO",
+      "ENTG",
+      "GFS",
+      "INTC",
+      "KLAC",
+      "LRCX",
+      "MCHP",
+      "MPWR",
+      "MRVL",
+      "MTSI",
+      "MU",
+      "NVDA",
+      "NVMI",
+      "NXPI",
+      "ON",
+      "QCOM",
+      "QRVO",
+      "RMBS",
+      "SWKS",
+      "TER",
+      "TXN"
+    ],
+    "metrics": [
+      "revenue",
+      "net_income",
+      "total_assets",
+      "current_assets",
+      "operating_cash_flow"
+    ],
+    "ten_k_filings_per_company": 3,
+    "filing_form": "10-K only; 20-F issuers excluded",
+    "gold_source": "SEC EDGAR original inline XBRL archive",
+    "filing_selection_source": "Finnhub annual raw payload"
+  },
+  "internal_integrity": {
+    "run_id": "8500ef00-4b72-4eb7-a778-2df2fd3f0185",
+    "run_status": "succeeded",
+    "run_expected_company_count": 14,
+    "target_company_count": 28,
+    "successful_company_count": 28,
+    "failed_company_count": 0,
+    "company_rows_present": 28,
+    "payload_count": 112,
+    "expected_payload_count": 112,
+    "payload_hash_reproducible_from_jsonb": 111,
+    "payload_hash_note": "JSONB can normalize numeric lexical forms; a non-reproducible hash does not by itself mean the semantic payload changed.",
+    "missing_endpoint_dimensions": [],
+    "duplicate_endpoint_dimensions": [],
+    "provenance_fact_count": 3869,
+    "valid_provenance_fact_count": 3869,
+    "duplicate_canonical_business_key_groups": 0
+  },
+  "sec_reconciliation": {
+    "requested_company_count": 28,
+    "evaluated_company_count": 25,
+    "expected_cells": 370,
+    "comparable_cells": 370,
+    "gold_unavailable_cells": 0,
+    "db_present_cells": 370,
+    "pass_count": 370,
+    "completeness": 1.0,
+    "full_record_accuracy": 1.0,
+    "value_accuracy_when_present": 1.0,
+    "unit_accuracy_when_present": 1.0,
+    "period_accuracy_when_present": 1.0,
+    "status_counts": {
+      "PASS": 370
+    },
+    "per_ticker": {
+      "ADI": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "ALAB": {
+        "comparable_cells": 10,
+        "pass_count": 10,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 10
+        }
+      },
+      "AMAT": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "AMD": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "AVGO": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "COHR": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "CRDO": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "ENTG": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "INTC": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "KLAC": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "LRCX": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "MCHP": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "MPWR": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "MRVL": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "MTSI": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "MU": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "NVDA": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "NXPI": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "ON": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "QCOM": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "QRVO": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "RMBS": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "SWKS": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "TER": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      },
+      "TXN": {
+        "comparable_cells": 15,
+        "pass_count": 15,
+        "full_record_accuracy": 1.0,
+        "status_counts": {
+          "PASS": 15
+        }
+      }
+    },
+    "skipped_no_10k_tickers": [
+      "ARM",
+      "GFS",
+      "NVMI"
+    ],
+    "filing_errors": []
+  }
+}

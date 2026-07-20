@@ -26,11 +26,11 @@ def get_neo4j_driver(config: Config | None = None) -> Driver:
 
 
 def get_llm(config: Config | None = None) -> ChatOpenAI:
-    """Return a ChatOpenAI client pointed at DeepSeek (or any OpenAI-compatible endpoint)."""
+    """Return the configured OpenAI-compatible chat client."""
     cfg = config or get_config()
     return ChatOpenAI(
         model=cfg.llm_model,
-        api_key=cfg.deepseek_api_key,
+        api_key=cfg.llm_api_key,
         base_url=cfg.llm_base_url,
         temperature=cfg.llm_temperature,
         timeout=120.0,

@@ -12,7 +12,7 @@ from pydantic import (
     model_validator,
 )
 
-from semigraph.financial.metrics import METRICS
+from semigraph.config import get_config
 
 
 class _StringEnum(str, Enum):
@@ -48,32 +48,11 @@ class SortOrder(_StringEnum):
     DESC = "desc"
 
 
-REPORTED_METRICS = frozenset(definition.name for definition in METRICS)
-DERIVED_METRICS = frozenset(
-    {
-        "gross_margin",
-        "operating_margin",
-        "net_margin",
-        "rd_intensity",
-        "free_cash_flow",
-        "free_cash_flow_margin",
-        "revenue_growth_yoy",
-        "net_income_growth_yoy",
-        "current_ratio",
-        "roa",
-        "roe",
-    }
-)
+_METRIC_REGISTRY = get_config().financial_metric_registry
+REPORTED_METRICS = _METRIC_REGISTRY["reported"]
+DERIVED_METRICS = _METRIC_REGISTRY["derived"]
 PERIODIC_METRICS = REPORTED_METRICS | DERIVED_METRICS
-SNAPSHOT_METRICS = frozenset(
-    {
-        "current_price",
-        "previous_close",
-        "day_change_percent",
-        "market_cap",
-        "pe_ttm",
-    }
-)
+SNAPSHOT_METRICS = _METRIC_REGISTRY["snapshot"]
 
 
 class FinancialQuerySpec(BaseModel):
@@ -161,8 +140,20 @@ class FinancialQuerySpec(BaseModel):
                 raise ValueError(
                     "snapshot queries support lookup, compare, and rank only"
                 )
-        elif self.quarter is not None and self.frequency != Frequency.QUARTERLY:
-            raise ValueError("quarter is valid only for quarterly queries")
+        else:
+            has_one_year_boundary = (self.start_year is None) != (
+                self.end_year is None
+            )
+            if (
+                self.operation in {Operation.LOOKUP, Operation.COMPARE}
+                and has_one_year_boundary
+            ):
+                raise ValueError(
+                    "lookup and compare require both start_year and end_year; "
+                    "for one fiscal year, set both to the same year"
+                )
+            if self.quarter is not None and self.frequency != Frequency.QUARTERLY:
+                raise ValueError("quarter is valid only for quarterly queries")
 
         if self.operation == Operation.COMPARE and len(self.tickers) < 2:
             raise ValueError("compare requires at least two tickers")

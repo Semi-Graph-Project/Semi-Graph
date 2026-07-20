@@ -11,6 +11,7 @@
 | `phase_t_multihop_queries.yaml` | ชุดคำถาม multi-hop ที่สร้างและ audit ภายในโครงการ |
 | `financebench_open_source.jsonl` | FinanceBench open-source questions |
 | `financebench_document_information.jsonl` | Metadata ของเอกสาร FinanceBench |
+| `financial_agent_e2e_60.yaml` | Financial Agent E2E จำนวน 60 ข้อ พร้อม Gold จาก PostgreSQL |
 
 ## Dataset Contract
 

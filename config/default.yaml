@@ -69,12 +69,6 @@ chunker:
 
 # LLM
 llm:
-  provider: "deepseek"
-  model: "deepseek-v4-flash"
-  temperature: 0.0
-  base_url: "https://api.deepseek.com"
-
-openrouter_llm:
   provider: "openrouter"
   model: "deepseek/deepseek-v4-flash"
   temperature: 0.0
@@ -92,7 +86,7 @@ reranker:
 agent_retrieval:
   vector:
     candidate_pool_k: 100
-    final_rerank: "cohere"
+    final_rerank: "none"
   graph:
     top_k_entities: 20
     top_k_triples: 10
@@ -101,7 +95,7 @@ agent_retrieval:
     seed_mode: "triple"
     rerank_mode: "legacy"
     candidate_pool_k: 100
-    final_rerank: "cohere"
+    final_rerank: "none"
     ppr_seed_weight_mode: "uniform"
     ppr_graph_mode: "entity_chunk"
     triple_filter: "llm"
@@ -183,3 +177,41 @@ financial:
   max_retries: 3
   query_timeout_ms: 5000
   max_query_rows: 50
+  # Metrics that FinancialQuerySpec may send to the deterministic SQL compiler.
+  # Keep unsupported metrics out of this registry; the LLM must never replace
+  # them with a merely similar metric.
+  metric_registry:
+    reported:
+      - revenue
+      - cost_of_revenue
+      - gross_profit
+      - research_and_development
+      - operating_income
+      - net_income
+      - diluted_eps
+      - cash_and_equivalents
+      - current_assets
+      - total_assets
+      - current_liabilities
+      - total_liabilities
+      - stockholders_equity
+      - operating_cash_flow
+      - capital_expenditure
+    derived:
+      - gross_margin
+      - operating_margin
+      - net_margin
+      - rd_intensity
+      - free_cash_flow
+      - free_cash_flow_margin
+      - revenue_growth_yoy
+      - net_income_growth_yoy
+      - current_ratio
+      - roa
+      - roe
+    snapshot:
+      - current_price
+      - previous_close
+      - day_change_percent
+      - market_cap
+      - pe_ttm

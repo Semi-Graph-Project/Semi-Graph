@@ -731,15 +731,20 @@ def run_financial_etl(
 ) -> FinancialETLSummary:
     """Run the Step 9 pipeline with preflight and per-ticker isolation.
 
-    ``only_tickers`` is a smoke-test subset, not a way to bypass universe
-    validation.  The complete Neo4j/config universe is checked first.  A
-    client can be injected for deterministic tests; production callers omit
-    it and the Finnhub staging client is constructed from ``Config``.
+    When supplied, ``only_tickers`` is an explicit ETL target list and may
+    contain companies that have not been extracted into Neo4j yet.  Without
+    it, the validated Neo4j/config universe remains the default.  A client can
+    be injected for deterministic tests; production callers omit it and the
+    Finnhub staging client is constructed from ``Config``.
     """
 
     cfg = cfg or get_config()
     discovered = validate_universe(load_graph_tickers(cfg), cfg)
-    targets = validate_requested_subset(only_tickers, discovered)
+    targets = (
+        sorted(_normalise_tickers(only_tickers))
+        if only_tickers
+        else discovered
+    )
     run_id = str(uuid4())
 
     # Run metadata and company rows must be committed before raw payloads are
@@ -751,7 +756,9 @@ def run_financial_etl(
             expected_company_count=int(cfg.financial_expected_company_count),
             discovered_tickers=discovered,
         )
-        _upsert_companies(conn, discovered)
+        # Explicit targets may not exist in Neo4j yet, but PostgreSQL foreign
+        # keys require their company rows before staging Finnhub payloads.
+        _upsert_companies(conn, sorted(set(discovered) | set(targets)))
 
     successful: list[str] = []
     failures: dict[str, dict[str, str]] = {}

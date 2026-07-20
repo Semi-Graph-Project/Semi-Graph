@@ -205,7 +205,14 @@ def _compact_financial_trace(
         "missing_count": trace.get("missing_count", 0),
         "returned_chunk_ids": _chunk_ids(chunks),
     }
-    for key in ("status", "reason", "stage", "error_type", "error"):
+    for key in (
+        "status",
+        "reason",
+        "unsupported_reason",
+        "stage",
+        "error_type",
+        "error",
+    ):
         if trace.get(key) is not None:
             compact[key] = trace[key]
     return compact

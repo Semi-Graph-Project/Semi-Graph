@@ -139,7 +139,11 @@ def test_compiler_requires_validated_spec():
 @pytest.mark.parametrize(
     ("operation", "filters", "template_id"),
     [
-        ("lookup", {"start_year": 2025}, "periodic.lookup.filtered.v1"),
+        (
+            "lookup",
+            {"start_year": 2025, "end_year": 2025},
+            "periodic.lookup.filtered.v1",
+        ),
         ("compare", {}, "periodic.compare.latest.v1"),
     ],
 )
@@ -147,4 +151,3 @@ def test_remaining_periodic_template_ids(operation, filters, template_id):
     tickers = ["NVDA", "AMD"] if operation == "compare" else ["NVDA"]
     compiled = _compile(operation=operation, tickers=tickers, **filters)
     assert compiled.template_id == template_id
-

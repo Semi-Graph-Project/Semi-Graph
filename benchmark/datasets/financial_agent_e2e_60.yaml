@@ -1,0 +1,2944 @@
+metadata:
+  name: SemiGraph Financial Agent E2E 60
+  version: '1.0'
+  generated_at: '2026-07-17T12:35:50.689150+00:00'
+  question_count: 60
+  category_counts:
+    single_company_lookup: 12
+    multi_company_comparison: 12
+    multi_year_trend: 12
+    derived_metric: 12
+    unsupported_abstention: 12
+  gold_source: financial.agent_periodic_metrics PostgreSQL view
+  gold_generation: independent direct SQL; no financial_search or production SQL compiler
+  database_reference_run_id: 8500ef00-4b72-4eb7-a778-2df2fd3f0185
+  database_reference_finished_at: '2026-07-17T11:35:15.296521+00:00'
+  agent_ticker_scope:
+  - AMAT
+  - AMD
+  - AMKR
+  - AVGO
+  - COHR
+  - ENTG
+  - INTC
+  - KLAC
+  - LRCX
+  - MU
+  - NVDA
+  - QCOM
+  - RMBS
+  - TXN
+  critical_spec_fields:
+  - tickers
+  - metrics
+  - frequency
+  - operation
+  - start_year
+  - end_year
+  - quarter
+  - aggregation
+  evaluation_levels:
+  - tool_selection
+  - query_spec
+  - sql_execution
+  - retrieved_values
+  - final_answer
+  - abstention
+  limitations:
+  - Gold answers are frozen from the current PostgreSQL view and must be regenerated after ETL updates.
+  - Final-answer numeric scoring permits 0.5% relative error for readable rounding; retrieved rows require exact Decimal equality.
+  - Unsupported questions test safe abstention and do not have numeric gold rows.
+queries:
+- category: single_company_lookup
+  query: What was NVDA's revenue in FY2025?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - NVDA
+    metrics:
+    - revenue
+    frequency: annual
+    operation: lookup
+    start_year: 2025
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: '15'
+    ticker: NVDA
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-01-26'
+    metric: revenue
+    value: '130497000000.00000000'
+    unit: usd
+    display_value: 130497000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 15
+      accession: 0001045810-25-000023
+      raw_payload_id: 5
+      source_concept: us-gaap_Revenues
+  reference_answer: NVDA FY2025 revenue = 130497000000.00000000 usd
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-001
+- category: single_company_lookup
+  query: What was AMD's net income in FY2024?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - AMD
+    metrics:
+    - net_income
+    frequency: annual
+    operation: lookup
+    start_year: 2024
+    end_year: 2024
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: '339'
+    ticker: AMD
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-12-28'
+    metric: net_income
+    value: '1641000000.00000000'
+    unit: usd
+    display_value: 1641000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 339
+      accession: 0000002488-25-000012
+      raw_payload_id: 13
+      source_concept: us-gaap_NetIncomeLoss
+  reference_answer: AMD FY2024 net_income = 1641000000.00000000 usd
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-002
+- category: single_company_lookup
+  query: What were AVGO's total assets in FY2024?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - AVGO
+    metrics:
+    - total_assets
+    frequency: annual
+    operation: lookup
+    start_year: 2024
+    end_year: 2024
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: '661'
+    ticker: AVGO
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-11-03'
+    metric: total_assets
+    value: '165645000000.00000000'
+    unit: usd
+    display_value: 165645000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 661
+      accession: 0001730168-24-000139
+      raw_payload_id: 21
+      source_concept: us-gaap_Assets
+  reference_answer: AVGO FY2024 total_assets = 165645000000.00000000 usd
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-003
+- category: single_company_lookup
+  query: What was MU's operating cash flow in FY2025?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - MU
+    metrics:
+    - operating_cash_flow
+    frequency: annual
+    operation: lookup
+    start_year: 2025
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: '1550'
+    ticker: MU
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-08-28'
+    metric: operating_cash_flow
+    value: '17525000000.00000000'
+    unit: usd
+    display_value: 17525000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 1550
+      accession: 0000723125-25-000028
+      raw_payload_id: 45
+      source_concept: us-gaap_NetCashProvidedByUsedInOperatingActivities
+  reference_answer: MU FY2025 operating_cash_flow = 17525000000.00000000 usd
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-004
+- category: single_company_lookup
+  query: What was INTC's research and development expense in FY2024?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - INTC
+    metrics:
+    - research_and_development
+    frequency: annual
+    operation: lookup
+    start_year: 2024
+    end_year: 2024
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: '1106'
+    ticker: INTC
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-12-28'
+    metric: research_and_development
+    value: '16546000000.00000000'
+    unit: usd
+    display_value: 16546000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 1106
+      accession: 0000050863-25-000009
+      raw_payload_id: 33
+      source_concept: us-gaap_ResearchAndDevelopmentExpense
+  reference_answer: INTC FY2024 research_and_development = 16546000000.00000000 usd
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-005
+- category: single_company_lookup
+  query: What was QCOM's diluted EPS in FY2024?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - QCOM
+    metrics:
+    - diluted_eps
+    frequency: annual
+    operation: lookup
+    start_year: 2024
+    end_year: 2024
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: '1874'
+    ticker: QCOM
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-09-29'
+    metric: diluted_eps
+    value: '8.00000000'
+    unit: usd/share
+    display_value: 8.00000000 usd/share
+    source_kind: reported
+    provenance:
+      fact_id: 1874
+      accession: 0000804328-24-000075
+      raw_payload_id: 53
+      source_concept: us-gaap_EarningsPerShareDiluted
+  reference_answer: QCOM FY2024 diluted_eps = 8.00000000 usd/share
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-006
+- category: single_company_lookup
+  query: What were TXN's current assets in FY2025?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - TXN
+    metrics:
+    - current_assets
+    frequency: annual
+    operation: lookup
+    start_year: 2025
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: '2148'
+    ticker: TXN
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-12-31'
+    metric: current_assets
+    value: '13750000000.00000000'
+    unit: usd
+    display_value: 13750000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 2148
+      accession: 0000097476-26-000059
+      raw_payload_id: 61
+      source_concept: us-gaap_AssetsCurrent
+  reference_answer: TXN FY2025 current_assets = 13750000000.00000000 usd
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-007
+- category: single_company_lookup
+  query: What was AMAT's gross profit in FY2024?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - AMAT
+    metrics:
+    - gross_profit
+    frequency: annual
+    operation: lookup
+    start_year: 2024
+    end_year: 2024
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: '172'
+    ticker: AMAT
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-10-27'
+    metric: gross_profit
+    value: '12897000000.00000000'
+    unit: usd
+    display_value: 12897000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 172
+      accession: 0000006951-24-000044
+      raw_payload_id: 9
+      source_concept: us-gaap_GrossProfit
+  reference_answer: AMAT FY2024 gross_profit = 12897000000.00000000 usd
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-008
+- category: single_company_lookup
+  query: What was KLAC's capital expenditure in FY2025?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - KLAC
+    metrics:
+    - capital_expenditure
+    frequency: annual
+    operation: lookup
+    start_year: 2025
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: '1255'
+    ticker: KLAC
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-06-30'
+    metric: capital_expenditure
+    value: '335259000.00000000'
+    unit: usd
+    display_value: 335259000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 1255
+      accession: 0000319201-25-000024
+      raw_payload_id: 37
+      source_concept: us-gaap_PaymentsToAcquirePropertyPlantAndEquipment
+  reference_answer: KLAC FY2025 capital_expenditure = 335259000.00000000 usd
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-009
+- category: single_company_lookup
+  query: What was LRCX's stockholders' equity in FY2025?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - LRCX
+    metrics:
+    - stockholders_equity
+    frequency: annual
+    operation: lookup
+    start_year: 2025
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: '1398'
+    ticker: LRCX
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-06-29'
+    metric: stockholders_equity
+    value: '9861619000.00000000'
+    unit: usd
+    display_value: 9861619000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 1398
+      accession: 0000707549-25-000075
+      raw_payload_id: 41
+      source_concept: us-gaap_StockholdersEquity
+  reference_answer: LRCX FY2025 stockholders_equity = 9861619000.00000000 usd
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-010
+- category: single_company_lookup
+  query: What were AMKR's current liabilities in FY2024?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - AMKR
+    metrics:
+    - current_liabilities
+    frequency: annual
+    operation: lookup
+    start_year: 2024
+    end_year: 2024
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: '499'
+    ticker: AMKR
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-12-31'
+    metric: current_liabilities
+    value: '1455275000.00000000'
+    unit: usd
+    display_value: 1455275000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 499
+      accession: 0001047127-25-000030
+      raw_payload_id: 17
+      source_concept: us-gaap_LiabilitiesCurrent
+  reference_answer: AMKR FY2024 current_liabilities = 1455275000.00000000 usd
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-011
+- category: single_company_lookup
+  query: What was RMBS's operating income in FY2024?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - RMBS
+    metrics:
+    - operating_income
+    frequency: annual
+    operation: lookup
+    start_year: 2024
+    end_year: 2024
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: '2015'
+    ticker: RMBS
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-12-31'
+    metric: operating_income
+    value: '183009000.00000000'
+    unit: usd
+    display_value: 183009000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 2015
+      accession: 0000917273-25-000021
+      raw_payload_id: 57
+      source_concept: us-gaap_OperatingIncomeLoss
+  reference_answer: RMBS FY2024 operating_income = 183009000.00000000 usd
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-012
+- category: multi_company_comparison
+  query: Compare NVDA's and AMD's revenue in FY2025.
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - NVDA
+    - AMD
+    metrics:
+    - revenue
+    frequency: annual
+    operation: compare
+    start_year: 2025
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.compare.filtered.v1
+  expected_row_count: 2
+  gold_rows:
+  - evidence_id: '320'
+    ticker: AMD
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-12-27'
+    metric: revenue
+    value: '34639000000.00000000'
+    unit: usd
+    display_value: 34639000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 320
+      accession: 0000002488-26-000018
+      raw_payload_id: 13
+      source_concept: us-gaap_RevenueFromContractWithCustomerExcludingAssessedTax
+  - evidence_id: '15'
+    ticker: NVDA
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-01-26'
+    metric: revenue
+    value: '130497000000.00000000'
+    unit: usd
+    display_value: 130497000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 15
+      accession: 0001045810-25-000023
+      raw_payload_id: 5
+      source_concept: us-gaap_Revenues
+  reference_answer: AMD FY2025 revenue = 34639000000.00000000 usd; NVDA FY2025 revenue = 130497000000.00000000 usd
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-013
+- category: multi_company_comparison
+  query: Compare the FY2025 gross margins of AMAT and LRCX.
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - AMAT
+    - LRCX
+    metrics:
+    - gross_margin
+    frequency: annual
+    operation: compare
+    start_year: 2025
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.compare.filtered.v1
+  expected_row_count: 2
+  gold_rows:
+  - evidence_id: derived:35
+    ticker: AMAT
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-10-26'
+    metric: gross_margin
+    value: '0.48674563'
+    unit: ratio
+    display_value: 48.6746%
+    source_kind: derived
+    provenance:
+      derived_id: 35
+      input_fact_ids:
+      - 157
+      - 155
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:305
+    ticker: LRCX
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-06-29'
+    metric: gross_margin
+    value: '0.48705024'
+    unit: ratio
+    display_value: 48.7050%
+    source_kind: derived
+    provenance:
+      derived_id: 305
+      input_fact_ids:
+      - 1388
+      - 1386
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: AMAT FY2025 gross_margin = 48.6746%; LRCX FY2025 gross_margin = 48.7050%
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-014
+- category: multi_company_comparison
+  query: Which company had the higher net margin in FY2024, INTC or AMD?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - INTC
+    - AMD
+    metrics:
+    - net_margin
+    frequency: annual
+    operation: compare
+    start_year: 2024
+    end_year: 2024
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.compare.filtered.v1
+  expected_row_count: 2
+  gold_rows:
+  - evidence_id: derived:81
+    ticker: AMD
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-12-28'
+    metric: net_margin
+    value: '0.06364165'
+    unit: ratio
+    display_value: 6.3642%
+    source_kind: derived
+    provenance:
+      derived_id: 81
+      input_fact_ids:
+      - 339
+      - 334
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:249
+    ticker: INTC
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-12-28'
+    metric: net_margin
+    value: '-0.35321369'
+    unit: ratio
+    display_value: -35.3214%
+    source_kind: derived
+    provenance:
+      derived_id: 249
+      input_fact_ids:
+      - 1108
+      - 1103
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: AMD FY2024 net_margin = 6.3642%; INTC FY2024 net_margin = -35.3214%
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-015
+- category: multi_company_comparison
+  query: Compare MU's and QCOM's operating cash flow in FY2024.
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - MU
+    - QCOM
+    metrics:
+    - operating_cash_flow
+    frequency: annual
+    operation: compare
+    start_year: 2024
+    end_year: 2024
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.compare.filtered.v1
+  expected_row_count: 2
+  gold_rows:
+  - evidence_id: '1565'
+    ticker: MU
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-08-29'
+    metric: operating_cash_flow
+    value: '8507000000.00000000'
+    unit: usd
+    display_value: 8507000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 1565
+      accession: 0000723125-24-000027
+      raw_payload_id: 45
+      source_concept: us-gaap_NetCashProvidedByUsedInOperatingActivities
+  - evidence_id: '1881'
+    ticker: QCOM
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-09-29'
+    metric: operating_cash_flow
+    value: '12202000000.00000000'
+    unit: usd
+    display_value: 12202000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 1881
+      accession: 0000804328-24-000075
+      raw_payload_id: 53
+      source_concept: us-gaap_NetCashProvidedByUsedInOperatingActivities
+  reference_answer: MU FY2024 operating_cash_flow = 8507000000.00000000 usd; QCOM FY2024 operating_cash_flow = 12202000000.00000000
+    usd
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-016
+- category: multi_company_comparison
+  query: Compare the FY2024 free cash flow of AVGO and TXN.
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - AVGO
+    - TXN
+    metrics:
+    - free_cash_flow
+    frequency: annual
+    operation: compare
+    start_year: 2024
+    end_year: 2024
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.compare.filtered.v1
+  expected_row_count: 2
+  gold_rows:
+  - evidence_id: derived:149
+    ticker: AVGO
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-11-03'
+    metric: free_cash_flow
+    value: '19414000000.00000000'
+    unit: USD
+    display_value: 19414000000.00000000 USD
+    source_kind: derived
+    provenance:
+      derived_id: 149
+      input_fact_ids:
+      - 665
+      - 666
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:488
+    ticker: TXN
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-12-31'
+    metric: free_cash_flow
+    value: '1498000000.00000000'
+    unit: USD
+    display_value: 1498000000.00000000 USD
+    source_kind: derived
+    provenance:
+      derived_id: 488
+      input_fact_ids:
+      - 2168
+      - 2169
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: AVGO FY2024 free_cash_flow = 19414000000.00000000 USD; TXN FY2024 free_cash_flow = 1498000000.00000000
+    USD
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-017
+- category: multi_company_comparison
+  query: Compare KLAC's and AMAT's ROA in FY2024.
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - KLAC
+    - AMAT
+    metrics:
+    - roa
+    frequency: annual
+    operation: compare
+    start_year: 2024
+    end_year: 2024
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.compare.filtered.v1
+  expected_row_count: 2
+  gold_rows:
+  - evidence_id: derived:55
+    ticker: AMAT
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-10-27'
+    metric: roa
+    value: '0.22036292'
+    unit: ratio
+    display_value: 22.0363%
+    source_kind: derived
+    provenance:
+      derived_id: 55
+      input_fact_ids:
+      - 175
+      - 179
+      - 194
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:291
+    ticker: KLAC
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-06-30'
+    metric: roa
+    value: '0.18720960'
+    unit: ratio
+    display_value: 18.7210%
+    source_kind: derived
+    provenance:
+      derived_id: 291
+      input_fact_ids:
+      - 1259
+      - 1263
+      - 1276
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: AMAT FY2024 roa = 22.0363%; KLAC FY2024 roa = 18.7210%
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-018
+- category: multi_company_comparison
+  query: Which company had the higher current ratio in FY2024, COHR or ENTG?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - COHR
+    - ENTG
+    metrics:
+    - current_ratio
+    frequency: annual
+    operation: compare
+    start_year: 2024
+    end_year: 2024
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.compare.filtered.v1
+  expected_row_count: 2
+  gold_rows:
+  - evidence_id: derived:188
+    ticker: COHR
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-06-30'
+    metric: current_ratio
+    value: '2.72376015'
+    unit: ratio
+    display_value: 2.7238x
+    source_kind: derived
+    provenance:
+      derived_id: 188
+      input_fact_ids:
+      - 812
+      - 814
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:222
+    ticker: ENTG
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-12-31'
+    metric: current_ratio
+    value: '3.07763082'
+    unit: ratio
+    display_value: 3.0776x
+    source_kind: derived
+    provenance:
+      derived_id: 222
+      input_fact_ids:
+      - 957
+      - 959
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: COHR FY2024 current_ratio = 2.7238x; ENTG FY2024 current_ratio = 3.0776x
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-019
+- category: multi_company_comparison
+  query: Compare the FY2025 ROE of NVDA and AVGO.
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - NVDA
+    - AVGO
+    metrics:
+    - roe
+    frequency: annual
+    operation: compare
+    start_year: 2025
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.compare.filtered.v1
+  expected_row_count: 2
+  gold_rows:
+  - evidence_id: derived:144
+    ticker: AVGO
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-11-02'
+    metric: roe
+    value: '0.31047862'
+    unit: ratio
+    display_value: 31.0479%
+    source_kind: derived
+    provenance:
+      derived_id: 144
+      input_fact_ids:
+      - 6889
+      - 650
+      - 664
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:23
+    ticker: NVDA
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-01-26'
+    metric: roe
+    value: '1.19177466'
+    unit: ratio
+    display_value: 119.1775%
+    source_kind: derived
+    provenance:
+      derived_id: 23
+      input_fact_ids:
+      - 20
+      - 27
+      - 41
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: AVGO FY2025 roe = 31.0479%; NVDA FY2025 roe = 119.1775%
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-020
+- category: multi_company_comparison
+  query: Which company had the higher R&D intensity in FY2024, QCOM or TXN?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - QCOM
+    - TXN
+    metrics:
+    - rd_intensity
+    frequency: annual
+    operation: compare
+    start_year: 2024
+    end_year: 2024
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.compare.filtered.v1
+  expected_row_count: 2
+  gold_rows:
+  - evidence_id: derived:420
+    ticker: QCOM
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-09-29'
+    metric: rd_intensity
+    value: '0.22824804'
+    unit: ratio
+    display_value: 22.8248%
+    source_kind: derived
+    provenance:
+      derived_id: 420
+      input_fact_ids:
+      - 1871
+      - 1869
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:487
+    ticker: TXN
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-12-31'
+    metric: rd_intensity
+    value: '0.12524775'
+    unit: ratio
+    display_value: 12.5248%
+    source_kind: derived
+    provenance:
+      derived_id: 487
+      input_fact_ids:
+      - 2158
+      - 2155
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: QCOM FY2024 rd_intensity = 22.8248%; TXN FY2024 rd_intensity = 12.5248%
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-021
+- category: multi_company_comparison
+  query: Compare AMD's and INTC's year-over-year revenue growth in FY2024.
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - AMD
+    - INTC
+    metrics:
+    - revenue_growth_yoy
+    frequency: annual
+    operation: compare
+    start_year: 2024
+    end_year: 2024
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.compare.filtered.v1
+  expected_row_count: 2
+  gold_rows:
+  - evidence_id: derived:85
+    ticker: AMD
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-12-28'
+    metric: revenue_growth_yoy
+    value: '0.13690476'
+    unit: ratio
+    display_value: 13.6905%
+    source_kind: derived
+    provenance:
+      derived_id: 85
+      input_fact_ids:
+      - 334
+      - 348
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:253
+    ticker: INTC
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-12-28'
+    metric: revenue_growth_yoy
+    value: '-0.02078262'
+    unit: ratio
+    display_value: -2.0783%
+    source_kind: derived
+    provenance:
+      derived_id: 253
+      input_fact_ids:
+      - 1103
+      - 1117
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: AMD FY2024 revenue_growth_yoy = 13.6905%; INTC FY2024 revenue_growth_yoy = -2.0783%
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-022
+- category: multi_company_comparison
+  query: Compare the FY2025 net margins of LRCX and KLAC.
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - LRCX
+    - KLAC
+    metrics:
+    - net_margin
+    frequency: annual
+    operation: compare
+    start_year: 2025
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.compare.filtered.v1
+  expected_row_count: 2
+  gold_rows:
+  - evidence_id: derived:272
+    ticker: KLAC
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-06-30'
+    metric: net_margin
+    value: '0.33412215'
+    unit: ratio
+    display_value: 33.4122%
+    source_kind: derived
+    provenance:
+      derived_id: 272
+      input_fact_ids:
+      - 1246
+      - 1243
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:307
+    ticker: LRCX
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-06-29'
+    metric: net_margin
+    value: '0.29064525'
+    unit: ratio
+    display_value: 29.0645%
+    source_kind: derived
+    provenance:
+      derived_id: 307
+      input_fact_ids:
+      - 1391
+      - 1386
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: KLAC FY2025 net_margin = 33.4122%; LRCX FY2025 net_margin = 29.0645%
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-023
+- category: multi_company_comparison
+  query: Compare COHR's and RMBS's year-over-year net income growth in FY2024.
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - COHR
+    - RMBS
+    metrics:
+    - net_income_growth_yoy
+    frequency: annual
+    operation: compare
+    start_year: 2024
+    end_year: 2024
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.compare.filtered.v1
+  expected_row_count: 2
+  gold_rows:
+  - evidence_id: derived:187
+    ticker: COHR
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-06-30'
+    metric: net_income_growth_yoy
+    value: '0.39815307'
+    unit: ratio
+    display_value: 39.8153%
+    source_kind: derived
+    provenance:
+      derived_id: 187
+      input_fact_ids:
+      - 809
+      - 823
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:458
+    ticker: RMBS
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-12-31'
+    metric: net_income_growth_yoy
+    value: '-0.46145898'
+    unit: ratio
+    display_value: -46.1459%
+    source_kind: derived
+    provenance:
+      derived_id: 458
+      input_fact_ids:
+      - 2016
+      - 2028
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: COHR FY2024 net_income_growth_yoy = 39.8153%; RMBS FY2024 net_income_growth_yoy = -46.1459%
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-024
+- category: multi_year_trend
+  query: Show NVDA's annual revenue trend from FY2024 through FY2026.
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - NVDA
+    metrics:
+    - revenue
+    frequency: annual
+    operation: trend
+    start_year: 2024
+    end_year: 2026
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.trend.v1
+  expected_row_count: 3
+  gold_rows:
+  - evidence_id: '29'
+    ticker: NVDA
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-01-28'
+    metric: revenue
+    value: '60922000000.00000000'
+    unit: usd
+    display_value: 60922000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 29
+      accession: 0001045810-24-000029
+      raw_payload_id: 5
+      source_concept: us-gaap_Revenues
+  - evidence_id: '15'
+    ticker: NVDA
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-01-26'
+    metric: revenue
+    value: '130497000000.00000000'
+    unit: usd
+    display_value: 130497000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 15
+      accession: 0001045810-25-000023
+      raw_payload_id: 5
+      source_concept: us-gaap_Revenues
+  - evidence_id: '1'
+    ticker: NVDA
+    frequency: annual
+    fiscal_year: 2026
+    fiscal_quarter: null
+    period_end: '2026-01-25'
+    metric: revenue
+    value: '215938000000.00000000'
+    unit: usd
+    display_value: 215938000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 1
+      accession: 0001045810-26-000021
+      raw_payload_id: 5
+      source_concept: us-gaap_Revenues
+  reference_answer: NVDA FY2024 revenue = 60922000000.00000000 usd; NVDA FY2025 revenue = 130497000000.00000000 usd; NVDA
+    FY2026 revenue = 215938000000.00000000 usd
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-025
+- category: multi_year_trend
+  query: How did AMD's net income change from FY2023 through FY2025?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - AMD
+    metrics:
+    - net_income
+    frequency: annual
+    operation: trend
+    start_year: 2023
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.trend.v1
+  expected_row_count: 3
+  gold_rows:
+  - evidence_id: '353'
+    ticker: AMD
+    frequency: annual
+    fiscal_year: 2023
+    fiscal_quarter: null
+    period_end: '2023-12-30'
+    metric: net_income
+    value: '854000000.00000000'
+    unit: usd
+    display_value: 854000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 353
+      accession: 0000002488-24-000012
+      raw_payload_id: 13
+      source_concept: us-gaap_NetIncomeLoss
+  - evidence_id: '339'
+    ticker: AMD
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-12-28'
+    metric: net_income
+    value: '1641000000.00000000'
+    unit: usd
+    display_value: 1641000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 339
+      accession: 0000002488-25-000012
+      raw_payload_id: 13
+      source_concept: us-gaap_NetIncomeLoss
+  - evidence_id: '325'
+    ticker: AMD
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-12-27'
+    metric: net_income
+    value: '4335000000.00000000'
+    unit: usd
+    display_value: 4335000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 325
+      accession: 0000002488-26-000018
+      raw_payload_id: 13
+      source_concept: us-gaap_NetIncomeLoss
+  reference_answer: AMD FY2023 net_income = 854000000.00000000 usd; AMD FY2024 net_income = 1641000000.00000000 usd; AMD FY2025
+    net_income = 4335000000.00000000 usd
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-026
+- category: multi_year_trend
+  query: Show AMAT's gross margin trend from FY2023 through FY2025.
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - AMAT
+    metrics:
+    - gross_margin
+    frequency: annual
+    operation: trend
+    start_year: 2023
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.trend.v1
+  expected_row_count: 3
+  gold_rows:
+  - evidence_id: derived:57
+    ticker: AMAT
+    frequency: annual
+    fiscal_year: 2023
+    fiscal_quarter: null
+    period_end: '2023-10-29'
+    metric: gross_margin
+    value: '0.46702116'
+    unit: ratio
+    display_value: 46.7021%
+    source_kind: derived
+    provenance:
+      derived_id: 57
+      input_fact_ids:
+      - 187
+      - 185
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:46
+    ticker: AMAT
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-10-27'
+    metric: gross_margin
+    value: '0.47457315'
+    unit: ratio
+    display_value: 47.4573%
+    source_kind: derived
+    provenance:
+      derived_id: 46
+      input_fact_ids:
+      - 172
+      - 170
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:35
+    ticker: AMAT
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-10-26'
+    metric: gross_margin
+    value: '0.48674563'
+    unit: ratio
+    display_value: 48.6746%
+    source_kind: derived
+    provenance:
+      derived_id: 35
+      input_fact_ids:
+      - 157
+      - 155
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: AMAT FY2023 gross_margin = 46.7021%; AMAT FY2024 gross_margin = 47.4573%; AMAT FY2025 gross_margin = 48.6746%
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-027
+- category: multi_year_trend
+  query: How did MU's free cash flow change from FY2023 through FY2025?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - MU
+    metrics:
+    - free_cash_flow
+    frequency: annual
+    operation: trend
+    start_year: 2023
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.trend.v1
+  expected_row_count: 3
+  gold_rows:
+  - evidence_id: derived:364
+    ticker: MU
+    frequency: annual
+    fiscal_year: 2023
+    fiscal_quarter: null
+    period_end: '2023-08-31'
+    metric: free_cash_flow
+    value: '-6117000000.00000000'
+    unit: USD
+    display_value: -6117000000.00000000 USD
+    source_kind: derived
+    provenance:
+      derived_id: 364
+      input_fact_ids:
+      - 1580
+      - 1581
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:353
+    ticker: MU
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-08-29'
+    metric: free_cash_flow
+    value: '121000000.00000000'
+    unit: USD
+    display_value: 121000000.00000000 USD
+    source_kind: derived
+    provenance:
+      derived_id: 353
+      input_fact_ids:
+      - 1565
+      - 1566
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:342
+    ticker: MU
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-08-28'
+    metric: free_cash_flow
+    value: '1668000000.00000000'
+    unit: USD
+    display_value: 1668000000.00000000 USD
+    source_kind: derived
+    provenance:
+      derived_id: 342
+      input_fact_ids:
+      - 1550
+      - 1551
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: MU FY2023 free_cash_flow = -6117000000.00000000 USD; MU FY2024 free_cash_flow = 121000000.00000000 USD;
+    MU FY2025 free_cash_flow = 1668000000.00000000 USD
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-028
+- category: multi_year_trend
+  query: Show INTC's annual revenue from FY2023 through FY2025.
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - INTC
+    metrics:
+    - revenue
+    frequency: annual
+    operation: trend
+    start_year: 2023
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.trend.v1
+  expected_row_count: 3
+  gold_rows:
+  - evidence_id: '1117'
+    ticker: INTC
+    frequency: annual
+    fiscal_year: 2023
+    fiscal_quarter: null
+    period_end: '2023-12-30'
+    metric: revenue
+    value: '54228000000.00000000'
+    unit: usd
+    display_value: 54228000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 1117
+      accession: 0000050863-24-000010
+      raw_payload_id: 33
+      source_concept: us-gaap_RevenueFromContractWithCustomerExcludingAssessedTax
+  - evidence_id: '1103'
+    ticker: INTC
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-12-28'
+    metric: revenue
+    value: '53101000000.00000000'
+    unit: usd
+    display_value: 53101000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 1103
+      accession: 0000050863-25-000009
+      raw_payload_id: 33
+      source_concept: us-gaap_RevenueFromContractWithCustomerExcludingAssessedTax
+  - evidence_id: '1089'
+    ticker: INTC
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-12-27'
+    metric: revenue
+    value: '52853000000.00000000'
+    unit: usd
+    display_value: 52853000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 1089
+      accession: 0000050863-26-000011
+      raw_payload_id: 33
+      source_concept: us-gaap_RevenueFromContractWithCustomerExcludingAssessedTax
+  reference_answer: INTC FY2023 revenue = 54228000000.00000000 usd; INTC FY2024 revenue = 53101000000.00000000 usd; INTC FY2025
+    revenue = 52853000000.00000000 usd
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-029
+- category: multi_year_trend
+  query: How did AVGO's net margin change from FY2023 through FY2025?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - AVGO
+    metrics:
+    - net_margin
+    frequency: annual
+    operation: trend
+    start_year: 2023
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.trend.v1
+  expected_row_count: 3
+  gold_rows:
+  - evidence_id: derived:158
+    ticker: AVGO
+    frequency: annual
+    fiscal_year: 2023
+    fiscal_quarter: null
+    period_end: '2023-10-29'
+    metric: net_margin
+    value: '0.39314330'
+    unit: ratio
+    display_value: 39.3143%
+    source_kind: derived
+    provenance:
+      derived_id: 158
+      input_fact_ids:
+      - 6919
+      - 667
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:147
+    ticker: AVGO
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-11-03'
+    metric: net_margin
+    value: '0.11430178'
+    unit: ratio
+    display_value: 11.4302%
+    source_kind: derived
+    provenance:
+      derived_id: 147
+      input_fact_ids:
+      - 6904
+      - 653
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:136
+    ticker: AVGO
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-11-02'
+    metric: net_margin
+    value: '0.36198288'
+    unit: ratio
+    display_value: 36.1983%
+    source_kind: derived
+    provenance:
+      derived_id: 136
+      input_fact_ids:
+      - 6889
+      - 639
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: AVGO FY2023 net_margin = 39.3143%; AVGO FY2024 net_margin = 11.4302%; AVGO FY2025 net_margin = 36.1983%
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-030
+- category: multi_year_trend
+  query: Show QCOM's operating margin trend from FY2023 through FY2025.
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - QCOM
+    metrics:
+    - operating_margin
+    frequency: annual
+    operation: trend
+    start_year: 2023
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.trend.v1
+  expected_row_count: 3
+  gold_rows:
+  - evidence_id: derived:430
+    ticker: QCOM
+    frequency: annual
+    fiscal_year: 2023
+    fiscal_quarter: null
+    period_end: '2023-09-24'
+    metric: operating_margin
+    value: '0.21742044'
+    unit: ratio
+    display_value: 21.7420%
+    source_kind: derived
+    provenance:
+      derived_id: 430
+      input_fact_ids:
+      - 1885
+      - 1882
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:418
+    ticker: QCOM
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-09-29'
+    metric: operating_margin
+    value: '0.25848262'
+    unit: ratio
+    display_value: 25.8483%
+    source_kind: derived
+    provenance:
+      derived_id: 418
+      input_fact_ids:
+      - 1872
+      - 1869
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:406
+    ticker: QCOM
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-09-28'
+    metric: operating_margin
+    value: '0.27899467'
+    unit: ratio
+    display_value: 27.8995%
+    source_kind: derived
+    provenance:
+      derived_id: 406
+      input_fact_ids:
+      - 1859
+      - 1856
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: QCOM FY2023 operating_margin = 21.7420%; QCOM FY2024 operating_margin = 25.8483%; QCOM FY2025 operating_margin
+    = 27.8995%
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-031
+- category: multi_year_trend
+  query: How did TXN's research and development expense change from FY2023 through FY2025?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - TXN
+    metrics:
+    - research_and_development
+    frequency: annual
+    operation: trend
+    start_year: 2023
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.trend.v1
+  expected_row_count: 3
+  gold_rows:
+  - evidence_id: '2173'
+    ticker: TXN
+    frequency: annual
+    fiscal_year: 2023
+    fiscal_quarter: null
+    period_end: '2023-12-31'
+    metric: research_and_development
+    value: '1863000000.00000000'
+    unit: usd
+    display_value: 1863000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 2173
+      accession: 0000097476-24-000007
+      raw_payload_id: 61
+      source_concept: us-gaap_ResearchAndDevelopmentExpense
+  - evidence_id: '2158'
+    ticker: TXN
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-12-31'
+    metric: research_and_development
+    value: '1959000000.00000000'
+    unit: usd
+    display_value: 1959000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 2158
+      accession: 0000097476-25-000007
+      raw_payload_id: 61
+      source_concept: us-gaap_ResearchAndDevelopmentExpense
+  - evidence_id: '2143'
+    ticker: TXN
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-12-31'
+    metric: research_and_development
+    value: '2083000000.00000000'
+    unit: usd
+    display_value: 2083000000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 2143
+      accession: 0000097476-26-000059
+      raw_payload_id: 61
+      source_concept: us-gaap_ResearchAndDevelopmentExpense
+  reference_answer: TXN FY2023 research_and_development = 1863000000.00000000 usd; TXN FY2024 research_and_development = 1959000000.00000000
+    usd; TXN FY2025 research_and_development = 2083000000.00000000 usd
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-032
+- category: multi_year_trend
+  query: Show KLAC's current ratio from FY2023 through FY2025.
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - KLAC
+    metrics:
+    - current_ratio
+    frequency: annual
+    operation: trend
+    start_year: 2023
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.trend.v1
+  expected_row_count: 3
+  gold_rows:
+  - evidence_id: derived:302
+    ticker: KLAC
+    frequency: annual
+    fiscal_year: 2023
+    fiscal_quarter: null
+    period_end: '2023-06-30'
+    metric: current_ratio
+    value: '2.23681149'
+    unit: ratio
+    display_value: 2.2368x
+    source_kind: derived
+    provenance:
+      derived_id: 302
+      input_fact_ids:
+      - 1275
+      - 1277
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:290
+    ticker: KLAC
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-06-30'
+    metric: current_ratio
+    value: '2.15224853'
+    unit: ratio
+    display_value: 2.1522x
+    source_kind: derived
+    provenance:
+      derived_id: 290
+      input_fact_ids:
+      - 1262
+      - 1264
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:278
+    ticker: KLAC
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-06-30'
+    metric: current_ratio
+    value: '2.61853299'
+    unit: ratio
+    display_value: 2.6185x
+    source_kind: derived
+    provenance:
+      derived_id: 278
+      input_fact_ids:
+      - 1249
+      - 1251
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: KLAC FY2023 current_ratio = 2.2368x; KLAC FY2024 current_ratio = 2.1522x; KLAC FY2025 current_ratio =
+    2.6185x
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-033
+- category: multi_year_trend
+  query: How did LRCX's gross margin change from FY2023 through FY2025?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - LRCX
+    metrics:
+    - gross_margin
+    frequency: annual
+    operation: trend
+    start_year: 2023
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.trend.v1
+  expected_row_count: 3
+  gold_rows:
+  - evidence_id: derived:327
+    ticker: LRCX
+    frequency: annual
+    fiscal_year: 2023
+    fiscal_quarter: null
+    period_end: '2023-06-25'
+    metric: gross_margin
+    value: '0.44621843'
+    unit: ratio
+    display_value: 44.6218%
+    source_kind: derived
+    provenance:
+      derived_id: 327
+      input_fact_ids:
+      - 1416
+      - 1414
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:316
+    ticker: LRCX
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-06-30'
+    metric: gross_margin
+    value: '0.47317064'
+    unit: ratio
+    display_value: 47.3171%
+    source_kind: derived
+    provenance:
+      derived_id: 316
+      input_fact_ids:
+      - 1402
+      - 1400
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:305
+    ticker: LRCX
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-06-29'
+    metric: gross_margin
+    value: '0.48705024'
+    unit: ratio
+    display_value: 48.7050%
+    source_kind: derived
+    provenance:
+      derived_id: 305
+      input_fact_ids:
+      - 1388
+      - 1386
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: LRCX FY2023 gross_margin = 44.6218%; LRCX FY2024 gross_margin = 47.3171%; LRCX FY2025 gross_margin = 48.7050%
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-034
+- category: multi_year_trend
+  query: Show ENTG's free cash flow margin from FY2023 through FY2025.
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - ENTG
+    metrics:
+    - free_cash_flow_margin
+    frequency: annual
+    operation: trend
+    start_year: 2023
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.trend.v1
+  expected_row_count: 3
+  gold_rows:
+  - evidence_id: derived:230
+    ticker: ENTG
+    frequency: annual
+    fiscal_year: 2023
+    fiscal_quarter: null
+    period_end: '2023-12-31'
+    metric: free_cash_flow_margin
+    value: '0.04901210'
+    unit: ratio
+    display_value: 4.9012%
+    source_kind: derived
+    provenance:
+      derived_id: 230
+      input_fact_ids:
+      - 975
+      - 976
+      - 963
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:219
+    ticker: ENTG
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-12-31'
+    metric: free_cash_flow_margin
+    value: '0.09752999'
+    unit: ratio
+    display_value: 9.7530%
+    source_kind: derived
+    provenance:
+      derived_id: 219
+      input_fact_ids:
+      - 961
+      - 962
+      - 949
+      missing_inputs: []
+      formula_version: v1
+  - evidence_id: derived:208
+    ticker: ENTG
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-12-31'
+    metric: free_cash_flow_margin
+    value: '0.12394419'
+    unit: ratio
+    display_value: 12.3944%
+    source_kind: derived
+    provenance:
+      derived_id: 208
+      input_fact_ids:
+      - 947
+      - 948
+      - 935
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: ENTG FY2023 free_cash_flow_margin = 4.9012%; ENTG FY2024 free_cash_flow_margin = 9.7530%; ENTG FY2025
+    free_cash_flow_margin = 12.3944%
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-035
+- category: multi_year_trend
+  query: How did RMBS's revenue change from FY2023 through FY2025?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - RMBS
+    metrics:
+    - revenue
+    frequency: annual
+    operation: trend
+    start_year: 2023
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.trend.v1
+  expected_row_count: 3
+  gold_rows:
+  - evidence_id: '9566'
+    ticker: RMBS
+    frequency: annual
+    fiscal_year: 2023
+    fiscal_quarter: null
+    period_end: '2023-12-31'
+    metric: revenue
+    value: '461117000.00000000'
+    unit: usd
+    display_value: 461117000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 9566
+      accession: 0000917273-24-000028
+      raw_payload_id: 57
+      source_concept: us-gaap_RevenueFromContractWithCustomerIncludingAssessedTax
+  - evidence_id: '9553'
+    ticker: RMBS
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-12-31'
+    metric: revenue
+    value: '556624000.00000000'
+    unit: usd
+    display_value: 556624000.00000000 usd
+    source_kind: reported
+    provenance:
+      fact_id: 9553
+      accession: 0000917273-25-000021
+      raw_payload_id: 57
+      source_concept: us-gaap_RevenueFromContractWithCustomerIncludingAssessedTax
+  - evidence_id: '9539'
+    ticker: RMBS
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-12-31'
+    metric: revenue
+    value: '707630000.00000000'
+    unit: u_usd
+    display_value: 707630000.00000000 u_usd
+    source_kind: reported
+    provenance:
+      fact_id: 9539
+      accession: 0001193125-26-057101
+      raw_payload_id: 57
+      source_concept: us-gaap_RevenueFromContractWithCustomerIncludingAssessedTax
+  reference_answer: RMBS FY2023 revenue = 461117000.00000000 usd; RMBS FY2024 revenue = 556624000.00000000 usd; RMBS FY2025
+    revenue = 707630000.00000000 u_usd
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-036
+- category: derived_metric
+  query: What was NVDA's gross margin in FY2025?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - NVDA
+    metrics:
+    - gross_margin
+    frequency: annual
+    operation: lookup
+    start_year: 2025
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: derived:13
+    ticker: NVDA
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-01-26'
+    metric: gross_margin
+    value: '0.74988697'
+    unit: ratio
+    display_value: 74.9887%
+    source_kind: derived
+    provenance:
+      derived_id: 13
+      input_fact_ids:
+      - 17
+      - 15
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: NVDA FY2025 gross_margin = 74.9887%
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-037
+- category: derived_metric
+  query: What was AMD's operating margin in FY2024?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - AMD
+    metrics:
+    - operating_margin
+    frequency: annual
+    operation: lookup
+    start_year: 2024
+    end_year: 2024
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: derived:80
+    ticker: AMD
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-12-28'
+    metric: operating_margin
+    value: '0.07368625'
+    unit: ratio
+    display_value: 7.3686%
+    source_kind: derived
+    provenance:
+      derived_id: 80
+      input_fact_ids:
+      - 338
+      - 334
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: AMD FY2024 operating_margin = 7.3686%
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-038
+- category: derived_metric
+  query: What was AVGO's net margin in FY2024?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - AVGO
+    metrics:
+    - net_margin
+    frequency: annual
+    operation: lookup
+    start_year: 2024
+    end_year: 2024
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: derived:147
+    ticker: AVGO
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-11-03'
+    metric: net_margin
+    value: '0.11430178'
+    unit: ratio
+    display_value: 11.4302%
+    source_kind: derived
+    provenance:
+      derived_id: 147
+      input_fact_ids:
+      - 6904
+      - 653
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: AVGO FY2024 net_margin = 11.4302%
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-039
+- category: derived_metric
+  query: What was INTC's R&D intensity in FY2024?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - INTC
+    metrics:
+    - rd_intensity
+    frequency: annual
+    operation: lookup
+    start_year: 2024
+    end_year: 2024
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: derived:250
+    ticker: INTC
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-12-28'
+    metric: rd_intensity
+    value: '0.31159489'
+    unit: ratio
+    display_value: 31.1595%
+    source_kind: derived
+    provenance:
+      derived_id: 250
+      input_fact_ids:
+      - 1106
+      - 1103
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: INTC FY2024 rd_intensity = 31.1595%
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-040
+- category: derived_metric
+  query: What was MU's free cash flow in FY2025?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - MU
+    metrics:
+    - free_cash_flow
+    frequency: annual
+    operation: lookup
+    start_year: 2025
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: derived:342
+    ticker: MU
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-08-28'
+    metric: free_cash_flow
+    value: '1668000000.00000000'
+    unit: USD
+    display_value: 1668000000.00000000 USD
+    source_kind: derived
+    provenance:
+      derived_id: 342
+      input_fact_ids:
+      - 1550
+      - 1551
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: MU FY2025 free_cash_flow = 1668000000.00000000 USD
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-041
+- category: derived_metric
+  query: What was AMAT's free cash flow margin in FY2024?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - AMAT
+    metrics:
+    - free_cash_flow_margin
+    frequency: annual
+    operation: lookup
+    start_year: 2024
+    end_year: 2024
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: derived:51
+    ticker: AMAT
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-10-27'
+    metric: free_cash_flow_margin
+    value: '0.27550044'
+    unit: ratio
+    display_value: 27.5500%
+    source_kind: derived
+    provenance:
+      derived_id: 51
+      input_fact_ids:
+      - 183
+      - 184
+      - 170
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: AMAT FY2024 free_cash_flow_margin = 27.5500%
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-042
+- category: derived_metric
+  query: What was TXN's year-over-year revenue growth in FY2025?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - TXN
+    metrics:
+    - revenue_growth_yoy
+    frequency: annual
+    operation: lookup
+    start_year: 2025
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: derived:479
+    ticker: TXN
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-12-31'
+    metric: revenue_growth_yoy
+    value: '0.13049038'
+    unit: ratio
+    display_value: 13.0490%
+    source_kind: derived
+    provenance:
+      derived_id: 479
+      input_fact_ids:
+      - 2140
+      - 2155
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: TXN FY2025 revenue_growth_yoy = 13.0490%
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-043
+- category: derived_metric
+  query: What was COHR's year-over-year net income growth in FY2025?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - COHR
+    metrics:
+    - net_income_growth_yoy
+    frequency: annual
+    operation: lookup
+    start_year: 2025
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: derived:175
+    ticker: COHR
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-06-30'
+    metric: net_income_growth_yoy
+    value: '1.31612383'
+    unit: ratio
+    display_value: 131.6124%
+    source_kind: derived
+    provenance:
+      derived_id: 175
+      input_fact_ids:
+      - 796
+      - 809
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: COHR FY2025 net_income_growth_yoy = 131.6124%
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-044
+- category: derived_metric
+  query: What was KLAC's current ratio in FY2025?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - KLAC
+    metrics:
+    - current_ratio
+    frequency: annual
+    operation: lookup
+    start_year: 2025
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: derived:278
+    ticker: KLAC
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-06-30'
+    metric: current_ratio
+    value: '2.61853299'
+    unit: ratio
+    display_value: 2.6185x
+    source_kind: derived
+    provenance:
+      derived_id: 278
+      input_fact_ids:
+      - 1249
+      - 1251
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: KLAC FY2025 current_ratio = 2.6185x
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-045
+- category: derived_metric
+  query: What was LRCX's ROA in FY2025?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - LRCX
+    metrics:
+    - roa
+    frequency: annual
+    operation: lookup
+    start_year: 2025
+    end_year: 2025
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: derived:314
+    ticker: LRCX
+    frequency: annual
+    fiscal_year: 2025
+    fiscal_quarter: null
+    period_end: '2025-06-29'
+    metric: roa
+    value: '0.26730948'
+    unit: ratio
+    display_value: 26.7309%
+    source_kind: derived
+    provenance:
+      derived_id: 314
+      input_fact_ids:
+      - 1391
+      - 1395
+      - 1409
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: LRCX FY2025 roa = 26.7309%
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-046
+- category: derived_metric
+  query: What was RMBS's ROE in FY2024?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - RMBS
+    metrics:
+    - roe
+    frequency: annual
+    operation: lookup
+    start_year: 2024
+    end_year: 2024
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: derived:461
+    ticker: RMBS
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-12-31'
+    metric: roe
+    value: '0.16659402'
+    unit: ratio
+    display_value: 16.6594%
+    source_kind: derived
+    provenance:
+      derived_id: 461
+      input_fact_ids:
+      - 2016
+      - 2021
+      - 2033
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: RMBS FY2024 roe = 16.6594%
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-047
+- category: derived_metric
+  query: What was COHR's fallback-derived gross profit in FY2024?
+  expected_tool: financial
+  expected_outcome: answer
+  gold_spec:
+    tickers:
+    - COHR
+    metrics:
+    - gross_profit
+    frequency: annual
+    operation: lookup
+    start_year: 2024
+    end_year: 2024
+    quarter: null
+    aggregation: null
+    sort_order: desc
+    limit: 5
+  expected_template_id: periodic.lookup.filtered.v1
+  expected_row_count: 1
+  gold_rows:
+  - evidence_id: derived:179
+    ticker: COHR
+    frequency: annual
+    fiscal_year: 2024
+    fiscal_quarter: null
+    period_end: '2024-06-30'
+    metric: gross_profit
+    value: '1455964000.00000000'
+    unit: USD
+    display_value: 1455964000.00000000 USD
+    source_kind: derived
+    provenance:
+      derived_id: 179
+      input_fact_ids:
+      - 806
+      - 807
+      missing_inputs: []
+      formula_version: v1
+  reference_answer: COHR FY2024 gross_profit = 1455964000.00000000 USD
+  numeric_tolerance:
+    retrieved_value: exact_decimal
+    final_answer_relative: 0.005
+  id: FIN-E2E-048
+- category: unsupported_abstention
+  query: Forecast NVDA's revenue for FY2030.
+  expected_tool: financial
+  expected_outcome: abstain
+  reason_code: forecast_not_supported
+  gold_spec: null
+  expected_template_id: null
+  expected_row_count: 0
+  gold_rows: []
+  reference_answer: The available data or capability is insufficient to answer this question. The Agent must abstain clearly
+    and must not fabricate a value or recommendation.
+  acceptable_behavior:
+    must_indicate_insufficient_or_unsupported: true
+    must_not_provide_requested_value_or_advice: true
+    acceptable_trace_signals:
+    - empty_evidence
+    - query_spec_validation
+  id: FIN-E2E-049
+- category: unsupported_abstention
+  query: What was ARM's net margin in FY2025?
+  expected_tool: financial
+  expected_outcome: abstain
+  reason_code: no_financial_data_for_company
+  gold_spec: null
+  expected_template_id: null
+  expected_row_count: 0
+  gold_rows: []
+  reference_answer: The available data or capability is insufficient to answer this question. The Agent must abstain clearly
+    and must not fabricate a value or recommendation.
+  acceptable_behavior:
+    must_indicate_insufficient_or_unsupported: true
+    must_not_provide_requested_value_or_advice: true
+    acceptable_trace_signals:
+    - no_corpus_ticker
+    - empty_evidence
+  id: FIN-E2E-050
+- category: unsupported_abstention
+  query: What was AAPL's revenue in FY2025?
+  expected_tool: financial
+  expected_outcome: abstain
+  reason_code: company_outside_corpus
+  gold_spec: null
+  expected_template_id: null
+  expected_row_count: 0
+  gold_rows: []
+  reference_answer: The available data or capability is insufficient to answer this question. The Agent must abstain clearly
+    and must not fabricate a value or recommendation.
+  acceptable_behavior:
+    must_indicate_insufficient_or_unsupported: true
+    must_not_provide_requested_value_or_advice: true
+    acceptable_trace_signals:
+    - no_corpus_ticker
+  id: FIN-E2E-051
+- category: unsupported_abstention
+  query: What was NVDA's dividend yield in FY2025?
+  expected_tool: financial
+  expected_outcome: abstain
+  reason_code: unsupported_metric
+  gold_spec: null
+  expected_template_id: null
+  expected_row_count: 0
+  gold_rows: []
+  reference_answer: The available data or capability is insufficient to answer this question. The Agent must abstain clearly
+    and must not fabricate a value or recommendation.
+  acceptable_behavior:
+    must_indicate_insufficient_or_unsupported: true
+    must_not_provide_requested_value_or_advice: true
+    acceptable_trace_signals:
+    - query_spec_validation
+  id: FIN-E2E-052
+- category: unsupported_abstention
+  query: What was NVDA's debt-to-equity ratio in FY2025?
+  expected_tool: financial
+  expected_outcome: abstain
+  reason_code: unsupported_metric
+  gold_spec: null
+  expected_template_id: null
+  expected_row_count: 0
+  gold_rows: []
+  reference_answer: The available data or capability is insufficient to answer this question. The Agent must abstain clearly
+    and must not fabricate a value or recommendation.
+  acceptable_behavior:
+    must_indicate_insufficient_or_unsupported: true
+    must_not_provide_requested_value_or_advice: true
+    acceptable_trace_signals:
+    - query_spec_validation
+  id: FIN-E2E-053
+- category: unsupported_abstention
+  query: Which stock should I buy, NVDA or AMD?
+  expected_tool: financial
+  expected_outcome: abstain
+  reason_code: normative_investment_advice
+  gold_spec: null
+  expected_template_id: null
+  expected_row_count: 0
+  gold_rows: []
+  reference_answer: The available data or capability is insufficient to answer this question. The Agent must abstain clearly
+    and must not fabricate a value or recommendation.
+  acceptable_behavior:
+    must_indicate_insufficient_or_unsupported: true
+    must_not_provide_requested_value_or_advice: true
+    acceptable_trace_signals:
+    - insufficient_evidence
+    - query_spec_validation
+  id: FIN-E2E-054
+- category: unsupported_abstention
+  query: What will AMD's stock price be tomorrow?
+  expected_tool: financial
+  expected_outcome: abstain
+  reason_code: future_price_not_supported
+  gold_spec: null
+  expected_template_id: null
+  expected_row_count: 0
+  gold_rows: []
+  reference_answer: The available data or capability is insufficient to answer this question. The Agent must abstain clearly
+    and must not fabricate a value or recommendation.
+  acceptable_behavior:
+    must_indicate_insufficient_or_unsupported: true
+    must_not_provide_requested_value_or_advice: true
+    acceptable_trace_signals:
+    - insufficient_evidence
+    - empty_evidence
+  id: FIN-E2E-055
+- category: unsupported_abstention
+  query: What was ASML's revenue in FY2024?
+  expected_tool: financial
+  expected_outcome: abstain
+  reason_code: company_outside_corpus
+  gold_spec: null
+  expected_template_id: null
+  expected_row_count: 0
+  gold_rows: []
+  reference_answer: The available data or capability is insufficient to answer this question. The Agent must abstain clearly
+    and must not fabricate a value or recommendation.
+  acceptable_behavior:
+    must_indicate_insufficient_or_unsupported: true
+    must_not_provide_requested_value_or_advice: true
+    acceptable_trace_signals:
+    - no_corpus_ticker
+  id: FIN-E2E-056
+- category: unsupported_abstention
+  query: What was NVDA's EBITDA in FY2025?
+  expected_tool: financial
+  expected_outcome: abstain
+  reason_code: unsupported_metric
+  gold_spec: null
+  expected_template_id: null
+  expected_row_count: 0
+  gold_rows: []
+  reference_answer: The available data or capability is insufficient to answer this question. The Agent must abstain clearly
+    and must not fabricate a value or recommendation.
+  acceptable_behavior:
+    must_indicate_insufficient_or_unsupported: true
+    must_not_provide_requested_value_or_advice: true
+    acceptable_trace_signals:
+    - query_spec_validation
+  id: FIN-E2E-057
+- category: unsupported_abstention
+  query: Compare NVDA's and AMD's P/E ratios as of 2024-12-31.
+  expected_tool: financial
+  expected_outcome: abstain
+  reason_code: historical_snapshot_not_available
+  gold_spec: null
+  expected_template_id: null
+  expected_row_count: 0
+  gold_rows: []
+  reference_answer: The available data or capability is insufficient to answer this question. The Agent must abstain clearly
+    and must not fabricate a value or recommendation.
+  acceptable_behavior:
+    must_indicate_insufficient_or_unsupported: true
+    must_not_provide_requested_value_or_advice: true
+    acceptable_trace_signals:
+    - query_spec_validation
+    - insufficient_evidence
+  id: FIN-E2E-058
+- category: unsupported_abstention
+  query: What was NVDA's gross margin in Q4 FY2025?
+  expected_tool: financial
+  expected_outcome: abstain
+  reason_code: quarterly_derived_metric_not_available
+  gold_spec: null
+  expected_template_id: null
+  expected_row_count: 0
+  gold_rows: []
+  reference_answer: The available data or capability is insufficient to answer this question. The Agent must abstain clearly
+    and must not fabricate a value or recommendation.
+  acceptable_behavior:
+    must_indicate_insufficient_or_unsupported: true
+    must_not_provide_requested_value_or_advice: true
+    acceptable_trace_signals:
+    - empty_evidence
+  id: FIN-E2E-059
+- category: unsupported_abstention
+  query: What was the combined FY2025 revenue of every semiconductor company worldwide?
+  expected_tool: financial
+  expected_outcome: abstain
+  reason_code: unbounded_universe
+  gold_spec: null
+  expected_template_id: null
+  expected_row_count: 0
+  gold_rows: []
+  reference_answer: The available data or capability is insufficient to answer this question. The Agent must abstain clearly
+    and must not fabricate a value or recommendation.
+  acceptable_behavior:
+    must_indicate_insufficient_or_unsupported: true
+    must_not_provide_requested_value_or_advice: true
+    acceptable_trace_signals:
+    - no_corpus_ticker
+    - query_spec_validation
+  id: FIN-E2E-060

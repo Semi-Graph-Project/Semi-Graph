@@ -89,16 +89,28 @@ class Config:
 
         # --- LLM ---
         llm = data.get("llm", {})
-        self.llm_provider: str = llm.get("provider", "deepseek")
-        self.llm_model: str = llm.get("model", "deepseek-chat")
+        self.llm_provider: str = llm.get("provider", "openrouter")
+        self.llm_model: str = llm.get(
+            "model", "deepseek/deepseek-v4-flash"
+        )
         self.llm_temperature: float = llm.get("temperature", 0.0)
-        self.llm_base_url: str = llm.get("base_url", "https://api.deepseek.com")
+        self.llm_base_url: str = llm.get(
+            "base_url", "https://openrouter.ai/api/v1"
+        )
 
         # --- API Keys (from env only) ---
         self.deepseek_api_key: str = os.environ.get("DEEPSEEK_API_KEY", "")
+        self.openrouter_api_key: str = os.environ.get("OPENROUTER_API_KEY", "")
         self.openai_api_key: str = os.environ.get("OPENAI_API_KEY", "")
         self.google_api_key: str = os.environ.get("GOOGLE_API_KEY", "")
         self.finnhub_api_key: str = os.environ.get("FINNHUB_API_KEY", "")
+
+        llm_api_keys = {
+            "deepseek": self.deepseek_api_key,
+            "openrouter": self.openrouter_api_key,
+            "openai": self.openai_api_key,
+        }
+        self.llm_api_key: str = llm_api_keys.get(self.llm_provider, "")
 
         # --- Neo4j (from env only) ---
         self.neo4j_uri: str = os.environ.get("NEO4J_URI", "")
@@ -147,7 +159,6 @@ class Config:
         )
         self.reranker_timeout_seconds = reranker.get("timeout_seconds", 60)
         self.reranker_max_retries = reranker.get("max_retries", 2)
-        self.openrouter_api_key = os.environ.get("OPENROUTER_API_KEY", "")
 
         # --- Agent retrieval (Phase T production profile) ---
         agent_retrieval = data.get("agent_retrieval", {})
@@ -178,6 +189,25 @@ class Config:
         self.financial_max_query_rows: int = int(
             financial.get("max_query_rows", 50)
         )
+        metric_registry = financial.get("metric_registry", {})
+        self.financial_metric_registry: dict[str, frozenset[str]] = {
+            group: frozenset(
+                str(metric).strip().lower()
+                for metric in metric_registry.get(group, [])
+                if str(metric).strip()
+            )
+            for group in ("reported", "derived", "snapshot")
+        }
+        missing_metric_groups = [
+            group
+            for group, metrics in self.financial_metric_registry.items()
+            if not metrics
+        ]
+        if missing_metric_groups:
+            raise ValueError(
+                "financial.metric_registry must define non-empty groups: "
+                + ", ".join(missing_metric_groups)
+            )
 
         self.postgres_admin_dsn: str = os.environ.get("POSTGRES_ADMIN_DSN", "")
         self.postgres_agent_dsn: str = os.environ.get("POSTGRES_AGENT_DSN", "")

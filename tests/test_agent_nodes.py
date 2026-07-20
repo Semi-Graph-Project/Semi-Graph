@@ -1,4 +1,23 @@
+from types import SimpleNamespace
+
 import semigraph.agent.nodes as nodes
+from semigraph.agent.prompts import build_financial_capability_summary
+
+
+def test_planner_financial_capabilities_come_from_registry():
+    cfg = SimpleNamespace(financial_metric_registry={
+        "reported": frozenset({"revenue"}),
+        "derived": frozenset({"revenue_growth_yoy", "roe"}),
+        "snapshot": frozenset({"pe_ttm"}),
+    })
+
+    summary = build_financial_capability_summary(cfg)
+
+    assert "Reported metrics: revenue" in summary
+    assert "Derived metrics: revenue_growth_yoy, roe" in summary
+    assert "Snapshot metrics: pe_ttm" in summary
+    assert "Never expand a derived metric" in summary
+    assert "revenue_growth_yoy" in nodes.PLANNER_SYSTEM_PROMPT
 
 
 def _financial_chunk(**overrides):

@@ -862,7 +862,7 @@ def trace_graph_search(
     query: str,
     top_k_chunks: int = 5,
     top_k_entities: int = 20,
-    damping: float = 0.7,
+    damping: float = 0.5,
     top_k_triples: int = 10,
     use_expansion: bool = True,
     seed_mode: str = "triple",

@@ -5,6 +5,7 @@ are mocked — real Finnhub hits live in integration scripts, not unit tests.
 """
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 
 import pytest
@@ -13,12 +14,11 @@ from semigraph.financial.backend import FinancialQueryResult
 from semigraph.financial.query_spec import FinancialQuerySpec
 from semigraph.online._ticker import CORPUS_TICKERS, extract_tickers, resolve_tickers
 from semigraph.online.financial_search import (
-    FINANCIAL_KEYWORDS,
     SNAPSHOT_KINDS,
     FinancialBackend,
     FinancialIntentParseError,
+    UnsupportedFinancialQuery,
     _build_financial_query_spec,
-    _has_financial_intent,
     _get_backend,
     _make_chunk,
     financial_search,
@@ -55,37 +55,6 @@ class TestExtractTickers:
         q = " ".join(sorted(CORPUS_TICKERS))
         out = extract_tickers(q)
         assert set(out) == CORPUS_TICKERS
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Intent guard
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-class TestHasFinancialIntent:
-    @pytest.mark.parametrize("q", [
-        "NVDA revenue",
-        "What is the gross margin?",
-        "Compare earnings",
-        "stock price today",
-        "operating income trend",
-        "ROE comparison",
-    ])
-    def test_keyword_present(self, q: str):
-        assert _has_financial_intent(q)
-
-    @pytest.mark.parametrize("q", [
-        "we use INTC platform",
-        "TSMC supply chain risk",
-        "What is AMD's CEO name?",
-        "Describe NVIDIA business segments",
-    ])
-    def test_no_keyword(self, q: str):
-        assert not _has_financial_intent(q)
-
-    def test_case_insensitive(self):
-        assert _has_financial_intent("REVENUE growth")
-        assert _has_financial_intent("Revenue Growth")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -159,6 +128,44 @@ class TestResolveTickers:
         )
         tickers = resolve_tickers("What is Nvidia's current stock price?")
         assert tickers == ["NVDA"]
+
+    @pytest.mark.parametrize("ticker", ["AAPL", "ARM", "ASML"])
+    def test_explicit_out_of_corpus_ticker_skips_expansion(
+        self,
+        ticker: str,
+        monkeypatch,
+    ):
+        called = {"flag": False}
+
+        def fake_expand(q, cfg=None):
+            called["flag"] = True
+            return f"{q} QCOM AVGO"
+
+        monkeypatch.setattr(
+            "semigraph.online._ticker.expand_query",
+            fake_expand,
+        )
+
+        assert resolve_tickers(f"What was {ticker}'s revenue in FY2025?") == []
+        assert called["flag"] is False
+
+    def test_out_of_corpus_ticker_blocks_partial_comparison(self, monkeypatch):
+        called = {"flag": False}
+
+        def fake_expand(q, cfg=None):
+            called["flag"] = True
+            return q
+
+        monkeypatch.setattr(
+            "semigraph.online._ticker.expand_query",
+            fake_expand,
+        )
+
+        assert resolve_tickers("Compare AAPL and NVDA revenue") == []
+        assert called["flag"] is False
+
+    def test_financial_acronyms_do_not_look_like_unknown_tickers(self):
+        assert resolve_tickers("NVDA ROA and EPS in FY2025 USD") == ["NVDA"]
 
     def test_use_expansion_false_skips_llm(self, monkeypatch):
         """use_expansion=False → never call expand_query even on regex miss."""
@@ -263,9 +270,31 @@ class TestOrchestrator:
         assert financial_search("   ")["chunks"] == []
         assert financial_search("")["trace"]["reason"] == "empty_query"
 
-    def test_no_financial_intent_returns_empty(self, patch_backend):
-        # Has ticker but no keyword → backend never invoked
-        assert financial_search("we use INTC for our research")["chunks"] == []
+    def test_query_with_ticker_is_not_keyword_gated(self, patch_backend):
+        out = financial_search("What were NVDA's total assets in FY2025?")
+
+        assert out["chunks"]
+        assert len(patch_backend.calls) == 1
+
+    def test_unsupported_metric_skips_backend(
+        self,
+        patch_backend,
+        monkeypatch,
+    ):
+        def unsupported_parser(query, *, tickers, cfg):
+            raise UnsupportedFinancialQuery("EBITDA is not supported")
+
+        monkeypatch.setattr(
+            "semigraph.online.financial_search._build_financial_query_spec",
+            unsupported_parser,
+        )
+
+        result = financial_search("What was NVDA's EBITDA in FY2025?")
+
+        assert result["chunks"] == []
+        assert result["trace"]["status"] == "skipped"
+        assert result["trace"]["reason"] == "unsupported_metric"
+        assert result["trace"]["unsupported_reason"] == "EBITDA is not supported"
         assert patch_backend.calls == []
 
     def test_no_ticker_returns_empty(self, patch_backend, monkeypatch):
@@ -366,6 +395,7 @@ class TestFinancialToolSpecBuilder:
     @staticmethod
     def _valid_json():
         return """{
+            "supported": true,
             "metrics": ["revenue"],
             "frequency": "annual",
             "operation": "trend",
@@ -405,7 +435,8 @@ class TestFinancialToolSpecBuilder:
             def invoke(self, messages):
                 self.calls.append(messages)
                 content = (
-                    "{\"tickers\": [\"AMD\"], \"metrics\": [\"revenue\"], "
+                    "{\"supported\": true, \"tickers\": [\"AMD\"], "
+                    "\"metrics\": [\"revenue\"], "
                     "\"frequency\": \"annual\", \"operation\": \"trend\"}"
                     if len(self.calls) == 1
                     else TestFinancialToolSpecBuilder._valid_json()
@@ -428,6 +459,84 @@ class TestFinancialToolSpecBuilder:
         assert spec.tickers == ["NVDA"]
         assert len(fake.calls) == 2
         assert "previous output failed validation" in fake.calls[1][0]["content"]
+
+    def test_single_year_lookup_retries_until_both_bounds_are_set(
+        self,
+        monkeypatch,
+    ):
+        class FakeLLM:
+            def __init__(self):
+                self.calls = []
+
+            def invoke(self, messages):
+                self.calls.append(messages)
+                end_year = "null" if len(self.calls) == 1 else "2025"
+                return SimpleNamespace(content=f"""{{
+                    "supported": true,
+                    "metrics": ["stockholders_equity"],
+                    "frequency": "annual",
+                    "operation": "lookup",
+                    "start_year": 2025,
+                    "end_year": {end_year},
+                    "limit": 5
+                }}""")
+
+        fake = FakeLLM()
+        monkeypatch.setattr(
+            "semigraph.online.financial_search.get_llm",
+            lambda cfg: fake,
+        )
+
+        spec = _build_financial_query_spec(
+            "What was LRCX stockholders equity in FY2025?",
+            tickers=["LRCX"],
+            cfg=SimpleNamespace(),
+        )
+
+        assert spec.start_year == spec.end_year == 2025
+        assert len(fake.calls) == 2
+        assert "both start_year and end_year" in fake.calls[1][0]["content"]
+
+    @pytest.mark.parametrize(
+        ("query", "reason"),
+        [
+            ("What was NVDA's EBITDA in FY2025?", "EBITDA is not supported"),
+            (
+                "What was NVDA's debt-to-equity ratio in FY2025?",
+                "debt-to-equity is not supported",
+            ),
+        ],
+    )
+    def test_unsupported_metric_returns_structured_decision(
+        self,
+        query: str,
+        reason: str,
+        monkeypatch,
+    ):
+        class FakeLLM:
+            def invoke(self, messages):
+                assert '"supported"' in messages[0]["content"]
+                assert "Never substitute" in messages[0]["content"]
+                return SimpleNamespace(
+                    content=json.dumps(
+                        {
+                            "supported": False,
+                            "unsupported_reason": reason,
+                        }
+                    )
+                )
+
+        monkeypatch.setattr(
+            "semigraph.online.financial_search.get_llm",
+            lambda cfg: FakeLLM(),
+        )
+
+        with pytest.raises(UnsupportedFinancialQuery, match=reason):
+            _build_financial_query_spec(
+                query,
+                tickers=["NVDA"],
+                cfg=SimpleNamespace(),
+            )
 
     def test_two_invalid_responses_raise_clear_error(self, monkeypatch):
         class FakeLLM:
@@ -497,8 +606,3 @@ def test_corpus_tickers_derive_from_config():
 def test_snapshot_kinds_are_three():
     assert len(SNAPSHOT_KINDS) == 3
     assert SNAPSHOT_KINDS == ("financials_annual", "key_metrics", "quote")
-
-
-def test_financial_keywords_include_core_terms():
-    for kw in ("revenue", "margin", "earnings", "p/e", "price", "ebitda"):
-        assert kw in FINANCIAL_KEYWORDS

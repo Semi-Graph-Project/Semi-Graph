@@ -1,0 +1,2 @@
+id,category,expected_outcome,query,status,latency_sec,first_tool,tool_correct,spec_correct,sql_success,gold_row_count,retrieved_gold_count,retrieval_recall,retrieval_exact,final_gold_count,final_numeric_recall,final_answer_correct,abstention_correct,citation_count,citations_valid,overall_pass,error_type,error
+FIN-E2E-001,single_company_lookup,answer,What was NVDA's revenue in FY2025?,completed,17.824,financial,True,True,True,1,1,1.0,True,1,1.0,True,,1,True,True,,

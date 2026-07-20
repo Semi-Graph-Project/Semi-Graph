@@ -1,0 +1,88 @@
+{
+  "evaluated_at": "2026-07-19T10:41:45.626554+00:00",
+  "evaluation_scope": "full Agent E2E with financial backend swapped only",
+  "dataset": "benchmark/datasets/financial_agent_e2e_60.yaml",
+  "vector_corpus": "benchmark/datasets/financial_vector_facts.jsonl",
+  "embedding_model": "BAAI/bge-base-en-v1.5",
+  "top_k": 5,
+  "query_count": 60,
+  "answerable_count": 48,
+  "unsupported_count": 12,
+  "error_count": 0,
+  "agent_vector": {
+    "tool_selection_accuracy": 0.983333,
+    "retrieval_exact_rate": 0.9375,
+    "retrieval_micro_recall": 0.952381,
+    "mean_retrieval_precision": 0.323611,
+    "final_answer_accuracy": 0.9375,
+    "abstention_accuracy": 1.0,
+    "citation_valid_rate": 1.0,
+    "overall_pass_rate": 0.95,
+    "latency_sec": {
+      "mean": 23.884,
+      "median": 11.039,
+      "max": 148.297
+    }
+  },
+  "agent_sql_reference": {
+    "source": "benchmark/results/financial_agent_e2e/20260718_180149/summary.json",
+    "tool_selection_accuracy": 1.0,
+    "retrieval_exact_rate": 1.0,
+    "retrieval_micro_recall": 1.0,
+    "final_answer_accuracy": 1.0,
+    "abstention_accuracy": 0.916667,
+    "citation_valid_rate": 1.0,
+    "overall_pass_rate": 0.983333,
+    "latency_sec": {
+      "mean": 24.228,
+      "median": 15.053,
+      "max": 180.092
+    }
+  },
+  "sql_minus_vector": {
+    "sql_minus_vector_tool_selection_accuracy": 0.016667,
+    "sql_minus_vector_retrieval_exact_rate": 0.0625,
+    "sql_minus_vector_retrieval_micro_recall": 0.047619,
+    "sql_minus_vector_final_answer_accuracy": 0.0625,
+    "sql_minus_vector_abstention_accuracy": -0.083333,
+    "sql_minus_vector_citation_valid_rate": 0.0,
+    "sql_minus_vector_overall_pass_rate": 0.033333
+  },
+  "by_category": {
+    "derived_metric": {
+      "count": 12,
+      "retrieval_exact_rate": 1.0,
+      "final_answer_accuracy": 1.0,
+      "abstention_accuracy": null,
+      "overall_pass_rate": 1.0
+    },
+    "multi_company_comparison": {
+      "count": 12,
+      "retrieval_exact_rate": 0.75,
+      "final_answer_accuracy": 0.75,
+      "abstention_accuracy": null,
+      "overall_pass_rate": 0.75
+    },
+    "multi_year_trend": {
+      "count": 12,
+      "retrieval_exact_rate": 1.0,
+      "final_answer_accuracy": 1.0,
+      "abstention_accuracy": null,
+      "overall_pass_rate": 1.0
+    },
+    "single_company_lookup": {
+      "count": 12,
+      "retrieval_exact_rate": 1.0,
+      "final_answer_accuracy": 1.0,
+      "abstention_accuracy": null,
+      "overall_pass_rate": 1.0
+    },
+    "unsupported_abstention": {
+      "count": 12,
+      "retrieval_exact_rate": null,
+      "final_answer_accuracy": null,
+      "abstention_accuracy": 1.0,
+      "overall_pass_rate": 1.0
+    }
+  }
+}

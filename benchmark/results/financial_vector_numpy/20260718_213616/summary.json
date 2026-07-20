@@ -1,0 +1,64 @@
+{
+  "evaluated_at": "2026-07-18T21:36:16.765227+00:00",
+  "evaluation_scope": "retrieval-only; no Vector Agent synthesis",
+  "benchmark": "benchmark/datasets/financial_agent_e2e_60.yaml",
+  "vector_corpus": "benchmark/datasets/financial_vector_facts.jsonl",
+  "embedding_cache": "benchmark/cache/financial_vector_facts_embeddings.npz",
+  "embedding_model": "BAAI/bge-base-en-v1.5",
+  "corpus_document_count": 2632,
+  "query_count": 60,
+  "answerable_count": 48,
+  "unsupported_count": 12,
+  "top_k": 5,
+  "vector_numpy": {
+    "micro_recall_at_k": 0.952381,
+    "complete_evidence_rate": 0.9375,
+    "mean_precision_at_k": 0.333333,
+    "mean_constraint_precision_at_k": 0.333333,
+    "mean_query_search_latency_ms": 0.451083
+  },
+  "sql_agent_reference": {
+    "source": "benchmark/results/financial_agent_e2e/20260718_180149/summary.json",
+    "micro_recall": 1.0,
+    "complete_evidence_rate": 1.0,
+    "final_answer_accuracy": 0.979167,
+    "overall_pass_rate": 0.966667
+  },
+  "retrieval_delta": {
+    "sql_minus_vector_micro_recall": 0.047619,
+    "sql_minus_vector_complete_evidence_rate": 0.0625
+  },
+  "unsupported_note": "Plain top-k vector retrieval always returns candidates; abstention requires an Agent or a separately calibrated threshold and is not scored in this retrieval-only experiment.",
+  "by_category": {
+    "derived_metric": {
+      "count": 12,
+      "micro_recall_at_k": 1.0,
+      "complete_evidence_rate": 1.0,
+      "mean_constraint_precision_at_k": 0.2
+    },
+    "multi_company_comparison": {
+      "count": 12,
+      "micro_recall_at_k": 0.833333,
+      "complete_evidence_rate": 0.75,
+      "mean_constraint_precision_at_k": 0.333333
+    },
+    "multi_year_trend": {
+      "count": 12,
+      "micro_recall_at_k": 1.0,
+      "complete_evidence_rate": 1.0,
+      "mean_constraint_precision_at_k": 0.6
+    },
+    "single_company_lookup": {
+      "count": 12,
+      "micro_recall_at_k": 1.0,
+      "complete_evidence_rate": 1.0,
+      "mean_constraint_precision_at_k": 0.2
+    },
+    "unsupported_abstention": {
+      "count": 12,
+      "micro_recall_at_k": null,
+      "complete_evidence_rate": null,
+      "mean_constraint_precision_at_k": null
+    }
+  }
+}

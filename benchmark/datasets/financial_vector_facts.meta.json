@@ -1,0 +1,70 @@
+{
+  "corpus_sha256": "2329f4d9133e8a91c0dcfc3cff05a94f417829a943e8755bba5e05855171a763",
+  "document_contract": "one curated database row per fact document",
+  "document_count": 2632,
+  "frequency_counts": {
+    "annual": 982,
+    "quarterly": 1581,
+    "snapshot": 69
+  },
+  "generated_at": "2026-07-18T21:36:08.907243+00:00",
+  "metric_counts": {
+    "capital_expenditure": 121,
+    "cash_and_equivalents": 142,
+    "cost_of_revenue": 151,
+    "current_assets": 154,
+    "current_liabilities": 154,
+    "current_price": 14,
+    "current_ratio": 42,
+    "day_change_percent": 14,
+    "diluted_eps": 152,
+    "free_cash_flow": 33,
+    "free_cash_flow_margin": 33,
+    "gross_margin": 42,
+    "gross_profit": 130,
+    "market_cap": 14,
+    "net_income": 154,
+    "net_income_growth_yoy": 28,
+    "net_margin": 42,
+    "operating_cash_flow": 154,
+    "operating_income": 132,
+    "operating_margin": 36,
+    "pe_ttm": 13,
+    "previous_close": 14,
+    "rd_intensity": 42,
+    "research_and_development": 154,
+    "revenue": 154,
+    "revenue_growth_yoy": 28,
+    "roa": 28,
+    "roe": 28,
+    "stockholders_equity": 154,
+    "total_assets": 154,
+    "total_liabilities": 121
+  },
+  "source_kind_counts": {
+    "derived": 391,
+    "finnhub_quote": 42,
+    "finnhub_vendor_metric": 27,
+    "reported": 2172
+  },
+  "source_views": [
+    "financial.agent_periodic_metrics",
+    "financial.agent_market_metrics"
+  ],
+  "ticker_scope": [
+    "AMAT",
+    "AMD",
+    "AMKR",
+    "AVGO",
+    "COHR",
+    "ENTG",
+    "INTC",
+    "KLAC",
+    "LRCX",
+    "MU",
+    "NVDA",
+    "QCOM",
+    "RMBS",
+    "TXN"
+  ]
+}

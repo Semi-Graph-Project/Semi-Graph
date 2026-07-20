@@ -5,7 +5,14 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from semigraph.financial.query_spec import FinancialQuerySpec
+from semigraph.config import get_config
+from semigraph.financial.query_spec import (
+    DERIVED_METRICS,
+    FinancialQuerySpec,
+    PERIODIC_METRICS,
+    REPORTED_METRICS,
+    SNAPSHOT_METRICS,
+)
 
 
 def _spec(**overrides):
@@ -37,6 +44,15 @@ def test_rejects_metric_outside_frequency_allowlist():
         _spec(metrics=["pe_ttm"])
     with pytest.raises(ValidationError, match="Unsupported metrics"):
         _spec(frequency="snapshot", metrics=["revenue"])
+
+
+def test_metric_allowlists_come_from_config_registry():
+    registry = get_config().financial_metric_registry
+
+    assert REPORTED_METRICS == registry["reported"]
+    assert DERIVED_METRICS == registry["derived"]
+    assert SNAPSHOT_METRICS == registry["snapshot"]
+    assert PERIODIC_METRICS == registry["reported"] | registry["derived"]
 
 
 def test_snapshot_rejects_period_filters_and_unsupported_operations():
@@ -96,3 +112,20 @@ def test_rejects_invalid_year_range_limit_and_extra_fields():
     with pytest.raises(ValidationError, match="Extra inputs"):
         _spec(raw_sql="DROP TABLE financial.companies")
 
+
+def test_lookup_and_compare_require_closed_year_bounds():
+    with pytest.raises(ValidationError, match="both start_year and end_year"):
+        _spec(start_year=2025)
+    with pytest.raises(ValidationError, match="both start_year and end_year"):
+        _spec(
+            operation="compare",
+            tickers=["NVDA", "AMD"],
+            end_year=2025,
+        )
+
+
+def test_trend_allows_open_year_range():
+    spec = _spec(operation="trend", start_year=2025)
+
+    assert spec.start_year == 2025
+    assert spec.end_year is None

@@ -1,5 +1,31 @@
+from semigraph.config import Config, get_config
 
-PLANNER_SYSTEM_PROMPT: str = """You are a query planner for SemiGraph, an agentic heterogeneous RAG system for semiconductor stock research.
+
+def build_financial_capability_summary(cfg: Config) -> str:
+    """Build the Planner-facing contract from the configured metric registry."""
+
+    registry = cfg.financial_metric_registry
+
+    def metric_line(label: str, group: str) -> str:
+        metrics = ", ".join(sorted(registry[group]))
+        return f"- {label}: {metrics}"
+
+    return "\n".join((
+        metric_line("Reported metrics", "reported"),
+        metric_line("Derived metrics", "derived"),
+        metric_line("Snapshot metrics", "snapshot"),
+        "- Operations: lookup, compare, trend, rank, aggregate",
+        "- Frequencies: annual, quarterly, snapshot",
+        "",
+        "Financial planning contract:",
+        "- Treat every registered metric as an atomic Financial Tool capability.",
+        "- Never expand a derived metric into its formula or input metrics.",
+        "- Keep a supported financial comparison, trend, rank, or aggregate as one subquery.",
+        "- Decompose only when the original question needs another evidence tool as well.",
+    ))
+
+
+_PLANNER_SYSTEM_PROMPT_TEMPLATE: str = """You are a query planner for SemiGraph, an agentic heterogeneous RAG system for semiconductor stock research.
 
 Your only job is to decompose the user question into 1-3 atomic subqueries. Each subquery must be answerable by exactly one retrieval tool.
 
@@ -15,6 +41,10 @@ Your only job is to decompose the user question into 1-3 atomic subqueries. Each
 |           | debt, cash flow, FY/annual/quarter metrics, or metric comparisons across tickers.                   |
 | news      | Explicit recent events or news coverage: news, headlines, announcements, press releases, product    |
 |           | launches, executive changes, geopolitical events, earnings news, or current-event wording.          |
+
+## Financial Tool Capability Contract
+
+{{FINANCIAL_CAPABILITY_SUMMARY}}
 
 ## Rules
 
@@ -46,7 +76,17 @@ Output: {"subqueries": ["What is the supplier relationship between AMD and TSMC 
 Example 3 — Thai mixed evidence (2 subqueries):
 Input: "AMD พึ่งพา TSMC ด้าน supply chain แค่ไหน และรายได้ FY2025 เป็นเท่าไร?"
 Output: {"subqueries": ["AMD มีความสัมพันธ์ด้าน supplier หรือ dependency กับ TSMC อย่างไร?", "รายได้ FY2025 ของ AMD เป็นเท่าไร?"]}
+
+Example 4 — registered derived metric remains atomic (1 subquery):
+Input: "Compare AMD's and INTC's year-over-year revenue growth in FY2024."
+Output: {"subqueries": ["Compare AMD's and INTC's year-over-year revenue growth in FY2024."]}
 """
+
+
+PLANNER_SYSTEM_PROMPT: str = _PLANNER_SYSTEM_PROMPT_TEMPLATE.replace(
+    "{{FINANCIAL_CAPABILITY_SUMMARY}}",
+    build_financial_capability_summary(get_config()),
+)
 
 
 TOOL_SELECT_SYSTEM_PROMPT: str = """You are a tool router for SemiGraph, an agentic heterogeneous RAG system for semiconductor stock research.

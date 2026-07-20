@@ -1,0 +1,61 @@
+id,category,expected_outcome,query,gold_count,retrieved_gold_count,recall_at_k,complete_evidence,precision_at_k,constraint_precision_at_k,first_gold_rank,latency_ms,retrieved_evidence_ids
+FIN-E2E-001,single_company_lookup,answer,What was NVDA's revenue in FY2025?,1,1,1.0,True,0.1,0.1,1,6.678,15|1|113|16|71|20|99|127|29|57
+FIN-E2E-002,single_company_lookup,answer,What was AMD's net income in FY2024?,1,1,1.0,True,0.1,0.1,1,0.201,339|353|325|437|423|395|451|409|381|367
+FIN-E2E-003,single_company_lookup,answer,What were AVGO's total assets in FY2024?,1,1,1.0,True,0.1,0.1,1,0.089,661|675|660|647|773|759|674|787|646|772
+FIN-E2E-004,single_company_lookup,answer,What was MU's operating cash flow in FY2025?,1,1,1.0,True,0.1,0.1,1,0.088,1550|1565|1580|1655|1670|1640|1610|1625|1700|1685
+FIN-E2E-005,single_company_lookup,answer,What was INTC's research and development expense in FY2024?,1,1,1.0,True,0.1,0.1,1,0.063,1106|1120|1092|1204|1218|1190|1162|1176|1232|1134
+FIN-E2E-006,single_company_lookup,answer,What was QCOM's diluted EPS in FY2024?,1,1,1.0,True,0.1,0.1,2,0.063,1887|1874|1965|1978|1991|1861|1926|1939|1900|1952
+FIN-E2E-007,single_company_lookup,answer,What were TXN's current assets in FY2025?,1,1,1.0,True,0.1,0.1,1,0.037,2148|2223|2163|2208|2268|2178|2238|2253|2298|2149
+FIN-E2E-008,single_company_lookup,answer,What was AMAT's gross profit in FY2024?,1,1,1.0,True,0.1,0.1,1,0.036,172|187|157|292|307|277|262|247|232|202
+FIN-E2E-009,single_company_lookup,answer,What was KLAC's capital expenditure in FY2025?,1,1,1.0,True,0.1,0.1,1,0.162,1255|1268|1281|1346|1359|1320|1333|1307|1385|1294
+FIN-E2E-010,single_company_lookup,answer,What was LRCX's stockholders' equity in FY2025?,1,1,1.0,True,0.1,0.1,1,0.156,1398|1412|1479|1493|1507|1426|1439|1535|1452|1521
+FIN-E2E-011,single_company_lookup,answer,What were AMKR's current liabilities in FY2024?,1,1,1.0,True,0.1,0.1,1,0.064,499|604|514|484|589|619|559|634|544|574
+FIN-E2E-012,single_company_lookup,answer,What was RMBS's operating income in FY2024?,1,1,1.0,True,0.1,0.1,1,0.066,2015|2104|2027|2091|2117|2002|2078|2065|2130|2016
+FIN-E2E-013,multi_company_comparison,answer,Compare NVDA's and AMD's revenue in FY2025.,2,2,1.0,True,0.2,0.2,1,0.052,320|15|321|390|348|334|16|1|404|113
+FIN-E2E-014,multi_company_comparison,answer,Compare the FY2025 gross margins of AMAT and LRCX.,2,2,1.0,True,0.2,0.2,1,0.052,derived:305|derived:327|derived:35|derived:316|derived:46|derived:57|derived:37|derived:307|1388|derived:306
+FIN-E2E-015,multi_company_comparison,answer,"Which company had the higher net margin in FY2024, INTC or AMD?",2,1,0.5,False,0.1,0.1,1,0.053,derived:81|derived:92|derived:70|derived:79|derived:90|derived:68|derived:95|derived:84|derived:73|336
+FIN-E2E-016,multi_company_comparison,answer,Compare MU's and QCOM's operating cash flow in FY2024.,2,1,0.5,False,0.1,0.1,1,0.062,1881|1894|1998|1868|1985|1972|1959|1946|1907|1920
+FIN-E2E-017,multi_company_comparison,answer,Compare the FY2024 free cash flow of AVGO and TXN.,2,2,1.0,True,0.2,0.2,2,0.123,derived:138|derived:149|derived:160|derived:488|derived:499|derived:477|derived:150|derived:161|derived:139|derived:489
+FIN-E2E-018,multi_company_comparison,answer,Compare KLAC's and AMAT's ROA in FY2024.,2,2,1.0,True,0.2,0.2,1,0.061,derived:291|derived:55|derived:279|derived:44|derived:256|derived:245|derived:121|derived:358|1262|derived:347
+FIN-E2E-019,multi_company_comparison,answer,"Which company had the higher current ratio in FY2024, COHR or ENTG?",2,2,1.0,True,0.2,0.2,2,0.059,derived:179|derived:188|derived:200|810|derived:222|806|derived:191|926|922|822
+FIN-E2E-020,multi_company_comparison,answer,Compare the FY2025 ROE of NVDA and AVGO.,2,2,1.0,True,0.2,0.2,1,0.057,derived:23|derived:12|derived:144|derived:155|642|646|derived:143|17|19|derived:14
+FIN-E2E-021,multi_company_comparison,answer,"Which company had the higher R&D intensity in FY2024, QCOM or TXN?",2,0,0.0,False,0.0,0.0,,0.057,1962|1975|1988|1936|1871|1910|1923|2248|1897|1884
+FIN-E2E-022,multi_company_comparison,answer,Compare AMD's and INTC's year-over-year revenue growth in FY2024.,2,2,1.0,True,0.2,0.2,1,0.056,derived:85|derived:74|334|320|derived:253|348|335|321|derived:86|336
+FIN-E2E-023,multi_company_comparison,answer,Compare the FY2025 net margins of LRCX and KLAC.,2,2,1.0,True,0.2,0.2,1,0.033,derived:307|derived:318|derived:329|derived:272|derived:284|derived:305|derived:296|derived:306|derived:327|derived:316
+FIN-E2E-024,multi_company_comparison,answer,Compare COHR's and RMBS's year-over-year net income growth in FY2024.,2,2,1.0,True,0.2,0.2,1,0.033,derived:458|derived:447|2016|derived:187|derived:457|derived:175|2028|2003|2013|2105
+FIN-E2E-025,multi_year_trend,answer,Show NVDA's annual revenue trend from FY2024 through FY2026.,3,3,1.0,True,0.3,0.3,1,0.034,29|1|derived:8|15|derived:19|6|34|3|20|31
+FIN-E2E-026,multi_year_trend,answer,How did AMD's net income change from FY2023 through FY2025?,3,3,1.0,True,0.3,0.3,1,0.064,353|325|339|409|381|395|465|423|437|451
+FIN-E2E-027,multi_year_trend,answer,Show AMAT's gross margin trend from FY2023 through FY2025.,3,3,1.0,True,0.3,0.3,1,0.064,derived:57|derived:35|derived:46|187|157|derived:59|derived:37|172|derived:48|derived:58
+FIN-E2E-028,multi_year_trend,answer,How did MU's free cash flow change from FY2023 through FY2025?,3,3,1.0,True,0.3,0.3,1,0.064,derived:364|derived:342|derived:353|derived:262|derived:240|derived:251|derived:365|derived:466|derived:61|derived:39
+FIN-E2E-029,multi_year_trend,answer,Show INTC's annual revenue from FY2023 through FY2025.,3,3,1.0,True,0.3,0.3,1,0.064,1117|1089|1122|1103|1119|1091|1094|1105|1121|1093
+FIN-E2E-030,multi_year_trend,answer,How did AVGO's net margin change from FY2023 through FY2025?,3,3,1.0,True,0.3,0.3,1,0.036,derived:158|derived:136|derived:147|derived:156|derived:134|derived:145|derived:157|derived:135|derived:146|derived:161
+FIN-E2E-031,multi_year_trend,answer,Show QCOM's operating margin trend from FY2023 through FY2025.,3,3,1.0,True,0.3,0.3,1,0.074,derived:430|derived:406|derived:418|derived:429|derived:431|derived:405|derived:407|derived:417|derived:419|1885
+FIN-E2E-032,multi_year_trend,answer,How did TXN's research and development expense change from FY2023 through FY2025?,3,3,1.0,True,0.3,0.3,1,0.035,2143|2173|2158|2203|2293|2218|2233|2248|2263|2278
+FIN-E2E-033,multi_year_trend,answer,Show KLAC's current ratio from FY2023 through FY2025.,3,3,1.0,True,0.3,0.3,1,0.058,derived:302|derived:278|derived:290|1249|1251|1275|1277|1262|1264|1274
+FIN-E2E-034,multi_year_trend,answer,How did LRCX's gross margin change from FY2023 through FY2025?,3,3,1.0,True,0.3,0.3,1,0.058,derived:327|derived:305|derived:316|1416|derived:329|1388|1402|derived:318|derived:328|derived:307
+FIN-E2E-035,multi_year_trend,answer,Show ENTG's free cash flow margin from FY2023 through FY2025.,3,3,1.0,True,0.3,0.3,1,0.059,derived:230|derived:208|derived:219|derived:207|derived:229|derived:218|derived:225|derived:227|derived:203|derived:205
+FIN-E2E-036,multi_year_trend,answer,How did RMBS's revenue change from FY2023 through FY2025?,3,3,1.0,True,0.3,0.3,1,0.162,9566|9539|9553|9677|9621|9649|2025|2028|9635|9593
+FIN-E2E-037,derived_metric,answer,What was NVDA's gross margin in FY2025?,1,1,1.0,True,0.1,0.1,1,0.055,derived:13|derived:2|derived:24|17|derived:15|3|115|101|derived:4|73
+FIN-E2E-038,derived_metric,answer,What was AMD's operating margin in FY2024?,1,1,1.0,True,0.1,0.1,1,0.056,derived:80|derived:91|derived:69|derived:81|derived:79|derived:92|derived:90|derived:68|derived:70|336
+FIN-E2E-039,derived_metric,answer,What was AVGO's net margin in FY2024?,1,1,1.0,True,0.1,0.1,1,0.058,derived:147|derived:158|derived:136|derived:145|derived:156|derived:146|derived:134|derived:157|derived:135|655
+FIN-E2E-040,derived_metric,answer,What was INTC's R&D intensity in FY2024?,1,1,1.0,True,0.1,0.1,5,0.058,1106|1120|1092|1204|derived:250|1190|1218|1162|1176|derived:261
+FIN-E2E-041,derived_metric,answer,What was MU's free cash flow in FY2025?,1,1,1.0,True,0.1,0.1,1,0.058,derived:342|derived:364|derived:353|derived:240|derived:262|derived:365|derived:343|derived:251|derived:444|derived:39
+FIN-E2E-042,derived_metric,answer,What was AMAT's free cash flow margin in FY2024?,1,1,1.0,True,0.1,0.1,1,0.129,derived:51|derived:62|derived:40|derived:50|derived:61|derived:39|183|derived:84|derived:117|derived:150
+FIN-E2E-043,derived_metric,answer,What was TXN's year-over-year revenue growth in FY2025?,1,1,1.0,True,0.1,0.1,1,0.041,derived:479|derived:490|2140|2155|2170|2215|2200|2230|2141|2142
+FIN-E2E-044,derived_metric,answer,What was COHR's year-over-year net income growth in FY2025?,1,1,1.0,True,0.1,0.1,1,0.165,derived:175|796|derived:187|809|823|derived:174|899|925|derived:186|886
+FIN-E2E-045,derived_metric,answer,What was KLAC's current ratio in FY2025?,1,1,1.0,True,0.1,0.1,1,0.116,derived:278|derived:290|derived:302|1249|1251|1248|derived:279|derived:270|derived:269|1340
+FIN-E2E-046,derived_metric,answer,What was LRCX's ROA in FY2025?,1,1,1.0,True,0.1,0.1,1,0.085,derived:314|derived:325|1394|1399|1386|1427|1414|1422|1390|1400
+FIN-E2E-047,derived_metric,answer,What was RMBS's ROE in FY2024?,1,1,1.0,True,0.1,0.1,1,0.112,derived:461|derived:450|2015|2021|9553|2017|2016|derived:460|2020|2013
+FIN-E2E-048,derived_metric,answer,What was COHR's fallback-derived gross profit in FY2024?,1,1,1.0,True,0.1,0.1,1,0.108,derived:179|derived:191|derived:167|925|809|823|912|derived:180|derived:192|922
+FIN-E2E-049,unsupported_abstention,abstain,Forecast NVDA's revenue for FY2030.,0,0,,,,,,0.043,15|71|1|57|113|29|141|derived:19|99|derived:8
+FIN-E2E-050,unsupported_abstention,abstain,What was ARM's net margin in FY2025?,0,0,,,,,,0.084,derived:70|derived:92|derived:81|derived:340|derived:103|derived:136|derived:307|derived:442|derived:329|derived:238
+FIN-E2E-051,unsupported_abstention,abstain,What was AAPL's revenue in FY2025?,0,0,,,,,,0.052,320|derived:74|321|390|404|376|391|377|derived:85|155
+FIN-E2E-052,unsupported_abstention,abstain,What was NVDA's dividend yield in FY2025?,0,0,,,,,,0.054,20|17|22|derived:15|derived:13|24|23|8|19|derived:21
+FIN-E2E-053,unsupported_abstention,abstain,What was NVDA's debt-to-equity ratio in FY2025?,0,0,,,,,,0.051,27|derived:21|13|111|125|83|139|69|97|55
+FIN-E2E-054,unsupported_abstention,abstain,"Which stock should I buy, NVDA or AMD?",0,0,,,,,,0.051,4|27|41|13|quote:35|125|18|32|111|153
+FIN-E2E-055,unsupported_abstention,abstain,What will AMD's stock price be tomorrow?,0,0,,,,,,0.046,quote:20|quote:20|quote:20|vendor:38|331|345|342|440|359|341
+FIN-E2E-056,unsupported_abstention,abstain,What was ASML's revenue in FY2024?,0,0,,,,,,0.191,1552|170|171|335|1537|1567|1257|1687|1256|490
+FIN-E2E-057,unsupported_abstention,abstain,What was NVDA's EBITDA in FY2025?,0,0,,,,,,0.119,20|26|19|25|22|8|24|124|6|17
+FIN-E2E-058,unsupported_abstention,abstain,Compare NVDA's and AMD's P/E ratios as of 2024-12-31.,0,0,,,,,,0.159,derived:76|derived:98|derived:32|derived:87|derived:21|derived:10|derived:92|341|derived:81|vendor:68
+FIN-E2E-059,unsupported_abstention,abstain,What was NVDA's gross margin in Q4 FY2025?,0,0,,,,,,0.146,derived:13|derived:2|derived:24|17|115|derived:15|3|101|129|143
+FIN-E2E-060,unsupported_abstention,abstain,What was the combined FY2025 revenue of every semiconductor company worldwide?,0,0,,,,,,0.092,320|321|348|334|376|322|390|404|349|335
