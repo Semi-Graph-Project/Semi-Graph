@@ -1,7 +1,7 @@
 
 from __future__ import annotations
 
-import uuid
+import time
 from typing import Literal, Optional
 
 from neo4j import Driver
@@ -45,6 +45,18 @@ CALL gds.graph.project.cypher(
     $node_query,
     $rel_query
 )
+YIELD graphName, nodeCount, relationshipCount
+RETURN graphName, nodeCount, relationshipCount
+"""
+
+_CYPHER_PROJECTION_EXISTS = """
+CALL gds.graph.exists($graph_name)
+YIELD exists
+RETURN exists
+"""
+
+_CYPHER_PROJECTION_INFO = """
+CALL gds.graph.list($graph_name)
 YIELD graphName, nodeCount, relationshipCount
 RETURN graphName, nodeCount, relationshipCount
 """
@@ -95,7 +107,158 @@ PPRGraphMode = Literal[
     "entity_chunk",
 ]
 
+PPR_PROJECTION_PREFIX = "semigraph_ppr"
 
+
+def projection_name(mode: PPRGraphMode) -> str:
+    """Return the stable GDS catalog name for one projection topology."""
+    if mode not in {"entity_only", "entity_chunk"}:
+        raise ValueError(f"Unknown PPR graph mode: {mode}")
+    return f"{PPR_PROJECTION_PREFIX}_{mode}"
+
+
+def _projection_info(session, name: str, mode: PPRGraphMode) -> dict | None:
+    exists_row = session.run(
+        _CYPHER_PROJECTION_EXISTS,
+        graph_name=name,
+    ).single()
+    if not exists_row or not exists_row["exists"]:
+        return None
+
+    info = session.run(
+        _CYPHER_PROJECTION_INFO,
+        graph_name=name,
+    ).single()
+    if info is None:
+        return None
+    return {
+        "name": info["graphName"],
+        "mode": mode,
+        "node_count": int(info["nodeCount"]),
+        "relationship_count": int(info["relationshipCount"]),
+    }
+
+
+def projection_status(
+    session,
+    mode: PPRGraphMode,
+) -> dict:
+    """Inspect a reusable GDS projection without creating it."""
+    name = projection_name(mode)
+    info = _projection_info(session, name, mode)
+    if info is None:
+        return {
+            "name": name,
+            "mode": mode,
+            "status": "missing",
+            "node_count": 0,
+            "relationship_count": 0,
+        }
+    return {**info, "status": "ready"}
+
+
+def ensure_projection(
+    session,
+    mode: PPRGraphMode,
+) -> dict:
+    """Create a named GDS projection once, then reuse it across PPR calls."""
+    started = time.perf_counter()
+    name = projection_name(mode)
+    existing = _projection_info(session, name, mode)
+    if existing is not None:
+        return {
+            **existing,
+            "status": "reused",
+            "ensure_latency_sec": round(time.perf_counter() - started, 3),
+        }
+
+    try:
+        projection = session.run(
+            _CYPHER_PROJECT,
+            graph_name=name,
+            node_query=_build_node_query(mode),
+            rel_query=_build_rel_query(mode),
+        ).single()
+    except Exception:
+        # Another worker may have created the same named projection between
+        # the existence check and project call. Reuse it only when it now
+        # exists; otherwise preserve the original database error.
+        existing = _projection_info(session, name, mode)
+        if existing is None:
+            raise
+        return {
+            **existing,
+            "status": "reused",
+            "ensure_latency_sec": round(time.perf_counter() - started, 3),
+        }
+
+    if projection is None:
+        raise RuntimeError(f"GDS did not return projection metadata for '{name}'")
+    return {
+        "name": projection["graphName"],
+        "mode": mode,
+        "status": "created",
+        "node_count": int(projection["nodeCount"]),
+        "relationship_count": int(projection["relationshipCount"]),
+        "ensure_latency_sec": round(time.perf_counter() - started, 3),
+    }
+
+
+def drop_projection(
+    session,
+    mode: PPRGraphMode,
+) -> dict:
+    """Drop a named projection explicitly; never called per query."""
+    name = projection_name(mode)
+    existing = _projection_info(session, name, mode)
+    if existing is None:
+        return {
+            "name": name,
+            "mode": mode,
+            "status": "missing",
+            "node_count": 0,
+            "relationship_count": 0,
+        }
+
+    session.run(_CYPHER_DROP, graph_name=name).consume()
+    return {**existing, "status": "dropped"}
+
+
+def refresh_projection(
+    session,
+    mode: PPRGraphMode,
+) -> dict:
+    """Rebuild a projection after the underlying Neo4j graph changes."""
+    previous = drop_projection(session, mode)
+    current = ensure_projection(session, mode)
+    return {
+        **current,
+        "status": "refreshed",
+        "previous_status": previous["status"],
+    }
+
+
+def manage_projection(
+    action: Literal["status", "prepare", "refresh", "drop"],
+    mode: PPRGraphMode,
+    cfg: Optional[Config] = None,
+) -> dict:
+    """Manage one projection using a short-lived Neo4j driver."""
+    cfg = cfg or get_config()
+    driver: Driver = get_neo4j_driver(cfg)
+    try:
+        with driver.session() as session:
+            if action == "status":
+                return projection_status(session, mode)
+            if action == "prepare":
+                return ensure_projection(session, mode)
+            if action == "refresh":
+                return refresh_projection(session, mode)
+            if action == "drop":
+                return drop_projection(session, mode)
+            raise ValueError(f"Unknown projection action: {action}")
+    finally:
+        driver.close()
 
 
 def _empty_passage_result() -> dict:
@@ -135,6 +298,57 @@ def _normalize_seed_weights(
     return [
         (node_id, weight / total_weight)
         for node_id, weight in weight_seeds
+    ]
+
+
+def _run_ppr_rows(
+    session,
+    graph_name: str,
+    weighted_seed_ids: list[tuple[int, float]],
+    *,
+    damping: float,
+    max_iterations: int,
+    seed_weight_mode: SeedWeightMode,
+) -> list[dict]:
+    """Run the unchanged PPR calculation against a reusable projection."""
+    if seed_weight_mode == "uniform":
+        source_ids = [node_id for node_id, _ in weighted_seed_ids]
+        return [
+            {"nodeId": row["nodeId"], "score": float(row["score"])}
+            for row in session.run(
+                _CYPHER_PPR,
+                graph_name=graph_name,
+                source_ids=source_ids,
+                damping=damping,
+                max_iter=max_iterations,
+            )
+        ]
+
+    # ============= Curently Version Uniform ============
+
+    combined_scores: dict[int, float] = {}
+    for seed_id, seed_weight in weighted_seed_ids:
+        rows = session.run(
+            _CYPHER_PPR,
+            graph_name=graph_name,
+            source_ids=[seed_id],
+            damping=damping,
+            max_iter=max_iterations,
+        )
+        for row in rows:
+            node_id = row["nodeId"]
+            combined_scores[node_id] = (
+                combined_scores.get(node_id, 0.0)
+                + float(row["score"]) * seed_weight
+            )
+
+    return [
+        {"nodeId": node_id, "score": score}
+        for node_id, score in sorted(
+            combined_scores.items(),
+            key=lambda item: item[1],
+            reverse=True,
+        )
     ]
 
 
@@ -249,15 +463,13 @@ def run_passage_ppr(
     seed_weight_mode: SeedWeightMode = "uniform",
     cfg: Optional[Config] = None,
 ) -> dict:
-    """Run PPR over Entity and Chunk nodes and return ranked passages."""
+    """Run PPR over a reusable Entity+Chunk projection."""
     if not seeds:
         print("[run_passage_ppr] No seeds provided.")
         return _empty_passage_result()
 
     cfg = cfg or get_config()
     driver: Driver = get_neo4j_driver(cfg)
-    graph_name = f"ppr_{uuid.uuid4().hex[:8]}"
-
     try:
         with driver.session() as session:
             id_rows = list(session.run(
@@ -268,8 +480,7 @@ def run_passage_ppr(
                         "type": seed["type"],
                     }
                     for seed in seeds
-                ]
-
+                ],
             ))
 
             seed_lookup = {
@@ -288,59 +499,30 @@ def run_passage_ppr(
                 return _empty_passage_result()
             weighted_seed_ids = _normalize_seed_weights(weighted_seed_ids)
 
-            try:
-                proj = session.run(
-                    _CYPHER_PROJECT,
-                    graph_name=graph_name,
-                    node_query=_build_node_query("entity_chunk"),
-                    rel_query=_build_rel_query("entity_chunk"),
-                ).single()
-                print(f"[run_passage_ppr] Projected '{graph_name}': "
-                      f"{proj['nodeCount']} nodes, "
-                      f"{proj['relationshipCount']} relationships")
+            projection = ensure_projection(
+                session,
+                "entity_chunk",
+            )
+            graph_name = projection["name"]
+            ppr_started = time.perf_counter()
+            ppr_rows = _run_ppr_rows(
+                session,
+                graph_name,
+                weighted_seed_ids,
+                damping=damping,
+                max_iterations=max_iterations,
+                seed_weight_mode=seed_weight_mode,
+            )
+            projection["ppr_latency_sec"] = round(
+                time.perf_counter() - ppr_started,
+                3,
+            )
 
-                if seed_weight_mode == "uniform":
-                    source_ids = [node_id for node_id, _ in weighted_seed_ids]
-                    ppr_rows = list(session.run(
-                        _CYPHER_PPR,
-                        graph_name=graph_name,
-                        source_ids=source_ids,
-                        damping=damping,
-                        max_iter=max_iterations,
-                    ))
-                else:
-                    combined_scores: dict[int, float] = {}
-                    for seed_id, seed_weight in weighted_seed_ids:
-                        rows = session.run(
-                            _CYPHER_PPR,
-                            graph_name=graph_name,
-                            source_ids=[seed_id],
-                            damping=damping,
-                            max_iter=max_iterations,
-                        )
-                        for row in rows:
-                            node_id = row["nodeId"]
-                            weighted_score = float(row["score"]) * seed_weight
-                            combined_scores[node_id] = (
-                                combined_scores.get(node_id, 0) + weighted_score
-                            )
-                    ppr_rows = [
-                        {"nodeId": node_id, "score": score}
-                        for node_id, score in combined_scores.items()
-                    ]
-                    ppr_rows.sort(key=lambda row: row["score"], reverse=True)
-            finally:
-                session.run(_CYPHER_DROP, graph_name=graph_name).consume()
             chunk_node_ids = {
                 row["id"]
                 for row in session.run(_CYPHER_CHUNK_NODE_IDS)
             }
 
-            top_chunk_rows = _top_chunk_score_rows(
-                ppr_rows,
-                chunk_node_ids,
-                top_k_chunks,
-            )
 
             entity_score_rows = sorted(
                 (
@@ -368,6 +550,12 @@ def run_passage_ppr(
                 if row["nodeId"] in id_to_entity
             ]
 
+            # ============= Chunk Query ===============
+            top_chunk_rows = _top_chunk_score_rows(
+                ppr_rows,
+                chunk_node_ids,
+                top_k_chunks,
+            )
             chunk_ids = [row["nodeId"] for row in top_chunk_rows]
             property_rows = list(session.run(_CYPHER_MAP_CHUNKS, ids=chunk_ids))
             id_to_chunk = {row["id"]: dict(row) for row in property_rows}
@@ -388,13 +576,8 @@ def run_passage_ppr(
             return {
                 "chunks": chunks,
                 "ppr_entities": top_entities,
-                "projection": {
-                    "node_count": proj["nodeCount"],
-                    "relationship_count": proj["relationshipCount"],
-                },
+                "projection": projection,
             }
-
-
     finally:
         driver.close()
 
@@ -407,7 +590,7 @@ def run_ppr(
     seed_weight_mode: SeedWeightMode = "uniform",
     cfg: Optional[Config] = None,
 ) -> list[dict]:
-    """Run Personalized PageRank from `seeds` and return top-k entities.
+    """Run Personalized PageRank over a reusable Entity-only projection.
 
     Args:
         seeds: Output of `query_to_seeds()` / `query_to_triple_seeds()`.
@@ -421,23 +604,17 @@ def run_ppr(
         List of dicts sorted by PPR score desc, each: [`{name, type, score}`, ...].
         Empty list if seeds is empty or no seed name maps to a graph entity.
 
-    Raises:
-        neo4j.exceptions.* — DB errors propagate; the in-memory projection
-        is still dropped via the inner `finally`.
+    The named GDS projection is retained between calls. Call
+    `refresh_projection()` after the underlying Neo4j graph changes.
     """
     if not seeds:
         print("[run_ppr] No seeds provided.")
         return []
 
-    seed_names: list[str] = [s["name"] for s in seeds]
-
     cfg = cfg or get_config()
     driver: Driver = get_neo4j_driver(cfg)
-    graph_name = f"ppr_{uuid.uuid4().hex[:8]}"
-
     try:
         with driver.session() as session:
-            # Map each seed to its typed Entity node id.
             id_rows = list(session.run(
                 _CYPHER_MAP_ID,
                 seeds=[
@@ -449,7 +626,7 @@ def run_ppr(
                 ]
             ))
             seed_lookup = {
-               (seed["name"], seed["type"]): seed
+                (seed["name"], seed["type"]): seed
                 for seed in seeds
             }
             weighted_seed_ids = []
@@ -463,55 +640,18 @@ def run_ppr(
                 return []
             weighted_seed_ids = _normalize_seed_weights(weighted_seed_ids)
 
-            try:
-                proj = session.run(
-                    _CYPHER_PROJECT,
-                    graph_name=graph_name,
-                    node_query=_build_node_query("entity_only"),
-                    rel_query=_build_rel_query("entity_only"),
-                ).single()
-                print(f"[run_ppr] Projected '{graph_name}': "
-                      f"{proj['nodeCount']} nodes, "
-                      f"{proj['relationshipCount']} relationships")
-
-
-                # print(f"[run_ppr] PPR over {len(seed_ids)} seeds "
-                #       f"(damping={damping}, max_iter={max_iterations}, teleport=uniform)")
-                if seed_weight_mode == "uniform":
-                    source_ids = [node_id for node_id, _ in weighted_seed_ids]
-                    ppr_rows = list(session.run(
-                        _CYPHER_PPR,
-                        graph_name=graph_name,
-                        source_ids=source_ids,
-                        damping=damping,
-                        max_iter=max_iterations,
-                    ))
-                else:
-                    combined_scores: dict[int, float] = {}
-                    for seed_id, seed_weight in weighted_seed_ids:
-                        rows = session.run(
-                            _CYPHER_PPR,
-                            graph_name=graph_name,
-                            source_ids=[seed_id],
-                            damping=damping,
-                            max_iter=max_iterations,
-                        )
-                        for row in rows:
-                            node_id = row["nodeId"]
-                            weighted_score = float(row["score"]) * seed_weight
-                            combined_scores[node_id] = (
-                                combined_scores.get(node_id, 0) + weighted_score
-                            )
-                    ppr_rows = [
-                        {"nodeId": node_id, "score": score}
-                        for node_id, score in combined_scores.items()
-                    ]
-                    ppr_rows.sort(key=lambda row: row["score"], reverse=True)
-                    
-
-
-            finally:
-                session.run(_CYPHER_DROP, graph_name=graph_name).consume()
+            projection = ensure_projection(
+                session,
+                "entity_only",
+            )
+            ppr_rows = _run_ppr_rows(
+                session,
+                projection["name"],
+                weighted_seed_ids,
+                damping=damping,
+                max_iterations=max_iterations,
+                seed_weight_mode=seed_weight_mode,
+            )
 
             top_rows = ppr_rows[:top_k]
             node_ids = [row["nodeId"] for row in top_rows]
