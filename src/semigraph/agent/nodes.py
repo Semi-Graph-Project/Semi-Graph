@@ -12,11 +12,18 @@ from semigraph.agent.prompts import (
 )
 from semigraph.agent.state import AgentState
 from semigraph.agent.tools import DEFAULT_TOP_K, RETRIEVERS, TOOL_SCHEMAS
-from semigraph.config import get_config
+from semigraph.config import Config, get_config
 from semigraph.connections import get_llm
+
+from pydantic import ValidationError
+from semigraph.agent.contracts import PlanRouteOutput
+from semigraph.agent.prompts import PLAN_ROUTE_SYSTEM_PROMPT
+
+
 
 
 MAX_REFLECTION_ROUNDS = 3
+MAX_PLAN_ROUTE_ATTEMPTS = 2
 
 FINANCIAL_METRIC_PATTERNS = (
     r"\brevenue\b",
@@ -61,6 +68,218 @@ EXPLICIT_NEWS_PATTERNS = (
     r"ประกาศ",
     r"บทความ",
 )
+
+def _parse_plan_route_response(raw: str) -> PlanRouteOutput:
+    """
+    Parse the raw response from the LLM for the plan route node.
+
+    Args:
+        raw (str): The raw string response from the LLM.
+
+    Returns:
+        PlanRouteOutput: Validated plan route output.
+    """
+    content = raw.strip()
+    content = content[content.find("{") : content.rfind("}") + 1]
+
+    try:
+        payload = json.loads(content)
+        if not isinstance(payload, dict):
+            raise ValueError("Parsed JSON is not a dictionary.")
+        # create + validate PlanRouteOutput
+        return PlanRouteOutput.model_validate(payload)
+
+    except (json.JSONDecodeError, ValidationError, ValueError) as e:
+        raise ValueError(f"Failed to parse and validate plan route response: {e}")
+
+
+def _collect_plan_warnings(
+    original_query: str,
+    plan: PlanRouteOutput,
+    cfg: Config,
+) -> list[dict]:
+    """Report explicit query anchors that disappeared from a valid plan.
+
+    This is a conservative diagnostic check. It never changes or rejects the
+    plan; semantic validation remains the planner's responsibility.
+    """
+
+    def normalize(text: str) -> str:
+        return re.sub(r"[_\-\s]+", " ", text).strip().casefold()
+
+    def contains_phrase(text: str, phrase: str) -> bool:
+        return bool(re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", text))
+
+    plan_parts: list[str] = []
+    for task in plan.tasks:
+        plan_parts.append(task.query)
+        plan_parts.extend(requirement.description for requirement in task.requirements)
+        plan_parts.append(task.initial_action.query)
+
+
+    plan_text = " ".join(plan_parts)
+    normalized_query = normalize(original_query)
+    normalized_plan = normalize(plan_text)
+    warnings: list[dict] = []
+
+    for ticker in cfg.tickers:
+        ticker_text = normalize(ticker)
+        if (
+            contains_phrase(normalized_query, ticker_text)
+            and not contains_phrase(normalized_plan, ticker_text)
+        ):
+            warnings.append({
+                "code": "missing_explicit_anchor",
+                "anchor_type": "ticker",
+                "value": ticker,
+            })
+
+    period_pattern = re.compile(
+        r"\b(?:fy\s*(?:19|20)\d{2}|(?:19|20)\d{2}|q[1-4])\b",
+        re.IGNORECASE,
+    )
+
+    def extract_periods(text: str) -> list[tuple[str, str]]:
+        periods: list[tuple[str, str]] = []
+        seen_keys: set[str] = set()
+        for match in period_pattern.finditer(text):
+            display_value = re.sub(r"\s+", "", match.group()).upper()
+            comparison_key = (
+                display_value[2:] if display_value.startswith("FY") else display_value
+            )
+            if comparison_key not in seen_keys:
+                periods.append((comparison_key, display_value))
+                seen_keys.add(comparison_key)
+        return periods
+
+    plan_periods = {key for key, _ in extract_periods(plan_text)}
+    for comparison_key, display_value in extract_periods(original_query):
+        if comparison_key not in plan_periods:
+            warnings.append({
+                "code": "missing_explicit_anchor",
+                "anchor_type": "period",
+                "value": display_value,
+            })
+
+    registered_metrics = sorted({
+        metric
+        for metric_group in cfg.financial_metric_registry.values()
+        for metric in metric_group
+    })
+    for metric in registered_metrics:
+        metric_text = normalize(metric)
+        if (
+            contains_phrase(normalized_query, metric_text)
+            and not contains_phrase(normalized_plan, metric_text)
+        ):
+            warnings.append({
+                "code": "missing_explicit_anchor",
+                "anchor_type": "metric",
+                "value": metric,
+            })
+
+    return warnings
+
+
+def plan_route_node(state: AgentState) -> dict:
+    print(f"Node : Plan Route Node")
+    started_at = time.perf_counter()
+    original_query = state.get("original_query", "")
+    attempts: list[dict] = []
+    llm_calls = 0
+
+    def error_update(fallback_source: str) -> dict:
+        return {
+            "tasks": [],
+            "current_task_index": 0,
+            "current_action": {},
+            "stop_reason": "plan_error",
+            "plan_trace": {
+                "status": "error",
+                "validation_mode": "structural_only_v1",
+                "attempts": attempts,
+                "warnings": [],
+                "llm_calls": llm_calls,
+                "latency_sec": time.perf_counter() - started_at,
+                "fallback_source": fallback_source,
+            },
+        }
+
+    if not isinstance(original_query, str) or not original_query.strip():
+        return error_update("empty_query")
+
+    original_query = original_query.strip()
+    cfg = get_config()
+    llm = get_llm(cfg)
+    previous_raw = ""
+    previous_error = ""
+
+    for attempt_number in range(1, MAX_PLAN_ROUTE_ATTEMPTS + 1):
+        user_message = original_query
+        if attempt_number > 1:
+            user_message = (
+                f"Original query:\n{original_query}\n\n"
+                f"Previous invalid output:\n{previous_raw}\n\n"
+                f"Validation error:\n{previous_error}\n\n"
+                "Repair the plan and return only valid JSON matching the required schema."
+            )
+
+        try:
+            llm_calls += 1
+            response = llm.invoke([
+                {"role": "system", "content": PLAN_ROUTE_SYSTEM_PROMPT},
+                {"role": "user", "content": user_message},
+            ])
+        except Exception as exc:
+            attempts.append({
+                "attempt": attempt_number,
+                "status": "provider_error",
+                "errors": [type(exc).__name__],
+            })
+            return error_update("provider_error")
+
+        raw = response.content if hasattr(response, "content") else str(response)
+        if not isinstance(raw, str):
+            raw = str(raw)
+
+        try:
+            plan_route = _parse_plan_route_response(raw)
+        except ValueError as e:
+            attempts.append({
+                "attempt": attempt_number,
+                "status": "invalid",
+                "errors": ["plan_response_failed_validation"],
+            })
+            previous_raw = raw
+            previous_error = str(e)
+            if attempt_number == MAX_PLAN_ROUTE_ATTEMPTS:
+                return error_update("validation_failed_after_repair")
+            continue
+
+        attempts.append({
+            "attempt": attempt_number,
+            "status": "valid",
+            "errors": [],
+        })
+        warnings = _collect_plan_warnings(original_query, plan_route, cfg)
+        serialized = plan_route.model_dump(mode="json")
+
+        return {
+            "tasks": serialized["tasks"],
+            "current_task_index": 0,
+            "current_action": serialized["tasks"][0]["initial_action"],
+            "plan_trace": {
+                "status": "ok" if attempt_number == 1 else "repaired",
+                "validation_mode": "structural_only_v1",
+                "attempts": attempts,
+                "warnings": warnings,
+                "llm_calls": llm_calls,
+                "latency_sec": time.perf_counter() - started_at,
+                "fallback_source": None,
+            },
+        }
+
+    return error_update("validation_failed_after_repair")
 
 
 def plan_node(state: AgentState) -> dict:
@@ -1137,36 +1356,3 @@ def _remove_invalid_citations(answer: str, valid_indices: set[int]) -> str:
     sanitized = re.sub(r"\s+([.,;:])", r"\1", sanitized)
     sanitized = re.sub(r"[ \t]{2,}", " ", sanitized)
     return sanitized.strip()
-
-
-if __name__ == "__main__":
-    s = AgentState(original_query="What is The real Moat of Nvidia that it's make they win in AI Era?")
-
-    plan_node_res = plan_node(s)
-    s.update(plan_node_res)
-    
-    print("== PLAN RES ==")
-    print(plan_node_res)
-
-    print("\n Current State ======")
-    print(s)
-
-    print("-----------\n\n")
-
-    tool_select_node_res = tool_select_node(s)
-    s.update(tool_select_node_res)
-    
-    print("== TOOL SELECT RES ==")
-    print(tool_select_node_res)
-
-    print("\n Current State ======")
-    print(s)
-
-    execute_node_res = execute_node(s)
-    s.update(execute_node_res)
-    
-    print("== EXECUTE NODE RES ==")
-    print(s["latest_chunks"])
-
-
-    print("-----------\n\n")

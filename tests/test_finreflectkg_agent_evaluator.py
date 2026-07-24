@@ -1,6 +1,7 @@
 """Unit tests for the FinReflectKG Agent evaluator."""
 
 import json
+import pytest
 
 import yaml
 
@@ -22,6 +23,7 @@ from scripts.evaluate_retrieval_quality import (
     _score_group_result as phase_t_score_groups,
 )
 from scripts.evaluate_retrieval_quality import _score_result as phase_t_score_chunks
+from semigraph.agent.contracts import AgentState
 
 
 def test_chunk_scoring_matches_phase_t_evaluator():
@@ -357,3 +359,28 @@ def test_resume_retries_error_and_replaces_same_unit(tmp_path, monkeypatch):
     assert attempts == 2
     assert len(records) == 1
     assert records[("Q1", "agent_vector")][0]["status"] == "ok"
+
+
+
+from scripts.evaluate_finreflectkg_agent import (
+    MODES,
+    build_evaluation_agent,
+)
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_all_evaluation_modes_compile_without_running_external_services(mode):
+    graph = build_evaluation_agent(mode, top_k=5)
+
+    assert graph is not None
+
+
+def test_agent_state_declares_plan_route_fields():
+    expected_fields = {
+        "tasks",
+        "current_task_index",
+        "current_action",
+        "plan_trace",
+    }
+
+    assert expected_fields <= set(AgentState.__annotations__)
