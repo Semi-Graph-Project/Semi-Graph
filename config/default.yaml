@@ -100,6 +100,13 @@ agent_retrieval:
     ppr_graph_mode: "entity_chunk"
     triple_filter: "llm"
 
+# Agent harness budgets. Keep operational limits in config rather than Prompt.
+agent_harness:
+  max_attempts_per_task: 3
+  max_assessment_attempts: 2
+  max_technical_retries: 1
+  assess_context_max_chars: 12000
+
 # KG Extraction
 kg:
   max_workers: 16

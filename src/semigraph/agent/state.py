@@ -1,5 +1,7 @@
 from typing import TypedDict
 
+from semigraph.agent.contracts import AttemptRecord
+
 
 class AgentState(TypedDict, total=False):
     """Shared state passed between agent nodes.
@@ -29,6 +31,11 @@ class AgentState(TypedDict, total=False):
     current_task_index: int
     current_action: dict
     plan_trace: dict
+    attempts: list[AttemptRecord]
+    evidence_pool: list[dict]
+    accepted_evidence: list[dict]
+    requirement_coverage: dict[str, dict]
+
 
     subqueries: list[str]
     current_subquery_idx: int

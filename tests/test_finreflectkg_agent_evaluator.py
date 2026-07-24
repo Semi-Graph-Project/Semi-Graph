@@ -23,7 +23,7 @@ from scripts.evaluate_retrieval_quality import (
     _score_group_result as phase_t_score_groups,
 )
 from scripts.evaluate_retrieval_quality import _score_result as phase_t_score_chunks
-from semigraph.agent.contracts import AgentState
+from semigraph.agent.state import AgentState
 
 
 def test_chunk_scoring_matches_phase_t_evaluator():

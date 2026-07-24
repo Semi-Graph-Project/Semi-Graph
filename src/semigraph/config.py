@@ -167,6 +167,38 @@ class Config:
             "graph": dict(agent_retrieval.get("graph", {})),
         }
 
+        # --- Agent harness budgets ---
+        agent_harness = data.get("agent_harness", {})
+        self.agent_max_attempts_per_task: int = int(
+            agent_harness.get("max_attempts_per_task", 3)
+        )
+        if not 1 <= self.agent_max_attempts_per_task <= 3:
+            raise ValueError("agent_harness.max_attempts_per_task must be 1..3")
+
+        self.agent_max_assessment_attempts: int = int(
+            agent_harness.get("max_assessment_attempts", 2)
+        )
+        if not 1 <= self.agent_max_assessment_attempts <= 2:
+            raise ValueError(
+                "agent_harness.max_assessment_attempts must be 1..2"
+            )
+
+        self.agent_max_technical_retries: int = int(
+            agent_harness.get("max_technical_retries", 1)
+        )
+        if not 0 <= self.agent_max_technical_retries <= 3:
+            raise ValueError(
+                "agent_harness.max_technical_retries must be 0..3"
+            )
+
+        self.agent_assess_context_max_chars: int = int(
+            agent_harness.get("assess_context_max_chars", 12000)
+        )
+        if self.agent_assess_context_max_chars < 2000:
+            raise ValueError(
+                "agent_harness.assess_context_max_chars must be >= 2000"
+            )
+
         # --- Financial PostgreSQL (Phase F.v2) ---
         financial = data.get("financial", {})
         self.financial_backend: str = financial.get("backend", "postgresql")
