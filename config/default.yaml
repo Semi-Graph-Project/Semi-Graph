@@ -9,6 +9,7 @@ edgar:
 # Tickers in corpus — auto-synced from Neo4j by `scripts/pilot.py` (DB = source
 # of truth). _ticker.py CORPUS_TICKERS derives from this list. Do not edit by hand.
 tickers:
+  - ADI
   - AMAT
   - AMD
   - AMKR
@@ -18,8 +19,10 @@ tickers:
   - INTC
   - KLAC
   - LRCX
+  - MRVL
   - MU
   - NVDA
+  - ON
   - QCOM
   - RMBS
   - TXN
@@ -105,7 +108,7 @@ agent_harness:
   max_attempts_per_task: 3
   max_assessment_attempts: 2
   max_technical_retries: 1
-  assess_context_max_chars: 12000
+  assess_context_max_chars: 60000
 
 # KG Extraction
 kg:
@@ -159,6 +162,7 @@ graph_repair:
     QCOM: "qualcomm"
     RMBS: "rambus"
     TXN: "texas instruments"
+    MRVL: "marvell"
 
 # News tool (Phase E.v1 — Finnhub News API)
 news:

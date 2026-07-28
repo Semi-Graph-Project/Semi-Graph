@@ -16,7 +16,11 @@ from semigraph.config import Config, get_config
 from semigraph.connections import get_llm
 
 from pydantic import ValidationError
-from semigraph.agent.contracts import PlanRouteOutput
+from semigraph.agent.contracts import (
+    AssessmentOutput,
+    PlanRouteOutput,
+    RetrievalAction,
+)
 from semigraph.agent.prompts import PLAN_ROUTE_SYSTEM_PROMPT
 
 
@@ -68,6 +72,23 @@ EXPLICIT_NEWS_PATTERNS = (
     r"ประกาศ",
     r"บทความ",
 )
+
+
+def _is_transient_retrieval_error(exc: Exception) -> bool:
+    if isinstance(exc, (TimeoutError, ConnectionError)):
+        return True
+
+    return type(exc).__name__ in {
+        "ServiceUnavailable",
+        "SessionExpired",
+        "ReadTimeout",
+        "ConnectTimeout",
+        "TimeoutException",
+        "ConnectError",
+        "RemoteProtocolError",
+    }
+
+
 
 def _parse_plan_route_response(raw: str) -> PlanRouteOutput:
     """
@@ -411,6 +432,386 @@ def tool_select_node(state: AgentState) -> dict:
     except Exception as e:
         print(f"Error during tool selection: {e}")
         return fallback
+
+def execute_attempt_node(state: AgentState) -> dict:
+    """Validate the current Task/Action before a retrieval attempt.
+
+    This stage validates the input and performs one raw Retriever dispatch.
+    Attempt persistence and technical retry are added in the next step.
+    """
+    tasks = state.get("tasks") or []
+    current_index = state.get("current_task_index")
+    attempts = state.get("attempts") or []
+
+    if (
+        not isinstance(tasks, list)
+        or not isinstance(current_index, int)
+        or not 0 <= current_index < len(tasks)
+        or not isinstance(attempts, list)
+    ):
+        return {"current_action": {}, "stop_reason": "unsupported"}
+
+    task = tasks[current_index]
+    task_id = task.get("task_id") if isinstance(task, dict) else None
+    if not task_id:
+        return {"current_action": {}, "stop_reason": "unsupported"}
+
+    try:
+        action = RetrievalAction.model_validate(state.get("current_action"))
+    except (ValidationError, TypeError, ValueError):
+        return {"current_action": {}, "stop_reason": "unsupported"}
+
+    attempt_number = 1 + sum(
+        1
+        for attempt in attempts
+        if isinstance(attempt, dict) and attempt.get("task_id") == task_id
+    )
+
+    cfg = get_config()
+    retriever = RETRIEVERS[action.tool.value]
+    technical_tries = []
+    retriever_result = None
+    last_error_type = None
+
+    for technical_try in range(1, cfg.agent_max_technical_retries + 2):
+        started_at = time.perf_counter()
+        try:
+            retriever_result = retriever(
+                query=action.query,
+                top_k_chunks=action.top_k_chunks,
+                cfg=cfg,
+            )
+            technical_tries.append(
+                {
+                    "technical_try": technical_try,
+                    "status": "ok",
+                    "latency_sec": round(time.perf_counter() - started_at, 3),
+                    "error_type": None,
+                }
+            )
+            break
+        except Exception as exc:
+            last_error_type = type(exc).__name__
+            technical_tries.append(
+                {
+                    "technical_try": technical_try,
+                    "status": "error",
+                    "latency_sec": round(time.perf_counter() - started_at, 3),
+                    "error_type": type(exc).__name__,
+                }
+            )
+            if not _is_transient_retrieval_error(exc):
+                break
+
+    if retriever_result is None:
+        retrieval_trace = {
+            "status": "terminal",
+            "error_type": last_error_type,
+            "technical_tries": technical_tries,
+        }
+        attempt = {
+            "attempt_id": f"{task_id}-A{attempt_number}",
+            "task_id": task_id,
+            "attempt_number": attempt_number,
+            "action": action.model_dump(mode="json"),
+            "retrieval_status": "tool_error",
+            "chunks": [],
+            "retrieval_trace": retrieval_trace,
+            "assessment": None,
+        }
+        return {
+            "attempts": [*attempts, attempt],
+            "current_action": {},
+            "attempt_number": attempt_number,
+            "retrieval_result": None,
+            "retrieval_trace": retrieval_trace,
+            "stop_reason": "tool_error",
+        }
+
+    if isinstance(retriever_result, dict):
+        raw_chunks = retriever_result.get("chunks") or []
+        raw_trace = retriever_result.get("trace")
+        retriever_trace = dict(raw_trace) if isinstance(raw_trace, dict) else {}
+    elif isinstance(retriever_result, list):
+        raw_chunks = retriever_result
+        retriever_trace = {}
+    else:
+        raw_chunks = []
+        retriever_trace = {}
+
+    chunks = [item for item in raw_chunks if isinstance(item, dict)]
+    old_evidence_pool = list(state.get("evidence_pool") or [])
+    evidence_pool = (
+        _dedupe_chunks_for_synthesis([*old_evidence_pool, *chunks])
+        if chunks
+        else old_evidence_pool
+    )
+    retrieval_trace = {
+        **retriever_trace,
+        "technical_tries": technical_tries,
+    }
+    attempt = {
+        "attempt_id": f"{task_id}-A{attempt_number}",
+        "task_id": task_id,
+        "attempt_number": attempt_number,
+        "action": action.model_dump(mode="json"),
+        "retrieval_status": "ok",
+        "chunks": chunks,
+        "retrieval_trace": retrieval_trace,
+        "assessment": None,
+    }
+
+    return {
+        "attempts": [*attempts, attempt],
+        "evidence_pool": evidence_pool,
+        "current_action": action.model_dump(mode="json"),
+        "attempt_number": attempt_number,
+        "retrieval_result": {"chunks": chunks, "trace": retriever_trace},
+        "retrieval_trace": retrieval_trace,
+        "stop_reason": None,
+    }
+
+
+def _chunk_preview(
+    chunk: dict,
+    text_limit: int | None = None,
+) -> dict:
+    """Return Assess-facing chunk data without mutating the raw chunk.
+
+    Current evidence uses the full text by leaving ``text_limit`` unset.
+    Historical accepted evidence can pass a smaller explicit limit.
+    """
+    if text_limit is not None and text_limit < 0:
+        raise ValueError("text_limit must be non-negative")
+
+    metadata_fields = (
+        "chunk_id",
+        "rank",
+        "original_rank",
+        "score",
+        "rerank_score",
+        "ticker",
+        "fiscal_year",
+        "fiscal_quarter",
+        "period_end",
+        "section",
+        "metric",
+        "value",
+        "unit",
+        "frequency",
+        "source_kind",
+        "published_at",
+        "source_url",
+    )
+    preview = {
+        field: chunk[field]
+        for field in metadata_fields
+        if chunk.get(field) is not None
+    }
+    text = str(chunk.get("text") or "")
+    preview["text"] = text if text_limit is None else text[:text_limit]
+    return preview
+
+
+def _compact_assess_diagnostics(trace: dict) -> dict:
+    """Keep only retrieval diagnostics that help Assess make a decision."""
+    fields = (
+        "status",
+        "reason",
+        "abort_reason",
+        "returned_chunk_ids",
+        "seed_count",
+        "candidate_count",
+        "error_type",
+    )
+    diagnostics = {
+        field: trace[field]
+        for field in fields
+        if trace.get(field) is not None
+    }
+
+    seeds = [item for item in trace.get("seeds", []) if isinstance(item, dict)]
+    if seeds:
+        diagnostics["seeds"] = seeds[:5]
+
+    triple_filter = trace.get("triple_filter")
+    if isinstance(triple_filter, dict):
+        selected_triples = [
+            item
+            for item in triple_filter.get("selected_triples", [])
+            if isinstance(item, dict)
+        ][:5]
+        compact_filter = {
+            "reason": triple_filter.get("reason"),
+            "selected_triples": selected_triples,
+        }
+        diagnostics["triple_filter"] = {
+            field: value
+            for field, value in compact_filter.items()
+            if value is not None
+        }
+
+    return diagnostics
+
+
+def _build_assess_context(state: AgentState, cfg: Config) -> str:
+    """Build a bounded Assess context without exposing old raw chunks."""
+    tasks = state.get("tasks") or []
+    current_index = state.get("current_task_index", 0)
+    current_task = (
+        tasks[current_index]
+        if isinstance(current_index, int) and 0 <= current_index < len(tasks)
+        else {}
+    )
+    task_id = (
+        current_task.get("task_id")
+        if isinstance(current_task, dict)
+        else None
+    )
+    task_attempts = [
+        attempt
+        for attempt in (state.get("attempts") or [])
+        if isinstance(attempt, dict) and attempt.get("task_id") == task_id
+    ]
+    latest_attempt = task_attempts[-1] if task_attempts else {}
+    latest_chunks = [
+        _chunk_preview(chunk)
+        for chunk in (latest_attempt.get("chunks") or [])
+        if isinstance(chunk, dict)
+    ]
+    latest_chunk_ids = {
+        chunk.get("chunk_id")
+        for chunk in (latest_attempt.get("chunks") or [])
+        if isinstance(chunk, dict) and chunk.get("chunk_id")
+    }
+    accepted_evidence = [
+        chunk
+        for chunk in (state.get("accepted_evidence") or [])
+        if isinstance(chunk, dict)
+        and chunk.get("chunk_id") not in latest_chunk_ids
+    ][-9:]
+    prior_attempts = [
+        {
+            "attempt_id": attempt.get("attempt_id"),
+            "action": attempt.get("action"),
+            "retrieval_status": attempt.get("retrieval_status"),
+            "returned_chunk_ids": [
+                chunk.get("chunk_id")
+                for chunk in (attempt.get("chunks") or [])
+                if isinstance(chunk, dict) and chunk.get("chunk_id")
+            ],
+        }
+        for attempt in task_attempts[:-1]
+    ]
+
+    context = {
+        "original_query": state.get("original_query", ""),
+        "current_task": current_task,
+        "current_action": latest_attempt.get("action")
+        or state.get("current_action", {}),
+        "latest_chunks": latest_chunks,
+        "requirement_coverage": state.get("requirement_coverage", {}),
+        "accepted_evidence": [
+            _chunk_preview(chunk, text_limit=240)
+            for chunk in accepted_evidence
+        ],
+        "prior_attempts": prior_attempts,
+        "latest_diagnostics": _compact_assess_diagnostics(
+            latest_attempt.get("retrieval_trace", {})
+            if isinstance(latest_attempt.get("retrieval_trace"), dict)
+            else {}
+        ),
+    }
+
+    max_chars = cfg.agent_assess_context_max_chars
+    serialized = json.dumps(context, ensure_ascii=False, separators=(",", ":"))
+
+    while len(serialized) > max_chars and context["prior_attempts"]:
+        context["prior_attempts"].pop(0)
+        serialized = json.dumps(
+            context, ensure_ascii=False, separators=(",", ":")
+        )
+        
+    while len(serialized) > max_chars and context["accepted_evidence"]:
+        context["accepted_evidence"].pop(0)
+        serialized = json.dumps(
+            context, ensure_ascii=False, separators=(",", ":")
+        )
+
+
+    while len(serialized) > max_chars:
+        for chunk in reversed(context["latest_chunks"]):
+            text = chunk.get("text", "")
+            if text:
+                excess = len(serialized) - max_chars
+                chunk["text"] = text[: max(0, len(text) - max(1, excess))]
+                break
+        else:
+            raise ValueError("Required Assess context exceeds configured limit")
+        serialized = json.dumps(
+
+            
+            context, ensure_ascii=False, separators=(",", ":")
+        )
+
+    return serialized
+
+
+def _parse_assessment_response(raw: str) -> AssessmentOutput:
+    """Parse one optional JSON fence and validate the Assess contract."""
+    if not isinstance(raw, str):
+        raise TypeError("Assessment response must be a string")
+
+    content = raw.strip()
+    lines = content.splitlines()
+    if (
+        len(lines) >= 2
+        and lines[0].strip().casefold() in {"```", "```json"}
+        and lines[-1].strip() == "```"
+    ):
+        content = "\n".join(lines[1:-1]).strip()
+
+    payload = json.loads(content)
+    if not isinstance(payload, dict):
+        raise TypeError("Assessment response root must be a JSON object")
+
+    return AssessmentOutput.model_validate(payload)
+
+
+def _normalize_assessment_error(
+    error: Exception | list[dict],
+) -> list[dict]:
+    """Return repair-safe errors without raw model output."""
+    if isinstance(error, list):
+        return [dict(item) for item in error]
+
+    if isinstance(error, json.JSONDecodeError):
+        return [{"code": "invalid_json"}]
+
+    if isinstance(error, ValidationError):
+        return [
+            {
+                "code": "schema_validation_error",
+                "loc": list(item["loc"]),
+                "type": item["type"],
+            }
+            for item in error.errors(
+                include_url=False,
+                include_context=False,
+                include_input=False,
+            )
+        ]
+
+    if isinstance(error, (TypeError, ValueError)):
+        return [{"code": "invalid_assessment_root"}]
+
+    return [
+        {
+            "code": "assessment_error",
+            "type": type(error).__name__,
+        }
+    ]
+
 
 def execute_node(state: AgentState) -> dict:
     """Run the tool selected by tool_select_node and persist its outputs.
@@ -1356,3 +1757,77 @@ def _remove_invalid_citations(answer: str, valid_indices: set[int]) -> str:
     sanitized = re.sub(r"\s+([.,;:])", r"\1", sanitized)
     sanitized = re.sub(r"[ \t]{2,}", " ", sanitized)
     return sanitized.strip()
+
+
+if __name__ == "__main__":
+    from pprint import pprint
+
+    mock_plan = PlanRouteOutput.model_validate(
+        {
+            "tasks": [
+                {
+                    "task_id": "T1",
+                    "query": "What evidence explains NVDA FY2024 operating risk?",
+                    "requirements": [
+                        {
+                            "requirement_id": "R1",
+                            "description": (
+                                "Identify evidence describing NVDA FY2024 "
+                                "operating risk."
+                            ),
+                        }
+                    ],
+                    "initial_action": {
+                        "tool": "graph",
+                        "query": "NVDA FY2024 operating risk",
+                        "top_k_chunks": 5,
+                    },
+                }
+            ]
+        }
+    )
+    first_task = mock_plan.tasks[0]
+    workbench_state: AgentState = {
+        "original_query": "What evidence explains NVDA FY2024 operating risk?",
+        "tasks": [
+            task.model_dump(mode="json")
+            for task in mock_plan.tasks
+        ],
+        "current_task_index": 0,
+        "current_action": first_task.initial_action.model_dump(mode="json"),
+        "attempts": [],
+        "evidence_pool": [],
+    }
+    execute_output = execute_attempt_node(workbench_state)
+    latest_attempt = execute_output["attempts"][-1]
+    retrieval_trace = latest_attempt.get("retrieval_trace") or {}
+    chunk_previews = [
+        {
+            "chunk_id": chunk.get("chunk_id"),
+            "text_preview": str(chunk.get("text") or "")[:120],
+        }
+        for chunk in latest_attempt.get("chunks", [])
+    ]
+
+    pprint(
+        {
+            "attempt_id": latest_attempt.get("attempt_id"),
+            "retrieval_status": latest_attempt.get("retrieval_status"),
+            "action": latest_attempt.get("action"),
+            "chunks": chunk_previews,
+            "retrieval_trace": {
+                "retriever": retrieval_trace.get("retriever"),
+                "profile": retrieval_trace.get("profile"),
+                "returned_chunk_ids": retrieval_trace.get(
+                    "returned_chunk_ids"
+                ),
+                "technical_tries": retrieval_trace.get("technical_tries"),
+            },
+            "assessment": latest_attempt.get("assessment"),
+            "evidence_pool_ids": [
+                chunk.get("chunk_id")
+                for chunk in execute_output.get("evidence_pool", [])
+            ],
+            "stop_reason": execute_output.get("stop_reason"),
+        }
+    )
