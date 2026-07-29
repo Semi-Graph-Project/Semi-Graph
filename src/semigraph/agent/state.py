@@ -4,39 +4,17 @@ from semigraph.agent.contracts import AttemptRecord
 
 
 class AgentState(TypedDict, total=False):
-    """Shared state passed between agent nodes.
+    """Serializable state shared by Agent nodes."""
 
-    All keys are optional because each node only populates the fields it owns.
-    The examples below show the shape that each value usually takes.
-    
-    planRouteShape = {
-        "original_query": "What is the impact of climate change on polar bear populations?",
-        "tasks": [
-            {
-                "task_id": "T1",
-                "query": "What is the impact of climate change on polar bear populations?",
-                "requirements": [
-                    {
-                        "requirement_id": "R1",
-                        "description": "Provide scientific studies and data on polar bear populations and climate change."
-                    }
-                ]
-            }
-        ]
-    }
-    """
-
+    # Four-node harness state
     original_query: str
     tasks: list[dict]
     current_task_index: int
     current_action: dict
     plan_trace: dict
     attempts: list[AttemptRecord]
-    evidence_pool: list[dict]
-    accepted_evidence: list[dict]
-    requirement_coverage: dict[str, dict]
 
-
+    # Legacy flow; removed when the production graph cuts over.
     subqueries: list[str]
     current_subquery_idx: int
     completed_subqueries: list[dict]

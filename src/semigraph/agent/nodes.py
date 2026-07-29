@@ -4,6 +4,7 @@ import time
 from decimal import Decimal, InvalidOperation
 
 from semigraph.agent.prompts import (
+    ASSESS_SYSTEM_PROMPT,
     OBSERVE_SYSTEM_PROMPT,
     PLANNER_SYSTEM_PROMPT,
     REFLECT_SYSTEM_PROMPT,
@@ -12,6 +13,11 @@ from semigraph.agent.prompts import (
 )
 from semigraph.agent.state import AgentState
 from semigraph.agent.tools import DEFAULT_TOP_K, RETRIEVERS, TOOL_SCHEMAS
+from semigraph.agent.retry_policy import (
+    decide_retry,
+    measure_evidence_gain,
+    validate_assessment_context,
+)
 from semigraph.config import Config, get_config
 from semigraph.connections import get_llm
 
@@ -434,11 +440,7 @@ def tool_select_node(state: AgentState) -> dict:
         return fallback
 
 def execute_attempt_node(state: AgentState) -> dict:
-    """Validate the current Task/Action before a retrieval attempt.
-
-    This stage validates the input and performs one raw Retriever dispatch.
-    Attempt persistence and technical retry are added in the next step.
-    """
+    """Execute one retrieval action and append one cohesive Attempt."""
     tasks = state.get("tasks") or []
     current_index = state.get("current_task_index")
     attempts = state.get("attempts") or []
@@ -512,7 +514,6 @@ def execute_attempt_node(state: AgentState) -> dict:
         attempt = {
             "attempt_id": f"{task_id}-A{attempt_number}",
             "task_id": task_id,
-            "attempt_number": attempt_number,
             "action": action.model_dump(mode="json"),
             "retrieval_status": "tool_error",
             "chunks": [],
@@ -522,9 +523,6 @@ def execute_attempt_node(state: AgentState) -> dict:
         return {
             "attempts": [*attempts, attempt],
             "current_action": {},
-            "attempt_number": attempt_number,
-            "retrieval_result": None,
-            "retrieval_trace": retrieval_trace,
             "stop_reason": "tool_error",
         }
 
@@ -540,12 +538,6 @@ def execute_attempt_node(state: AgentState) -> dict:
         retriever_trace = {}
 
     chunks = [item for item in raw_chunks if isinstance(item, dict)]
-    old_evidence_pool = list(state.get("evidence_pool") or [])
-    evidence_pool = (
-        _dedupe_chunks_for_synthesis([*old_evidence_pool, *chunks])
-        if chunks
-        else old_evidence_pool
-    )
     retrieval_trace = {
         **retriever_trace,
         "technical_tries": technical_tries,
@@ -553,7 +545,6 @@ def execute_attempt_node(state: AgentState) -> dict:
     attempt = {
         "attempt_id": f"{task_id}-A{attempt_number}",
         "task_id": task_id,
-        "attempt_number": attempt_number,
         "action": action.model_dump(mode="json"),
         "retrieval_status": "ok",
         "chunks": chunks,
@@ -563,11 +554,7 @@ def execute_attempt_node(state: AgentState) -> dict:
 
     return {
         "attempts": [*attempts, attempt],
-        "evidence_pool": evidence_pool,
         "current_action": action.model_dump(mode="json"),
-        "attempt_number": attempt_number,
-        "retrieval_result": {"chunks": chunks, "trace": retriever_trace},
-        "retrieval_trace": retrieval_trace,
         "stop_reason": None,
     }
 
@@ -655,7 +642,7 @@ def _compact_assess_diagnostics(trace: dict) -> dict:
 
 
 def _build_assess_context(state: AgentState, cfg: Config) -> str:
-    """Build a bounded Assess context without exposing old raw chunks."""
+    """Derive a bounded Assess view from the Attempt Ledger."""
     tasks = state.get("tasks") or []
     current_index = state.get("current_task_index", 0)
     current_task = (
@@ -679,22 +666,36 @@ def _build_assess_context(state: AgentState, cfg: Config) -> str:
         for chunk in (latest_attempt.get("chunks") or [])
         if isinstance(chunk, dict)
     ]
-    latest_chunk_ids = {
-        chunk.get("chunk_id")
-        for chunk in (latest_attempt.get("chunks") or [])
-        if isinstance(chunk, dict) and chunk.get("chunk_id")
-    }
+    accepted_ids: set[str] = set()
+    covered_ids: set[str] = set()
+    for attempt in task_attempts[:-1]:
+        assessment = attempt.get("assessment") or {}
+        output = assessment.get("output") or {}
+        accepted_ids.update(output.get("accepted_chunk_ids", []))
+        covered_ids.update(output.get("covered_requirement_ids", []))
+        if assessment.get("status") == "fail_open":
+            accepted_ids.update(
+                chunk.get("chunk_id")
+                for chunk in attempt.get("chunks", [])
+                if isinstance(chunk, dict) and chunk.get("chunk_id")
+            )
+
     accepted_evidence = [
         chunk
-        for chunk in (state.get("accepted_evidence") or [])
-        if isinstance(chunk, dict)
-        and chunk.get("chunk_id") not in latest_chunk_ids
+        for attempt in task_attempts[:-1]
+        for chunk in attempt.get("chunks", [])
+        if isinstance(chunk, dict) and chunk.get("chunk_id") in accepted_ids
     ][-9:]
     prior_attempts = [
         {
             "attempt_id": attempt.get("attempt_id"),
             "action": attempt.get("action"),
             "retrieval_status": attempt.get("retrieval_status"),
+            "accepted_chunk_ids": (
+                ((attempt.get("assessment") or {}).get("output") or {}).get(
+                    "accepted_chunk_ids", []
+                )
+            ),
             "returned_chunk_ids": [
                 chunk.get("chunk_id")
                 for chunk in (attempt.get("chunks") or [])
@@ -710,7 +711,7 @@ def _build_assess_context(state: AgentState, cfg: Config) -> str:
         "current_action": latest_attempt.get("action")
         or state.get("current_action", {}),
         "latest_chunks": latest_chunks,
-        "requirement_coverage": state.get("requirement_coverage", {}),
+        "covered_requirement_ids": sorted(covered_ids),
         "accepted_evidence": [
             _chunk_preview(chunk, text_limit=240)
             for chunk in accepted_evidence
@@ -731,13 +732,12 @@ def _build_assess_context(state: AgentState, cfg: Config) -> str:
         serialized = json.dumps(
             context, ensure_ascii=False, separators=(",", ":")
         )
-        
+
     while len(serialized) > max_chars and context["accepted_evidence"]:
         context["accepted_evidence"].pop(0)
         serialized = json.dumps(
             context, ensure_ascii=False, separators=(",", ":")
         )
-
 
     while len(serialized) > max_chars:
         for chunk in reversed(context["latest_chunks"]):
@@ -749,8 +749,6 @@ def _build_assess_context(state: AgentState, cfg: Config) -> str:
         else:
             raise ValueError("Required Assess context exceeds configured limit")
         serialized = json.dumps(
-
-            
             context, ensure_ascii=False, separators=(",", ":")
         )
 
@@ -811,6 +809,134 @@ def _normalize_assessment_error(
             "type": type(error).__name__,
         }
     ]
+
+
+def assess_node(state: AgentState) -> dict:
+    """Assess the latest Attempt and let the controller approve any retry."""
+    try:
+        task = state["tasks"][state["current_task_index"]]
+        latest = state["attempts"][-1]
+    except (KeyError, IndexError, TypeError):
+        return {"current_action": {}, "stop_reason": "assessment_error"}
+
+    if (
+        latest.get("task_id") != task.get("task_id")
+        or latest.get("retrieval_status") != "ok"
+        or latest.get("assessment") is not None
+    ):
+        return {"current_action": {}, "stop_reason": "assessment_error"}
+
+    cfg = get_config()
+    llm = get_llm(cfg)
+    user_message = _build_assess_context(state, cfg)
+    llm_calls = 0
+    started_at = time.perf_counter()
+    error_codes: list[str] = []
+    assessment = None
+    failure_source = "validation_failed_after_repair"
+    current_chunk_ids = {
+        chunk["chunk_id"]
+        for chunk in (latest.get("chunks") or [])
+        if isinstance(chunk, dict) and chunk.get("chunk_id")
+    }
+
+    for assessment_try in range(1, cfg.agent_max_assessment_attempts + 1):
+        llm_calls += 1
+        try:
+            response = llm.invoke([
+                {"role": "system", "content": ASSESS_SYSTEM_PROMPT},
+                {"role": "user", "content": user_message},
+            ])
+        except Exception as exc:
+            failure_source = "provider_error"
+            error_codes.append(f"provider_error:{type(exc).__name__}")
+            break
+
+        raw = str(getattr(response, "content", response))
+
+        try:
+            assessment = _parse_assessment_response(raw)
+            errors = validate_assessment_context(
+                assessment,
+                task=task,
+                current_chunk_ids=current_chunk_ids,
+            )
+        except (json.JSONDecodeError, ValidationError, TypeError, ValueError) as exc:
+            errors = _normalize_assessment_error(exc)
+
+        if not errors:
+            break
+
+        assessment = None
+        error_codes.extend(error.get("code", "assessment_error") for error in errors)
+        if assessment_try < cfg.agent_max_assessment_attempts:
+            user_message = (
+                f"Original Query:\n{state.get('original_query', '')}\n\n"
+                f"Current Task:\n{json.dumps(task, ensure_ascii=False)}\n\n"
+                f"Previous invalid output:\n{raw}\n\n"
+                f"Validation errors:\n{json.dumps(errors, ensure_ascii=False)}\n\n"
+                "Return only repaired JSON matching the same schema."
+            )
+
+    attempts = list(state["attempts"])
+    assessed_attempt = dict(latest)
+    trace = {
+        "llm_calls": llm_calls,
+        "latency_sec": time.perf_counter() - started_at,
+        "error_codes": error_codes,
+    }
+
+    if assessment is None:
+        controller = {
+            "decision": "stop",
+            "allowed": False,
+            "reason": failure_source,
+            "stop_reason": "assessment_error",
+            "next_action": None,
+        }
+        assessed_attempt["assessment"] = {
+            "status": "fail_open",
+            "output": None,
+            "controller": controller,
+            "trace": trace,
+        }
+        attempts[-1] = assessed_attempt
+        return {
+            "attempts": attempts,
+            "current_action": {},
+            "stop_reason": "assessment_error",
+        }
+
+    evidence_gain = measure_evidence_gain(assessment, state["attempts"])
+    controller = decide_retry(
+        assessment,
+        state["attempts"],
+        evidence_gain,
+        cfg.agent_max_attempts_per_task,
+    )
+    assessed_attempt["assessment"] = {
+        "status": "valid" if llm_calls == 1 else "repaired",
+        "output": assessment.model_dump(mode="json"),
+        "controller": controller,
+        "trace": {**trace, "evidence_gain": evidence_gain},
+    }
+    attempts[-1] = assessed_attempt
+
+    if controller["decision"] == "retry":
+        current_action = controller["next_action"]
+        stop_reason = None
+    elif controller["decision"] == "accept":
+        current_action = {}
+        stop_reason = "sufficient"
+    else:
+        current_action = {}
+        stop_reason = controller["stop_reason"] or "unsupported"
+
+    return {
+        "attempts": attempts,
+        "current_action": current_action,
+        "stop_reason": stop_reason,
+    }
 
 
 def execute_node(state: AgentState) -> dict:
@@ -1796,7 +1922,6 @@ if __name__ == "__main__":
         "current_task_index": 0,
         "current_action": first_task.initial_action.model_dump(mode="json"),
         "attempts": [],
-        "evidence_pool": [],
     }
     execute_output = execute_attempt_node(workbench_state)
     latest_attempt = execute_output["attempts"][-1]
@@ -1824,10 +1949,6 @@ if __name__ == "__main__":
                 "technical_tries": retrieval_trace.get("technical_tries"),
             },
             "assessment": latest_attempt.get("assessment"),
-            "evidence_pool_ids": [
-                chunk.get("chunk_id")
-                for chunk in execute_output.get("evidence_pool", [])
-            ],
             "stop_reason": execute_output.get("stop_reason"),
         }
     )
