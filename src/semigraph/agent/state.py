@@ -13,6 +13,8 @@ class AgentState(TypedDict, total=False):
     current_action: dict
     plan_trace: dict
     attempts: list[AttemptRecord]
+    completed_tasks: list[dict]
+    synthesis_trace: dict
 
     # Legacy flow; removed when the production graph cuts over.
     subqueries: list[str]

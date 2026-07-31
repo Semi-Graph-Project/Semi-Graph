@@ -9,7 +9,9 @@ edgar:
 # Tickers in corpus — auto-synced from Neo4j by `scripts/pilot.py` (DB = source
 # of truth). _ticker.py CORPUS_TICKERS derives from this list. Do not edit by hand.
 tickers:
+  - ACLS
   - ADI
+  - ALAB
   - AMAT
   - AMD
   - AMKR
@@ -24,9 +26,10 @@ tickers:
   - MRVL
   - MU
   - NVDA
-  - ON
+  - "ON"
   - QCOM
   - RMBS
+  - SWKS
   - TXN
 
 reextract_tickers:
@@ -149,22 +152,28 @@ graph:
 graph_repair:
   enabled: true
   method: "llm_evidence_graph_repair_v1"
+
   filer_aliases:
-    AMAT: "applied materials"
-    AMD: "amd"
-    AMKR: "amkor"
-    AVGO: "broadcom"
-    COHR: "coherent"
-    ENTG: "entegris"
-    INTC: "intel"
-    KLAC: "kla"
-    LRCX: "lam research"
-    MU: "micron"
-    NVDA: "nvidia"
-    QCOM: "qualcomm"
-    RMBS: "rambus"
-    TXN: "texas instruments"
-    MRVL: "marvell"
+    "ADI": "analog devices"
+    "ALAB": "astera labs"
+    "AMAT": "applied materials"
+    "AMD": "amd"
+    "AMKR": "amkor"
+    "AVGO": "broadcom"
+    "COHR": "coherent"
+    "ENTG": "entegris"
+    "INTC": "intel"
+    "KLAC": "kla"
+    "LRCX": "lam research"
+    "MCHP": "microchip technology"
+    "MPWR": "monolithic power systems"
+    "MRVL": "marvell"
+    "MU": "micron"
+    "NVDA": "nvidia"
+    "ON": "on semiconductor"
+    "QCOM": "qualcomm"
+    "RMBS": "rambus"
+    "TXN": "texas instruments"
 
 # News tool (Phase E.v1 — Finnhub News API)
 news:

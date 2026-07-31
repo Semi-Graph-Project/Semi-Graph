@@ -1,0 +1,2372 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SemiGraph — Four-Node Agent Flow</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --surface: rgba(13, 27, 46, 0.92);
+      --surface-2: rgba(18, 38, 63, 0.78);
+      --line: rgba(147, 176, 211, 0.18);
+      --text: #e9f1fb;
+      --muted: #93a9c2;
+      --cyan: #4de2d1;
+      --blue: #66a8ff;
+      --violet: #ad8cff;
+      --green: #6ee7a7;
+      --amber: #ffc96b;
+      --red: #ff7c8c;
+      --shadow: 0 22px 70px rgba(0, 0, 0, 0.35);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: Inter, "Noto Sans Thai", "Leelawadee UI", system-ui, sans-serif;
+      background:
+        radial-gradient(circle at 15% 8%, rgba(77, 226, 209, 0.12), transparent 28rem),
+        radial-gradient(circle at 90% 20%, rgba(173, 140, 255, 0.12), transparent 32rem),
+        linear-gradient(145deg, #07111f 0%, #081523 48%, #050c16 100%);
+    }
+
+    button, select { font: inherit; }
+
+    .shell {
+      width: min(1500px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 30px 0 52px;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--cyan);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 950px;
+      font-size: clamp(2rem, 4vw, 4.2rem);
+      line-height: 1.04;
+      letter-spacing: -0.045em;
+    }
+
+    .subtitle {
+      max-width: 900px;
+      margin: 15px 0 0;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.75;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 25px 0 18px;
+    }
+
+    .status-card, .panel, .flow-stage, .controls {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .status-card {
+      min-height: 92px;
+      padding: 16px 18px;
+      border-radius: 15px;
+    }
+
+    .status-card .label {
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .status-card strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 0.96rem;
+      line-height: 1.45;
+    }
+
+    .status-card.done { border-top: 2px solid var(--green); }
+    .status-card.partial { border-top: 2px solid var(--amber); }
+    .status-card.legacy { border-top: 2px solid var(--violet); }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 15px;
+    }
+
+    .scenario {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-right: auto;
+    }
+
+    .scenario label {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    select, .control-button {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--text);
+      background: #10233b;
+    }
+
+    select { padding: 0 35px 0 12px; }
+
+    .control-button {
+      min-width: 42px;
+      padding: 0 13px;
+      cursor: pointer;
+      transition: 160ms ease;
+    }
+
+    .control-button:hover {
+      border-color: rgba(77, 226, 209, 0.6);
+      transform: translateY(-1px);
+    }
+
+    .control-button.primary {
+      color: #041a1a;
+      border-color: transparent;
+      background: var(--cyan);
+      font-weight: 850;
+    }
+
+    .step-counter {
+      min-width: 84px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 0.8rem;
+    }
+
+    .progress-track {
+      height: 3px;
+      margin: 12px 2px 0;
+      overflow: hidden;
+      border-radius: 99px;
+      background: rgba(147, 176, 211, 0.14);
+    }
+
+    .progress-bar {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--cyan), var(--blue), var(--violet));
+      transition: width 420ms ease;
+    }
+
+    .flow-stage {
+      position: relative;
+      margin-top: 12px;
+      padding: 24px 18px 17px;
+      overflow: hidden;
+      border-radius: var(--radius);
+    }
+
+    .flow-stage::after {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      content: "";
+      background:
+        linear-gradient(rgba(147, 176, 211, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(147, 176, 211, 0.025) 1px, transparent 1px);
+      background-size: 30px 30px;
+    }
+
+    .flow-scroll {
+      position: relative;
+      z-index: 1;
+      overflow-x: auto;
+      padding: 8px 2px 15px;
+    }
+
+    .flow-row {
+      display: flex;
+      align-items: center;
+      min-width: 1160px;
+    }
+
+    .node {
+      position: relative;
+      width: 142px;
+      min-height: 112px;
+      padding: 14px 12px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+      background: linear-gradient(160deg, #122942, #0b1c31);
+      transition: 260ms ease;
+    }
+
+    .node:hover { border-color: rgba(77, 226, 209, 0.55); }
+
+    .node .number {
+      color: var(--muted);
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+    }
+
+    .node strong {
+      display: block;
+      margin: 7px 0 5px;
+      font-size: 0.9rem;
+    }
+
+    .node small {
+      display: block;
+      color: var(--muted);
+      font-size: 0.69rem;
+      line-height: 1.45;
+    }
+
+    .node .node-state {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #446079;
+    }
+
+    .node.visited {
+      border-color: rgba(110, 231, 167, 0.35);
+      background: linear-gradient(160deg, rgba(26, 76, 72, 0.7), #0b1c31);
+    }
+
+    .node.visited .node-state { background: var(--green); }
+
+    .node.active {
+      border-color: var(--cyan);
+      transform: translateY(-5px);
+      box-shadow:
+        0 0 0 4px rgba(77, 226, 209, 0.1),
+        0 18px 40px rgba(77, 226, 209, 0.15);
+    }
+
+    .node.active::before {
+      position: absolute;
+      inset: -1px;
+      border: 1px solid var(--cyan);
+      border-radius: inherit;
+      content: "";
+      animation: nodePulse 1.5s ease-out infinite;
+    }
+
+    .node.pending { border-style: dashed; }
+    .node.pending .node-state { background: var(--amber); }
+
+    .arrow {
+      position: relative;
+      width: 37px;
+      height: 2px;
+      flex: 0 0 37px;
+      margin: 0 4px;
+      background: rgba(147, 176, 211, 0.28);
+    }
+
+    .arrow::after {
+      position: absolute;
+      top: -4px;
+      right: -1px;
+      width: 8px;
+      height: 8px;
+      border-top: 2px solid rgba(147, 176, 211, 0.48);
+      border-right: 2px solid rgba(147, 176, 211, 0.48);
+      content: "";
+      transform: rotate(45deg);
+    }
+
+    .flow-note-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      min-width: 1160px;
+      margin-top: 15px;
+      gap: 10px;
+    }
+
+    .flow-note {
+      min-height: 48px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      line-height: 1.45;
+      background: rgba(4, 14, 25, 0.58);
+    }
+
+    .flow-note strong { color: var(--text); }
+    .flow-note.retry { border-left: 3px solid var(--blue); }
+    .flow-note.advance { border-left: 3px solid var(--green); }
+    .flow-note.pending-note { border-left: 3px solid var(--amber); }
+
+    .scenario-alert {
+      display: none;
+      margin-top: 13px;
+      padding: 11px 14px;
+      border: 1px solid rgba(255, 124, 140, 0.32);
+      border-radius: 11px;
+      color: #ffd6dc;
+      background: rgba(100, 25, 43, 0.25);
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+
+    .scenario-alert.visible { display: block; }
+
+    .work-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .panel {
+      min-width: 0;
+      padding: 19px;
+      border-radius: var(--radius);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 13px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-header h2 {
+      margin: 3px 0 0;
+      font-size: 1.08rem;
+    }
+
+    .phase-label {
+      color: var(--muted);
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .badge {
+      flex: 0 0 auto;
+      padding: 5px 9px;
+      border-radius: 99px;
+      font-size: 0.66rem;
+      font-weight: 850;
+      letter-spacing: 0.04em;
+    }
+
+    .badge.implemented { color: #baffda; background: rgba(38, 137, 93, 0.25); }
+    .badge.pending { color: #ffe1a6; background: rgba(161, 104, 12, 0.28); }
+    .badge.gap { color: #ffc3cc; background: rgba(171, 45, 68, 0.27); }
+
+    .goal {
+      margin: 15px 0;
+      color: #cbd9e9;
+      font-size: 0.89rem;
+      line-height: 1.68;
+    }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .mini-card {
+      min-width: 0;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface-2);
+    }
+
+    .mini-card h3 {
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 0.69rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .mini-card p, .mini-card li {
+      color: #d3deeb;
+      font-size: 0.78rem;
+      line-height: 1.58;
+    }
+
+    .mini-card p { margin: 0; }
+    .mini-card ul { margin: 0; padding-left: 17px; }
+
+    .contract {
+      margin-top: 10px;
+      padding: 12px 13px;
+      border-left: 3px solid var(--violet);
+      border-radius: 10px;
+      background: rgba(80, 57, 131, 0.18);
+    }
+
+    .contract .contract-name {
+      color: #d9caff;
+      font-size: 0.75rem;
+      font-weight: 850;
+    }
+
+    .contract p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 0.73rem;
+      line-height: 1.55;
+    }
+
+    .state-tabs {
+      display: flex;
+      gap: 6px;
+      margin: 14px 0 10px;
+    }
+
+    .tab {
+      padding: 6px 10px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      color: var(--muted);
+      cursor: pointer;
+      background: transparent;
+      font-size: 0.73rem;
+      font-weight: 750;
+    }
+
+    .tab.active {
+      color: var(--text);
+      border-color: var(--line);
+      background: #122942;
+    }
+
+    pre {
+      min-height: 355px;
+      max-height: 520px;
+      margin: 0;
+      padding: 15px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: #d8e5f3;
+      background: #050e19;
+      font: 0.73rem/1.62 "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .json-key { color: #78c8ff; }
+    .json-string { color: #a7edbd; }
+    .json-number { color: #ffd27e; }
+    .json-bool { color: #d7a6ff; }
+    .json-null { color: #ff9ca8; }
+    .json-bracket {
+      font-weight: 950;
+      text-shadow: 0 0 8px currentColor;
+    }
+    .json-bracket-0 { color: #4de2d1; }
+    .json-bracket-1 { color: #ffc96b; }
+    .json-bracket-2 { color: #ad8cff; }
+    .json-bracket-3 { color: #6ee7a7; }
+    .json-bracket-4 { color: #ff8fa8; }
+    .json-bracket-5 { color: #66a8ff; }
+
+    .json-legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin: -2px 0 10px;
+      color: var(--muted);
+      font-size: 0.64rem;
+    }
+
+    .json-legend strong {
+      margin-right: 3px;
+      color: #cbd9e9;
+      font-size: 0.65rem;
+    }
+
+    .json-level {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 6px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: rgba(5, 14, 25, 0.55);
+    }
+
+    .json-level i {
+      font: normal 900 0.78rem "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+      text-shadow: 0 0 7px currentColor;
+    }
+
+    .callout {
+      margin-top: 12px;
+      padding: 11px 13px;
+      border-radius: 11px;
+      color: #dce8f5;
+      background: rgba(47, 102, 151, 0.18);
+      font-size: 0.78rem;
+      line-height: 1.55;
+    }
+
+    .attempt-contract-panel { margin-top: 12px; }
+
+    .attempt-contract-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 0.96fr) minmax(0, 1.04fr);
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .contract-column {
+      min-width: 0;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(6, 17, 31, 0.55);
+    }
+
+    .contract-column-title {
+      margin: 0 0 13px;
+      color: var(--muted);
+      font-size: 0.7rem;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .model-path {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 12px;
+    }
+
+    .model-path span {
+      padding: 6px 9px;
+      border: 1px solid rgba(173, 140, 255, 0.28);
+      border-radius: 8px;
+      color: #e2d8ff;
+      background: rgba(87, 59, 148, 0.2);
+      font: 0.69rem "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+    }
+
+    .model-path i {
+      color: var(--muted);
+      font-style: normal;
+      font-size: 0.8rem;
+    }
+
+    .schema-box {
+      overflow: hidden;
+      border: 1px solid rgba(102, 168, 255, 0.25);
+      border-radius: 12px;
+      background: #0a192b;
+    }
+
+    .schema-box + .schema-box { margin-top: 11px; }
+
+    .schema-box.nested {
+      margin: 12px;
+      border-color: rgba(173, 140, 255, 0.3);
+      background: rgba(44, 29, 78, 0.34);
+    }
+
+    .schema-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(18, 41, 66, 0.7);
+    }
+
+    .schema-head strong { font-size: 0.8rem; }
+
+    .type-pill {
+      padding: 3px 7px;
+      border-radius: 99px;
+      color: #bbd9ff;
+      background: rgba(49, 105, 166, 0.32);
+      font-size: 0.61rem;
+      font-weight: 800;
+    }
+
+    .schema-fields { padding: 4px 11px 8px; }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: minmax(105px, 0.38fr) minmax(0, 0.62fr);
+      gap: 10px;
+      padding: 8px 1px;
+      border-bottom: 1px dashed rgba(147, 176, 211, 0.13);
+      font-size: 0.7rem;
+      line-height: 1.45;
+    }
+
+    .field-row:last-child { border-bottom: 0; }
+
+    .field-name {
+      color: var(--cyan);
+      font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+      word-break: break-word;
+    }
+
+    .field-row.identity .field-name { color: #71dff2; }
+    .field-row.action .field-name { color: #87b9ff; }
+    .field-row.status .field-name { color: #ffd27e; }
+    .field-row.evidence .field-name { color: #8cf0b8; }
+    .field-row.trace .field-name { color: #d1a8ff; }
+    .field-row.assessment .field-name { color: #ff9fb3; }
+
+    .field-row.identity { background: linear-gradient(90deg, rgba(77, 226, 209, 0.055), transparent); }
+    .field-row.action { background: linear-gradient(90deg, rgba(102, 168, 255, 0.06), transparent); }
+    .field-row.status { background: linear-gradient(90deg, rgba(255, 201, 107, 0.06), transparent); }
+    .field-row.evidence { background: linear-gradient(90deg, rgba(110, 231, 167, 0.06), transparent); }
+    .field-row.trace { background: linear-gradient(90deg, rgba(173, 140, 255, 0.065), transparent); }
+    .field-row.assessment { background: linear-gradient(90deg, rgba(255, 124, 140, 0.06), transparent); }
+
+    .field-purpose { color: var(--muted); }
+    .field-purpose b { color: #d9e5f2; font-weight: 700; }
+
+    .contract-color-key {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin: -2px 0 12px;
+    }
+
+    .contract-color-key span {
+      padding: 4px 7px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      font-size: 0.61rem;
+      font-weight: 800;
+      background: rgba(4, 14, 25, 0.52);
+    }
+
+    .key-identity { color: #71dff2; }
+    .key-action { color: #87b9ff; }
+    .key-status { color: #ffd27e; }
+    .key-evidence { color: #8cf0b8; }
+    .key-trace { color: #d1a8ff; }
+    .key-assessment { color: #ff9fb3; }
+
+    .attempt-example-list {
+      display: grid;
+      gap: 11px;
+    }
+
+    .attempt-visual {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: linear-gradient(145deg, #0d2238, #091725);
+    }
+
+    .attempt-visual::before {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 3px;
+      content: "";
+      background: var(--blue);
+    }
+
+    .attempt-visual.accept::before { background: var(--green); }
+
+    .attempt-visual-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 11px 13px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .attempt-id {
+      color: var(--text);
+      font: 800 0.78rem "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+    }
+
+    .decision-pill {
+      padding: 4px 8px;
+      border-radius: 99px;
+      color: #cce0ff;
+      background: rgba(55, 114, 182, 0.28);
+      font-size: 0.63rem;
+      font-weight: 850;
+    }
+
+    .decision-pill.accept {
+      color: #baffda;
+      background: rgba(38, 137, 93, 0.26);
+    }
+
+    .attempt-visual-body {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      padding: 11px 13px 13px;
+    }
+
+    .attempt-value {
+      min-width: 0;
+      padding: 8px 9px;
+      border-radius: 8px;
+      background: rgba(4, 14, 25, 0.62);
+    }
+
+    .attempt-value.wide { grid-column: 1 / -1; }
+
+    .attempt-value label {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 0.6rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .attempt-value code {
+      color: #dbe8f6;
+      font-size: 0.68rem;
+      line-height: 1.45;
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    .evidence-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 2px 0;
+      color: var(--muted);
+      font-size: 0.69rem;
+    }
+
+    .evidence-link .chunk-chip {
+      padding: 3px 7px;
+      border: 1px solid rgba(110, 231, 167, 0.33);
+      border-radius: 6px;
+      color: #baffda;
+      background: rgba(38, 137, 93, 0.16);
+      font: 700 0.65rem "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+    }
+
+    .attempt-life {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .life-step {
+      position: relative;
+      min-height: 86px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface-2);
+    }
+
+    .life-step:not(:last-child)::after {
+      position: absolute;
+      top: 35px;
+      right: -10px;
+      z-index: 2;
+      color: var(--cyan);
+      content: "→";
+      font-weight: 900;
+    }
+
+    .life-step span {
+      display: block;
+      color: var(--cyan);
+      font-size: 0.6rem;
+      font-weight: 850;
+      letter-spacing: 0.07em;
+    }
+
+    .life-step p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 0.67rem;
+      line-height: 1.45;
+    }
+
+    .ledger-panel { margin-top: 12px; }
+
+    .ledger-wrap {
+      margin-top: 14px;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      min-width: 820px;
+      border-collapse: collapse;
+      font-size: 0.75rem;
+    }
+
+    th {
+      padding: 10px 11px;
+      color: var(--muted);
+      text-align: left;
+      font-size: 0.67rem;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      background: rgba(18, 41, 66, 0.8);
+    }
+
+    td {
+      padding: 11px;
+      border-top: 1px solid var(--line);
+      color: #d9e5f2;
+      vertical-align: top;
+    }
+
+    .empty-ledger {
+      padding: 22px !important;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      margin-right: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+
+    .dot.ok { background: var(--green); }
+    .dot.error { background: var(--red); }
+    .dot.wait { background: var(--amber); }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 0.7rem;
+    }
+
+    .legend span::before {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      margin-right: 6px;
+      border-radius: 50%;
+      content: "";
+    }
+
+    .legend .l-done::before { background: var(--green); }
+    .legend .l-now::before { background: var(--cyan); }
+    .legend .l-pending::before { background: var(--amber); }
+    .legend .l-gap::before { background: var(--red); }
+
+    footer {
+      margin-top: 18px;
+      color: #71869e;
+      font-size: 0.7rem;
+      line-height: 1.6;
+      text-align: center;
+    }
+
+    @keyframes nodePulse {
+      from { opacity: 0.8; transform: scale(1); }
+      to { opacity: 0; transform: scale(1.09); }
+    }
+
+    @media (max-width: 900px) {
+      .status-grid, .work-grid, .attempt-contract-grid { grid-template-columns: 1fr; }
+      .mini-grid { grid-template-columns: 1fr; }
+      .attempt-life { grid-template-columns: 1fr 1fr; }
+      .life-step:nth-child(2)::after { display: none; }
+      .shell { width: min(100% - 20px, 1500px); padding-top: 19px; }
+      .status-card { min-height: auto; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <p class="eyebrow">SemiGraph · Architecture Workbench</p>
+    <h1>Four-Node Agent<br>End-to-End Flow</h1>
+    <p class="subtitle">
+      Animation นี้เดินตาม State จริงตั้งแต่ Query เข้า PlanRoute, Execute, Assess,
+      Adaptive Retry, Task ถัดไป และรอยต่อไป Synthesis พร้อมเปิดให้ดู Contract
+      และ State update ของแต่ละก้าว
+    </p>
+
+    <section class="status-grid" aria-label="Implementation status">
+      <article class="status-card done">
+        <span class="label">เขียนแล้ว</span>
+        <strong>PlanRoute → ExecuteAttempt → Assess → Task advancement</strong>
+      </article>
+      <article class="status-card partial">
+        <span class="label">Ticket 04 กำลังทำ</span>
+        <strong>Error isolation, evidence selector และ grounded Synthesis</strong>
+      </article>
+      <article class="status-card legacy">
+        <span class="label">Production reality</span>
+        <strong>graph.py ยังเป็น legacy flow จนกว่า Ticket 05 จะ cut over</strong>
+      </article>
+    </section>
+
+    <section class="controls" aria-label="Animation controls">
+      <div class="scenario">
+        <label for="scenario">ฉากจำลอง</label>
+        <select id="scenario">
+          <option value="main">2 Tasks + Graph retry + Synthesis</option>
+          <option value="toolError">Tool error — ช่องว่างปัจจุบัน</option>
+        </select>
+      </div>
+      <button class="control-button" id="reset" title="Reset">↺</button>
+      <button class="control-button" id="previous" title="Previous step">←</button>
+      <button class="control-button primary" id="play">▶ Play</button>
+      <button class="control-button" id="next" title="Next step">→</button>
+      <span class="step-counter" id="stepCounter">1 / 1</span>
+      <div class="progress-track" style="flex-basis:100%">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+    </section>
+
+    <section class="flow-stage">
+      <div class="flow-scroll">
+        <div class="flow-row">
+          <button class="node" data-node="query">
+            <span class="node-state"></span>
+            <span class="number">INPUT</span>
+            <strong>Original Query</strong>
+            <small>สร้าง AgentState เริ่มต้น</small>
+          </button>
+          <span class="arrow"></span>
+          <button class="node" data-node="plan">
+            <span class="node-state"></span>
+            <span class="number">NODE 01</span>
+            <strong>PlanRoute</strong>
+            <small>Tasks + Requirements + initial Tool</small>
+          </button>
+          <span class="arrow"></span>
+          <button class="node" data-node="execute">
+            <span class="node-state"></span>
+            <span class="number">NODE 02</span>
+            <strong>ExecuteAttempt</strong>
+            <small>เรียก Retriever + append ledger</small>
+          </button>
+          <span class="arrow"></span>
+          <button class="node" data-node="assess">
+            <span class="node-state"></span>
+            <span class="number">NODE 03</span>
+            <strong>Assess</strong>
+            <small>เลือก evidence + retry decision</small>
+          </button>
+          <span class="arrow"></span>
+          <button class="node" data-node="gate">
+            <span class="node-state"></span>
+            <span class="number">CONTROL</span>
+            <strong>Task Gate</strong>
+            <small>Retry / next Task / finish</small>
+          </button>
+          <span class="arrow"></span>
+          <button class="node pending" data-node="synthesize">
+            <span class="node-state"></span>
+            <span class="number">NODE 04</span>
+            <strong>Synthesize</strong>
+            <small>Grounded answer + citations</small>
+          </button>
+          <span class="arrow"></span>
+          <button class="node pending" data-node="output">
+            <span class="node-state"></span>
+            <span class="number">END</span>
+            <strong>Final Output</strong>
+            <small>Answer + citation + trace</small>
+          </button>
+        </div>
+
+        <div class="flow-note-row">
+          <div class="flow-note retry">
+            <strong>Retry loop:</strong> Assess อนุมัติ action ใหม่ → Execute Task เดิม
+            โดยยังไม่เพิ่ม <code>current_task_index</code>
+          </div>
+          <div class="flow-note advance">
+            <strong>Task advancement:</strong> accept/stop → บันทึก completion →
+            ใช้ <code>initial_action</code> ของ Task ถัดไป
+          </div>
+          <div class="flow-note pending-note">
+            <strong>Synthesis boundary:</strong> เมื่อ Tasks หมด คัด accepted raw chunks
+            จาก Attempts แล้วเรียก LLM เพียงครั้งเดียว
+          </div>
+        </div>
+      </div>
+      <div class="scenario-alert" id="scenarioAlert"></div>
+    </section>
+
+    <section class="work-grid">
+      <article class="panel">
+        <header class="panel-header">
+          <div>
+            <span class="phase-label" id="phaseLabel">Input</span>
+            <h2 id="stepTitle">รับคำถามจากผู้ใช้</h2>
+          </div>
+          <span class="badge implemented" id="statusBadge">Implemented</span>
+        </header>
+
+        <p class="goal" id="goal"></p>
+
+        <div class="mini-grid">
+          <section class="mini-card">
+            <h3>รับเข้า</h3>
+            <p id="inputText"></p>
+          </section>
+          <section class="mini-card">
+            <h3>ส่งออก</h3>
+            <p id="outputText"></p>
+          </section>
+          <section class="mini-card" style="grid-column:1 / -1">
+            <h3>ข้างในทำอะไร</h3>
+            <ul id="processList"></ul>
+          </section>
+        </div>
+
+        <div class="contract">
+          <span class="contract-name" id="contractName">AgentState (TypedDict)</span>
+          <p id="contractText"></p>
+        </div>
+
+        <div class="callout" id="callout"></div>
+      </article>
+
+      <article class="panel">
+        <header class="panel-header">
+          <div>
+            <span class="phase-label">Runtime State</span>
+            <h2>สิ่งที่ LangGraph merge กลับเข้า AgentState</h2>
+          </div>
+        </header>
+        <div class="state-tabs">
+          <button class="tab active" data-tab="update">State update</button>
+          <button class="tab" data-tab="snapshot">State หลังจบก้าวนี้</button>
+          <button class="tab" data-tab="model">Contract shape</button>
+        </div>
+        <div class="json-legend">
+          <strong>Rainbow brackets:</strong>
+          <span class="json-level"><i class="json-bracket-0">{ }</i> root</span>
+          <span class="json-level"><i class="json-bracket-1">{ }</i> level 2</span>
+          <span class="json-level"><i class="json-bracket-2">[ ]</i> level 3</span>
+          <span class="json-level"><i class="json-bracket-3">{ }</i> level 4+</span>
+        </div>
+        <pre id="stateCode" aria-live="polite"></pre>
+      </article>
+    </section>
+
+    <section class="panel attempt-contract-panel" hidden>
+      <header class="panel-header">
+        <div>
+          <span class="phase-label">Visualized Contract Model</span>
+          <h2>Attempts Ledger ข้างในซ้อนกันอย่างไร</h2>
+        </div>
+        <span class="badge implemented">Append-only list</span>
+      </header>
+
+      <div class="attempt-contract-grid">
+        <section class="contract-column">
+          <h3 class="contract-column-title">1 · โครงสร้าง Contract</h3>
+          <div class="model-path">
+            <span>AgentState</span><i>→</i>
+            <span>attempts[]</span><i>→</i>
+            <span>AttemptRecord</span>
+          </div>
+          <div class="contract-color-key">
+            <span class="key-identity">Identity</span>
+            <span class="key-action">Action</span>
+            <span class="key-status">Status</span>
+            <span class="key-evidence">Evidence</span>
+            <span class="key-trace">Trace</span>
+            <span class="key-assessment">Assessment</span>
+          </div>
+
+          <div class="schema-box">
+            <div class="schema-head">
+              <strong>AttemptRecord</strong>
+              <span class="type-pill">TypedDict</span>
+            </div>
+            <div class="schema-fields">
+              <div class="field-row identity">
+                <span class="field-name">attempt_id: str</span>
+                <span class="field-purpose"><b>T1-A1</b> — ID ของการค้นรอบนี้</span>
+              </div>
+              <div class="field-row identity">
+                <span class="field-name">task_id: str</span>
+                <span class="field-purpose"><b>T1</b> — รอบนี้เป็นของ Task ไหน</span>
+              </div>
+              <div class="field-row action">
+                <span class="field-name">action: dict</span>
+                <span class="field-purpose">สำเนา <b>RetrievalAction</b>: Tool, query, top_k</span>
+              </div>
+              <div class="field-row status">
+                <span class="field-name">retrieval_status: str</span>
+                <span class="field-purpose"><b>ok | tool_error</b> — Tool ทำงานสำเร็จหรือไม่</span>
+              </div>
+              <div class="field-row evidence">
+                <span class="field-name">chunks: list[dict]</span>
+                <span class="field-purpose"><b>Raw chunks</b> ที่ Retriever คืนในรอบนี้</span>
+              </div>
+              <div class="field-row trace">
+                <span class="field-name">retrieval_trace: dict</span>
+                <span class="field-purpose">Phase T trace + technical retries สำหรับ Debug</span>
+              </div>
+              <div class="field-row assessment">
+                <span class="field-name">assessment: dict | None</span>
+                <span class="field-purpose"><b>None หลัง Execute</b>; Assess จะเติม envelope ด้านล่าง</span>
+              </div>
+            </div>
+
+            <div class="schema-box nested">
+              <div class="schema-head">
+                <strong>assessment envelope</strong>
+                <span class="type-pill">runtime dict</span>
+              </div>
+              <div class="schema-fields">
+                <div class="field-row status">
+                  <span class="field-name">status</span>
+                  <span class="field-purpose">valid | repaired | fail_open</span>
+                </div>
+                <div class="field-row assessment">
+                  <span class="field-name">output</span>
+                  <span class="field-purpose"><b>AssessmentOutput</b> จาก LLM ที่ validate แล้ว</span>
+                </div>
+                <div class="field-row action">
+                  <span class="field-name">controller</span>
+                  <span class="field-purpose">ผล deterministic policy ว่า retry ผ่านหรือไม่</span>
+                </div>
+                <div class="field-row trace">
+                  <span class="field-name">trace</span>
+                  <span class="field-purpose">LLM calls, latency, errors และ evidence gain</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="schema-box" style="margin-top:11px">
+            <div class="schema-head">
+              <strong>AssessmentOutput</strong>
+              <span class="type-pill">Pydantic</span>
+            </div>
+            <div class="schema-fields">
+              <div class="field-row evidence">
+                <span class="field-name">accepted_chunk_ids</span>
+                <span class="field-purpose">Chunk รอบล่าสุดที่มีประโยชน์</span>
+              </div>
+              <div class="field-row evidence">
+                <span class="field-name">covered_requirement_ids</span>
+                <span class="field-purpose">Requirement ที่หลักฐานรวมตอบครบ</span>
+              </div>
+              <div class="field-row status">
+                <span class="field-name">decision</span>
+                <span class="field-purpose">accept | retry | stop</span>
+              </div>
+              <div class="field-row action">
+                <span class="field-name">retry_strategy</span>
+                <span class="field-purpose">กลยุทธ์ retry หรือ null</span>
+              </div>
+              <div class="field-row action">
+                <span class="field-name">next_action</span>
+                <span class="field-purpose">RetrievalAction รอบใหม่ หรือ null</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="contract-column">
+          <h3 class="contract-column-title">2 · ตัวอย่าง Task เดียว Retry สองรอบ</h3>
+          <div class="attempt-example-list">
+            <article class="attempt-visual">
+              <div class="attempt-visual-head">
+                <span class="attempt-id">attempts[0] · T1-A1</span>
+                <span class="decision-pill">decision: retry</span>
+              </div>
+              <div class="attempt-visual-body">
+                <div class="attempt-value">
+                  <label>Action</label>
+                  <code>graph("AMD TSMC dependency")</code>
+                </div>
+                <div class="attempt-value">
+                  <label>Retrieval</label>
+                  <code>status=ok · chunks=[]</code>
+                </div>
+                <div class="attempt-value wide">
+                  <label>Assessment</label>
+                  <code>accepted=[] · covered=[] · strategy=bridge_hint · next_action=Graph query ใหม่</code>
+                </div>
+              </div>
+            </article>
+
+            <article class="attempt-visual accept">
+              <div class="attempt-visual-head">
+                <span class="attempt-id">attempts[1] · T1-A2</span>
+                <span class="decision-pill accept">decision: accept</span>
+              </div>
+              <div class="attempt-visual-body">
+                <div class="attempt-value">
+                  <label>Action</label>
+                  <code>graph("AMD TSMC relationship bridge")</code>
+                </div>
+                <div class="attempt-value">
+                  <label>Retrieval</label>
+                  <code>status=ok · chunks=[C1, C2]</code>
+                </div>
+                <div class="attempt-value wide">
+                  <label>Assessment</label>
+                  <code>accepted=[C1, C2] · covered=[T1-R1] · decision=accept</code>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div style="margin-top:13px">
+            <div class="evidence-link">
+              <span class="chunk-chip">C1</span>
+              <span>accepted_chunk_ids ชี้กลับไปยัง raw C1 ใน T1-A2</span>
+            </div>
+            <div class="evidence-link">
+              <span class="chunk-chip">C2</span>
+              <span>accepted_chunk_ids ชี้กลับไปยัง raw C2 ใน T1-A2</span>
+            </div>
+          </div>
+
+          <div class="callout">
+            Attempts ไม่ใช่ก้อน evidence ใหม่อีกชุด มันคือ “ประวัติแต่ละการค้น”:
+            Action ที่ใช้ + ผลดิบที่ได้ + คำตัดสินของ Assess อยู่ด้วยกันใน record เดียว
+          </div>
+        </section>
+      </div>
+
+      <div class="attempt-life">
+        <article class="life-step">
+          <span>01 · EXECUTE</span>
+          <p>append Attempt ใหม่ โดย assessment ยังเป็น None</p>
+        </article>
+        <article class="life-step">
+          <span>02 · ASSESS</span>
+          <p>copy latest record แล้วเติม assessment envelope</p>
+        </article>
+        <article class="life-step">
+          <span>03 · RETRY</span>
+          <p>append A2 ต่อจาก A1 — ห้ามเขียนทับรอบเก่า</p>
+        </article>
+        <article class="life-step">
+          <span>04 · SYNTHESIZE</span>
+          <p>อ่าน accepted IDs แล้วย้อนหยิบ raw chunks จาก record</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel ledger-panel">
+      <header class="panel-header">
+        <div>
+          <span class="phase-label">Canonical Evidence Store</span>
+          <h2>Attempts Ledger ณ ก้าวปัจจุบัน</h2>
+        </div>
+        <span class="badge implemented">Source of truth</span>
+      </header>
+      <div class="ledger-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Attempt</th>
+              <th>Task</th>
+              <th>Action</th>
+              <th>Retrieval</th>
+              <th>Chunk IDs</th>
+              <th>Assessment</th>
+              <th>Decision</th>
+            </tr>
+          </thead>
+          <tbody id="ledgerBody"></tbody>
+        </table>
+      </div>
+      <div class="legend">
+        <span class="l-done">เขียนแล้ว</span>
+        <span class="l-now">กำลังเดินอยู่</span>
+        <span class="l-pending">ยังอยู่ใน Ticket 04</span>
+        <span class="l-gap">ช่องว่าง/เส้นทางที่ยังผิด</span>
+      </div>
+    </section>
+
+    <footer>
+      Snapshot จาก src/semigraph/agent/contracts.py, state.py, nodes.py และ Ticket 04 ·
+      Viz นี้อธิบาย Four-Node Harness ใหม่ ไม่ใช่การยืนยันว่า production graph.py cut over แล้ว
+    </footer>
+  </main>
+
+  <script>
+    "use strict";
+
+    var query = "AMD พึ่งพา TSMC อย่างไร และ gross margin ของ AMD ใน FY2025 เท่าไร?";
+    var graphInitial = {
+      tool: "graph",
+      query: "AMD TSMC supplier foundry dependency",
+      top_k_chunks: 5
+    };
+    var graphRetry = {
+      tool: "graph",
+      query: "AMD TSMC foundry dependency supply relationship bridge",
+      top_k_chunks: 5
+    };
+    var financialInitial = {
+      tool: "financial",
+      query: "AMD gross margin FY2025",
+      top_k_chunks: 5
+    };
+    var tasks = [
+      {
+        task_id: "T1",
+        query: "AMD พึ่งพา TSMC อย่างไร?",
+        requirements: [
+          {
+            requirement_id: "T1-R1",
+            description: "หลักฐานความสัมพันธ์ supplier/foundry dependency ระหว่าง AMD กับ TSMC"
+          }
+        ],
+        initial_action: graphInitial
+      },
+      {
+        task_id: "T2",
+        query: "gross margin ของ AMD ใน FY2025 เท่าไร?",
+        requirements: [
+          {
+            requirement_id: "T2-R1",
+            description: "ค่า gross margin ของ AMD สำหรับ FY2025"
+          }
+        ],
+        initial_action: financialInitial
+      }
+    ];
+
+    function clone(value) {
+      return JSON.parse(JSON.stringify(value));
+    }
+
+    function attempt(id, taskId, action, status, chunks, assessment) {
+      return {
+        attempt_id: id,
+        task_id: taskId,
+        action: clone(action),
+        retrieval_status: status,
+        chunks: clone(chunks),
+        retrieval_trace: {
+          status: status === "ok" ? "ok" : "terminal",
+          technical_tries: [
+            {
+              technical_try: 1,
+              status: status === "ok" ? "ok" : "error",
+              latency_sec: status === "ok" ? 1.42 : 2.01,
+              error_type: status === "ok" ? null : "TimeoutError"
+            }
+          ]
+        },
+        assessment: assessment ? clone(assessment) : null
+      };
+    }
+
+    var retryEnvelope = {
+      status: "valid",
+      output: {
+        accepted_chunk_ids: [],
+        covered_requirement_ids: [],
+        decision: "retry",
+        retry_strategy: "bridge_hint",
+        next_action: graphRetry
+      },
+      controller: {
+        decision: "retry",
+        allowed: true,
+        reason: "same_tool_retry",
+        stop_reason: null,
+        next_action: graphRetry
+      },
+      trace: {
+        llm_calls: 1,
+        latency_sec: 0.91,
+        error_codes: [],
+        evidence_gain: {
+          has_gain: false,
+          new_accepted_chunk_ids: []
+        }
+      }
+    };
+
+    var graphAcceptEnvelope = {
+      status: "valid",
+      output: {
+        accepted_chunk_ids: ["G-101", "G-102"],
+        covered_requirement_ids: ["T1-R1"],
+        decision: "accept",
+        retry_strategy: null,
+        next_action: null
+      },
+      controller: {
+        decision: "accept",
+        allowed: false,
+        reason: "all_requirements_covered",
+        stop_reason: null,
+        next_action: null
+      },
+      trace: {
+        llm_calls: 1,
+        latency_sec: 0.84,
+        error_codes: [],
+        evidence_gain: {
+          has_gain: true,
+          new_accepted_chunk_ids: ["G-101", "G-102"]
+        }
+      }
+    };
+
+    var financialAcceptEnvelope = {
+      status: "valid",
+      output: {
+        accepted_chunk_ids: ["F-201"],
+        covered_requirement_ids: ["T2-R1"],
+        decision: "accept",
+        retry_strategy: null,
+        next_action: null
+      },
+      controller: {
+        decision: "accept",
+        allowed: false,
+        reason: "all_requirements_covered",
+        stop_reason: null,
+        next_action: null
+      },
+      trace: {
+        llm_calls: 1,
+        latency_sec: 0.72,
+        error_codes: [],
+        evidence_gain: {
+          has_gain: true,
+          new_accepted_chunk_ids: ["F-201"]
+        }
+      }
+    };
+
+    var a1Empty = attempt("T1-A1", "T1", graphInitial, "ok", [], null);
+    var a1Assessed = attempt("T1-A1", "T1", graphInitial, "ok", [], retryEnvelope);
+    var a2Raw = attempt(
+      "T1-A2",
+      "T1",
+      graphRetry,
+      "ok",
+      [
+        {
+          chunk_id: "G-101",
+          text: "AMD relies on third-party foundries, including TSMC, for wafer fabrication.",
+          metadata: {ticker: "AMD", source: "10-K"}
+        },
+        {
+          chunk_id: "G-102",
+          text: "Supply constraints at foundry partners may affect product availability.",
+          metadata: {ticker: "AMD", source: "10-K"}
+        }
+      ],
+      null
+    );
+    var a2Assessed = clone(a2Raw);
+    a2Assessed.assessment = clone(graphAcceptEnvelope);
+
+    var f1Raw = attempt(
+      "T2-A1",
+      "T2",
+      financialInitial,
+      "ok",
+      [
+        {
+          chunk_id: "F-201",
+          text: "AMD FY2025 gross margin: 53.1%",
+          metadata: {ticker: "AMD", metric: "gross_margin", period: "FY2025"}
+        }
+      ],
+      null
+    );
+    var f1Assessed = clone(f1Raw);
+    f1Assessed.assessment = clone(financialAcceptEnvelope);
+
+    var contractShapes = {
+      AgentState: {
+        owner: "TypedDict · state.py",
+        fields: [
+          "original_query",
+          "tasks",
+          "current_task_index",
+          "current_action",
+          "plan_trace",
+          "attempts",
+          "completed_tasks",
+          "synthesis_trace",
+          "final_answer",
+          "citation_map"
+        ]
+      },
+      PlanRouteOutput: {
+        owner: "Pydantic · contracts.py",
+        tasks: "list[PlannedTask] · 1..3"
+      },
+      PlannedTask: {
+        task_id: "NonEmptyText",
+        query: "NonEmptyText",
+        requirements: "list[EvidenceRequirement] · min 1",
+        initial_action: "RetrievalAction"
+      },
+      RetrievalAction: {
+        owner: "Pydantic · contracts.py",
+        tool: "graph | vector | financial | news",
+        query: "non-empty string · max 1000",
+        top_k_chunks: "int · 1..100"
+      },
+      AttemptRecord: {
+        owner: "TypedDict · contracts.py",
+        fields: [
+          "attempt_id",
+          "task_id",
+          "action",
+          "retrieval_status",
+          "chunks",
+          "retrieval_trace",
+          "assessment"
+        ]
+      },
+      AssessmentOutput: {
+        owner: "Pydantic · contracts.py",
+        accepted_chunk_ids: "list[NonEmptyText]",
+        covered_requirement_ids: "list[NonEmptyText]",
+        decision: "accept | retry | stop",
+        retry_strategy: "RetryStrategy | null",
+        next_action: "RetrievalAction | null"
+      },
+      CompletionRecord: {
+        owner: "lean dict · nodes.py::_complete_current_task",
+        shape: {
+          task_id: "str",
+          sufficient: "bool",
+          stop_reason: "str"
+        }
+      },
+      SynthesisDraft: {
+        owner: "Ticket 04 · ยังไม่ใช่ runtime contract",
+        input: [
+          "original_query",
+          "tasks",
+          "completed_tasks",
+          "selected raw chunks"
+        ],
+        output: ["final_answer", "citation_map", "synthesis_trace"]
+      }
+    };
+
+    function baseState() {
+      return {
+        original_query: query,
+        tasks: [],
+        current_task_index: 0,
+        current_action: {},
+        attempts: [],
+        completed_tasks: []
+      };
+    }
+
+    function plannedState() {
+      var state = baseState();
+      state.tasks = clone(tasks);
+      state.current_action = clone(graphInitial);
+      state.plan_trace = {
+        status: "ok",
+        validation_mode: "structural_only_v1",
+        attempts: [{attempt: 1, status: "valid", errors: []}],
+        warnings: [],
+        llm_calls: 1,
+        latency_sec: 0.77,
+        fallback_source: null
+      };
+      return state;
+    }
+
+    var mainSteps = [
+      {
+        node: "query",
+        phase: "Input",
+        title: "รับ Original Query",
+        status: "implemented",
+        goal: "สร้าง State เริ่มต้นหนึ่งก้อน ซึ่งทุก Node จะอ่านและคืนเฉพาะ field ที่ต้องเปลี่ยน",
+        input: "ข้อความจากผู้ใช้",
+        output: "AgentState ที่มี original_query",
+        process: [
+          "ยังไม่เรียก LLM หรือ Retriever",
+          "ยังไม่มี Task, Attempt หรือ evidence"
+        ],
+        contract: "AgentState",
+        contractText: "Shared runtime state; LangGraph จะ merge partial dict จากแต่ละ Node กลับเข้า State นี้",
+        update: {original_query: query},
+        snapshot: baseState(),
+        ledger: [],
+        callout: "แก่นของ State machine: Node ไม่ต้องคืน State ทั้งหมด คืนเฉพาะสิ่งที่เปลี่ยนก็พอ"
+      },
+      {
+        node: "plan",
+        phase: "Node 01 · PlanRoute",
+        title: "แตก Query เป็น 2 Tasks",
+        status: "implemented",
+        goal: "รักษา Graph multi-hop ไว้ใน Task เดียว แต่แยก exact financial metric เป็นอีก Task เพราะใช้คนละ evidence store",
+        input: "original_query + PLAN_ROUTE_SYSTEM_PROMPT",
+        output: "PlanRouteOutput ที่ผ่าน Pydantic",
+        process: [
+          "LLM คืน JSON เท่านั้น",
+          "Pydantic ตรวจ Task/Requirement IDs, Tool, query และ top_k",
+          "ถ้า invalid ซ่อมได้อีก 1 ครั้ง",
+          "ตั้ง current_action = T1.initial_action"
+        ],
+        contract: "PlanRouteOutput",
+        contractText: "Pydantic เป็น boundary: JSON จาก LLM ต้องกลายเป็น 1–3 PlannedTask ที่มี RetrievalAction ครบ",
+        update: {
+          tasks: tasks,
+          current_task_index: 0,
+          current_action: graphInitial,
+          plan_trace: {
+            status: "ok",
+            llm_calls: 1,
+            warnings: []
+          }
+        },
+        snapshot: plannedState(),
+        ledger: [],
+        callout: "Requirements บอกว่า Task ต้องหาอะไรให้ครบ ส่วน initial_action บอก Retriever ว่าจะเริ่มหาอย่างไร"
+      },
+      {
+        node: "execute",
+        phase: "Node 02 · ExecuteAttempt",
+        title: "Graph retrieval รอบแรกได้ zero result",
+        status: "implemented",
+        goal: "เรียก Graph Retriever ตาม Action โดยไม่ตัดสินคุณภาพ แล้วจดทุกอย่างลง Attempt record เดียว",
+        input: "current Task T1 + RetrievalAction(graph)",
+        output: "AttemptRecord T1-A1",
+        process: [
+          "validate current_action ด้วย RetrievalAction",
+          "เรียก RETRIEVERS['graph'] ด้วย query/top_k/cfg",
+          "technical retry เฉพาะ transport error",
+          "ผลว่างยังเป็น retrieval_status='ok' เพื่อส่งให้ Assess วิเคราะห์"
+        ],
+        contract: "AttemptRecord",
+        contractText: "หนึ่ง Agent attempt รวม action, raw chunks, retriever trace และ assessment ไว้ record เดียว",
+        update: {
+          attempts: [a1Empty],
+          current_action: graphInitial,
+          stop_reason: null
+        },
+        snapshot: Object.assign(plannedState(), {attempts: [a1Empty]}),
+        ledger: [a1Empty],
+        callout: "Zero result ไม่ใช่ Tool error: Tool ทำงานสำเร็จแต่หา evidence ไม่เจอ จึงยังควรให้ Agent ออกแบบ retry"
+      },
+      {
+        node: "assess",
+        phase: "Node 03 · Assess",
+        title: "Assess พบว่ายังไม่ครอบคลุม Requirement",
+        status: "implemented",
+        goal: "ให้ LLM map chunks → Requirement และเสนอ retry ที่มี feedback เชิง retrieval",
+        input: "Task T1 + latest Attempt + compact context",
+        output: "AssessmentOutput(decision='retry')",
+        process: [
+          "accepted_chunk_ids ว่าง เพราะรอบนี้ไม่มี chunk",
+          "covered_requirement_ids ว่าง เพราะ T1-R1 ยังไม่ครบ",
+          "เสนอ bridge_hint และ Graph query ใหม่",
+          "controller ตรวจ budget, action novelty และ Tool retry profile"
+        ],
+        contract: "AssessmentOutput",
+        contractText: "LLM เสนอ semantic decision; deterministic controller เป็นคนอนุมัติว่า retry ทำได้จริงหรือไม่",
+        update: {
+          "attempts[-1].assessment": retryEnvelope,
+          current_action: graphRetry,
+          stop_reason: null
+        },
+        snapshot: Object.assign(plannedState(), {
+          current_action: graphRetry,
+          attempts: [a1Assessed]
+        }),
+        ledger: [a1Assessed],
+        callout: "Retry ยังอยู่ T1: current_task_index ไม่เปลี่ยน และ Attempt รอบต่อไปจะเป็น T1-A2"
+      },
+      {
+        node: "execute",
+        phase: "Node 02 · Retry loop",
+        title: "Graph retrieval รอบสองใช้ bridge hint",
+        status: "implemented",
+        goal: "ลอง Action ใหม่ที่เปลี่ยน query อย่างมีสาระ แล้ว append ledger โดยไม่เขียนทับ A1",
+        input: "controller-approved graphRetry",
+        output: "AttemptRecord T1-A2 + raw chunks G-101, G-102",
+        process: [
+          "นับ attempt_number เฉพาะ task_id=T1",
+          "Graph Retriever คืน raw chunks และ Phase T trace",
+          "append T1-A2 ต่อจาก T1-A1"
+        ],
+        contract: "AttemptRecord",
+        contractText: "Attempts เป็น append-only ledger; รอบก่อนยังอยู่ครบเพื่อดู feedback และผลลัพธ์ย้อนหลัง",
+        update: {
+          attempts: [a1Assessed, a2Raw],
+          current_action: graphRetry
+        },
+        snapshot: Object.assign(plannedState(), {
+          current_action: graphRetry,
+          attempts: [a1Assessed, a2Raw]
+        }),
+        ledger: [a1Assessed, a2Raw],
+        callout: "หลักฐานยังเป็น raw dict เดิมจาก Retriever ไม่มีการ annotate หรือตัด field ใน State"
+      },
+      {
+        node: "assess",
+        phase: "Node 03 · Assess",
+        title: "Accept evidence ของ T1",
+        status: "implemented",
+        goal: "ยืนยันว่า G-101/G-102 มีประโยชน์และครอบคลุม T1-R1 ครบ ก่อนจบ Task",
+        input: "T1 + T1-A2 chunks + accepted history จาก A1",
+        output: "AssessmentOutput(decision='accept')",
+        process: [
+          "validate ว่า accepted IDs อยู่ใน latest Attempt จริง",
+          "validate ว่า covered ID เป็น Requirement ของ T1",
+          "Accept ได้เมื่อ Requirement ทุกข้อ covered",
+          "เก็บ assessment envelope ไว้ใน T1-A2"
+        ],
+        contract: "AssessmentOutput",
+        contractText: "accepted_chunk_ids คือ evidence ที่มีประโยชน์; covered_requirement_ids คือ Requirement ที่ evidence รวมตอบได้ครบ",
+        update: {
+          "attempts[-1].assessment": graphAcceptEnvelope
+        },
+        snapshot: Object.assign(plannedState(), {
+          current_action: graphRetry,
+          attempts: [a1Assessed, a2Assessed]
+        }),
+        ledger: [a1Assessed, a2Assessed],
+        callout: "Assessment ไม่สร้าง evidence pool ซ้ำ: accepted evidence จะ derive ย้อนกลับจาก Attempts ตอน Synthesis"
+      },
+      {
+        node: "gate",
+        phase: "Task controller",
+        title: "บันทึก T1 แล้วเดินไป T2",
+        status: "implemented",
+        goal: "ปิด Task ปัจจุบันแบบ lean แล้วเตรียม initial_action ของ Task ถัดไป",
+        input: "controller decision=accept + stop_reason='sufficient'",
+        output: "Completion record + current_task_index=1",
+        process: [
+          "_complete_current_task บันทึกเพียง task_id/sufficient/stop_reason",
+          "เพิ่ม index จาก 0 → 1",
+          "ตั้ง current_action = T2.initial_action",
+          "ล้าง stop_reason เพื่อให้กราฟทำงานต่อ"
+        ],
+        contract: "CompletionRecord",
+        contractText: "Completion ไม่ copy chunks เพราะ Attempts เป็น evidence owner อยู่แล้ว",
+        update: {
+          completed_tasks: [
+            {task_id: "T1", sufficient: true, stop_reason: "sufficient"}
+          ],
+          current_task_index: 1,
+          current_action: financialInitial,
+          stop_reason: null
+        },
+        snapshot: Object.assign(plannedState(), {
+          current_task_index: 1,
+          current_action: financialInitial,
+          attempts: [a1Assessed, a2Assessed],
+          completed_tasks: [
+            {task_id: "T1", sufficient: true, stop_reason: "sufficient"}
+          ]
+        }),
+        ledger: [a1Assessed, a2Assessed],
+        callout: "Task แยกกันจริงเมื่อ controller เลื่อน index เท่านั้น การมี tasks list อย่างเดียวไม่ได้ทำให้ระบบเดินต่อเอง"
+      },
+      {
+        node: "execute",
+        phase: "Node 02 · ExecuteAttempt",
+        title: "Financial retrieval สำหรับ T2",
+        status: "implemented",
+        goal: "ใช้ RetrievalAction ของ T2 เรียก structured Financial Tool แล้วจดผลเป็น Attempt ใหม่",
+        input: "Task T2 + RetrievalAction(financial)",
+        output: "AttemptRecord T2-A1 + F-201",
+        process: [
+          "dispatch ตาม action.tool โดยไม่มี keyword override",
+          "attempt_number เริ่ม A1 ใหม่เพราะเป็นคนละ task_id",
+          "เก็บ raw metric chunk และ trace"
+        ],
+        contract: "RetrievalAction",
+        contractText: "Tool selection มาจาก PlanRoute/Assess; Execute มีหน้าที่ทำตาม Action เท่านั้น",
+        update: {
+          attempts: [a1Assessed, a2Assessed, f1Raw],
+          current_action: financialInitial
+        },
+        snapshot: Object.assign(plannedState(), {
+          current_task_index: 1,
+          current_action: financialInitial,
+          attempts: [a1Assessed, a2Assessed, f1Raw],
+          completed_tasks: [
+            {task_id: "T1", sufficient: true, stop_reason: "sufficient"}
+          ]
+        }),
+        ledger: [a1Assessed, a2Assessed, f1Raw],
+        callout: "T2-A1 แยกจาก T1-A1/T1-A2 แต่ทั้งหมดอยู่ใน Attempts list เดียวเพื่อ trace End-to-End"
+      },
+      {
+        node: "assess",
+        phase: "Node 03 + Task controller",
+        title: "Accept T2 และ Tasks หมดแล้ว",
+        status: "implemented",
+        goal: "เก็บ Assessment ของ T2 แล้วบันทึก completion โดยไม่สร้าง next action เพราะไม่มี Task เหลือ",
+        input: "T2 + F-201",
+        output: "T2 sufficient; current_action={}",
+        process: [
+          "F-201 ถูก accept และ T2-R1 covered",
+          "_complete_current_task เพิ่ม completion ของ T2",
+          "ไม่มี next index จึงล้าง current_action",
+          "stop_reason='sufficient' เป็นสัญญาณว่าจบ retrieval phase"
+        ],
+        contract: "CompletionRecord",
+        contractText: "เมื่อ Task สุดท้ายจบ State จะมี completed_tasks ครบ แต่ Synthesis ใหม่ยังต้องถูกเชื่อมใน Ticket 04",
+        update: {
+          "attempts[-1].assessment": financialAcceptEnvelope,
+          completed_tasks: [
+            {task_id: "T1", sufficient: true, stop_reason: "sufficient"},
+            {task_id: "T2", sufficient: true, stop_reason: "sufficient"}
+          ],
+          current_action: {},
+          stop_reason: "sufficient"
+        },
+        snapshot: Object.assign(plannedState(), {
+          current_task_index: 1,
+          current_action: {},
+          stop_reason: "sufficient",
+          attempts: [a1Assessed, a2Assessed, f1Assessed],
+          completed_tasks: [
+            {task_id: "T1", sufficient: true, stop_reason: "sufficient"},
+            {task_id: "T2", sufficient: true, stop_reason: "sufficient"}
+          ]
+        }),
+        ledger: [a1Assessed, a2Assessed, f1Assessed],
+        callout: "จุดนี้คือปลายสุดของ Four-Node ส่วนที่เขียนแล้วในตอนนี้ ขั้นถัดไปเป็นงานที่เหลือของ Ticket 04"
+      },
+      {
+        node: "synthesize",
+        phase: "Ticket 04 · Evidence selection",
+        title: "Derive accepted raw chunks จาก Attempts",
+        status: "pending",
+        goal: "คัดเฉพาะ raw chunks ที่ Assess ยอมรับ กระจาย evidence ต่อ Task และจำกัด context รวมไม่เกิน 9 chunks",
+        input: "tasks + completed_tasks + attempts",
+        output: "selected chunks: G-101, G-102, F-201",
+        process: [
+          "อ่าน accepted_chunk_ids จาก assessment.output",
+          "ย้อนหา raw chunk dict ใน Attempt เดียวกัน",
+          "validated evidence มาก่อน fail_open",
+          "รอบใหม่มาก่อนรอบเก่าใน Task; เริ่ม 3 chunks/Task แล้ว global fill"
+        ],
+        contract: "SynthesisDraft",
+        contractText: "ยังไม่ได้เขียน runtime selector; ข้อนี้คือ contract ที่ Ticket 04 ล็อกไว้",
+        update: {
+          selected_for_synthesis: {
+            T1: ["G-101", "G-102"],
+            T2: ["F-201"]
+          }
+        },
+        snapshot: {
+          derived_from: "attempts",
+          selected_raw_chunks: [
+            {task_id: "T1", chunk_id: "G-101"},
+            {task_id: "T1", chunk_id: "G-102"},
+            {task_id: "T2", chunk_id: "F-201"}
+          ],
+          max_chunks: 9
+        },
+        ledger: [a1Assessed, a2Assessed, f1Assessed],
+        callout: "ตรงนี้จงใจไม่สร้าง accepted_evidence ใน State เพราะจะซ้ำกับข้อมูลที่ derive จาก Attempts ได้"
+      },
+      {
+        node: "synthesize",
+        phase: "Node 04 · Grounded Synthesis",
+        title: "สร้าง Final Answer ครั้งเดียว",
+        status: "pending",
+        goal: "ให้ LLM ตอบ Original Query จาก selected chunks เท่านั้น แล้วตรวจ citation index ก่อนส่งออก",
+        input: "Original Query + Tasks + completion records + 3 selected chunks",
+        output: "final_answer + citation_map + synthesis_trace",
+        process: [
+          "ถ้าไม่มี evidence คืน insufficient answer โดย llm_calls=0",
+          "ถ้ามี evidence เรียก LLM หนึ่งครั้ง",
+          "ใช้ _remove_invalid_citations() ตัด citation ที่ไม่มีจริง",
+          "เก็บ selected IDs, latency, llm_calls และ error type"
+        ],
+        contract: "SynthesisDraft",
+        contractText: "Legacy synthesize_node มีอยู่แล้ว แต่ grounded Synthesis ที่ derive จาก Attempts ยังไม่ถูกเขียนและยังไม่ถูกต่อเข้า production graph",
+        update: {
+          final_answer: "AMD พึ่งพา TSMC ด้าน wafer fabrication [1][2] และ FY2025 gross margin เท่ากับ 53.1% [3]",
+          citation_map: [
+            {citation_index: 1, chunk_id: "G-101"},
+            {citation_index: 2, chunk_id: "G-102"},
+            {citation_index: 3, chunk_id: "F-201"}
+          ],
+          synthesis_trace: {
+            status: "ok",
+            selected_chunk_ids: ["G-101", "G-102", "F-201"],
+            llm_calls: 1,
+            latency_sec: 1.18,
+            error_type: null
+          }
+        },
+        snapshot: {
+          final_answer: "AMD พึ่งพา TSMC ด้าน wafer fabrication [1][2] และ FY2025 gross margin เท่ากับ 53.1% [3]",
+          citation_map: [
+            {citation_index: 1, chunk_id: "G-101"},
+            {citation_index: 2, chunk_id: "G-102"},
+            {citation_index: 3, chunk_id: "F-201"}
+          ],
+          synthesis_trace: {
+            status: "ok",
+            selected_chunk_ids: ["G-101", "G-102", "F-201"],
+            llm_calls: 1,
+            latency_sec: 1.18,
+            error_type: null
+          }
+        },
+        ledger: [a1Assessed, a2Assessed, f1Assessed],
+        callout: "Pending: ตัวอย่าง Output นี้แสดง shape ที่ต้องการ ไม่ใช่ผลที่ Code Four-Node ปัจจุบันสร้างได้แล้ว"
+      },
+      {
+        node: "output",
+        phase: "END",
+        title: "ส่งคำตอบและ Trace ออก",
+        status: "pending",
+        goal: "คืนผลลัพธ์ที่ผู้ใช้เห็นและข้อมูล Debug ที่ evaluator สามารถบันทึกได้",
+        input: "Final AgentState",
+        output: "Answer + citations + plan/attempt/synthesis traces",
+        process: [
+          "ผู้ใช้เห็น final_answer",
+          "Evaluator เก็บ citation_map และ traces",
+          "Ticket 05 จะเปลี่ยน production build_agent() มาใช้เส้นทางนี้"
+        ],
+        contract: "AgentState",
+        contractText: "Production cutover ยังเป็นเจ้าของ Ticket 05; จนกว่าจะถึงตอนนั้น graph.py ยังเดิน legacy Plan/ToolSelect/Execute/Observe/Reflect/Synthesize",
+        update: {graph_route: "Synthesize → END"},
+        snapshot: {
+          user_visible: {
+            final_answer: "AMD พึ่งพา TSMC ด้าน wafer fabrication [1][2] และ FY2025 gross margin เท่ากับ 53.1% [3]",
+            citations: 3
+          },
+          debug: {
+            plan_trace: "available",
+            attempts: 3,
+            completed_tasks: 2,
+            synthesis_trace: "pending implementation"
+          }
+        },
+        ledger: [a1Assessed, a2Assessed, f1Assessed],
+        callout: "ภาพรวมนี้จบที่ Design ปลายทาง แต่ badge สีเหลืองเตือนว่าส่วนนี้ยังไม่ใช่ production runtime ปัจจุบัน"
+      }
+    ];
+
+    var toolErrorAttempt = attempt(
+      "T1-A1",
+      "T1",
+      graphInitial,
+      "tool_error",
+      [],
+      null
+    );
+
+    var errorSteps = [
+      clone(mainSteps[0]),
+      clone(mainSteps[1]),
+      {
+        node: "execute",
+        phase: "Node 02 · ExecuteAttempt",
+        title: "Graph Retriever เกิด Timeout",
+        status: "gap",
+        goal: "Technical loop ลองซ้ำตาม budget แล้วบันทึก terminal Tool error หนึ่ง Attempt",
+        input: "T1 + graphInitial",
+        output: "T1-A1 retrieval_status='tool_error'",
+        process: [
+          "Timeout เป็น transient error จึง technical retry ได้",
+          "เมื่อ retries หมด retriever_result ยังเป็น None",
+          "append Attempt ที่ chunks=[] และ assessment=None",
+          "คืน current_action={} กับ stop_reason='tool_error'"
+        ],
+        contract: "AttemptRecord",
+        contractText: "Tool error ถูกบันทึกถูกต้อง แต่ return path ยังไม่เรียก _complete_current_task",
+        update: {
+          attempts: [toolErrorAttempt],
+          current_action: {},
+          stop_reason: "tool_error"
+        },
+        snapshot: Object.assign(plannedState(), {
+          attempts: [toolErrorAttempt],
+          current_action: {},
+          stop_reason: "tool_error"
+        }),
+        ledger: [toolErrorAttempt],
+        callout: "ช่องว่างปัจจุบันเริ่มตรงนี้: current_task_index ยังเป็น 0 แม้ T1 ไปต่อไม่ได้"
+      },
+      {
+        node: "assess",
+        phase: "Node 03 · Precondition",
+        title: "Assess ปฏิเสธ Tool-error Attempt",
+        status: "gap",
+        goal: "Assess รับเฉพาะ retrieval_status='ok' จึงไม่เรียก LLM สำหรับ transport failure",
+        input: "latest T1-A1 ที่ retrieval_status='tool_error'",
+        output: "current_action={} + assessment_error",
+        process: [
+          "precondition พบ retrieval_status ไม่ใช่ ok",
+          "คืน assessment_error ทันที",
+          "เส้นทาง early return นี้ไม่เรียก _complete_current_task",
+          "T2.initial_action จึงไม่เคยถูกตั้ง"
+        ],
+        contract: "AgentState",
+        contractText: "การไม่ส่ง transport error ให้ Assess เป็นสิ่งถูกต้อง แต่ controller ต้องปิด T1 และเดิน T2 ให้เอง",
+        update: {
+          current_action: {},
+          stop_reason: "assessment_error"
+        },
+        snapshot: Object.assign(plannedState(), {
+          attempts: [toolErrorAttempt],
+          current_task_index: 0,
+          current_action: {},
+          stop_reason: "assessment_error",
+          completed_tasks: []
+        }),
+        ledger: [toolErrorAttempt],
+        callout: "Task แยกกันใน list แต่ยังไม่แยก execution จนกว่า current_task_index จะถูกเพิ่ม"
+      },
+      {
+        node: "gate",
+        phase: "Current component route",
+        title: "Route ไป END ก่อน T2",
+        status: "gap",
+        goal: "แสดงพฤติกรรมจริงของ component route ตอนนี้ ไม่ใช่พฤติกรรมที่ต้องการ",
+        input: "stop_reason มีค่า หรือ current_action ว่าง",
+        output: "END",
+        process: [
+          "route ตรวจ state.get('stop_reason')",
+          "ได้ assessment_error จึงเลือก end",
+          "current_task_index ยังคง 0",
+          "T2 ไม่ถูก Execute"
+        ],
+        contract: "CompletionRecord",
+        contractText: "Ticket 04 ต้องเปลี่ยน Tool-error path ให้บันทึก {task_id:'T1', sufficient:false, stop_reason:'tool_error'} แล้วเริ่ม T2",
+        update: {
+          ended_early: true,
+          skipped_task_ids: ["T2"]
+        },
+        snapshot: {
+          current_behavior: "T1 tool_error → assessment_error → END",
+          expected_after_ticket04: "T1 tool_error → complete T1 → T2.initial_action",
+          current_task_index: 0,
+          T2_executed: false
+        },
+        ledger: [toolErrorAttempt],
+        callout: "นี่คือเหตุผลที่ checklist ‘tool_error ของ Task หนึ่งต้องไม่ขวาง Task ถัดไป’ ยังไม่ถูกติ๊ก"
+      }
+    ];
+
+    var scenarios = {
+      main: {
+        steps: mainSteps,
+        alert: ""
+      },
+      toolError: {
+        steps: errorSteps,
+        alert: "ฉากนี้จงใจแสดง bug/gap ปัจจุบัน: Tool error ของ T1 ยังทำให้ component flow จบก่อน T2 ส่วนการแก้เป็นงานที่เหลือใน Ticket 04"
+      }
+    };
+
+    var currentScenario = "main";
+    var currentStep = 0;
+    var activeTab = "update";
+    var timer = null;
+
+    var scenarioSelect = document.getElementById("scenario");
+    var playButton = document.getElementById("play");
+    var stepCounter = document.getElementById("stepCounter");
+    var progressBar = document.getElementById("progressBar");
+    var stateCode = document.getElementById("stateCode");
+    var scenarioAlert = document.getElementById("scenarioAlert");
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    function highlight(value) {
+      var json = JSON.stringify(value, null, 2);
+      var pattern = /("(?:\\u[a-fA-F0-9]{4}|\\[^u]|[^"\\])*")(\s*:)?|\b(true|false)\b|\b(null)\b|-?\d+(?:\.\d+)?|[{}\[\]]/g;
+      var output = "";
+      var lastIndex = 0;
+      var depth = 0;
+      var match;
+
+      while ((match = pattern.exec(json)) !== null) {
+        output += escapeHtml(json.slice(lastIndex, match.index));
+        var token = match[0];
+
+        if ("{}[]".includes(token)) {
+          var isClosing = token === "}" || token === "]";
+          if (isClosing) depth = Math.max(0, depth - 1);
+          var bracketClass = "json-bracket-" + String(depth % 6);
+          output += '<span class="json-bracket ' + bracketClass + '">' +
+            escapeHtml(token) + "</span>";
+          if (!isClosing) depth += 1;
+        } else if (match[1]) {
+          var cssClass = match[2] ? "json-key" : "json-string";
+          output += '<span class="' + cssClass + '">' +
+            escapeHtml(match[1]) + "</span>" + (match[2] || "");
+        } else if (match[3]) {
+          output += '<span class="json-bool">' + token + "</span>";
+        } else if (match[4]) {
+          output += '<span class="json-null">' + token + "</span>";
+        } else {
+          output += '<span class="json-number">' + token + "</span>";
+        }
+
+        lastIndex = pattern.lastIndex;
+      }
+
+      return output + escapeHtml(json.slice(lastIndex));
+    }
+
+    function statusLabel(status) {
+      if (status === "implemented") return "Implemented";
+      if (status === "gap") return "Current gap";
+      return "Ticket 04 pending";
+    }
+
+    function renderLedger(rows) {
+      var body = document.getElementById("ledgerBody");
+      if (!rows.length) {
+        body.innerHTML = '<tr><td class="empty-ledger" colspan="7">ยังไม่มี Attempt — Ledger จะเริ่มโตที่ ExecuteAttempt</td></tr>';
+        return;
+      }
+
+      body.innerHTML = rows.map(function (row) {
+        var assessment = row.assessment;
+        var output = assessment && assessment.output;
+        var decision = output ? output.decision : "—";
+        var chunkIds = row.chunks.map(function (chunk) {
+          return chunk.chunk_id || "?";
+        }).join(", ") || "∅";
+        var retrievalClass = row.retrieval_status === "ok" ? "ok" : "error";
+        var assessText = assessment ? assessment.status : "pending";
+        var assessClass = assessment ? "ok" : "wait";
+        return [
+          "<tr>",
+          "<td><strong>" + escapeHtml(row.attempt_id) + "</strong></td>",
+          "<td>" + escapeHtml(row.task_id) + "</td>",
+          "<td>" + escapeHtml(row.action.tool) + "<br><span style='color:var(--muted)'>" + escapeHtml(row.action.query) + "</span></td>",
+          "<td><span class='dot " + retrievalClass + "'></span>" + escapeHtml(row.retrieval_status) + "</td>",
+          "<td>" + escapeHtml(chunkIds) + "</td>",
+          "<td><span class='dot " + assessClass + "'></span>" + escapeHtml(assessText) + "</td>",
+          "<td>" + escapeHtml(decision) + "</td>",
+          "</tr>"
+        ].join("");
+      }).join("");
+    }
+
+    function visitedNodes(steps, index) {
+      var result = {};
+      for (var i = 0; i < index; i += 1) result[steps[i].node] = true;
+      return result;
+    }
+
+    function renderState(step) {
+      var value = step[activeTab];
+      if (activeTab === "model") value = contractShapes[step.contract];
+      stateCode.innerHTML = highlight(value);
+    }
+
+    function render() {
+      var config = scenarios[currentScenario];
+      var steps = config.steps;
+      var step = steps[currentStep];
+      var visited = visitedNodes(steps, currentStep);
+
+      document.querySelectorAll(".node").forEach(function (node) {
+        var id = node.getAttribute("data-node");
+        node.classList.toggle("active", id === step.node);
+        node.classList.toggle("visited", Boolean(visited[id]));
+      });
+
+      document.getElementById("phaseLabel").textContent = step.phase;
+      document.getElementById("stepTitle").textContent = step.title;
+      document.getElementById("goal").textContent = step.goal;
+      document.getElementById("inputText").textContent = step.input;
+      document.getElementById("outputText").textContent = step.output;
+      document.getElementById("contractName").textContent = step.contract;
+      document.getElementById("contractText").textContent = step.contractText;
+      document.getElementById("callout").textContent = step.callout;
+
+      var badge = document.getElementById("statusBadge");
+      badge.textContent = statusLabel(step.status);
+      badge.className = "badge " + step.status;
+
+      document.getElementById("processList").innerHTML = step.process.map(function (item) {
+        return "<li>" + escapeHtml(item) + "</li>";
+      }).join("");
+
+      renderState(step);
+      renderLedger(step.ledger);
+
+      stepCounter.textContent = String(currentStep + 1) + " / " + String(steps.length);
+      progressBar.style.width = String(((currentStep + 1) / steps.length) * 100) + "%";
+
+      scenarioAlert.textContent = config.alert;
+      scenarioAlert.classList.toggle("visible", Boolean(config.alert));
+    }
+
+    function stop() {
+      if (timer) window.clearInterval(timer);
+      timer = null;
+      playButton.textContent = "▶ Play";
+    }
+
+    function play() {
+      if (timer) {
+        stop();
+        return;
+      }
+      playButton.textContent = "Ⅱ Pause";
+      timer = window.setInterval(function () {
+        var steps = scenarios[currentScenario].steps;
+        if (currentStep >= steps.length - 1) {
+          stop();
+          return;
+        }
+        currentStep += 1;
+        render();
+      }, 1800);
+    }
+
+    function move(delta) {
+      stop();
+      var max = scenarios[currentScenario].steps.length - 1;
+      currentStep = Math.max(0, Math.min(max, currentStep + delta));
+      render();
+    }
+
+    scenarioSelect.addEventListener("change", function (event) {
+      stop();
+      currentScenario = event.target.value;
+      currentStep = 0;
+      render();
+    });
+
+    document.getElementById("reset").addEventListener("click", function () {
+      stop();
+      currentStep = 0;
+      render();
+    });
+    document.getElementById("previous").addEventListener("click", function () {
+      move(-1);
+    });
+    document.getElementById("next").addEventListener("click", function () {
+      move(1);
+    });
+    playButton.addEventListener("click", play);
+
+    document.querySelectorAll(".tab").forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        activeTab = tab.getAttribute("data-tab");
+        document.querySelectorAll(".tab").forEach(function (item) {
+          item.classList.toggle("active", item === tab);
+        });
+        renderState(scenarios[currentScenario].steps[currentStep]);
+      });
+    });
+
+    document.querySelectorAll(".node").forEach(function (node) {
+      node.addEventListener("click", function () {
+        stop();
+        var id = node.getAttribute("data-node");
+        var steps = scenarios[currentScenario].steps;
+        var nextIndex = steps.findIndex(function (step, index) {
+          return step.node === id && index >= currentStep;
+        });
+        if (nextIndex < 0) {
+          nextIndex = steps.findIndex(function (step) { return step.node === id; });
+        }
+        if (nextIndex >= 0) {
+          currentStep = nextIndex;
+          render();
+        }
+      });
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "ArrowRight") move(1);
+      if (event.key === "ArrowLeft") move(-1);
+      if (event.key === " ") {
+        event.preventDefault();
+        play();
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>

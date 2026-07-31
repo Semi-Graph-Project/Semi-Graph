@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-- [ ] Tasks ทำงานตามลำดับและจบเป็น completed, partial หรือ failed พร้อม stop reason ที่ไม่ปะปนกับความหมายว่า evidence เพียงพอ
+- [ / ] Tasks ทำงานตามลำดับและจบเป็น completed, partial หรือ failed พร้อม stop reason ที่ไม่ปะปนกับความหมายว่า evidence เพียงพอ
 - [ ] Attempt Ledger และ Raw Evidence Pool เก็บ audit เต็มแบบ append-only, Accepted Evidence เก็บ supporting chunks แบบ union และ Working Context ส่งให้ Assess เฉพาะข้อมูลย่อที่จำเป็นโดยขนาดไม่โตตาม raw history
 - [ ] Assess ทำ semantic mapping ว่า chunk รองรับ Requirement ใด แล้ว deterministic selector เลือก coverage-first ภายใน synthesis budget เริ่มต้นราวเก้า unique chunks
 - [ ] Attempt แรกและ Attempt ล่าสุดไม่มี priority โดยตัวมันเอง; retry chunks ที่ครอบคลุม Requirements มากกว่าสามารถแทนผลรอบแรกใน Synthesis Context ได้ทั้งหมด

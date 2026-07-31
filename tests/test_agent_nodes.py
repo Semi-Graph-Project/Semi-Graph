@@ -83,6 +83,17 @@ def test_financial_chunk_format_uses_percent_and_keeps_full_citation_data():
     assert citation_lookup[1]["provenance"]["debug_blob"] == "kept outside prompt"
 
 
+def test_synthesis_formatter_keeps_full_chunk_text():
+    chunk = {
+        "chunk_id": "C1",
+        "text": "start-" + "x" * 3_000 + "-important-tail",
+    }
+
+    formatted, _ = nodes._format_chunks_for_synthesis([chunk])
+
+    assert "-important-tail" in formatted
+
+
 class TestExecuteNode:
 
     def test_execute_dispatches_selected_retriever_and_updates_state(

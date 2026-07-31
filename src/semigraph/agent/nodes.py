@@ -8,6 +8,7 @@ from semigraph.agent.prompts import (
     OBSERVE_SYSTEM_PROMPT,
     PLANNER_SYSTEM_PROMPT,
     REFLECT_SYSTEM_PROMPT,
+    SYNTHESIZE_ATTEMPTS_SYSTEM_PROMPT,
     SYNTHESIZE_SYSTEM_PROMPT,
     TOOL_SELECT_SYSTEM_PROMPT,
 )
@@ -520,11 +521,12 @@ def execute_attempt_node(state: AgentState) -> dict:
             "retrieval_trace": retrieval_trace,
             "assessment": None,
         }
-        return {
-            "attempts": [*attempts, attempt],
-            "current_action": {},
-            "stop_reason": "tool_error",
-        }
+        return _complete_current_task(
+            state,
+            [*attempts, attempt],
+            "tool_error",
+        )
+
 
     if isinstance(retriever_result, dict):
         raw_chunks = retriever_result.get("chunks") or []
@@ -556,6 +558,189 @@ def execute_attempt_node(state: AgentState) -> dict:
         "attempts": [*attempts, attempt],
         "current_action": action.model_dump(mode="json"),
         "stop_reason": None,
+    }
+
+
+def _select_synthesis_chunks(
+    attempts: list[dict],
+    max_per_task: int = 3,
+    max_total: int = 9,
+) -> list[dict]:
+    """Return prioritized, unique raw chunks ready for Synthesis."""
+    if max_per_task < 1 or max_total < 1:
+        raise ValueError("Synthesis chunk limits must be positive")
+
+    attempts_by_task: dict[str, list[dict]] = {}
+    for attempt in attempts:
+        task_id = attempt.get("task_id")
+        if task_id:
+            attempts_by_task.setdefault(task_id, []).append(attempt)
+
+    accepted: dict[str, list[dict]] = {}
+    fail_open: dict[str, list[dict]] = {}
+
+    for task_id, task_attempts in attempts_by_task.items():
+        accepted[task_id] = []
+        fail_open[task_id] = []
+        seen_task_ids: set[str] = set()
+
+        for attempt in reversed(task_attempts):
+            assessment = attempt.get("assessment") or {}
+            if assessment.get("status") not in {"valid", "repaired"}:
+                continue
+            output = assessment.get("output") or {}
+            accepted_ids = set(output.get("accepted_chunk_ids") or [])
+            for chunk in attempt.get("chunks") or []:
+                chunk_id = chunk.get("chunk_id")
+                if chunk_id in accepted_ids and chunk_id not in seen_task_ids:
+                    accepted[task_id].append(chunk)
+                    seen_task_ids.add(chunk_id)
+
+        for attempt in reversed(task_attempts):
+            assessment = attempt.get("assessment") or {}
+            if assessment.get("status") != "fail_open":
+                continue
+            for chunk in attempt.get("chunks") or []:
+                chunk_id = chunk.get("chunk_id")
+                if chunk_id and chunk_id not in seen_task_ids:
+                    fail_open[task_id].append(chunk)
+                    seen_task_ids.add(chunk_id)
+
+    def fair_order(queues: dict[str, list[dict]]) -> list[dict]:
+        ordered = [
+            chunk
+            for task_id in attempts_by_task
+            for chunk in queues[task_id][:max_per_task]
+        ]
+        longest = max((len(queue) for queue in queues.values()), default=0)
+        ordered.extend(
+            queues[task_id][index]
+            for index in range(max_per_task, longest)
+            for task_id in attempts_by_task
+            if index < len(queues[task_id])
+        )
+        return ordered
+
+    selected: list[dict] = []
+    seen_ids: set[str] = set()
+    candidates = [*fair_order(accepted), *fair_order(fail_open)]
+    for chunk in candidates:
+        chunk_id = chunk.get("chunk_id")
+        if not chunk_id or chunk_id in seen_ids:
+            continue
+        selected.append(chunk)
+        seen_ids.add(chunk_id)
+        if len(selected) == max_total:
+            break
+
+    return selected
+
+
+def synthesize_attempts_node(state: AgentState) -> dict:
+    """Synthesize once from evidence selected from the Attempt Ledger."""
+    started_at = time.perf_counter()
+    attempts = state.get("attempts") or []
+    selected_chunks = _select_synthesis_chunks(attempts)
+    eligible_ids_by_task: dict[str, set[str]] = {
+        task["task_id"]: set()
+        for task in (state.get("tasks") or [])
+        if isinstance(task, dict) and task.get("task_id")
+    }
+
+    for attempt in attempts:
+        task_id = attempt.get("task_id")
+        if not task_id:
+            continue
+        eligible_ids = eligible_ids_by_task.setdefault(task_id, set())
+        assessment = attempt.get("assessment") or {}
+        if assessment.get("status") in {"valid", "repaired"}:
+            output = assessment.get("output") or {}
+            eligible_ids.update(output.get("accepted_chunk_ids") or [])
+        elif assessment.get("status") == "fail_open":
+            eligible_ids.update(
+                chunk["chunk_id"]
+                for chunk in (attempt.get("chunks") or [])
+                if chunk.get("chunk_id")
+            )
+
+    selected_ids_by_task = {
+        task_id: [
+            chunk["chunk_id"]
+            for chunk in selected_chunks
+            if chunk["chunk_id"] in eligible_ids
+        ]
+        for task_id, eligible_ids in eligible_ids_by_task.items()
+    }
+
+    if not selected_chunks:
+        return {
+            "final_answer": (
+                "I do not have enough evidence to answer the question."
+            ),
+            "citation_map": [],
+            "synthesis_trace": {
+                "status": "no_evidence",
+                "selected_chunk_ids_by_task": selected_ids_by_task,
+                "llm_calls": 0,
+                "latency_sec": round(time.perf_counter() - started_at, 3),
+                "error_type": None,
+            },
+        }
+
+    evidence_text, citation_lookup = _format_chunks_for_synthesis(
+        selected_chunks
+    )
+    user_message = (
+        f"Original Query:\n{state.get('original_query', '')}\n\n"
+        f"Tasks:\n{json.dumps(state.get('tasks') or [], ensure_ascii=False)}"
+        "\n\n"
+        "Task Completions:\n"
+        f"{json.dumps(state.get('completed_tasks') or [], ensure_ascii=False)}"
+        "\n\n"
+        f"Selected Evidence Chunks:\n{evidence_text}"
+    )
+
+    try:
+        llm = get_llm(get_config())
+        response = llm.invoke([
+            {
+                "role": "system",
+                "content": SYNTHESIZE_ATTEMPTS_SYSTEM_PROMPT,
+            },
+            {"role": "user", "content": user_message},
+        ])
+        raw = response.content if hasattr(response, "content") else str(response)
+        answer = _remove_invalid_citations(
+            str(raw).strip(),
+            set(citation_lookup),
+        )
+        cited_indices = _extract_citation_indices(answer)
+        citation_map = [
+            {"citation_index": index, **citation_lookup[index]}
+            for index in cited_indices
+            if index in citation_lookup
+        ]
+        status = "ok"
+        error_type = None
+    except Exception as exc:
+        answer = (
+            "I could not synthesize a grounded final answer from the "
+            "current evidence."
+        )
+        citation_map = []
+        status = "provider_error"
+        error_type = type(exc).__name__
+
+    return {
+        "final_answer": answer,
+        "citation_map": citation_map,
+        "synthesis_trace": {
+            "status": status,
+            "selected_chunk_ids_by_task": selected_ids_by_task,
+            "llm_calls": 1,
+            "latency_sec": round(time.perf_counter() - started_at, 3),
+            "error_type": error_type,
+        },
     }
 
 
@@ -811,6 +996,42 @@ def _normalize_assessment_error(
     ]
 
 
+def _complete_current_task(
+    state: AgentState,
+    attempts: list[dict],
+    stop_reason: str,
+) -> dict:
+    """Record one Task outcome and prepare the next Task, if any."""
+    tasks = state["tasks"]
+    current_index = state["current_task_index"]
+    task = tasks[current_index]
+    completed_tasks = [
+        *(state.get("completed_tasks") or []),
+        {
+            "task_id": task["task_id"],
+            "sufficient": stop_reason == "sufficient",
+            "stop_reason": stop_reason,
+        },
+    ]
+
+    next_index = current_index + 1
+    if next_index < len(tasks):
+        return {
+            "attempts": attempts,
+            "completed_tasks": completed_tasks,
+            "current_task_index": next_index,
+            "current_action": dict(tasks[next_index]["initial_action"]),
+            "stop_reason": None,
+        }
+
+    return {
+        "attempts": attempts,
+        "completed_tasks": completed_tasks,
+        "current_action": {},
+        "stop_reason": stop_reason,
+    }
+
+
 def assess_node(state: AgentState) -> dict:
     """Assess the latest Attempt and let the controller approve any retry."""
     try:
@@ -901,11 +1122,11 @@ def assess_node(state: AgentState) -> dict:
             "trace": trace,
         }
         attempts[-1] = assessed_attempt
-        return {
-            "attempts": attempts,
-            "current_action": {},
-            "stop_reason": "assessment_error",
-        }
+        return _complete_current_task(
+            state,
+            attempts,
+            "assessment_error",
+        )
 
     evidence_gain = measure_evidence_gain(assessment, state["attempts"])
     controller = decide_retry(
@@ -923,20 +1144,18 @@ def assess_node(state: AgentState) -> dict:
     attempts[-1] = assessed_attempt
 
     if controller["decision"] == "retry":
-        current_action = controller["next_action"]
-        stop_reason = None
-    elif controller["decision"] == "accept":
-        current_action = {}
-        stop_reason = "sufficient"
-    else:
-        current_action = {}
-        stop_reason = controller["stop_reason"] or "unsupported"
+        return {
+            "attempts": attempts,
+            "current_action": controller["next_action"],
+            "stop_reason": None,
+        }
 
-    return {
-        "attempts": attempts,
-        "current_action": current_action,
-        "stop_reason": stop_reason,
-    }
+    stop_reason = (
+        "sufficient"
+        if controller["decision"] == "accept"
+        else controller["stop_reason"] or "unsupported"
+    )
+    return _complete_current_task(state, attempts, stop_reason)
 
 
 def execute_node(state: AgentState) -> dict:
@@ -1663,14 +1882,6 @@ def _annotate_chunk_for_synthesis(chunk: dict, batch: dict) -> dict:
     return annotated
 
 
-def _strip_internal_chunk_keys(chunk: dict) -> dict:
-    return {
-        key: value
-        for key, value in chunk.items()
-        if not str(key).startswith("_")
-    }
-
-
 def _build_retrieval_batches(state: AgentState) -> list[dict]:
     tool_call_log = list(state.get("tool_call_log") or [])
     chunks_history = [
@@ -1825,7 +2036,6 @@ def _select_chunks_for_synthesis(
 def _format_chunks_for_synthesis(
     chunks: list[dict],
     max_chunks: int | None = None,
-    max_chars: int = 2000,
 ) -> tuple[str, dict[int, dict]]:
     formatted: list[str] = []
     citation_lookup: dict[int, dict] = {}
@@ -1833,8 +2043,6 @@ def _format_chunks_for_synthesis(
 
     for i, chunk in enumerate(selected_chunks, start=1):
         text = str(chunk.get("text") or "").strip()
-        if len(text) > max_chars:
-            text = f"{text[:max_chars]}..."
 
         lines = [f"[{i}] chunk_id={chunk.get('chunk_id', 'UNKNOWN')}"]
         if chunk.get("_retrieval_subquery"):
@@ -1855,7 +2063,11 @@ def _format_chunks_for_synthesis(
             ])
 
         formatted.append("\n".join(lines))
-        citation_lookup[i] = _strip_internal_chunk_keys(chunk)
+        citation_lookup[i] = {
+            key: value
+            for key, value in chunk.items()
+            if not str(key).startswith("_")
+        }
 
     return "\n\n".join(formatted), citation_lookup
 
@@ -1885,70 +2097,55 @@ def _remove_invalid_citations(answer: str, valid_indices: set[int]) -> str:
     return sanitized.strip()
 
 
-if __name__ == "__main__":
-    from pprint import pprint
-
-    mock_plan = PlanRouteOutput.model_validate(
+def _workbench() -> None:
+    """Show how synthesis-ready chunks are selected from Attempts."""
+    first_c1 = {"chunk_id": "C1", "text": "older raw C1 from A1"}
+    retry_c1 = {"chunk_id": "C1", "text": "newer raw C1 from A2"}
+    retry_c2 = {"chunk_id": "C2", "text": "raw C2 from A2"}
+    fallback_c3 = {"chunk_id": "C3", "text": "fail-open raw C3"}
+    attempts = [
         {
-            "tasks": [
-                {
-                    "task_id": "T1",
-                    "query": "What evidence explains NVDA FY2024 operating risk?",
-                    "requirements": [
-                        {
-                            "requirement_id": "R1",
-                            "description": (
-                                "Identify evidence describing NVDA FY2024 "
-                                "operating risk."
-                            ),
-                        }
-                    ],
-                    "initial_action": {
-                        "tool": "graph",
-                        "query": "NVDA FY2024 operating risk",
-                        "top_k_chunks": 5,
-                    },
-                }
-            ]
-        }
-    )
-    first_task = mock_plan.tasks[0]
-    workbench_state: AgentState = {
-        "original_query": "What evidence explains NVDA FY2024 operating risk?",
-        "tasks": [
-            task.model_dump(mode="json")
-            for task in mock_plan.tasks
-        ],
-        "current_task_index": 0,
-        "current_action": first_task.initial_action.model_dump(mode="json"),
-        "attempts": [],
-    }
-    execute_output = execute_attempt_node(workbench_state)
-    latest_attempt = execute_output["attempts"][-1]
-    retrieval_trace = latest_attempt.get("retrieval_trace") or {}
-    chunk_previews = [
+            "attempt_id": "T1-A1",
+            "task_id": "T1",
+            "chunks": [first_c1],
+            "assessment": {
+                "status": "valid",
+                "output": {"accepted_chunk_ids": ["C1"]},
+            },
+        },
         {
-            "chunk_id": chunk.get("chunk_id"),
-            "text_preview": str(chunk.get("text") or "")[:120],
-        }
-        for chunk in latest_attempt.get("chunks", [])
+            "attempt_id": "T1-A2",
+            "task_id": "T1",
+            "chunks": [retry_c1, retry_c2],
+            "assessment": {
+                "status": "repaired",
+                "output": {"accepted_chunk_ids": ["C1", "C2"]},
+            },
+        },
+        {
+            "attempt_id": "T2-A1",
+            "task_id": "T2",
+            "chunks": [fallback_c3],
+            "assessment": {"status": "fail_open", "output": None},
+        },
     ]
 
-    pprint(
-        {
-            "attempt_id": latest_attempt.get("attempt_id"),
-            "retrieval_status": latest_attempt.get("retrieval_status"),
-            "action": latest_attempt.get("action"),
-            "chunks": chunk_previews,
-            "retrieval_trace": {
-                "retriever": retrieval_trace.get("retriever"),
-                "profile": retrieval_trace.get("profile"),
-                "returned_chunk_ids": retrieval_trace.get(
-                    "returned_chunk_ids"
-                ),
-                "technical_tries": retrieval_trace.get("technical_tries"),
-            },
-            "assessment": latest_attempt.get("assessment"),
-            "stop_reason": execute_output.get("stop_reason"),
-        }
-    )
+    selected = _select_synthesis_chunks(attempts)
+    print("Attempts:")
+    for attempt in attempts:
+        returned = [chunk["chunk_id"] for chunk in attempt["chunks"]]
+        output = attempt["assessment"].get("output") or {}
+        accepted_ids = output.get("accepted_chunk_ids", [])
+        status = attempt["assessment"]["status"]
+        print(
+            f"  {attempt['attempt_id']}: status={status}, "
+            f"returned={returned}, accepted={accepted_ids}"
+        )
+
+    print("\nSynthesis-ready raw chunks:")
+    print(json.dumps(selected, indent=2, ensure_ascii=False))
+    print(f"\nNewer retry C1 preserved: {selected[0] is retry_c1}")
+
+
+if __name__ == "__main__":
+    _workbench()
