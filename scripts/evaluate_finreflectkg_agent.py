@@ -1,11 +1,11 @@
 """Evaluate the SemiGraph agent on the FinReflectKG multi-hop benchmark.
 
-The evaluator keeps production agent code unchanged.  It composes the same
-LangGraph nodes with one of three tool-selection policies:
+The evaluator uses the production Four-Node Harness with one of three
+tool-selection policies:
 
 * agent_vector: always retrieve with the Phase T vector retriever.
 * agent_graph: always retrieve with the Phase T graph retriever.
-* full_agent: use the production LLM router and all of its registered tools.
+* full_agent: let PlanRoute and Assess use all registered tools.
 
 Each run writes retrieval metrics, the final answer, agent traces, and a
 RAGAS-ready JSONL file.  No RAGAS judge is called by this script.
@@ -23,10 +23,9 @@ import time
 from contextlib import redirect_stdout
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import yaml
-from langgraph.graph import END, START, StateGraph
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -34,26 +33,20 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from semigraph.agent.nodes import (  # noqa: E402
-    _dedupe_chunks_for_synthesis,
-    _route_after_reflect,
-    _select_chunks_for_synthesis,
-    advance_subquery_node,
-    execute_node,
-    observe_node,
-    plan_node,
-    reflect_node,
-    synthesize_node,
-    tool_select_node,
+from semigraph.agent.graph import build_agent  # noqa: E402
+from semigraph.agent.ledger import (  # noqa: E402
+    retrieval_traces,
+    retrieved_chunks,
+    tool_calls,
 )
-from semigraph.agent.state import AgentState  # noqa: E402
+from semigraph.agent.nodes import _select_synthesis_chunks  # noqa: E402
 from semigraph.agent.tools import DEFAULT_TOP_K  # noqa: E402
 
 
 DEFAULT_DATASET = ROOT / "benchmark" / "datasets" / "finreflectkg_sox_strict74.yaml"
 DEFAULT_OUTPUT_ROOT = ROOT / "benchmark" / "results" / "finreflectkg_agent"
 MODES = ("agent_vector", "agent_graph", "full_agent")
-CHECKPOINT_SCHEMA_VERSION = 1
+CHECKPOINT_SCHEMA_VERSION = 2
 RunKey = tuple[str, str]
 CheckpointRecords = dict[RunKey, tuple[dict[str, Any], dict[str, Any]]]
 
@@ -85,85 +78,16 @@ def load_dataset(path: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     return metadata, queries
 
 
-def _current_query(state: AgentState) -> str:
-    subqueries = list(state.get("subqueries") or [])
-    index = int(state.get("current_subquery_idx", 0))
-    if 0 <= index < len(subqueries):
-        return str(subqueries[index])
-    return str(state.get("original_query") or "")
-
-
-def locked_tool_selector(tool_name: str, top_k: int) -> Callable[[AgentState], dict]:
-    """Build a selector that preserves retries but locks the retriever type."""
-
-    if tool_name not in {"vector", "graph"}:
-        raise ValueError(f"Unsupported locked tool: {tool_name}")
-
-    def select(state: AgentState) -> dict:
-        query = str(state.get("retry_query") or _current_query(state)).strip()
-        return {
-            "next_tool": {
-                "name": tool_name,
-                "args": {"query": query, "top_k_chunks": top_k},
-            }
-        }
-
-    return select
-
-
-def full_tool_selector(top_k: int) -> Callable[[AgentState], dict]:
-    """Use the production router while normalizing the per-call evidence budget."""
-
-    def select(state: AgentState) -> dict:
-        update = tool_select_node(state)
-        next_tool = dict(update.get("next_tool") or {})
-        args = dict(next_tool.get("args") or {})
-        args.setdefault("query", state.get("retry_query") or _current_query(state))
-        args["top_k_chunks"] = top_k
-        next_tool["args"] = args
-        return {"next_tool": next_tool}
-
-    return select
-
-
 def build_evaluation_agent(mode: str, top_k: int):
-    """Compile the production workflow with an evaluation-only tool policy."""
-
-    if mode == "agent_vector":
-        selector = locked_tool_selector("vector", top_k)
-    elif mode == "agent_graph":
-        selector = locked_tool_selector("graph", top_k)
-    elif mode == "full_agent":
-        selector = full_tool_selector(top_k)
-    else:
+    """Build one harness; only the ablation Tool policy differs by mode."""
+    locked_tools = {
+        "agent_vector": "vector",
+        "agent_graph": "graph",
+        "full_agent": None,
+    }
+    if mode not in locked_tools:
         raise ValueError(f"Unknown evaluation mode: {mode}")
-
-    workflow = StateGraph(AgentState)
-    workflow.add_node("plan", plan_node)
-    workflow.add_node("tool_select", selector)
-    workflow.add_node("execute", execute_node)
-    workflow.add_node("observe", observe_node)
-    workflow.add_node("reflect", reflect_node)
-    workflow.add_node("advance_subquery", advance_subquery_node)
-    workflow.add_node("synthesize", synthesize_node)
-
-    workflow.add_edge(START, "plan")
-    workflow.add_edge("plan", "tool_select")
-    workflow.add_edge("tool_select", "execute")
-    workflow.add_edge("execute", "observe")
-    workflow.add_edge("observe", "reflect")
-    workflow.add_conditional_edges(
-        "reflect",
-        _route_after_reflect,
-        {
-            "advance_subquery": "advance_subquery",
-            "tool_select": "tool_select",
-            "synthesize": "synthesize",
-        },
-    )
-    workflow.add_edge("advance_subquery", "tool_select")
-    workflow.add_edge("synthesize", END)
-    return workflow.compile()
+    return build_agent(locked_tool=locked_tools[mode], top_k=top_k)
 
 
 def _ordered_unique(values: list[str]) -> list[str]:
@@ -239,18 +163,96 @@ def score_groups(
 
 
 def _deduped_chunks(state: dict[str, Any]) -> list[dict[str, Any]]:
-    chunks = [
-        chunk for chunk in state.get("chunks_history", [])
-        if isinstance(chunk, dict)
-    ]
-    return _dedupe_chunks_for_synthesis(chunks)
+    """Derive all chronologically unique retrieved chunks from Attempts."""
+    return retrieved_chunks(state.get("attempts", []) or [])
 
 
 def _synthesis_chunks(state: dict[str, Any]) -> list[dict[str, Any]]:
-    """Recreate the exact context selection used by synthesize_node."""
+    """Recreate the exact Attempt Ledger selection used by Synthesis."""
+    return _select_synthesis_chunks(state.get("attempts", []) or [])
 
-    selected = _select_chunks_for_synthesis(state)
-    return _dedupe_chunks_for_synthesis(selected or _deduped_chunks(state))
+
+def _evidence_pool_chunks(state: dict[str, Any]) -> list[dict[str, Any]]:
+    """Derive every accepted/fail-open chunk without adding duplicate state."""
+    attempts = state.get("attempts", []) or []
+    raw_count = sum(len(attempt.get("chunks") or []) for attempt in attempts)
+    limit = max(1, raw_count)
+    return _select_synthesis_chunks(
+        attempts,
+        max_per_task=limit,
+        max_total=limit,
+    )
+
+
+def _tool_call_log(state: dict[str, Any]) -> list[dict[str, Any]]:
+    return tool_calls(state.get("attempts", []) or [])
+
+
+def _retrieval_traces(state: dict[str, Any]) -> list[dict[str, Any]]:
+    return retrieval_traces(state.get("attempts", []) or [])
+
+
+def _assessment_traces(state: dict[str, Any]) -> list[dict[str, Any]]:
+    traces = []
+    for attempt in state.get("attempts", []) or []:
+        assessment = attempt.get("assessment") or {}
+        if not assessment:
+            continue
+        traces.append({
+            "attempt_id": attempt.get("attempt_id"),
+            "task_id": attempt.get("task_id"),
+            "status": assessment.get("status"),
+            "controller": assessment.get("controller") or {},
+            "trace": assessment.get("trace") or {},
+        })
+    return traces
+
+
+def _stage_summary(state: dict[str, Any], total_latency_sec: float) -> dict[str, Any]:
+    plan_trace = state.get("plan_trace") or {}
+    synthesis_trace = state.get("synthesis_trace") or {}
+    assessments = _assessment_traces(state)
+
+    plan_calls = int(plan_trace.get("llm_calls") or 0)
+    assess_calls = sum(
+        int(item["trace"].get("llm_calls") or 0)
+        for item in assessments
+    )
+    synthesis_calls = int(synthesis_trace.get("llm_calls") or 0)
+
+    plan_latency = float(plan_trace.get("latency_sec") or 0)
+    retrieval_latency = sum(
+        float(technical_try.get("latency_sec") or 0)
+        for attempt in state.get("attempts", []) or []
+        for technical_try in (
+            (attempt.get("retrieval_trace") or {}).get("technical_tries") or []
+        )
+    )
+    assess_latency = sum(
+        float(item["trace"].get("latency_sec") or 0)
+        for item in assessments
+    )
+    synthesis_latency = float(synthesis_trace.get("latency_sec") or 0)
+    recorded_latency = (
+        plan_latency + retrieval_latency + assess_latency + synthesis_latency
+    )
+
+    return {
+        "llm_calls": {
+            "plan_route": plan_calls,
+            "assess": assess_calls,
+            "synthesize": synthesis_calls,
+            "orchestration_total": plan_calls + assess_calls + synthesis_calls,
+        },
+        "latency_sec": {
+            "plan_route": round(plan_latency, 3),
+            "retrieval": round(retrieval_latency, 3),
+            "assess": round(assess_latency, 3),
+            "synthesize": round(synthesis_latency, 3),
+            "recorded_total": round(recorded_latency, 3),
+            "unattributed": round(max(0.0, total_latency_sec - recorded_latency), 3),
+        },
+    }
 
 
 def _context_texts(chunks: list[dict[str, Any]]) -> list[str]:
@@ -280,18 +282,22 @@ def agent_state_errors(state: dict[str, Any]) -> list[str]:
     """Return retryable failures that production nodes recorded in state."""
 
     errors = []
-    for trace in state.get("retrieval_trace_history", []) or []:
-        if trace.get("status") != "error":
+    plan_trace = state.get("plan_trace") or {}
+    if plan_trace.get("status") == "error":
+        errors.append(f"plan: {plan_trace.get('fallback_source', 'plan_error')}")
+
+    for attempt in state.get("attempts", []) or []:
+        if attempt.get("retrieval_status") != "tool_error":
             continue
-        message = str(trace.get("error") or trace.get("error_type") or "retrieval error")
-        errors.append(f"{trace.get('tool', 'unknown')}: {message}")
+        action = attempt.get("action") or {}
+        trace = attempt.get("retrieval_trace") or {}
+        message = str(trace.get("error_type") or "retrieval error")
+        errors.append(f"{action.get('tool', 'unknown')}: {message}")
 
     final_answer = str(state.get("final_answer") or "").strip()
     if not final_answer:
         errors.append("missing final answer")
-    elif final_answer == (
-        "I could not synthesize a grounded final answer from the current evidence."
-    ):
+    elif (state.get("synthesis_trace") or {}).get("status") == "provider_error":
         errors.append("synthesis failed")
     return list(dict.fromkeys(errors))
 
@@ -306,12 +312,17 @@ def result_from_state(
     """Build the detailed record and its RAGAS-ready projection."""
 
     all_chunks = _deduped_chunks(state)
+    evidence_pool_chunks = _evidence_pool_chunks(state)
     synthesis_chunks = _synthesis_chunks(state)
     all_ids = chunk_ids(all_chunks)
+    evidence_pool_ids = chunk_ids(evidence_pool_chunks)
     synthesis_ids = chunk_ids(synthesis_chunks)
     gold_ids = _ordered_unique([str(value) for value in item.get("gold_chunks", []) if value])
     groups = evidence_groups(item, gold_ids)
-    tool_log = list(state.get("tool_call_log") or [])
+    tool_log = _tool_call_log(state)
+    retrieval_traces = _retrieval_traces(state)
+    assessment_traces = _assessment_traces(state)
+    stage_summary = _stage_summary(state, latency_sec)
     called_tools = [str(entry.get("tool") or "") for entry in tool_log if entry.get("tool")]
     gold_tools = [str(tool) for tool in item.get("gold_tools", []) if tool]
     state_errors = agent_state_errors(state)
@@ -329,22 +340,32 @@ def result_from_state(
         "called_tools": called_tools,
         "tool_match": int(bool(set(called_tools) & set(gold_tools))) if gold_tools else None,
         "tool_call_count": len(tool_log),
+        "orchestration_llm_calls": stage_summary["llm_calls"][
+            "orchestration_total"
+        ],
         "unique_retrieved_count": len(all_ids),
+        "evidence_pool_count": len(evidence_pool_ids),
         "synthesis_context_count": len(synthesis_ids),
         "gold_chunk_ids": gold_ids,
         "returned_chunk_ids": all_ids,
+        "evidence_pool_chunk_ids": evidence_pool_ids,
         "synthesis_chunk_ids": synthesis_ids,
         "metrics_at_k": _metric_set(all_ids[:score_k], gold_ids, groups),
         "metrics_all_retrieved": _metric_set(all_ids, gold_ids, groups),
+        "metrics_evidence_pool": _metric_set(evidence_pool_ids, gold_ids, groups),
         "metrics_synthesis_context": _metric_set(synthesis_ids, gold_ids, groups),
         "final_answer": str(state.get("final_answer") or ""),
         "citation_map": list(state.get("citation_map") or []),
-        "subqueries": list(state.get("subqueries") or []),
-        "completed_subqueries": list(state.get("completed_subqueries") or []),
+        "tasks": list(state.get("tasks") or []),
+        "completed_tasks": list(state.get("completed_tasks") or []),
+        "attempts": list(state.get("attempts") or []),
+        "plan_trace": dict(state.get("plan_trace") or {}),
+        "synthesis_trace": dict(state.get("synthesis_trace") or {}),
+        "stop_reason": state.get("stop_reason"),
         "tool_call_log": tool_log,
-        "retrieval_trace_history": list(state.get("retrieval_trace_history") or []),
-        "observation_history": list(state.get("observation_history") or []),
-        "reflection_history": list(state.get("reflection_history") or []),
+        "retrieval_trace_history": retrieval_traces,
+        "assessment_trace_history": assessment_traces,
+        "stage_summary": stage_summary,
         "error_type": "AgentStateError" if state_errors else "",
         "error": "; ".join(state_errors),
     }
@@ -384,22 +405,45 @@ def error_result(
         "called_tools": [],
         "tool_match": None,
         "tool_call_count": 0,
+        "orchestration_llm_calls": 0,
         "unique_retrieved_count": 0,
+        "evidence_pool_count": 0,
         "synthesis_context_count": 0,
         "gold_chunk_ids": gold_ids,
         "returned_chunk_ids": [],
+        "evidence_pool_chunk_ids": [],
         "synthesis_chunk_ids": [],
         "metrics_at_k": empty_metrics,
         "metrics_all_retrieved": empty_metrics,
+        "metrics_evidence_pool": empty_metrics,
         "metrics_synthesis_context": empty_metrics,
         "final_answer": "",
         "citation_map": [],
-        "subqueries": [],
-        "completed_subqueries": [],
+        "tasks": [],
+        "completed_tasks": [],
+        "attempts": [],
+        "plan_trace": {},
+        "synthesis_trace": {},
+        "stop_reason": "runtime_error",
         "tool_call_log": [],
         "retrieval_trace_history": [],
-        "observation_history": [],
-        "reflection_history": [],
+        "assessment_trace_history": [],
+        "stage_summary": {
+            "llm_calls": {
+                "plan_route": 0,
+                "assess": 0,
+                "synthesize": 0,
+                "orchestration_total": 0,
+            },
+            "latency_sec": {
+                "plan_route": 0.0,
+                "retrieval": 0.0,
+                "assess": 0.0,
+                "synthesize": 0.0,
+                "recorded_total": 0.0,
+                "unattributed": round(latency_sec, 3),
+            },
+        },
         "error_type": type(exc).__name__,
         "error": str(exc),
     }
@@ -451,6 +495,10 @@ def aggregate_results(rows: list[dict[str, Any]], modes: list[str]) -> dict[str,
             "synthesis_answerable": _mean(selected, ("metrics_synthesis_context", "answerable")),
             "avg_latency_sec": _mean(successful, ("latency_sec",)),
             "avg_tool_calls": _mean(successful, ("tool_call_count",)),
+            "avg_orchestration_llm_calls": _mean(
+                successful,
+                ("orchestration_llm_calls",),
+            ),
             "avg_unique_retrieved": _mean(successful, ("unique_retrieved_count",)),
         }
     return summary
@@ -616,6 +664,7 @@ def validate_resume_config(
     """Fail closed when a resume request would mix experiment contracts."""
 
     comparable_fields = (
+        "agent_harness",
         "dataset",
         "dataset_sha256",
         "modes",
@@ -629,7 +678,7 @@ def validate_resume_config(
     mismatches = [
         field
         for field in comparable_fields
-        if field in existing and existing.get(field) != expected.get(field)
+        if existing.get(field) != expected.get(field)
     ]
     if mismatches:
         raise ValueError(
@@ -648,9 +697,10 @@ def write_summary_markdown(
         (
             f"| Mode | Queries | Errors | Hit@{score_k} | Recall@{score_k} | "
             f"GroupRecall@{score_k} | Answerable@{score_k} | Hit@All | "
-            "Recall@All | Synthesis GroupRecall | Avg Calls | Avg Latency |"
+            "Recall@All | Synthesis GroupRecall | Avg Tool Calls | "
+            "Avg Agent LLM Calls | Avg Latency |"
         ),
-        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for mode, row in summary.items():
         lines.append(
@@ -659,6 +709,7 @@ def write_summary_markdown(
             f"{row['group_recall_at_k']:.3f} | {row['answerable_at_k']:.3f} | "
             f"{row['chunk_hit_all']:.3f} | {row['chunk_recall_all']:.3f} | "
             f"{row['synthesis_group_recall']:.3f} | {row['avg_tool_calls']:.2f} | "
+            f"{row['avg_orchestration_llm_calls']:.2f} | "
             f"{row['avg_latency_sec']:.2f}s |"
         )
     _atomic_write(path, "\n".join(lines) + "\n")
@@ -766,6 +817,7 @@ def main() -> None:
         for mode in args.modes
     ]
     contract = {
+        "agent_harness": "four_node_v1",
         "dataset": str(args.dataset.resolve()),
         "dataset_sha256": dataset_sha256(args.dataset),
         "dataset_metadata": dataset_metadata,

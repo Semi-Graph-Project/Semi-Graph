@@ -27,12 +27,9 @@ _COLORS = {
     "white": "\033[37m",
 }
 _NODE_COLORS = {
-    "plan": "blue",
-    "tool_select": "cyan",
+    "plan_route": "blue",
     "execute": "yellow",
-    "observe": "magenta",
-    "reflect": "red",
-    "advance_subquery": "green",
+    "assess": "magenta",
     "synthesize": "white",
 }
 
@@ -95,28 +92,32 @@ def _summarize_retrieval_trace(trace: dict) -> str:
 
 
 def _summarize_update(update: dict) -> str:
-    if "subqueries" in update:
-        return f"subqueries={update['subqueries']}"
-    if "next_tool" in update:
-        return f"next_tool={update['next_tool']}"
-    if "latest_chunks" in update:
-        log = (update.get("tool_call_log") or [{}])[-1]
-        trace = (update.get("retrieval_trace_history") or [{}])[-1]
+    if "tasks" in update:
         return (
-            f"tool={log.get('tool')} status={log.get('status')} "
-            f"n_chunks={len(update.get('latest_chunks') or [])} "
-            f"query={log.get('query')!r} {_summarize_retrieval_trace(trace)}"
+            f"tasks={len(update.get('tasks') or [])} "
+            f"plan_status={(update.get('plan_trace') or {}).get('status')} "
+            f"action={update.get('current_action')}"
         )
-    if "observation_text" in update:
-        return f"observation={_compact_text(update.get('observation_text'))}"
-    if "sufficient" in update:
+    if "attempts" in update:
+        attempt = (update.get("attempts") or [{}])[-1]
+        assessment = attempt.get("assessment") or {}
+        if assessment:
+            controller = assessment.get("controller") or {}
+            return (
+                f"attempt={attempt.get('attempt_id')} "
+                f"assessment={assessment.get('status')} "
+                f"decision={controller.get('decision')} "
+                f"reason={controller.get('reason')} "
+                f"next_action={update.get('current_action')}"
+            )
+        action = attempt.get("action") or {}
         return (
-            f"sufficient={update.get('sufficient')} "
-            f"stop_reason={update.get('stop_reason')} "
-            f"retry_query={update.get('retry_query')!r}"
+            f"attempt={attempt.get('attempt_id')} tool={action.get('tool')} "
+            f"status={attempt.get('retrieval_status')} "
+            f"n_chunks={len(attempt.get('chunks') or [])} "
+            f"query={action.get('query')!r} "
+            f"{_summarize_retrieval_trace(attempt.get('retrieval_trace') or {})}"
         )
-    if "completed_subqueries" in update and "final_answer" not in update:
-        return f"completed_subqueries={update['completed_subqueries']}"
     if "final_answer" in update:
         return (
             f"final_answer={_compact_text(update.get('final_answer'))} "
@@ -202,10 +203,10 @@ def main() -> None:
                 c_print(f"[{elapsed:7.2f}s]", color="magenta", dim=True, end=" ")
                 c_print(f"{node_name}:", color=_node_color(node_name), bold=True, end=" ")
                 c_print(_summarize_update(update), color="white")
-                if args.show_retrieval_traces and "retrieval_trace_history" in update:
-                    traces = update.get("retrieval_trace_history") or []
-                    if traces:
-                        _print_json("RETRIEVAL_TRACE", traces[-1])
+                if args.show_retrieval_traces and update.get("attempts"):
+                    trace = update["attempts"][-1].get("retrieval_trace") or {}
+                    if trace:
+                        _print_json("RETRIEVAL_TRACE", trace)
                 print("\n\n--------------------------------")
     except Exception as exc:
         elapsed = time.time() - started

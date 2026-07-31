@@ -18,6 +18,7 @@ from typing import Any
 import yaml
 
 from semigraph.agent.graph import build_agent
+from semigraph.agent.ledger import retrieval_traces, retrieved_chunks, tool_calls
 
 
 DEFAULT_DATASET = Path("benchmark/datasets/financial_agent_e2e_60.yaml")
@@ -310,9 +311,10 @@ def score_case(
     critical_fields: list[str],
     error: Exception | None,
 ) -> dict[str, Any]:
-    logs = list(state.get("tool_call_log") or [])
-    traces = list(state.get("retrieval_trace_history") or [])
-    chunks = list(state.get("chunks_history") or [])
+    attempts = list(state.get("attempts") or [])
+    logs = tool_calls(attempts)
+    traces = retrieval_traces(attempts)
+    chunks = retrieved_chunks(attempts)
     citations = list(state.get("citation_map") or [])
     answer = str(state.get("final_answer") or "")
 

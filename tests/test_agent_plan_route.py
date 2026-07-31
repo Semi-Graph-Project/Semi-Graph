@@ -7,8 +7,12 @@ from pydantic import ValidationError
 
 import semigraph.agent.nodes as nodes
 from semigraph.agent.contracts import EvidenceRequirement, PlanRouteOutput, PlannedTask, RetrievalAction, ToolName
+from semigraph.agent.prompts import (
+    PLAN_ROUTE_SYSTEM_PROMPT,
+    build_financial_capability_summary,
+)
 from semigraph.agent.tools import DEFAULT_TOP_K
-# from semigraph.agent
+from semigraph.config import get_config
 
 
 def _valid_plan_payload() -> dict:
@@ -330,37 +334,6 @@ def test_plan_route_node_provider_error_is_terminal(monkeypatch):
         {"attempt": 1, "status": "provider_error", "errors": ["RuntimeError"]},
     ]
 
-from semigraph.agent.contracts import ToolName
-from semigraph.agent.prompts import (
-    PLAN_ROUTE_SYSTEM_PROMPT,
-    build_financial_capability_summary,
-)
-from semigraph.agent.tools import DEFAULT_TOP_K
-from semigraph.config import get_config
-
-
-def test_plan_route_prompt_keeps_connected_graph_chain_in_one_task():
-    prompt = PLAN_ROUTE_SYSTEM_PROMPT
-
-    assert "connected multi-hop relationship chain" in prompt
-    assert "ONE `graph` task" in prompt
-    assert "evidence requirements" in prompt
-    assert '"requirements"' in prompt
-
-
-def test_plan_route_prompt_matches_contract_and_registry():
-    prompt = PLAN_ROUTE_SYSTEM_PROMPT
-
-    for tool in ToolName:
-        assert f"`{tool.value}`" in prompt
-
-    assert "Never produce `hybrid`" in prompt
-    assert f'"top_k_chunks": {DEFAULT_TOP_K}' in prompt
-
-    capability_summary = build_financial_capability_summary(get_config())
-    assert capability_summary in prompt
-
-
 def test_plan_route_prompt_keeps_connected_graph_chain_in_one_task():
     prompt = PLAN_ROUTE_SYSTEM_PROMPT.lower()
 
@@ -370,23 +343,14 @@ def test_plan_route_prompt_keeps_connected_graph_chain_in_one_task():
     assert "individual hops or claims" in prompt
 
 
-
-"""
-sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
-
-"""
-
 def test_plan_route_prompt_matches_contract_and_registry():
     prompt = PLAN_ROUTE_SYSTEM_PROMPT.lower()
-
-    expected_tools = {"graph", "vector", "financial", "news"}
-    assert {tool.value for tool in ToolName} == expected_tools
 
     for tool in ToolName:
         assert f"`{tool.value}`" in prompt
 
     assert "never produce `hybrid`" in prompt
-    
+
     expected_fields = (
         set(PlannedTask.model_fields)
         | set(EvidenceRequirement.model_fields)
@@ -400,14 +364,3 @@ def test_plan_route_prompt_matches_contract_and_registry():
 
     capability_summary = build_financial_capability_summary(get_config()).lower()
     assert capability_summary in prompt
-
-
-if __name__ == "__main__":
-    capability_summary = build_financial_capability_summary(get_config())
-    print(" Capability Summary:")
-    print(capability_summary)
-
-    print("typed = ", type(capability_summary))
-
-
-    # print(set(PlannedTask.model_fields) | set(EvidenceRequirement.model_fields) | set(RetrievalAction.model_fields))

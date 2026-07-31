@@ -37,6 +37,7 @@ from evaluate_financial_vector_numpy import (
     load_or_build_embeddings,
 )
 from semigraph.agent.graph import build_agent
+from semigraph.agent.ledger import retrieval_traces, retrieved_chunks, tool_calls
 from semigraph.agent.tools import RETRIEVERS
 from semigraph.offline.embeddings import get_embedding_model
 
@@ -166,9 +167,10 @@ def score_vector_case(
     latency_sec: float,
     error: Exception | None,
 ) -> dict[str, Any]:
-    logs = list(state.get("tool_call_log") or [])
-    traces = list(state.get("retrieval_trace_history") or [])
-    chunks = list(state.get("chunks_history") or [])
+    attempts = list(state.get("attempts") or [])
+    logs = tool_calls(attempts)
+    traces = retrieval_traces(attempts)
+    chunks = retrieved_chunks(attempts)
     citations = list(state.get("citation_map") or [])
     answer = str(state.get("final_answer") or "")
 

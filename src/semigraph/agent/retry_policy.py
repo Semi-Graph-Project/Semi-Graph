@@ -48,6 +48,7 @@ def validate_assessment_context(
     assessment: AssessmentOutput,
     task: dict,
     current_chunk_ids: set[str],
+    locked_tool: str | None = None,
 ) -> list[dict]:
     """Reject only IDs or decisions that contradict the current context."""
     requirement_ids = {
@@ -93,6 +94,16 @@ def validate_assessment_context(
     ):
         errors.append({
             "code": "unregistered_next_tool",
+            "value": assessment.next_action.tool.value,
+        })
+
+    if (
+        locked_tool
+        and assessment.next_action is not None
+        and assessment.next_action.tool.value != locked_tool
+    ):
+        errors.append({
+            "code": "locked_tool_mismatch",
             "value": assessment.next_action.tool.value,
         })
 

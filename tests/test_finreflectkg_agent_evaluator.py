@@ -7,12 +7,12 @@ import yaml
 
 from scripts import evaluate_finreflectkg_agent as evaluator
 from scripts.evaluate_finreflectkg_agent import (
+    MODES,
     agent_state_errors,
     aggregate_results,
     build_evaluation_agent,
     evidence_groups,
     load_checkpoint,
-    locked_tool_selector,
     result_from_state,
     score_chunks,
     score_groups,
@@ -50,27 +50,23 @@ def test_evidence_groups_uses_legacy_fallback():
     }
 
 
-def test_locked_selector_preserves_retry_query_and_budget():
-    selector = locked_tool_selector("graph", top_k=7)
+def test_evaluation_modes_share_production_builder_with_only_tool_lock(monkeypatch):
+    calls = []
 
-    update = selector({
-        "original_query": "original",
-        "subqueries": ["planned"],
-        "current_subquery_idx": 0,
-        "retry_query": "targeted retry",
-    })
+    def fake_build_agent(**kwargs):
+        calls.append(kwargs)
+        return object()
 
-    assert update == {
-        "next_tool": {
-            "name": "graph",
-            "args": {"query": "targeted retry", "top_k_chunks": 7},
-        }
-    }
+    monkeypatch.setattr(evaluator, "build_agent", fake_build_agent)
 
-
-def test_all_evaluation_modes_compile_without_running_external_services():
     for mode in ("agent_vector", "agent_graph", "full_agent"):
-        assert build_evaluation_agent(mode, top_k=5) is not None
+        build_evaluation_agent(mode, top_k=7)
+
+    assert calls == [
+        {"locked_tool": "vector", "top_k": 7},
+        {"locked_tool": "graph", "top_k": 7},
+        {"locked_tool": None, "top_k": 7},
+    ]
 
 
 def test_result_keeps_final_answer_and_ragas_contract():
@@ -87,55 +83,128 @@ def test_result_keeps_final_answer_and_ragas_contract():
     }
     state = {
         "original_query": item["query"],
-        "subqueries": [item["query"]],
-        "current_subquery_idx": 0,
-        "round": 1,
-        "stop_reason": "sufficient",
-        "reflection_reason": "enough",
-        "chunks_history": [
-            {"chunk_id": "gold_1", "text": "First context."},
-            {"chunk_id": "gold_2", "text": "Second context."},
+        "stop_reason": "assessment_error",
+        "tasks": [{"task_id": "T1"}, {"task_id": "T2"}],
+        "completed_tasks": [
+            {
+                "task_id": "T1",
+                "sufficient": True,
+                "stop_reason": "sufficient",
+            },
+            {
+                "task_id": "T2",
+                "sufficient": False,
+                "stop_reason": "assessment_error",
+            },
         ],
-        "tool_call_log": [{
-            "round": 0,
-            "subquery": item["query"],
-            "tool": "vector",
-            "query": item["query"],
-            "top_k_chunks": 5,
-            "n_chunks": 2,
+        "attempts": [
+            {
+                "attempt_id": "T1-A1",
+                "task_id": "T1",
+                "action": {
+                    "tool": "vector",
+                    "query": item["query"],
+                    "top_k_chunks": 5,
+                },
+                "retrieval_status": "ok",
+                "chunks": [
+                    {"chunk_id": "gold_1", "text": "First context."},
+                    {"chunk_id": "noise", "text": "Rejected context."},
+                ],
+                "retrieval_trace": {
+                    "status": "ok",
+                    "technical_tries": [{"latency_sec": 0.2}],
+                },
+                "assessment": {
+                    "status": "valid",
+                    "output": {
+                        "accepted_chunk_ids": ["gold_1"],
+                        "covered_requirement_ids": ["R1"],
+                        "decision": "accept",
+                    },
+                    "controller": {"decision": "accept"},
+                    "trace": {"llm_calls": 1, "latency_sec": 0.3},
+                },
+            },
+            {
+                "attempt_id": "T2-A1",
+                "task_id": "T2",
+                "action": {
+                    "tool": "graph",
+                    "query": "second evidence query",
+                    "top_k_chunks": 5,
+                },
+                "retrieval_status": "ok",
+                "chunks": [{
+                    "chunk_id": "gold_2",
+                    "text": "Second context.",
+                }],
+                "retrieval_trace": {
+                    "status": "ok",
+                    "technical_tries": [{"latency_sec": 0.4}],
+                },
+                "assessment": {
+                    "status": "fail_open",
+                    "output": None,
+                    "controller": {"decision": "stop"},
+                    "trace": {"llm_calls": 2, "latency_sec": 0.5},
+                },
+            },
+        ],
+        "plan_trace": {"status": "ok", "llm_calls": 1, "latency_sec": 0.1},
+        "synthesis_trace": {
             "status": "ok",
-        }],
-        "retrieval_trace_history": [],
-        "observation_history": [],
-        "reflection_history": [{
-            "round": 1,
-            "subquery": item["query"],
-            "sufficient": True,
-            "reason": "enough",
-            "feedback": "",
-            "retry_query": "",
-            "stop_reason": "sufficient",
-        }],
-        "completed_subqueries": [{
-            "subquery_idx": 0,
-            "subquery": item["query"],
-            "stop_reason": "sufficient",
-            "reflection_reason": "enough",
-            "round": 1,
-        }],
+            "llm_calls": 1,
+            "latency_sec": 0.6,
+        },
         "final_answer": "Grounded answer [1].",
         "citation_map": [{"citation_index": 1, "chunk_id": "gold_1"}],
     }
 
-    detail, ragas = result_from_state(item, "agent_vector", state, 1.25, 5)
+    detail, ragas = result_from_state(item, "agent_vector", state, 2.5, 5)
 
     assert detail["final_answer"] == "Grounded answer [1]."
     assert detail["metrics_all_retrieved"]["recall"] == 1.0
     assert detail["metrics_all_retrieved"]["answerable"] == 1
+    assert detail["returned_chunk_ids"] == ["gold_1", "noise", "gold_2"]
+    assert detail["evidence_pool_chunk_ids"] == ["gold_1", "gold_2"]
+    assert detail["synthesis_chunk_ids"] == ["gold_1", "gold_2"]
+    assert detail["stop_reason"] == "assessment_error"
+    assert detail["completed_tasks"][-1]["stop_reason"] == "assessment_error"
+    assert detail["retrieval_trace_history"][1]["attempt_id"] == "T2-A1"
+    assert detail["assessment_trace_history"][1]["status"] == "fail_open"
+    assert detail["orchestration_llm_calls"] == 5
+    assert detail["stage_summary"] == {
+        "llm_calls": {
+            "plan_route": 1,
+            "assess": 3,
+            "synthesize": 1,
+            "orchestration_total": 5,
+        },
+        "latency_sec": {
+            "plan_route": 0.1,
+            "retrieval": 0.6,
+            "assess": 0.8,
+            "synthesize": 0.6,
+            "recorded_total": 2.1,
+            "unattributed": 0.4,
+        },
+    }
     assert ragas["user_input"] == item["query"]
     assert ragas["response"] == detail["final_answer"]
     assert ragas["retrieved_contexts"] == ["First context.", "Second context."]
     assert ragas["reference"] == "Reference answer."
+    assert set(ragas) == {
+        "id",
+        "mode",
+        "user_input",
+        "response",
+        "retrieved_contexts",
+        "reference",
+        "retrieved_context_ids",
+        "reference_context_ids",
+        "status",
+    }
 
 
 def test_aggregate_reports_each_mode_independently():
@@ -152,6 +221,7 @@ def test_aggregate_reports_each_mode_independently():
             "status": "ok",
             "latency_sec": 1.0,
             "tool_call_count": 1,
+            "orchestration_llm_calls": 3,
             "unique_retrieved_count": 5,
             "metrics_at_k": metrics,
             "metrics_all_retrieved": metrics,
@@ -162,6 +232,7 @@ def test_aggregate_reports_each_mode_independently():
 
     assert summary["agent_vector"]["chunk_hit_at_k"] == 0.0
     assert summary["agent_graph"]["chunk_hit_at_k"] == 1.0
+    assert summary["agent_graph"]["avg_orchestration_llm_calls"] == 3.0
 
 
 def test_checkpoint_round_trip_is_atomic_and_keyed(tmp_path):
@@ -232,20 +303,32 @@ def test_resume_config_rejects_parameter_drift():
         raise AssertionError("Resume accepted incompatible parameters")
 
 
+def test_resume_config_requires_four_node_harness_identity():
+    with pytest.raises(ValueError, match="agent_harness"):
+        validate_resume_config(
+            {"dataset": "/tmp/questions.yaml"},
+            {
+                "agent_harness": "four_node_v1",
+                "dataset": "/tmp/questions.yaml",
+            },
+        )
+
+
 def test_agent_state_errors_marks_retrieval_and_synthesis_failures():
     state = {
-        "retrieval_trace_history": [{
-            "tool": "graph",
-            "status": "error",
-            "error": "network disconnected",
+        "attempts": [{
+            "action": {"tool": "graph"},
+            "retrieval_status": "tool_error",
+            "retrieval_trace": {"error_type": "ConnectionError"},
         }],
+        "synthesis_trace": {"status": "provider_error"},
         "final_answer": (
             "I could not synthesize a grounded final answer from the current evidence."
         ),
     }
 
     assert agent_state_errors(state) == [
-        "graph: network disconnected",
+        "graph: ConnectionError",
         "synthesis failed",
     ]
 
@@ -253,25 +336,31 @@ def test_agent_state_errors_marks_retrieval_and_synthesis_failures():
 def _successful_state(query: str) -> dict:
     return {
         "original_query": query,
-        "subqueries": [query],
-        "current_subquery_idx": 0,
-        "round": 1,
         "stop_reason": "sufficient",
-        "reflection_reason": "enough",
-        "chunks_history": [{"chunk_id": "gold_1", "text": "Evidence."}],
-        "tool_call_log": [{
-            "round": 0,
-            "subquery": query,
-            "tool": "vector",
-            "query": query,
-            "top_k_chunks": 5,
-            "n_chunks": 1,
-            "status": "ok",
+        "tasks": [{"task_id": "T1"}],
+        "completed_tasks": [{
+            "task_id": "T1",
+            "sufficient": True,
+            "stop_reason": "sufficient",
         }],
-        "retrieval_trace_history": [],
-        "observation_history": [],
-        "reflection_history": [],
-        "completed_subqueries": [],
+        "attempts": [{
+            "attempt_id": "T1-A1",
+            "task_id": "T1",
+            "action": {"tool": "vector", "query": query, "top_k_chunks": 5},
+            "retrieval_status": "ok",
+            "chunks": [{"chunk_id": "gold_1", "text": "Evidence."}],
+            "retrieval_trace": {},
+            "assessment": {
+                "status": "valid",
+                "output": {
+                    "accepted_chunk_ids": ["gold_1"],
+                    "covered_requirement_ids": ["R1"],
+                    "decision": "accept",
+                },
+            },
+        }],
+        "plan_trace": {"status": "ok"},
+        "synthesis_trace": {"status": "ok"},
         "final_answer": "Answer [1].",
         "citation_map": [{"citation_index": 1, "chunk_id": "gold_1"}],
     }
@@ -359,14 +448,6 @@ def test_resume_retries_error_and_replaces_same_unit(tmp_path, monkeypatch):
     assert attempts == 2
     assert len(records) == 1
     assert records[("Q1", "agent_vector")][0]["status"] == "ok"
-
-
-
-from scripts.evaluate_finreflectkg_agent import (
-    MODES,
-    build_evaluation_agent,
-)
-
 
 @pytest.mark.parametrize("mode", MODES)
 def test_all_evaluation_modes_compile_without_running_external_services(mode):

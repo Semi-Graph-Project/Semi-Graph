@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import argparse
+import json
+import os
+import sys
 import time
 
 from semigraph.agent.graph import build_agent
@@ -7,102 +11,209 @@ from semigraph.agent.graph import build_agent
 
 QUERIES = [
     (
-        "multihop_equipment_to_downstream_benefit",
-        "When equipment manufacturers like Applied Materials, Lam Research, or KLA enable factories to increase yields or shrink manufacturing processes, how do downstream companies like AMD or NVIDIA benefit commercially?"
+        "filing_strategy",
+        "How does NVIDIA describe the role of accelerated computing and AI "
+        "in its business strategy?",
     ),
     (
-        "multihop_intel_mobileye_products",
-        "Which autonomous driving subsidiary does Intel operate, and what products does it make?",
+        "graph_supply_risk",
+        "How could AMD's dependence on TSMC create supply-chain exposure for "
+        "AMD's data-center products?",
     ),
     (
-        "multihop_foundry_country_political_risk",
-        "What political risks affect the home country of the leading pure-play semiconductor foundry?",
-    ),
-    (
-        "multihop_memory_hbm_consumer_brand",
-        "Which American memory chip company produces HBM3E, and what consumer brand does it use for memory and storage products?",
+        "recent_business_event",
+        "What recent semiconductor news could affect ASML's business, and why "
+        "might it matter to the company?",
     ),
 ]
 
-
-def summarize_update(node_name: str, update: dict) -> str:
-    if "next_tool" in update:
-        return f"next_tool={update['next_tool']}"
-    if "subqueries" in update:
-        return f"subqueries={update['subqueries']}"
-    if "latest_chunks" in update:
-        log = (update.get("tool_call_log") or [{}])[-1]
-        return (
-            f"tool={log.get('tool')} n_chunks={len(update.get('latest_chunks') or [])} "
-            f"status={log.get('status')} query={log.get('query')!r}"
-        )
-    if "observation_text" in update:
-        return f"observation={update['observation_text'][:180]!r}"
-    if "sufficient" in update:
-        return (
-            f"sufficient={update.get('sufficient')} stop_reason={update.get('stop_reason')} "
-            f"retry_query={update.get('retry_query')!r}"
-        )
-    if "completed_subqueries" in update and "final_answer" not in update:
-        return f"completed_subqueries={update['completed_subqueries']}"
-    if "final_answer" in update:
-        return (
-            f"final_answer={update.get('final_answer', '')[:220]!r} "
-            f"citations={len(update.get('citation_map') or [])}"
-        )
-    return str(update)[:220]
+RESET = "\033[0m"
+BOLD = "\033[1m"
+COLORS = {
+    "query": "\033[96m",
+    "plan_route": "\033[94m",
+    "execute": "\033[93m",
+    "assess": "\033[95m",
+    "synthesize": "\033[92m",
+    "error": "\033[91m",
+    "dim": "\033[90m",
+}
 
 
-def summarize_citation_map(citations: list[dict]) -> list[dict]:
-    compact = []
-    for item in citations:
-        text = str(item.get("text") or "").replace("\n", " ")
-        compact.append({
+def _paint(text: str, color: str, enabled: bool, *, bold: bool = False) -> str:
+    if not enabled:
+        return text
+    prefix = COLORS[color]
+    if bold:
+        prefix = BOLD + prefix
+    return f"{prefix}{text}{RESET}"
+
+
+def _print_json(label: str, value: object, color: str, enabled: bool) -> None:
+    print(_paint(label, color, enabled, bold=True))
+    print(json.dumps(value, ensure_ascii=False, indent=2, default=str))
+
+
+def _chunk_previews(chunks: list[dict]) -> list[dict]:
+    return [
+        {
+            "chunk_id": chunk.get("chunk_id"),
+            "ticker": chunk.get("ticker"),
+            "section": chunk.get("section"),
+            "score": chunk.get("score"),
+            "text": str(chunk.get("text") or "").replace("\n", " ")[:180],
+        }
+        for chunk in chunks
+    ]
+
+
+def _citation_previews(citations: list[dict]) -> list[dict]:
+    return [
+        {
             "citation_index": item.get("citation_index"),
             "chunk_id": item.get("chunk_id"),
             "ticker": item.get("ticker"),
-            "fiscal_year": item.get("fiscal_year"),
             "section": item.get("section"),
-            "score": item.get("score"),
-            "preview": text[:260],
-        })
-    return compact
+            "text": str(item.get("text") or "").replace("\n", " ")[:180],
+        }
+        for item in citations
+    ]
+
+
+def _print_node_trace(node_name: str, update: dict, color: bool) -> None:
+    if node_name == "plan_route":
+        _print_json(
+            "PLAN",
+            {
+                "tasks": update.get("tasks", []),
+                "current_action": update.get("current_action", {}),
+                "plan_trace": update.get("plan_trace", {}),
+            },
+            node_name,
+            color,
+        )
+        return
+
+    attempts = update.get("attempts") or []
+    latest = attempts[-1] if attempts else {}
+
+    if node_name == "execute":
+        _print_json(
+            "RETRIEVAL ATTEMPT",
+            {
+                "attempt_id": latest.get("attempt_id"),
+                "action": latest.get("action"),
+                "retrieval_status": latest.get("retrieval_status"),
+                "chunks": _chunk_previews(latest.get("chunks") or []),
+                "retrieval_trace": latest.get("retrieval_trace", {}),
+            },
+            node_name,
+            color,
+        )
+        return
+
+    if node_name == "assess":
+        _print_json(
+            "ASSESSMENT",
+            {
+                "attempt_id": latest.get("attempt_id"),
+                "assessment": latest.get("assessment"),
+                "next_action": update.get("current_action", {}),
+                "completed_tasks": update.get("completed_tasks", []),
+                "stop_reason": update.get("stop_reason"),
+            },
+            node_name,
+            color,
+        )
+        return
+
+    if node_name == "synthesize":
+        print(_paint("FINAL ANSWER", node_name, color, bold=True))
+        print(update.get("final_answer", ""))
+        _print_json(
+            "CITATIONS",
+            _citation_previews(update.get("citation_map") or []),
+            node_name,
+            color,
+        )
+        _print_json(
+            "SYNTHESIS TRACE",
+            update.get("synthesis_trace", {}),
+            node_name,
+            color,
+        )
+
+
+def _run_query(
+    graph,
+    label: str,
+    query: str,
+    recursion_limit: int,
+    color: bool,
+) -> bool:
+    print("\n" + "=" * 88)
+    print(_paint(f"SMOKE CASE: {label}", "query", color, bold=True))
+    print(_paint(f"QUERY: {query}", "query", color))
+    print("=" * 88)
+
+    started = time.perf_counter()
+    try:
+        for event in graph.stream(
+            {"original_query": query},
+            stream_mode="updates",
+            config={"recursion_limit": recursion_limit},
+        ):
+            for node_name, update in event.items():
+                elapsed = time.perf_counter() - started
+                header = f"[{elapsed:7.2f}s] {node_name.upper()}"
+                print("\n" + _paint(header, node_name, color, bold=True))
+                _print_node_trace(node_name, update, color)
+    except Exception as exc:
+        elapsed = time.perf_counter() - started
+        message = f"FAILED after {elapsed:.2f}s: {type(exc).__name__}: {exc}"
+        print(_paint(message, "error", color, bold=True))
+        return False
+
+    elapsed = time.perf_counter() - started
+    print(_paint(f"COMPLETED in {elapsed:.2f}s", "query", color, bold=True))
+    return True
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Run three real narrative queries through the Full Agent.",
+    )
+    parser.add_argument("--recursion-limit", type=int, default=50)
+    parser.add_argument("--no-color", action="store_true")
+    args = parser.parse_args()
+
+    if args.recursion_limit < 1:
+        parser.error("--recursion-limit must be positive")
+
+    color = (
+        sys.stdout.isatty()
+        and not args.no_color
+        and "NO_COLOR" not in os.environ
+    )
     graph = build_agent()
+    results = [
+        _run_query(graph, label, query, args.recursion_limit, color)
+        for label, query in QUERIES
+    ]
 
-    for label, query in QUERIES:
-        print(f"\n=== {label} ===", flush=True)
-        print(f"QUERY: {query}", flush=True)
-        t0 = time.time()
-        try:
-            final_state = None
-            for event in graph.stream(
-                {"original_query": query},
-                stream_mode="updates",
-                config={"recursion_limit": 50},
-            ):
-                for node_name, update in event.items():
-                    final_state = update
-                    elapsed = round(time.time() - t0, 2)
-                    print(
-                        f"[{elapsed:>6.2f}s] {node_name}: {summarize_update(node_name, update)}",
-                        flush=True,
-                    )
-
-            print(f"--- completed in {time.time() - t0:.2f}s ---", flush=True)
-            if final_state:
-                print(f"FINAL_ANSWER: {final_state.get('final_answer', '')}", flush=True)
-                print(
-                    f"CITATION_MAP: {summarize_citation_map(final_state.get('citation_map', []))}",
-                    flush=True,
-                )
-        except Exception as exc:
-            print(
-                f"ERROR after {time.time() - t0:.2f}s: {type(exc).__name__}: {exc}",
-                flush=True,
-            )
+    passed = sum(results)
+    print("\n" + "=" * 88)
+    summary_color = "synthesize" if passed == len(results) else "error"
+    print(
+        _paint(
+            f"SMOKE SUMMARY: {passed}/{len(results)} completed",
+            summary_color,
+            color,
+            bold=True,
+        )
+    )
+    if passed != len(results):
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

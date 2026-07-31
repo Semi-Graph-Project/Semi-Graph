@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Interactive, source-grounded architecture map for SemiGraph.">
+  <title>SemiGraph · Interactive Architecture</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="SemiGraph architecture home">
+      <span class="brand-mark" aria-hidden="true">
+        <i></i><i></i><i></i><i></i>
+      </span>
+      <span>
+        <strong>SemiGraph</strong>
+        <small>system atlas / 2026</small>
+      </span>
+    </a>
+    <div class="topbar-meta">
+      <span class="live-dot"></span>
+      <span>Mapped from the current working tree</span>
+      <span class="topbar-divider"></span>
+      <span>Agentic Heterogeneous RAG</span>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">End-to-end source map</p>
+        <h1>หนึ่งคำถาม<br><span>เดินทางผ่านระบบอย่างไร</span></h1>
+        <p class="hero-lead">
+          ภาพสถาปัตยกรรมที่ผูกกับโค้ดจริง ตั้งแต่ LangGraph วางงาน
+          เลือก Graph / Vector / Financial / News ตรวจหลักฐาน วนค้นใหม่
+          แล้วสังเคราะห์คำตอบพร้อม citation
+        </p>
+      </div>
+      <div class="hero-stats" aria-label="Project source statistics">
+        <article>
+          <strong>59</strong>
+          <span>Python modules</span>
+          <small>ทุกไฟล์ใน src/semigraph</small>
+        </article>
+        <article>
+          <strong>14,459</strong>
+          <span>lines mapped</span>
+          <small>รวม runtime + data factory</small>
+        </article>
+        <article>
+          <strong>4</strong>
+          <span>retrieval tools</span>
+          <small>สัญญา chunk รูปแบบเดียวกัน</small>
+        </article>
+        <article>
+          <strong>2</strong>
+          <span>evidence stores</span>
+          <small>Neo4j + PostgreSQL</small>
+        </article>
+      </div>
+    </section>
+
+    <section class="atlas" aria-labelledby="atlas-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Interactive atlas</p>
+          <h2 id="atlas-title">เลือกมุมมอง แล้วลองเดินระบบทีละขั้น</h2>
+        </div>
+        <p id="view-summary" class="section-summary">
+          เส้นทางจริงของ Agent: วางงาน → ค้น → ประเมิน → วนแก้ → สังเคราะห์
+        </p>
+      </div>
+
+      <div class="view-switcher" role="tablist" aria-label="Architecture views">
+        <button class="view-tab active" data-view="runtime" role="tab" aria-selected="true">
+          <span>01</span> Agent runtime
+        </button>
+        <button class="view-tab" data-view="graph" role="tab" aria-selected="false">
+          <span>02</span> Graph search
+        </button>
+        <button class="view-tab" data-view="factory" role="tab" aria-selected="false">
+          <span>03</span> Data factory
+        </button>
+        <button class="view-tab" data-view="source" role="tab" aria-selected="false">
+          <span>04</span> Source map
+        </button>
+      </div>
+
+      <div class="workbench">
+        <div class="canvas-column">
+          <div class="canvas-toolbar">
+            <div id="scenario-control" class="toolbar-group">
+              <label for="scenario-select">Demo path</label>
+              <select id="scenario-select"></select>
+              <button id="previous-step" class="icon-button" aria-label="Previous step" title="Previous step">←</button>
+              <button id="play-step" class="play-button" aria-label="Play architecture path">
+                <span class="play-icon">▶</span>
+                <span class="play-label">Play flow</span>
+              </button>
+              <button id="next-step" class="icon-button" aria-label="Next step" title="Next step">→</button>
+            </div>
+
+            <div id="source-search-control" class="source-search-control" hidden>
+              <label for="source-search">ค้นหา module / symbol</label>
+              <input id="source-search" type="search" placeholder="เช่น PPR, sql_compiler, ontology…" autocomplete="off">
+            </div>
+
+            <div class="toolbar-group zoom-controls" aria-label="Canvas zoom controls">
+              <button id="zoom-out" class="icon-button" aria-label="Zoom out">−</button>
+              <button id="zoom-reset" class="zoom-value" aria-label="Reset zoom">100%</button>
+              <button id="zoom-in" class="icon-button" aria-label="Zoom in">+</button>
+            </div>
+          </div>
+
+          <div class="lens-row">
+            <div id="layer-filters" class="layer-filters" aria-label="Architecture layer filters"></div>
+            <div id="ablation-lens" class="ablation-lens">
+              <span>Evaluation lens</span>
+              <button data-lens="heterogeneous" class="active">Heterogeneous</button>
+              <button data-lens="agentic-vector">Agentic vector</button>
+              <button data-lens="vanilla-vector">Vanilla vector</button>
+            </div>
+          </div>
+
+          <div id="diagram-stage" class="diagram-stage">
+            <svg id="architecture-svg" role="img" aria-label="Interactive SemiGraph architecture diagram">
+              <defs>
+                <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="strokeWidth">
+                  <path d="M0,0 L9,4.5 L0,9 z"></path>
+                </marker>
+                <marker id="arrow-active" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="strokeWidth">
+                  <path d="M0,0 L9,4.5 L0,9 z"></path>
+                </marker>
+                <filter id="node-glow" x="-40%" y="-40%" width="180%" height="180%">
+                  <feGaussianBlur stdDeviation="8" result="blur"></feGaussianBlur>
+                  <feMerge><feMergeNode in="blur"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+                </filter>
+              </defs>
+              <g id="viewport">
+                <g id="edge-layer"></g>
+                <g id="node-layer"></g>
+              </g>
+            </svg>
+            <div class="canvas-hint"><kbd>drag</kbd> เลื่อนผัง · <kbd>wheel</kbd> ซูม · คลิกกล่องเพื่อดูโค้ด</div>
+          </div>
+
+          <div id="source-stage" class="source-stage" hidden>
+            <div class="source-overview">
+              <div>
+                <span id="source-result-count">59 / 59 modules</span>
+                <strong>Source ownership map</strong>
+              </div>
+              <p>โมดูลถูกจัดตามหน้าที่ ไม่ได้จัดตามลำดับ import อย่างเดียว</p>
+            </div>
+            <div id="source-groups"></div>
+          </div>
+
+          <div id="step-caption" class="step-caption">
+            <div class="step-index"><span id="step-current">00</span><small id="step-total">/ 00</small></div>
+            <div>
+              <strong id="step-title">พร้อมสำรวจ</strong>
+              <p id="step-description">กด Play flow หรือเลือกกล่องใดก็ได้เพื่อดูรายละเอียด</p>
+            </div>
+            <div class="progress-track"><span id="progress-fill"></span></div>
+          </div>
+        </div>
+
+        <aside id="inspector" class="inspector" aria-live="polite">
+          <div class="inspector-head">
+            <div>
+              <span id="inspector-layer" class="layer-badge">SYSTEM</span>
+              <span id="inspector-id" class="node-id">OVERVIEW</span>
+            </div>
+            <span id="inspector-status" class="status-pill">source-grounded</span>
+          </div>
+          <h3 id="inspector-title">SemiGraph end-to-end</h3>
+          <p id="inspector-description">
+            เลือกกล่องในผังเพื่อดูว่า component รับอะไร ส่งอะไร ตัดสินใจอย่างไร
+            และมี source file ใดเป็นเจ้าของ
+          </p>
+
+          <div class="inspector-block">
+            <span class="block-label">Data contract</span>
+            <code id="inspector-contract">Query → Evidence chunks → Grounded answer</code>
+          </div>
+
+          <div class="inspector-block">
+            <span class="block-label">What happens here</span>
+            <ul id="inspector-points">
+              <li>Agent มี 4 โหนดหลักและ retry ที่มีงบชัดเจน</li>
+              <li>Retriever ทุกตัวคืน chunk contract ร่วมกัน</li>
+              <li>คำตอบสุดท้ายใช้เฉพาะ evidence ที่ผ่านการคัดเลือก</li>
+            </ul>
+          </div>
+
+          <div class="inspector-block">
+            <span class="block-label">Owned by source</span>
+            <div id="inspector-files" class="file-links"></div>
+          </div>
+
+          <div id="inspector-note" class="inspector-note">
+            <span>Design note</span>
+            <p>เส้นทึบคือ runtime path, เส้นประคือ optional / retry / data preparation</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="truth-grid" aria-label="Architecture takeaways">
+      <article class="truth-card accent-cyan">
+        <span class="truth-number">01</span>
+        <div>
+          <h3>Agent ไม่ได้ค้นครั้งเดียวแล้วตอบ</h3>
+          <p>มันแยก evidence requirements, ประเมิน chunk ที่ได้ และอนุญาต retry เฉพาะการเปลี่ยน query/tool ที่มีสาระและยังอยู่ในงบ</p>
+        </div>
+      </article>
+      <article class="truth-card accent-amber">
+        <span class="truth-number">02</span>
+        <div>
+          <h3>Graph กับ Vector ใช้ข้อมูล SEC ชุดเดียวกัน</h3>
+          <p>ต่างกันที่ index และกลไกจัดอันดับ: Vector ใช้ cosine บน Chunk ส่วน Graph ใช้ triple seeds + PPR บน Entity–Chunk topology</p>
+        </div>
+      </article>
+      <article class="truth-card accent-violet">
+        <span class="truth-number">03</span>
+        <div>
+          <h3>Financial แยก numerical truth ออกจาก narrative</h3>
+          <p>ตัวเลขผ่าน validated intent และ allowlisted SQL template ไปยัง PostgreSQL; ไม่มี LLM-generated SQL และ provenance ติดมากับทุก row</p>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <footer>
+    <span>SemiGraph architecture atlas</span>
+    <span>Derived from <code>src/semigraph</code> · current working tree</span>
+  </footer>
+
+  <noscript>Visualization นี้ต้องเปิด JavaScript เพื่อใช้ interaction และ source search</noscript>
+</body>
+</html>
