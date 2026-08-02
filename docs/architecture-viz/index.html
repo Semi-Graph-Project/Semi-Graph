@@ -89,6 +89,9 @@
         <button class="view-tab" data-view="source" role="tab" aria-selected="false">
           <span>04</span> Source map
         </button>
+        <button class="view-tab" data-view="interfaces" role="tab" aria-selected="false">
+          <span>05</span> Interface literacy
+        </button>
       </div>
 
       <div class="workbench">
@@ -189,12 +192,22 @@
             <code id="inspector-contract">Query → Evidence chunks → Grounded answer</code>
           </div>
 
+          <div id="runtime-state-block" class="inspector-block runtime-state-block">
+            <div class="runtime-state-head">
+              <span class="block-label">Runtime State</span>
+              <small id="runtime-state-scope">เลือก Play flow เพื่อดู State</small>
+            </div>
+            <div id="runtime-state-grid" class="runtime-state-grid">
+              <p class="state-empty">State จะเปลี่ยนตาม node ที่กำลังทำงาน</p>
+            </div>
+          </div>
+
           <div class="inspector-block">
             <span class="block-label">What happens here</span>
             <ul id="inspector-points">
-              <li>Agent มี 4 โหนดหลักและ retry ที่มีงบชัดเจน</li>
-              <li>Retriever ทุกตัวคืน chunk contract ร่วมกัน</li>
-              <li>คำตอบสุดท้ายใช้เฉพาะ evidence ที่ผ่านการคัดเลือก</li>
+              <li>Dispatcher กระจาย Planned Tasks ที่อิสระให้ Worker ทำพร้อมกัน</li>
+              <li>Retry อยู่ภายใน Local State ของ Task เดิม</li>
+              <li>Collector เรียงผลกลับตาม Plan ก่อน Synthesis ครั้งเดียว</li>
             </ul>
           </div>
 

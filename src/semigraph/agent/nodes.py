@@ -156,6 +156,38 @@ def _collect_plan_warnings(
     return warnings
 
 
+def _normalize_plan_tasks(
+    plan: PlanRouteOutput,
+    locked_tool: str | None = None,
+) -> list[dict]:
+    """Return bounded, one-requirement Tasks ready for execution."""
+    tasks: list[dict] = []
+
+    for planned_task in plan.tasks:
+        split_task = len(planned_task.requirements) > 1
+        for requirement in planned_task.requirements:
+            task_id = f"T{len(tasks) + 1}"
+            query = (
+                requirement.description if split_task else planned_task.query
+            )
+            action = planned_task.initial_action.model_dump(mode="json")
+            effective_tool = locked_tool or action["tool"]
+            if split_task or effective_tool == "graph":
+                action["query"] = query
+
+            tasks.append({
+                "task_id": task_id,
+                "query": query,
+                "requirements": [{
+                    "requirement_id": f"{task_id}-R1",
+                    "description": requirement.description,
+                }],
+                "initial_action": action,
+            })
+
+    return tasks
+
+
 def plan_route_node(state: AgentState) -> dict:
     print(f"Node : Plan Route Node")
     started_at = time.perf_counter()
@@ -244,15 +276,22 @@ def plan_route_node(state: AgentState) -> dict:
             "errors": [],
         })
         warnings = _collect_plan_warnings(original_query, plan_route, cfg)
-        serialized = plan_route.model_dump(mode="json")
+        tasks = _normalize_plan_tasks(plan_route, locked_tool)
 
         return {
-            "tasks": serialized["tasks"],
+            "tasks": tasks,
             "current_task_index": 0,
-            "current_action": serialized["tasks"][0]["initial_action"],
+            "current_action": tasks[0]["initial_action"],
             "plan_trace": {
                 "status": "ok" if attempt_number == 1 else "repaired",
                 "validation_mode": "structural_only_v1",
+                "normalization": {
+                    "input_tasks": len(plan_route.tasks),
+                    "input_requirements": sum(
+                        len(task.requirements) for task in plan_route.tasks
+                    ),
+                    "output_tasks": len(tasks),
+                },
                 "attempts": attempts,
                 "warnings": warnings,
                 "llm_calls": llm_calls,
@@ -401,11 +440,11 @@ def _select_synthesis_chunks(
             attempts_by_task.setdefault(task_id, []).append(attempt)
 
     accepted: dict[str, list[dict]] = {}
-    fail_open: dict[str, list[dict]] = {}
+    fallback: dict[str, list[dict]] = {}
 
     for task_id, task_attempts in attempts_by_task.items():
         accepted[task_id] = []
-        fail_open[task_id] = []
+        fallback[task_id] = []
         seen_task_ids: set[str] = set()
 
         for attempt in reversed(task_attempts):
@@ -420,14 +459,20 @@ def _select_synthesis_chunks(
                     accepted[task_id].append(chunk)
                     seen_task_ids.add(chunk_id)
 
+        # Prefer the first two results from every Attempt, then use remaining
+        # ranks only when the global synthesis budget still has room.
         for attempt in reversed(task_attempts):
-            assessment = attempt.get("assessment") or {}
-            if assessment.get("status") != "fail_open":
-                continue
-            for chunk in attempt.get("chunks") or []:
+            for chunk in (attempt.get("chunks") or [])[:2]:
                 chunk_id = chunk.get("chunk_id")
                 if chunk_id and chunk_id not in seen_task_ids:
-                    fail_open[task_id].append(chunk)
+                    fallback[task_id].append(chunk)
+                    seen_task_ids.add(chunk_id)
+
+        for attempt in reversed(task_attempts):
+            for chunk in (attempt.get("chunks") or [])[2:]:
+                chunk_id = chunk.get("chunk_id")
+                if chunk_id and chunk_id not in seen_task_ids:
+                    fallback[task_id].append(chunk)
                     seen_task_ids.add(chunk_id)
 
     def fair_order(queues: dict[str, list[dict]]) -> list[dict]:
@@ -447,7 +492,7 @@ def _select_synthesis_chunks(
 
     selected: list[dict] = []
     seen_ids: set[str] = set()
-    candidates = [*fair_order(accepted), *fair_order(fail_open)]
+    candidates = [*fair_order(accepted), *fair_order(fallback)]
     for chunk in candidates:
         chunk_id = chunk.get("chunk_id")
         if not chunk_id or chunk_id in seen_ids:
@@ -476,16 +521,11 @@ def synthesize_attempts_node(state: AgentState) -> dict:
         if not task_id:
             continue
         eligible_ids = eligible_ids_by_task.setdefault(task_id, set())
-        assessment = attempt.get("assessment") or {}
-        if assessment.get("status") in {"valid", "repaired"}:
-            output = assessment.get("output") or {}
-            eligible_ids.update(output.get("accepted_chunk_ids") or [])
-        elif assessment.get("status") == "fail_open":
-            eligible_ids.update(
-                chunk["chunk_id"]
-                for chunk in (attempt.get("chunks") or [])
-                if chunk.get("chunk_id")
-            )
+        eligible_ids.update(
+            chunk["chunk_id"]
+            for chunk in (attempt.get("chunks") or [])
+            if isinstance(chunk, dict) and chunk.get("chunk_id")
+        )
 
     selected_ids_by_task = {
         task_id: [

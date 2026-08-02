@@ -126,6 +126,7 @@ def test_assess_prompt_matches_lean_contract_and_retry_registry():
     assert "requirement_coverage" not in ASSESS_SYSTEM_PROMPT
     assert "generic HyDE" in ASSESS_SYSTEM_PROMPT
     assert "hybrid" not in ASSESS_SYSTEM_PROMPT.casefold()
+    assert "useful partial evidence" in ASSESS_SYSTEM_PROMPT
 
 
 def test_context_validator_checks_only_real_task_and_chunk_ids():
@@ -978,7 +979,7 @@ def test_synthesis_selector_prioritizes_validated_newer_and_fail_open_last():
     assert result[-1] is fallback
 
 
-def test_synthesis_selector_excludes_unaccepted_raw_but_keeps_fail_open():
+def test_synthesis_selector_adds_bounded_raw_fallback_after_accepted():
     accepted = {"chunk_id": "C1", "text": "accepted"}
     rejected_raw = {"chunk_id": "C2", "text": "not accepted"}
     fail_open = {"chunk_id": "C3", "text": "fallback"}
@@ -1000,7 +1001,23 @@ def test_synthesis_selector_excludes_unaccepted_raw_but_keeps_fail_open():
 
     result = nodes._select_synthesis_chunks(attempts)
 
-    assert result == [accepted, fail_open]
+    assert result == [accepted, rejected_raw, fail_open]
+
+
+def test_synthesis_selector_uses_lower_ranks_when_budget_has_room():
+    chunks = [{"chunk_id": f"C{index}"} for index in range(1, 5)]
+    attempts = [{
+        "task_id": "T1",
+        "chunks": chunks,
+        "assessment": {
+            "status": "valid",
+            "output": {"accepted_chunk_ids": []},
+        },
+    }]
+
+    result = nodes._select_synthesis_chunks(attempts, max_total=4)
+
+    assert result == chunks
 
 
 def test_synthesis_selector_allocates_per_task_then_global_fill():

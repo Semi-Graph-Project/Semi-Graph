@@ -513,6 +513,94 @@ kbd {
   font-size: 9px;
   line-height: 1.55;
 }
+.runtime-state-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.runtime-state-head .block-label { margin-bottom: 0; }
+.runtime-state-head small {
+  color: var(--subtle);
+  font-family: var(--mono);
+  font-size: 7px;
+  line-height: 1.4;
+  text-align: right;
+}
+.runtime-state-grid {
+  display: grid;
+  gap: 9px;
+  margin-top: 12px;
+  max-height: 470px;
+  padding-right: 4px;
+  overflow: auto;
+  scrollbar-color: rgba(var(--cyan-rgb), .3) transparent;
+}
+.state-empty {
+  margin: 0;
+  padding: 16px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 9px;
+  color: var(--subtle);
+  font-family: var(--mono);
+  font-size: 8px;
+  text-align: center;
+}
+.state-field {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--state-color) 34%, transparent);
+  border-left: 3px solid var(--state-color);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--state-color) 5%, #071115);
+}
+.state-field-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--state-color) 18%, transparent);
+  color: var(--state-color);
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .05em;
+}
+.state-field-name small { color: var(--subtle); font-size: 7px; font-weight: 400; }
+.state-field pre,
+.state-list-item pre {
+  margin: 0;
+  padding: 10px;
+  overflow: auto;
+  color: #c4d9d7;
+  font-family: var(--mono);
+  font-size: 7.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.state-list {
+  display: grid;
+  gap: 7px;
+  padding: 8px;
+}
+.state-list-item {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--item-color) 28%, transparent);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, .16);
+}
+.state-list-index {
+  display: inline-block;
+  margin: 7px 0 0 8px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--item-color) 12%, transparent);
+  color: var(--item-color);
+  font-family: var(--mono);
+  font-size: 7px;
+}
 .inspector ul { margin: 0; padding: 0; list-style: none; }
 .inspector li { position: relative; margin: 0 0 10px; padding-left: 16px; color: var(--muted); font-size: 11px; line-height: 1.55; }
 .inspector li::before { content: ""; position: absolute; left: 0; top: .62em; width: 5px; height: 5px; border-radius: 50%; background: var(--cyan); }

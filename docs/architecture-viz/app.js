@@ -10,6 +10,7 @@ const LAYERS = {
   offline:   { label: "Data factory", color: "#7cb8ff" },
   guard:     { label: "Validation", color: "#8ddf8a" },
   shared:    { label: "Shared", color: "#ff8e9e" },
+  contract:  { label: "Contract", color: "#d58cff" },
 };
 
 const FILE = (path, symbol = "") => symbol ? `${path} :: ${symbol}` : path;
@@ -18,126 +19,95 @@ const runtimeNodes = [
   {
     id: "query", x: 35, y: 305, w: 170, h: 112, layer: "user", kicker: "INPUT / 00",
     title: "User query", subtitle: "Thai or English", chip: "original_query",
-    description: "คำถามต้นฉบับเป็น anchor ที่ห้ามหายระหว่างวางงาน คำตอบท้ายสุดต้องตอบคำถามนี้ ไม่ใช่แค่ subquery ที่ Agent สร้างขึ้น",
+    description: "คำถามต้นฉบับเข้าสู่ Parent AgentState และเป็น anchor ร่วมที่ Worker ทุกตัวได้รับเหมือนกัน",
     contract: "AgentState.original_query: str",
-    points: ["รับคำถามภาษาธรรมชาติ", "ticker, metric, fiscal period และข้อจำกัดที่ระบุชัดต้องถูกเก็บไว้", "ยังไม่มี retrieval หรือคำตอบเกิดขึ้นในจุดนี้"],
+    points: ["ยังไม่มี Task หรือ Attempt", "Planner และ Synthesis อ่าน query ก้อนเดียวกัน", "Worker ได้สำเนาค่านี้ผ่าน Send payload"],
     files: [FILE("src/semigraph/agent/state.py", "AgentState.original_query")],
-    note: "AgentState เป็น TypedDict ที่ serialize ได้ เพื่อให้ LangGraph ส่ง state ระหว่างโหนดอย่างโปร่งใส",
+    note: "กด Next เพื่อดู State เปลี่ยนทีละ node; กล่อง Runtime State แสดงตัวอย่างข้อมูลจริงตาม contract",
   },
   {
     id: "plan", x: 250, y: 305, w: 180, h: 112, layer: "agent", kicker: "LANGGRAPH / 01",
-    title: "PlanRoute", subtitle: "1–3 retrieval tasks", chip: "LLM + Pydantic",
-    description: "LLM แปลงคำถามเป็นงานย่อยที่มี evidence requirements แล้วเลือก tool เริ่มต้นของแต่ละงาน โดยไม่ตอบคำถามและไม่ใช้ความรู้นอกระบบ",
-    contract: "original_query → PlanRouteOutput{tasks[1..3]}",
-    points: ["แต่ละ task มี task_id, query, requirements และ initial_action", "ตรวจ JSON ด้วย Pydantic; แก้ output ที่ผิดได้ 1 ครั้ง", "ตรวจ warning เมื่อ ticker / period / metric ที่ผู้ใช้ระบุหายไป"],
+    title: "PlanRoute", subtitle: "atomic evidence tasks", chip: "LLM + Pydantic",
+    description: "สร้าง Tasks ที่ค้นแยกกันได้ โดย connected Graph chain ยังคงอยู่ Task เดียวเพื่อรักษา multi-hop signal",
+    contract: "original_query → PlanRouteOutput{tasks[1..5]}",
+    points: ["คืน tasks และ initial_action", "locked-tool policy ถูกใช้กับทุก Task", "Plan ยังไม่เริ่ม Retriever"],
     files: [FILE("src/semigraph/agent/nodes.py", "plan_route_node"), FILE("src/semigraph/agent/contracts.py", "PlanRouteOutput"), FILE("src/semigraph/agent/prompts.py", "PLAN_ROUTE_SYSTEM_PROMPT")],
-    note: "Planner เลือกจาก graph, vector, financial, news เท่านั้น — hybrid มีใน tool registry แต่ไม่ใช่ output ที่ planner อนุญาต",
+    note: "Tasks อิสระกันใน runtime ปัจจุบัน; ถ้า Task ต้องใช้ผลจาก Task อื่น ต้องเพิ่ม dependency contract ก่อน",
   },
   {
-    id: "tasks", x: 475, y: 305, w: 190, h: 112, layer: "agent", kicker: "STATE / 02",
-    title: "Task queue", subtitle: "requirements + action", chip: "T1…T3",
-    description: "คิวงานทำให้คำถามผสม เช่น ความสัมพันธ์ + ตัวเลข ถูกค้นแยกแหล่ง แต่ยังรวมกลับมาเป็นคำตอบเดียวได้",
-    contract: "PlannedTask[] + current_task_index + current_action",
-    points: ["งานทำตามลำดับแบบ sequential", "หนึ่ง graph chain อยู่ใน task เดียวแต่แตก evidence requirement ได้หลายข้อ", "เมื่อ task จบจะโหลด initial_action ของ task ถัดไป"],
-    files: [FILE("src/semigraph/agent/contracts.py", "PlannedTask / EvidenceRequirement"), FILE("src/semigraph/agent/nodes.py", "_complete_current_task")],
-    note: "การแตกงานย่อยยึดตาม evidence source ไม่ได้แยกทุก clause แบบกลไก",
+    id: "dispatcher", x: 475, y: 305, w: 190, h: 112, layer: "agent", kicker: "LANGGRAPH / 02",
+    title: "Task dispatcher", subtitle: "dynamic fan-out", chip: "list[Send]",
+    description: "อ่าน Parent tasks แล้วคืน Send หนึ่งใบต่อ Task ให้ LangGraph สร้าง task_worker หลาย instance ใน superstep เดียวกัน",
+    contract: "AgentState.tasks → list[Send('task_worker', payload)]",
+    points: ["Dispatcher ไม่แก้ AgentState", "Send ระบุ node ปลายทางและ payload", "ไม่มี Tasks จะส่งเส้นทางตรงไป Collector"],
+    files: [FILE("src/semigraph/agent/graph.py", "_dispatch_tasks / Send")],
+    note: "Send เป็น control instruction ของ LangGraph ไม่ใช่ dict update ที่ถูก merge เข้า AgentState",
   },
   {
-    id: "execute", x: 710, y: 305, w: 185, h: 112, layer: "agent", kicker: "LANGGRAPH / 03",
-    title: "Execute attempt", subtitle: "dispatch one action", chip: "Attempt A1…A3",
-    description: "ตรวจ RetrievalAction แล้ว dispatch ไปยัง retriever ที่เลือก ผลลัพธ์ทั้งหมดถูกบันทึกเป็น Attempt เดียวพร้อม latency, error และ trace",
-    contract: "RetrievalAction → AttemptRecord{chunks, trace, status}",
-    points: ["เลือก retriever ผ่าน RETRIEVERS[action.tool]", "retry technical error แบบ transient ได้ 1 ครั้งตาม config", "ไม่กลืน tool error; ปิด task ด้วย stop_reason=tool_error"],
-    files: [FILE("src/semigraph/agent/nodes.py", "execute_attempt_node"), FILE("src/semigraph/agent/tools.py", "RETRIEVERS"), FILE("src/semigraph/agent/contracts.py", "AttemptRecord")],
-    note: "technical retry ต่างจาก evidence retry: แบบแรกแก้ connection/provider ชั่วคราว ส่วนแบบหลังเปลี่ยนวิธีค้นเพราะหลักฐานยังไม่พอ",
+    id: "worker_t1", x: 725, y: 65, w: 205, h: 112, layer: "agent", kicker: "WORKER / T1",
+    title: "Single-task worker", subtitle: "Graph evidence", chip: "Execute ↔ Assess",
+    description: "Worker T1 สร้าง Local AgentState ที่มี tasks=[T1], index=0 และ Ledger ของตัวเอง แล้ววน Retry ภายใน Task เดิม",
+    contract: "Send{task:T1} → TaskResult{attempts, completion}",
+    points: ["ใช้ execute_attempt_node เดิม", "ใช้ assess_node และ retry policy เดิม", "ไม่เขียน Attempts กลางพร้อม Worker อื่น"],
+    files: [FILE("src/semigraph/agent/graph.py", "task_worker / task_workflow"), FILE("src/semigraph/agent/nodes.py", "execute_attempt_node / assess_node")],
+    note: "connected Graph chain ทั้งก้อนอยู่ใน T1 และ Retry ตาม feedback แบบ sequential ภายใน Worker",
   },
   {
-    id: "graph_tool", x: 965, y: 70, w: 195, h: 112, layer: "retrieval", kicker: "TOOL / GRAPH",
-    title: "Graph search", subtitle: "triple seeds → PPR", chip: "Neo4j + GDS",
-    tool: "graph",
-    description: "ค้นความสัมพันธ์หลายทอดด้วย semantic triple seeds, LLM candidate filter และ Personalized PageRank บน Entity–Chunk graph",
-    contract: "query + top_k → ranked SEC chunks + graph trace",
-    points: ["profile ปัจจุบัน: triple seeds, top 10, LLM filter", "PPR damping 0.5, uniform seed weights, entity_chunk projection", "เก็บ seed, selected triples, projection และ candidate ranking ใน trace"],
-    files: [FILE("src/semigraph/agent/tools.py", "agent_graph_search"), FILE("src/semigraph/online/graph_search.py", "trace_graph_search"), FILE("src/semigraph/online/ppr.py", "run_passage_ppr")],
-    note: "เหมาะกับ supplier, dependency, exposure, competition และ X→Y→Z ไม่ใช่การค้นข้อความคล้ายอย่างเดียว",
+    id: "worker_t2", x: 725, y: 305, w: 205, h: 112, layer: "agent", kicker: "WORKER / T2",
+    title: "Single-task worker", subtitle: "Financial evidence", chip: "Execute ↔ Assess",
+    description: "Worker T2 ทำงานพร้อม T1 แต่มี current_action, attempts และ completion แยกจากกันทั้งหมด",
+    contract: "Send{task:T2} → TaskResult{attempts, completion}",
+    points: ["เริ่มจาก T2.initial_action", "Tool error ของ T2 ไม่หยุด T1/T3", "จบแล้วคืน TaskResult หนึ่งก้อน"],
+    files: [FILE("src/semigraph/agent/graph.py", "task_worker"), FILE("src/semigraph/agent/nodes.py", "_complete_current_task")],
+    note: "Worker-local current_task_index เป็น 0 เสมอ เพราะ Local State มีเพียง Task เดียว",
   },
   {
-    id: "vector_tool", x: 965, y: 220, w: 195, h: 112, layer: "retrieval", kicker: "TOOL / VECTOR",
-    title: "Vector search", subtitle: "semantic SEC chunks", chip: "BGE 768d",
-    tool: "vector",
-    description: "ฝัง query ด้วย BGE แล้วค้น cosine similarity จาก Neo4j chunk vector index เป็น homogeneous RAG baseline",
-    contract: "query → db.index.vector.queryNodes('chunk_embedding')",
-    points: ["candidate pool ปัจจุบัน 100", "คืน top-k โดย score และ chunk_id แบบ deterministic", "รองรับ Cohere rerank แบบ optional แต่ production profile ปิดไว้"],
-    files: [FILE("src/semigraph/agent/tools.py", "agent_vector_search"), FILE("src/semigraph/online/vector_search.py", "trace_vector_search"), FILE("src/semigraph/offline/embeddings.py", "EmbeddingModel")],
-    note: "เหมาะกับข้อความบรรยายใน Item 1, 1A, 7 เช่น strategy, product, risk และ management commentary",
+    id: "worker_t3", x: 725, y: 545, w: 205, h: 112, layer: "agent", kicker: "WORKER / T3",
+    title: "Single-task worker", subtitle: "News evidence", chip: "Execute ↔ Assess",
+    description: "Worker T3 เป็น instance ของ node เดียวกัน ไม่ใช่ source function คนละตัว; กล่องสามใบทำให้เห็น runtime fan-out",
+    contract: "Send{task:T3} → TaskResult{attempts, completion}",
+    points: ["ทำพร้อม Worker อื่นได้", "Retry ยังอยู่ใน T3 เท่านั้น", "completion เก็บ sufficient และ stop_reason"],
+    files: [FILE("src/semigraph/agent/graph.py", "task_worker")],
+    note: "จำนวน Worker จริงเท่ากับจำนวน Planned Tasks ตั้งแต่ 1 ถึง 5",
   },
   {
-    id: "financial_tool", x: 965, y: 370, w: 195, h: 112, layer: "retrieval", kicker: "TOOL / FINANCIAL",
-    title: "Financial search", subtitle: "typed numeric truth", chip: "PostgreSQL",
-    tool: "financial",
-    description: "แปลงคำถามตัวเลขเป็น FinancialQuerySpec ที่ validate ได้ แล้ว compiler เลือก SQL template ที่อนุญาตไว้เพื่ออ่าน curated views",
-    contract: "query → FinancialQuerySpec → bound SQL → financial chunks",
-    points: ["ticker resolution: regex ก่อน, LLM expansion เป็น fallback", "LLM ระบุ intent แต่ห้ามเขียน SQL และห้ามตั้ง query/tickers เอง", "รองรับ lookup, compare, trend, rank, aggregate"],
-    files: [FILE("src/semigraph/online/financial_search.py", "financial_search"), FILE("src/semigraph/financial/query_spec.py", "FinancialQuerySpec"), FILE("src/semigraph/financial/sql_compiler.py", "compile_financial_query"), FILE("src/semigraph/financial/backend.py", "PostgreSQLBackend")],
-    note: "runtime default ไม่ยิง Finnhub ตรง — Finnhub เติมข้อมูลเข้า PostgreSQL ล่วงหน้าผ่าน ETL",
+    id: "reducer", x: 1010, y: 305, w: 205, h: 112, layer: "shared", kicker: "STATE REDUCER / 03",
+    title: "task_results reducer", subtitle: "fan-in append", chip: "Annotated[list, add]",
+    description: "LangGraph รวม TaskResult จาก Worker ทุกตัวด้วย reducer add โดยไม่ให้ branches เขียน Attempts กลางชนกัน",
+    contract: "TaskResult + TaskResult → AgentState.task_results",
+    points: ["แต่ละ Worker คืน list หนึ่งสมาชิก", "Reducer รวมผลเมื่อ superstep จบ", "ลำดับเสร็จยังไม่ใช่ลำดับ Plan"],
+    files: [FILE("src/semigraph/agent/state.py", "TaskResult / AgentState.task_results")],
+    note: "Reducer มีหน้าที่รวมเท่านั้น; Collector เป็นคนจัดลำดับและเปลี่ยนกลับเป็น runtime fields หลัก",
   },
   {
-    id: "news_tool", x: 965, y: 520, w: 195, h: 112, layer: "retrieval", kicker: "TOOL / NEWS",
-    title: "News search", subtitle: "time-sensitive evidence", chip: "Finnhub live",
-    tool: "news",
-    description: "ดึง company news ตาม ticker และช่วงเวลา จัดอันดับด้วย recency decay แล้วห่อเป็น chunk contract เดียวกับ retriever อื่น",
-    contract: "news-intent query → Finnhub articles → ranked news chunks",
-    points: ["guard ตามต้นทุน: empty → intent → ticker → API key", "ค่าเริ่มต้นย้อนหลัง 90 วันและใช้ headline + summary", "full article และ file cache เป็นตัวเลือกเสริม"],
-    files: [FILE("src/semigraph/online/news_search.py", "news_search / FinnhubNewsBackend"), FILE("src/semigraph/online/_ticker.py", "resolve_tickers")],
-    note: "คำว่า latest อย่างเดียวไม่ควรบังคับ news; Planner เลือกตามชนิด evidence ที่คำถามต้องการ",
+    id: "collector", x: 1260, y: 305, w: 205, h: 112, layer: "agent", kicker: "LANGGRAPH / 04",
+    title: "Task collector", subtitle: "restore Plan order", chip: "attempts + completions",
+    description: "อ่าน task_results แล้วเรียงตาม tasks จาก Plan ก่อน flatten Attempts และ completion กลับเข้าสู่ Parent AgentState",
+    contract: "tasks + task_results → attempts + completed_tasks",
+    points: ["ไม่ใช้ลำดับที่ Worker เสร็จ", "รักษาลำดับ Attempt ภายใน Task", "clear current_action ก่อน Synthesis"],
+    files: [FILE("src/semigraph/agent/graph.py", "_collect_task_results")],
+    note: "การเรียงแบบ deterministic กันผล Synthesis และ Recall เปลี่ยนเพราะ race order",
   },
   {
-    id: "chunks", x: 1225, y: 305, w: 205, h: 112, layer: "shared", kicker: "SHARED CONTRACT / 04",
-    title: "Evidence chunks", subtitle: "one shape, four sources", chip: "6 stable keys",
-    description: "ทุก retriever แปลงหลักฐานเป็นรูปทรงร่วม ทำให้ Execute, Assess และ Synthesize ไม่ต้องรู้รายละเอียด backend",
-    contract: "{chunk_id, text, ticker, fiscal_year, section, score, ...}",
-    points: ["Graph/Vector คืนข้อความ SEC", "Financial เพิ่ม metric, value, unit, period และ provenance", "News เพิ่ม datetime; section prefix บอกชนิดแหล่งข้อมูล"],
-    files: [FILE("src/semigraph/agent/tools.py", "RetrieverResult"), FILE("src/semigraph/financial/backend.py", "row_to_financial_chunk"), FILE("src/semigraph/online/news_search.py", "_make_chunk")],
-    note: "นี่คือ abstraction boundary สำคัญที่สุด: backend ต่างกันมาก แต่ Agent อ่าน evidence ในภาษาเดียวกัน",
-  },
-  {
-    id: "assess", x: 1490, y: 190, w: 195, h: 112, layer: "guard", kicker: "LANGGRAPH / 05",
-    title: "Assess evidence", subtitle: "accept / retry / stop", chip: "grounded controller",
-    description: "LLM ชี้ว่า chunk ล่าสุดใดมีประโยชน์และ requirement ใดครอบคลุม จากนั้น deterministic controller ตรวจว่าการ retry ปลอดภัยและยังมีงบ",
-    contract: "Attempt + requirements → AssessmentOutput + controller decision",
-    points: ["accepted_chunk_ids ต้องมาจาก attempt ล่าสุดเท่านั้น", "accept ได้เมื่อครบทุก requirement", "สูงสุด 3 attempts/task และ assessment repair 2 ครั้ง"],
-    files: [FILE("src/semigraph/agent/nodes.py", "assess_node"), FILE("src/semigraph/agent/retry_policy.py", "validate_assessment_context / decide_retry"), FILE("src/semigraph/agent/contracts.py", "AssessmentOutput")],
-    note: "controller กัน repeated action, top-k-only retry, duplicate result และ retry ครั้งที่สามที่ไม่มี evidence gain",
-  },
-  {
-    id: "complete", x: 1490, y: 435, w: 195, h: 112, layer: "agent", kicker: "STATE / 06",
-    title: "Complete task", subtitle: "advance or finish", chip: "stop_reason",
-    description: "บันทึกว่างานพอหรือหยุดเพราะอะไร แล้วเลื่อนไป task ถัดไป หรือปล่อย current_action ว่างเพื่อเข้าสู่ synthesis",
-    contract: "{task_id, sufficient, stop_reason} → next action | synthesis",
-    points: ["stop_reason สำคัญต่อการอธิบาย gap", "task error ไม่จำเป็นต้องทำให้คำถามทั้งก้อนล้ม", "เมื่อยังมี task ถัดไปจะกลับเข้า Execute"],
-    files: [FILE("src/semigraph/agent/nodes.py", "_complete_current_task")],
-    note: "Agent ทำงานหลายแหล่งแบบ sequential ใน state เดียว จึงยังเชื่อมคำตอบกลับเข้าคำถามรวมได้",
-  },
-  {
-    id: "ledger", x: 710, y: 540, w: 185, h: 112, layer: "shared", kicker: "OBSERVABILITY",
+    id: "ledger", x: 1260, y: 535, w: 205, h: 112, layer: "shared", kicker: "PARENT STATE",
     title: "Attempt ledger", subtitle: "append-only evidence log", chip: "trace + lineage",
-    description: "Attempt คือหน่วยบันทึกที่รวม action, chunks, retrieval trace และ assessment ไว้ด้วยกัน เพื่อ audit ได้ว่าคำตอบมาจากการค้นครั้งใด",
+    description: "Collector รวม Worker-local Ledgers เป็น attempts กลางหลังทุก Task เสร็จแล้ว จึงไม่มี concurrent write บน field นี้",
     contract: "AttemptRecord[] → retrieved_chunks / tool_calls / traces",
-    points: ["เก็บผลดิบโดยไม่กลายรูปจนเสีย provenance", "มี read-only views สำหรับ evaluation และ UI", "Synthesis เลือก evidence จาก ledger ไม่ได้อ่านตัวแปรกระจัดกระจาย"],
+    points: ["เรียง Task ตาม Plan", "เรียง Attempt ตาม A1→A2→A3 ภายใน Task", "Synthesis derive evidence จาก Ledger นี้"],
     files: [FILE("src/semigraph/agent/ledger.py", "retrieved_chunks / tool_calls / retrieval_traces"), FILE("src/semigraph/agent/contracts.py", "AttemptRecord")],
-    note: "การรวม trace กับ evidence ใน record เดียวลดโอกาส lineage หลุดเมื่อเกิด retry หลายรอบ",
+    note: "task_results เป็น fan-in buffer; attempts คือ public ledger ที่ evaluator และ Synthesis ใช้ต่อ",
   },
   {
-    id: "synthesize", x: 1745, y: 305, w: 195, h: 112, layer: "agent", kicker: "LANGGRAPH / 07",
-    title: "Grounded synthesis", subtitle: "one final LLM call", chip: "max 9 chunks",
-    description: "เลือก accepted evidence อย่างยุติธรรมข้าม task แล้วเรียก LLM ครั้งเดียวเพื่อเขียนคำตอบ โดยอนุญาต citation index ที่มีอยู่จริงเท่านั้น",
+    id: "synthesize", x: 1530, y: 305, w: 205, h: 112, layer: "agent", kicker: "LANGGRAPH / 05",
+    title: "Grounded synthesis", subtitle: "accepted → raw fallback", chip: "max 9 chunks",
+    description: "ถูกเรียกครั้งเดียวหลัง Collector รวมทุก Task แล้ว เลือก evidence สูงสุด 9 chunks และสร้างคำตอบพร้อม citation",
     contract: "selected evidence + task outcomes → answer + citation_map",
-    points: ["สูงสุด 3 chunks/task และรวมสูงสุด 9", "fail-open evidence ใช้ได้เมื่อ assessment provider ล้ม", "ลบ citation index ที่ไม่อยู่ใน lookup ก่อนส่งออก"],
+    points: ["accepted มาก่อน raw fallback", "กระจายหลักฐานข้าม Task", "ไม่มี evidence จะไม่เรียก LLM"],
     files: [FILE("src/semigraph/agent/nodes.py", "_select_synthesis_chunks / synthesize_attempts_node"), FILE("src/semigraph/agent/prompts.py", "SYNTHESIZE_ATTEMPTS_SYSTEM_PROMPT")],
-    note: "หากไม่มี evidence จะตอบตรง ๆ ว่าหลักฐานไม่พอ แทนการเติมจาก world knowledge",
+    note: "Synthesis ไม่เห็น Worker-local State โดยตรง; มันอ่าน attempts และ completed_tasks ที่ Collector เตรียมไว้",
   },
   {
-    id: "answer", x: 1990, y: 305, w: 175, h: 112, layer: "user", kicker: "OUTPUT / 08",
+    id: "answer", x: 1795, y: 305, w: 180, h: 112, layer: "user", kicker: "OUTPUT / 06",
     title: "Answer to user", subtitle: "grounded + cited", chip: "final_answer",
     description: "ผลลัพธ์สุดท้ายประกอบด้วยข้อความตอบ, citation map, synthesis trace และ Attempt Ledger ที่ UI/evaluator ใช้ตรวจย้อนกลับได้",
     contract: "{final_answer, citation_map, synthesis_trace, attempts}",
@@ -149,27 +119,104 @@ const runtimeNodes = [
 
 const runtimeEdges = [
   { id: "q-plan", from: "query", to: "plan", label: "query" },
-  { id: "plan-tasks", from: "plan", to: "tasks", label: "validated plan" },
-  { id: "tasks-exec", from: "tasks", to: "execute", label: "current_action" },
-  { id: "exec-graph", from: "execute", to: "graph_tool", label: "dispatch", optional: true },
-  { id: "exec-vector", from: "execute", to: "vector_tool", label: "dispatch", optional: true },
-  { id: "exec-fin", from: "execute", to: "financial_tool", label: "dispatch", optional: true },
-  { id: "exec-news", from: "execute", to: "news_tool", label: "dispatch", optional: true },
-  { id: "graph-chunks", from: "graph_tool", to: "chunks", label: "ranked chunks" },
-  { id: "vector-chunks", from: "vector_tool", to: "chunks", label: "ranked chunks" },
-  { id: "fin-chunks", from: "financial_tool", to: "chunks", label: "typed rows" },
-  { id: "news-chunks", from: "news_tool", to: "chunks", label: "recent articles" },
-  { id: "chunks-assess", from: "chunks", to: "assess", label: "latest attempt" },
-  { id: "assess-exec", from: "assess", to: "execute", label: "grounded retry", retry: true, curve: "top" },
-  { id: "assess-complete", from: "assess", to: "complete", label: "accept / stop", fromAnchor: "bottom", toAnchor: "top" },
-  { id: "complete-exec", from: "complete", to: "execute", label: "next task", retry: true, curve: "bottom" },
-  { id: "complete-synth", from: "complete", to: "synthesize", label: "all tasks done" },
-  { id: "synth-answer", from: "synthesize", to: "answer", label: "answer + citations" },
-  { id: "exec-ledger", from: "execute", to: "ledger", label: "append", data: true, fromAnchor: "bottom", toAnchor: "top" },
-  { id: "assess-ledger", from: "assess", to: "ledger", label: "assessment", data: true, curve: "bottom" },
+  { id: "plan-dispatch", from: "plan", to: "dispatcher", label: "tasks" },
+  { id: "send-t1", from: "dispatcher", to: "worker_t1", label: "Send(T1)", curve: "top" },
+  { id: "send-t2", from: "dispatcher", to: "worker_t2", label: "Send(T2)" },
+  { id: "send-t3", from: "dispatcher", to: "worker_t3", label: "Send(T3)", curve: "bottom" },
+  { id: "t1-reducer", from: "worker_t1", to: "reducer", label: "TaskResult", curve: "top", data: true },
+  { id: "t2-reducer", from: "worker_t2", to: "reducer", label: "TaskResult", data: true },
+  { id: "t3-reducer", from: "worker_t3", to: "reducer", label: "TaskResult", curve: "bottom", data: true },
+  { id: "reducer-collector", from: "reducer", to: "collector", label: "task_results" },
+  { id: "collector-synth", from: "collector", to: "synthesize", label: "all tasks done" },
+  { id: "collector-ledger", from: "collector", to: "ledger", label: "ordered attempts", data: true, fromAnchor: "bottom", toAnchor: "top" },
   { id: "ledger-synth", from: "ledger", to: "synthesize", label: "selected evidence", data: true, curve: "bottom" },
-  { id: "vanilla-q-vector", from: "query", to: "vector_tool", label: "direct query", lens: "vanilla-vector", curve: "top" },
-  { id: "vanilla-vector-answer", from: "vector_tool", to: "answer", label: "retrieve + generate", lens: "vanilla-vector", curve: "top" },
+  { id: "synth-answer", from: "synthesize", to: "answer", label: "answer + citations" },
+];
+
+const interfaceNodes = [
+  {
+    id: "i_query", x: 30, y: 290, w: 205, h: 122, layer: "user", kicker: "INPUT / 00",
+    title: "Original Query", subtitle: "AgentState entry", chip: "str",
+    description: "จุดเริ่มของระบบและ anchor กลางที่ต้องคงความหมายเดิมตลอดทั้งรอบค้นหา",
+    contract: "AgentState\n{ original_query: str }",
+    points: ["รับจาก: build_agent entry", "ส่งต่อให้: PlanRoute, Worker และ Synthesis", "ห้าม: retry เปลี่ยนความต้องการเดิมแบบอิสระ"],
+    files: [FILE("src/semigraph/agent/state.py", "AgentState.original_query"), FILE("src/semigraph/agent/graph.py", "build_agent")],
+    note: "เวลา debug ให้เริ่มจาก query นี้ แล้วตรวจว่า Task และ action ยังรักษา ticker, period และ relationship anchor ครบหรือไม่",
+  },
+  {
+    id: "i_plan", x: 275, y: 290, w: 220, h: 122, layer: "agent", kicker: "PLAN / 01",
+    title: "PlanRouteOutput", subtitle: "evidence needs", chip: "Pydantic",
+    description: "Planner แตกคำถามเป็น Task ที่ค้นได้จริง; connected Graph chain ต้องอยู่ Task เดียวเพื่อไม่เสีย multi-hop signal",
+    contract: "PlanRouteOutput\n{ tasks: list[PlannedTask] }\nPlannedTask = { task_id, query, requirements, initial_action }",
+    points: ["รับจาก: original_query + Planner LLM", "ส่งต่อให้: dispatcher", "ตรวจ: 1–5 Tasks และ ID ไม่ซ้ำ"],
+    files: [FILE("src/semigraph/agent/contracts.py", "PlanRouteOutput / PlannedTask"), FILE("src/semigraph/agent/nodes.py", "plan_route_node")],
+    note: "ถ้า Plan ผิด ให้ debug ที่ requirement/action ก่อนดู Retriever เพราะ Worker จะทำตามสัญญานี้",
+  },
+  {
+    id: "i_action", x: 535, y: 290, w: 220, h: 122, layer: "contract", kicker: "ACTION / 02",
+    title: "RetrievalAction", subtitle: "tool call request", chip: "strict model",
+    description: "สัญญากลางที่บอกว่า Worker จะเรียก Tool ไหน ด้วย query อะไร และต้องการกี่ chunks",
+    contract: "RetrievalAction\n{ tool: vector|graph|financial|news,\n  query: str, top_k_chunks: 1..100 }",
+    points: ["รับจาก: PlannedTask.initial_action หรือ Assess.next_action", "ส่งต่อให้: execute_attempt_node", "ห้าม: field นอก schema และ query ว่าง"],
+    files: [FILE("src/semigraph/agent/contracts.py", "RetrievalAction"), FILE("src/semigraph/agent/nodes.py", "execute_attempt_node")],
+    note: "Retry ที่ดีแก้ action ตาม evidence gap เช่น bridge_hint หรือ focus_missing โดยไม่ลบ Attempt เก่า",
+  },
+  {
+    id: "i_attempt", x: 795, y: 290, w: 220, h: 122, layer: "shared", kicker: "LEDGER / 03",
+    title: "AttemptRecord", subtitle: "one retrieval try", chip: "TypedDict",
+    description: "บันทึกการเรียก Tool หนึ่งครั้งแบบ append-only; รอบใหม่เพิ่ม record ไม่ overwrite รอบเก่า",
+    contract: "AttemptRecord\n{ attempt_id, task_id, action,\n  retrieval_status, chunks, retrieval_trace,\n  assessment: dict | None }",
+    points: ["รับจาก: execute_attempt_node", "ส่งต่อให้: assess_node, Collector และ evaluator", "เก็บ: raw chunks + trace เดิมครบ"],
+    files: [FILE("src/semigraph/agent/contracts.py", "AttemptRecord"), FILE("src/semigraph/agent/nodes.py", "execute_attempt_node")],
+    note: "ถ้า retrieval error ให้เก็บ Attempt ที่ chunks ว่างและ terminal status; อย่าปลอมเป็น evidence miss",
+  },
+  {
+    id: "i_assess", x: 1055, y: 290, w: 235, h: 122, layer: "guard", kicker: "ASSESS / 04",
+    title: "AssessmentOutput", subtitle: "evidence decision", chip: "Pydantic",
+    description: "ตรวจว่า chunks ครอบคลุม Requirement หรือยัง แล้วเลือก accept, retry หรือ stop",
+    contract: "AssessmentOutput\n{ accepted_chunk_ids, covered_requirement_ids,\n  decision: accept|retry|stop,\n  retry_strategy?: anchor_enrichment|focus_missing|bridge_hint|\n    constraint_repair|news_query_refinement|switch_tool,\n  next_action?: RetrievalAction }",
+    points: ["รับจาก: latest Attempt + current Task", "ส่งต่อ: retry controller หรือ TaskResult", "retry ต้องมี strategy และ next_action"],
+    files: [FILE("src/semigraph/agent/contracts.py", "AssessmentOutput"), FILE("src/semigraph/agent/nodes.py", "assess_node")],
+    note: "Assessment ไม่สร้าง chunk ID เอง; ID ทุกตัวต้องมาจาก Attempt ปัจจุบันหรือ evidence ที่ยอมรับแล้ว",
+  },
+  {
+    id: "i_result", x: 1330, y: 290, w: 220, h: 122, layer: "contract", kicker: "WORKER OUTPUT / 05",
+    title: "TaskResult", subtitle: "worker boundary", chip: "TypedDict",
+    description: "ขอบเขตระหว่าง Worker ที่ทำงานแบบ isolated กับ Parent State ที่รอรวมผล",
+    contract: "TaskResult\n{ task_id: str,\n  attempts: list[AttemptRecord],\n  completion: { task_id, sufficient, stop_reason } }",
+    points: ["รับจาก: task_worker หลัง Task จบ", "ส่งต่อให้: task_results reducer", "ไม่รวม: evidence ซ้ำใน completion"],
+    files: [FILE("src/semigraph/agent/state.py", "TaskResult"), FILE("src/semigraph/agent/graph.py", "task_worker")],
+    note: "Worker หนึ่งตัวคืน TaskResult หนึ่งก้อน; Task error ไม่ควรหยุด Worker ของ Task อื่น",
+  },
+  {
+    id: "i_state", x: 1590, y: 290, w: 235, h: 122, layer: "contract", kicker: "PARENT STATE / 06",
+    title: "AgentState", subtitle: "shared runtime state", chip: "TypedDict",
+    description: "State เจ้าของจริงหลัง Collector รวมผลตาม Plan order แล้ว พร้อมส่งให้ Synthesis และ evaluator",
+    contract: "AgentState (total=False)\n{ original_query: str, tasks: list[dict],\n  current_task_index: int, current_action: dict,\n  plan_trace: dict,\n  task_results: Annotated[list[TaskResult], add],\n  attempts: list[AttemptRecord], completed_tasks: list[dict],\n  synthesis_trace: dict, stop_reason: str,\n  final_answer: str, citation_map: list[dict] }",
+    points: ["รับจาก: Collector และ Synthesis", "ส่งต่อให้: synthesize_node, checkpoint และ evaluator", "task_results ใช้ reducer add; attempts รวมหลัง fan-in"],
+    files: [FILE("src/semigraph/agent/state.py", "AgentState"), FILE("src/semigraph/agent/graph.py", "_collect_task_results")],
+    note: "เวลา debug ให้แยก Worker-local state ออกจาก Parent AgentState; ห้ามคิดว่า task_results เรียงตามเวลาที่เสร็จ",
+  },
+  {
+    id: "i_output", x: 1865, y: 290, w: 235, h: 122, layer: "user", kicker: "OUTPUT / 07",
+    title: "Synthesis result", subtitle: "grounded response", chip: "final contract",
+    description: "คำตอบที่สร้างจาก selected raw chunks เท่านั้น พร้อม citation map และ trace ที่ตรวจสอบย้อนหลังได้",
+    contract: "AgentState output\n{ final_answer: str, citation_map: list[dict],\n  synthesis_trace: dict, attempts: list[AttemptRecord] }",
+    points: ["รับจาก: completed_tasks + selected evidence", "ส่งให้: User, UI และ RAGAS projection", "citation ต้องชี้เฉพาะ selected chunk IDs"],
+    files: [FILE("src/semigraph/agent/nodes.py", "synthesize_attempts_node"), FILE("src/semigraph/agent/state.py", "final_answer / citation_map")],
+    note: "นี่คือ public answer contract; Attempt Ledger และ synthesis_trace ทำให้คำตอบ audit ได้โดยไม่เปิด hidden chain-of-thought",
+  },
+];
+
+const interfaceEdges = [
+  { id: "iq-plan", from: "i_query", to: "i_plan", label: "original_query" },
+  { id: "iplan-action", from: "i_plan", to: "i_action", label: "initial_action" },
+  { id: "ia-attempt", from: "i_action", to: "i_attempt", label: "execute" },
+  { id: "iattempt-assess", from: "i_attempt", to: "i_assess", label: "latest attempt", data: true },
+  { id: "iassess-retry", from: "i_assess", to: "i_action", label: "retry / next_action", retry: true, curve: "top" },
+  { id: "iassess-result", from: "i_assess", to: "i_result", label: "accept / stop", data: true },
+  { id: "iresult-state", from: "i_result", to: "i_state", label: "task_results reducer", data: true },
+  { id: "istate-output", from: "i_state", to: "i_output", label: "selected evidence" },
 ];
 
 const graphNodes = [
@@ -299,63 +346,200 @@ const factoryEdges = [
   { id: "neo-bench", from: "f_neo", to: "f_benchmark", label: "retrieval corpus", optional: true, curve: "bottom" },
 ];
 
+const DEMO_QUERY = "Compare AMD supply-chain exposure, FY2025 margin, and recent risk news.";
+
+const DEMO_TASKS = [
+  {
+    task_id: "T1", query: "Trace AMD → TSMC capacity exposure",
+    requirements: [{ requirement_id: "T1-R1", description: "AMD–TSMC capacity evidence" }],
+    initial_action: { tool: "graph", query: "Trace AMD → TSMC capacity exposure", top_k_chunks: 5 },
+  },
+  {
+    task_id: "T2", query: "Find AMD FY2025 gross margin",
+    requirements: [{ requirement_id: "T2-R1", description: "AMD FY2025 gross margin" }],
+    initial_action: { tool: "financial", query: "Find AMD FY2025 gross margin", top_k_chunks: 5 },
+  },
+  {
+    task_id: "T3", query: "Find recent AMD supply risk news",
+    requirements: [{ requirement_id: "T3-R1", description: "Recent AMD supply risk" }],
+    initial_action: { tool: "news", query: "Find recent AMD supply risk news", top_k_chunks: 5 },
+  },
+];
+
+const DEMO_ATTEMPTS = {
+  T1: [
+    {
+      attempt_id: "T1-A1", task_id: "T1",
+      action: { tool: "graph", query: "Trace AMD → TSMC capacity exposure", top_k_chunks: 5 },
+      retrieval_status: "ok", chunks: [{ chunk_id: "G-101", text: "AMD relies on third-party foundries…" }],
+      retrieval_trace: { status: "ok", seeds: 4 },
+      assessment: { status: "valid", output: { accepted_chunk_ids: ["G-101"], decision: "retry", retry_strategy: "bridge_hint" } },
+    },
+    {
+      attempt_id: "T1-A2", task_id: "T1",
+      action: { tool: "graph", query: "AMD TSMC wafer capacity bridge", top_k_chunks: 5 },
+      retrieval_status: "ok", chunks: [{ chunk_id: "G-205", text: "TSMC provides advanced-node wafer capacity…" }],
+      retrieval_trace: { status: "ok", seeds: 6 },
+      assessment: { status: "valid", output: { accepted_chunk_ids: ["G-205"], covered_requirement_ids: ["T1-R1"], decision: "accept" } },
+    },
+  ],
+  T2: [{
+    attempt_id: "T2-A1", task_id: "T2",
+    action: { tool: "financial", query: "Find AMD FY2025 gross margin", top_k_chunks: 5 },
+    retrieval_status: "ok", chunks: [{ chunk_id: "F-301", text: "AMD gross margin FY2025: 53%" }],
+    retrieval_trace: { status: "ok", row_count: 1 },
+    assessment: { status: "valid", output: { accepted_chunk_ids: ["F-301"], covered_requirement_ids: ["T2-R1"], decision: "accept" } },
+  }],
+  T3: [{
+    attempt_id: "T3-A1", task_id: "T3",
+    action: { tool: "news", query: "Find recent AMD supply risk news", top_k_chunks: 5 },
+    retrieval_status: "ok", chunks: [{ chunk_id: "N-401", text: "Recent supply-chain risk update…" }],
+    retrieval_trace: { status: "ok", returned_chunk_ids: ["N-401"] },
+    assessment: { status: "valid", output: { accepted_chunk_ids: ["N-401"], covered_requirement_ids: ["T3-R1"], decision: "accept" } },
+  }],
+};
+
+const DEMO_COMPLETIONS = ["T1", "T2", "T3"].map(taskId => ({
+  task_id: taskId, sufficient: true, stop_reason: "sufficient",
+}));
+
+const taskResult = (taskId, index) => ({
+  task_id: taskId,
+  attempts: DEMO_ATTEMPTS[taskId],
+  completion: DEMO_COMPLETIONS[index],
+});
+
+const runtimeStateSnapshots = {
+  query: {
+    scope: "Parent AgentState · graph input",
+    fields: { original_query: DEMO_QUERY },
+  },
+  plan: {
+    scope: "Parent AgentState · after PlanRoute",
+    fields: {
+      original_query: DEMO_QUERY,
+      tasks: DEMO_TASKS,
+      plan_trace: { status: "ok", llm_calls: 1, warnings: [] },
+    },
+  },
+  dispatch: {
+    scope: "Dispatcher return · LangGraph control output, not AgentState",
+    fields: {
+      send_commands: DEMO_TASKS.map(task => ({
+        node: "task_worker",
+        arg: { original_query: DEMO_QUERY, task },
+      })),
+    },
+  },
+  workerT1: {
+    scope: "Worker T1 · isolated local AgentState",
+    fields: {
+      original_query: DEMO_QUERY, tasks: [DEMO_TASKS[0]], current_task_index: 0,
+      current_action: {}, attempts: DEMO_ATTEMPTS.T1,
+      completed_tasks: [DEMO_COMPLETIONS[0]], stop_reason: "sufficient",
+    },
+  },
+  workerT2: {
+    scope: "Worker T2 · isolated local AgentState",
+    fields: {
+      original_query: DEMO_QUERY, tasks: [DEMO_TASKS[1]], current_task_index: 0,
+      current_action: {}, attempts: DEMO_ATTEMPTS.T2,
+      completed_tasks: [DEMO_COMPLETIONS[1]], stop_reason: "sufficient",
+    },
+  },
+  workerT3: {
+    scope: "Worker T3 · isolated local AgentState",
+    fields: {
+      original_query: DEMO_QUERY, tasks: [DEMO_TASKS[2]], current_task_index: 0,
+      current_action: {}, attempts: DEMO_ATTEMPTS.T3,
+      completed_tasks: [DEMO_COMPLETIONS[2]], stop_reason: "sufficient",
+    },
+  },
+  reduced: {
+    scope: "Parent AgentState · after task_results reducer",
+    fields: {
+      original_query: DEMO_QUERY, tasks: DEMO_TASKS,
+      task_results: [taskResult("T2", 1), taskResult("T1", 0), taskResult("T3", 2)],
+    },
+  },
+  collected: {
+    scope: "Parent AgentState · after Collector restores Plan order",
+    fields: {
+      original_query: DEMO_QUERY, tasks: DEMO_TASKS,
+      attempts: [...DEMO_ATTEMPTS.T1, ...DEMO_ATTEMPTS.T2, ...DEMO_ATTEMPTS.T3],
+      completed_tasks: DEMO_COMPLETIONS, current_action: {}, stop_reason: "sufficient",
+    },
+  },
+  synthesized: {
+    scope: "Parent AgentState · final output",
+    fields: {
+      original_query: DEMO_QUERY,
+      attempts: [...DEMO_ATTEMPTS.T1, ...DEMO_ATTEMPTS.T2, ...DEMO_ATTEMPTS.T3],
+      completed_tasks: DEMO_COMPLETIONS,
+      final_answer: "AMD's exposure, FY2025 margin, and recent risk are supported by [1]–[3].",
+      citation_map: [
+        { citation_index: 1, chunk_id: "G-205" },
+        { citation_index: 2, chunk_id: "F-301" },
+        { citation_index: 3, chunk_id: "N-401" },
+      ],
+      synthesis_trace: { status: "ok", llm_calls: 1, selected_chunk_ids_by_task: { T1: ["G-205"], T2: ["F-301"], T3: ["N-401"] } },
+    },
+  },
+};
+
 const VIEWS = {
   runtime: {
-    title: "เส้นทางจริงของ Agent: วางงาน → ค้น → ประเมิน → วนแก้ → สังเคราะห์",
-    width: 2200, height: 720, nodes: runtimeNodes, edges: runtimeEdges,
+    title: "AgentState: Plan → Send fan-out → isolated Task workers → reducer → Collector → one Synthesis",
+    width: 2020, height: 720, nodes: runtimeNodes, edges: runtimeEdges,
     scenarios: {
-      mixed: {
-        label: "Mixed: Graph + Financial",
+      parallelTasks: {
+        label: "Parallel Tasks · State walkthrough",
         steps: [
-          ["query", null, "รับคำถามผสม", "คำถามต้องการทั้งความสัมพันธ์ใน supply chain และค่า gross margin"],
-          ["plan", "q-plan", "แตกตาม evidence source", "PlanRoute สร้าง T1=Graph และ T2=Financial พร้อม requirement ของแต่ละงาน"],
-          ["tasks", "plan-tasks", "โหลดงานแรก", "Task queue เลือก initial_action ของ T1 โดยยังเก็บ query ต้นฉบับไว้"],
-          ["execute", "tasks-exec", "เริ่ม Attempt T1-A1", "Execute validate action และเลือก graph retriever"],
-          ["graph_tool", "exec-graph", "ค้นความสัมพันธ์หลายทอด", "Triple seeds และ PPR คืน SEC chunks ที่เชื่อม AMD กับ TSMC"],
-          ["chunks", "graph-chunks", "ทำ evidence ให้เป็นรูปเดียว", "ผล Graph ถูกห่อเป็น chunk contract และเก็บ retrieval trace"],
-          ["assess", "chunks-assess", "ตรวจ requirements ของ T1", "Assess ยอมรับเฉพาะ chunk ID ที่อยู่ใน attempt ล่าสุด"],
-          ["complete", "assess-complete", "ปิด T1 แล้วไป T2", "เมื่อ evidence พอ controller บันทึก sufficient และโหลด Financial action"],
-          ["execute", "complete-exec", "เริ่ม Attempt T2-A1", "Execute ใช้ action ของ task ตัวเลขโดยไม่ทำ plan ใหม่"],
-          ["financial_tool", "exec-fin", "อ่าน numerical truth", "Financial Tool สร้าง typed spec และรัน allowlisted SQL บน PostgreSQL"],
-          ["chunks", "fin-chunks", "ได้ metric พร้อม provenance", "ผลลัพธ์ยังใช้ common chunk shape แต่มี value/unit/period เพิ่ม"],
-          ["assess", "chunks-assess", "ตรวจค่าและช่วงเวลา", "Assess เช็กว่าค่า gross margin และ FY ตรง requirement"],
-          ["complete", "assess-complete", "งานครบทั้งหมด", "Task completion ปล่อย current_action ว่างเพื่อไป synthesis"],
-          ["synthesize", "complete-synth", "รวมหลักฐานข้าม store", "เลือก accepted chunks จาก ledger อย่างยุติธรรม แล้วเรียก LLM หนึ่งครั้ง"],
-          ["answer", "synth-answer", "ตอบพร้อม citation", "ผู้ใช้ได้คำตอบเดียวที่เชื่อม narrative graph evidence กับ structured number"],
+          ["query", null, "รับ Original Query", "Parent State เริ่มจาก original_query เพียง field เดียว", "query"],
+          ["plan", "q-plan", "PlanRoute สร้างสาม Tasks", "T1=Graph, T2=Financial และ T3=News; แต่ละ Task มี initial_action ของตัวเอง", "plan"],
+          ["dispatcher", "plan-dispatch", "Dispatcher อ่าน tasks", "Node นี้ไม่แก้ State แต่เตรียม Send control instructions ให้ LangGraph", "dispatch"],
+          [["worker_t1", "worker_t2", "worker_t3"], ["send-t1", "send-t2", "send-t3"], "Fan-out พร้อมกัน", "LangGraph เรียก task_worker สาม instance ด้วย payload คนละ Task", "dispatch"],
+          ["worker_t1", "send-t1", "T1 ทำ Graph และ Retry ภายใน", "A1 ได้ partial evidence แล้ว A2 ใช้ bridge_hint ก่อนปิด sufficient", "workerT1"],
+          ["worker_t2", "send-t2", "T2 ทำ Financial แยกจาก T1", "Local State มี tasks=[T2] และ Ledger ของ T2 เท่านั้น", "workerT2"],
+          ["worker_t3", "send-t3", "T3 ทำ News แยกจาก Task อื่น", "Worker ทุกตัวคืน TaskResult หนึ่งก้อน ไม่เขียน Attempts กลาง", "workerT3"],
+          ["reducer", ["t1-reducer", "t2-reducer", "t3-reducer"], "Reducer รวม TaskResult", "ตัวอย่างจงใจให้ T2 เสร็จก่อน T1 เพื่อแสดงว่า task_results อาจไม่เรียงตาม Plan", "reduced"],
+          ["collector", "reducer-collector", "Collector คืนลำดับ T1 → T2 → T3", "Flatten Attempts และ completion ตาม Plan order แล้ว clear current_action", "collected"],
+          ["ledger", "collector-ledger", "Parent Attempt Ledger พร้อมใช้", "Evaluator และ Synthesis เห็น Attempt ครบทุก Task โดยไม่มี concurrent write", "collected"],
+          ["synthesize", ["collector-synth", "ledger-synth"], "Synthesis เรียกครั้งเดียว", "เลือก accepted evidence ก่อน เติม raw fallback และจำกัดรวมไม่เกิน 9 chunks", "synthesized"],
+          ["answer", "synth-answer", "คืน Final AgentState", "คำตอบ, citation map และ synthesis trace อยู่ร่วมกับ Ledger ที่ตรวจย้อนหลังได้", "synthesized"],
         ],
       },
-      graphRetry: {
-        label: "Graph: missing bridge → retry",
+    },
+  },
+  interfaces: {
+    title: "Interface literacy: อ่าน input/output และ Contract ของแต่ละ boundary",
+    width: 2140, height: 680, nodes: interfaceNodes, edges: interfaceEdges,
+    scenarios: {
+      contractFlow: {
+        label: "Contract flow · เริ่มจาก Query จนถึง Answer",
         steps: [
-          ["query", null, "รับคำถาม multi-hop", "คำถามต้องการ bridge ระหว่างบริษัท ผู้ผลิต และความเสี่ยง"],
-          ["plan", "q-plan", "คง chain ไว้ใน task เดียว", "Planner แตกเป็นหลาย requirements แต่เลือก Graph action เดียว"],
-          ["tasks", "plan-tasks", "เริ่ม T1", "โหลด query ที่เก็บ entity และ relationship anchors"],
-          ["execute", "tasks-exec", "Attempt แรก", "dispatch ไป Graph Search"],
-          ["graph_tool", "exec-graph", "PPR รอบแรก", "retriever คืนหลักฐานบาง hop แต่ยังขาด bridge"],
-          ["chunks", "graph-chunks", "บันทึกผลรอบแรก", "raw chunks และ trace ถูก append ลง ledger"],
-          ["assess", "chunks-assess", "พบ requirement ที่ยังไม่ครบ", "LLM เสนอ bridge_hint และ action ใหม่"],
-          ["execute", "assess-exec", "Controller อนุมัติ retry", "action ใหม่ไม่ซ้ำ ยังอยู่ในงบ และเปลี่ยน query อย่างมีสาระ"],
-          ["graph_tool", "exec-graph", "PPR รอบสอง", "query ใหม่เน้น relationship bridge ที่ขาด"],
-          ["chunks", "graph-chunks", "ได้ evidence gain", "chunk ใหม่ถูกเปรียบกับ accepted evidence เดิม"],
-          ["assess", "chunks-assess", "requirements ครบ", "Assessment accept เมื่อมี accepted chunk ล่าสุดและ coverage ครบ"],
-          ["complete", "assess-complete", "ปิด task", "บันทึก sufficient"],
-          ["synthesize", "complete-synth", "เลือก evidence จากหลาย attempt", "Synthesis ใช้ accepted chunks ไม่ใช่ทุก candidate"],
-          ["answer", "synth-answer", "ตอบ multi-hop แบบ trace ได้", "citation ชี้กลับ chunk ต้นทางของแต่ละ claim"],
+          ["i_query", null, "1. เริ่มจาก Original Query", "นี่คือความต้องการต้นฉบับที่ทุก Node ต้องรักษาความหมายไว้"],
+          ["i_plan", "iq-plan", "2. อ่าน PlanRouteOutput", "ตรวจว่า Task แยกเป็น evidence need และ Graph chain ยังอยู่ Task เดียวหรือไม่"],
+          ["i_action", "iplan-action", "3. อ่าน RetrievalAction", "ก่อน debug Retriever ให้ตรวจ tool, query และ top_k ที่ Worker ได้รับก่อน"],
+          ["i_attempt", "ia-attempt", "4. อ่าน AttemptRecord", "หนึ่ง record = หนึ่ง Tool call; รอบ Retry ต้อง append record ใหม่"],
+          ["i_assess", "iattempt-assess", "5. อ่าน AssessmentOutput", "Assessment ตัดสินจาก chunks ที่มีจริง ไม่สร้าง chunk ID ใหม่"],
+          ["i_action", "iassess-retry", "6. ถ้า Retry ให้ดู next_action", "ตรวจ strategy และ query ว่าแก้ evidence gap จริง ไม่ใช่ repeat เดิม"],
+          ["i_result", "iassess-result", "7. Worker คืน TaskResult", "completion เก็บเฉพาะสถานะจบ ไม่ copy evidence ซ้ำ"],
+          ["i_state", "iresult-state", "8. Collector รวมเป็น AgentState", "task_results อาจมาถึงไม่เรียงเวลา แต่ Collector คืนลำดับตาม Plan"],
+          ["i_output", "istate-output", "9. Synthesis คืน Public Output", "Final answer อ้างเฉพาะ selected chunks และมี trace ให้ตรวจย้อนหลัง"],
         ],
       },
-      news: {
-        label: "Latest news event",
+      debugOrder: {
+        label: "Debug order · ไล่ Bug จาก Interface ด้านนอกเข้าไป",
         steps: [
-          ["query", null, "รับคำถามล่าสุด", "คำถามระบุ company และต้องการเหตุการณ์/ข่าว"],
-          ["plan", "q-plan", "เลือก News ตาม evidence type", "recency wording อย่างเดียวไม่พอ; task ต้องการ article/event จริง"],
-          ["tasks", "plan-tasks", "โหลด News action", "query รักษา ticker และข้อจำกัดเวลา"],
-          ["execute", "tasks-exec", "เริ่ม Attempt", "dispatch ไป News retriever"],
-          ["news_tool", "exec-news", "Finnhub company news", "ผ่าน intent/ticker guards แล้วดึงบทความย้อนหลังตาม config"],
-          ["chunks", "news-chunks", "จัดอันดับด้วย recency", "headline+summary ถูกห่อเป็น news chunks"],
-          ["assess", "chunks-assess", "ตรวจว่า event ตรงคำถาม", "ยอมรับเฉพาะบทความที่ครอบคลุม requirement"],
-          ["complete", "assess-complete", "ปิด task", "ไม่มีงานถัดไป"],
-          ["synthesize", "complete-synth", "สรุปจากบทความที่เลือก", "ไม่ปนข้อความ SEC เก่าถ้าไม่ได้อยู่ใน evidence"],
-          ["answer", "synth-answer", "ตอบพร้อมแหล่งข่าว", "citation map เก็บ chunk/source metadata"],
+          ["i_output", null, "เริ่มดู Output ที่ผิด", "แยกว่า Answer ผิดเพราะ citation, evidence selection หรือ retrieval"],
+          ["i_state", "istate-output", "ตรวจ Parent AgentState", "ดู attempts, completed_tasks และ synthesis_trace ที่ Collector เตรียมให้"],
+          ["i_result", "iresult-state", "ตรวจ TaskResult", "ดูว่า Task ใดจบด้วย sufficient, no_evidence_gain หรือ tool_error"],
+          ["i_assess", "iassess-result", "ตรวจ AssessmentOutput", "ดู decision, accepted IDs และ covered requirement IDs"],
+          ["i_attempt", "iattempt-assess", "ตรวจ AttemptRecord", "ดู raw chunks, retrieval_status และ retrieval_trace ของรอบล่าสุด"],
+          ["i_action", "ia-attempt", "ตรวจ RetrievalAction", "ถ้า query/tool ผิด ให้แก้ที่ Planner หรือ retry policy ก่อนแก้ Retriever"],
+          ["i_plan", "iplan-action", "ตรวจ PlanRouteOutput", "ย้อนดู requirement และ initial_action ว่ากำหนด evidence need ถูกหรือไม่"],
+          ["i_query", "iq-plan", "สุดท้ายตรวจ Original Query", "ห้ามแก้ต้นเหตุด้วยการเปลี่ยนความหมายของคำถาม"],
         ],
       },
     },
@@ -449,12 +633,12 @@ const MODULE_GROUPS = [
     modules: [
       ["src/semigraph/agent/__init__.py", 0, "Agent package marker", "—"],
       ["src/semigraph/agent/contracts.py", 155, "Strict Pydantic/TypedDict contracts ของ plan, action, assessment และ attempt", "PlanRouteOutput · RetrievalAction · AssessmentOutput · AttemptRecord"],
-      ["src/semigraph/agent/graph.py", 128, "ประกอบ LangGraph 4 โหนดและ conditional routes; รองรับ locked-tool evaluation", "build_agent · _route_after_execute"],
+      ["src/semigraph/agent/graph.py", 197, "ประกอบ Plan, Send fan-out, isolated Task workers, deterministic Collector และ Synthesis", "build_agent · _dispatch_tasks · _collect_task_results"],
       ["src/semigraph/agent/ledger.py", 49, "Read-only views จาก Attempt Ledger สำหรับ chunks, tool calls และ traces", "retrieved_chunks · tool_calls · retrieval_traces"],
       ["src/semigraph/agent/nodes.py", 1226, "Logic ของ PlanRoute, Execute, Assess, task advance และ grounded synthesis", "plan_route_node · execute_attempt_node · assess_node · synthesize_attempts_node"],
       ["src/semigraph/agent/prompts.py", 192, "Prompt contracts ของ Planner, Assessor และ Synthesis ที่ผูก metric/retry registry", "PLAN_ROUTE_SYSTEM_PROMPT · ASSESS_SYSTEM_PROMPT"],
       ["src/semigraph/agent/retry_policy.py", 241, "Deterministic guard สำหรับ assessment context, evidence gain และ retry budget", "validate_assessment_context · decide_retry"],
-      ["src/semigraph/agent/state.py", 19, "Serializable LangGraph shared state", "AgentState"],
+      ["src/semigraph/agent/state.py", 29, "Serializable shared state พร้อม reducer สำหรับ parallel Task results", "TaskResult · AgentState"],
       ["src/semigraph/agent/tools.py", 337, "Agent adapters, compact traces, retriever registry และ tool schemas", "agent_graph_search · agent_vector_search · agent_financial_search · RETRIEVERS"],
       ["src/semigraph/agent/ws.py", 6, "LangGraph dev workspace entrypoint", "graph = build_agent()"],
     ],
@@ -533,7 +717,7 @@ const MODULE_GROUPS = [
 
 const state = {
   view: "runtime",
-  scenario: "mixed",
+  scenario: "parallelTasks",
   step: -1,
   playing: false,
   playTimer: null,
@@ -579,6 +763,9 @@ const els = {
   inspectorTitle: document.getElementById("inspector-title"),
   inspectorDescription: document.getElementById("inspector-description"),
   inspectorContract: document.getElementById("inspector-contract"),
+  runtimeStateBlock: document.getElementById("runtime-state-block"),
+  runtimeStateScope: document.getElementById("runtime-state-scope"),
+  runtimeStateGrid: document.getElementById("runtime-state-grid"),
   inspectorPoints: document.getElementById("inspector-points"),
   inspectorFiles: document.getElementById("inspector-files"),
   inspectorNote: document.querySelector("#inspector-note p"),
@@ -685,6 +872,12 @@ function renderDiagram() {
   els.nodeLayer.replaceChildren();
   const nodes = nodeMap(view);
   const step = activeStep();
+  const activeNodeIds = new Set(
+    step ? (Array.isArray(step[0]) ? step[0] : [step[0]]) : [],
+  );
+  const activeEdgeIds = new Set(
+    step ? (Array.isArray(step[1]) ? step[1] : [step[1]]) : [],
+  );
 
   for (const edge of view.edges) {
     const group = svgEl("g", { "data-edge": edge.id });
@@ -694,7 +887,7 @@ function renderDiagram() {
     if (edge.data) classes.push("data");
     const edgeFiltered = !state.enabledLayers.has(nodes.get(edge.from).layer) || !state.enabledLayers.has(nodes.get(edge.to).layer);
     if (edgeFiltered || isEdgeMutedByLens(edge, nodes)) classes.push("muted");
-    if (step && step[1] === edge.id) classes.push("active");
+    if (activeEdgeIds.has(edge.id)) classes.push("active");
     const path = svgEl("path", { d: edgePath(edge, nodes), class: classes.join(" ") });
     group.append(path);
     if (edge.label) {
@@ -707,7 +900,7 @@ function renderDiagram() {
   for (const node of view.nodes) {
     const classes = ["architecture-node"];
     if (state.selectedNode === node.id) classes.push("selected");
-    if (step && step[0] === node.id) classes.push("active");
+    if (activeNodeIds.has(node.id)) classes.push("active");
     if (!state.enabledLayers.has(node.layer)) classes.push("filtered");
     else if (isNodeMutedByLens(node)) classes.push("muted");
     const group = svgEl("g", {
@@ -789,6 +982,78 @@ function renderScenarioOptions() {
   updateStepCaption();
 }
 
+const STATE_FIELD_COLORS = {
+  original_query: "#edf5f2",
+  tasks: "#64e0d4",
+  current_task_index: "#ffb95c",
+  current_action: "#ffb95c",
+  plan_trace: "#7cb8ff",
+  send_commands: "#b5a0ff",
+  task_results: "#b5a0ff",
+  attempts: "#ff8e9e",
+  completed_tasks: "#8ddf8a",
+  stop_reason: "#8ddf8a",
+  final_answer: "#7cb8ff",
+  citation_map: "#7cb8ff",
+  synthesis_trace: "#7cb8ff",
+};
+
+const STATE_ITEM_COLORS = ["#64e0d4", "#ffb95c", "#b5a0ff", "#ff8e9e", "#8ddf8a"];
+
+function stateValueElement(value) {
+  if (!Array.isArray(value)) {
+    const pre = document.createElement("pre");
+    pre.textContent = JSON.stringify(value, null, 2);
+    return pre;
+  }
+
+  const list = document.createElement("div");
+  list.className = "state-list";
+  value.forEach((item, index) => {
+    const card = document.createElement("div");
+    card.className = "state-list-item";
+    card.style.setProperty("--item-color", STATE_ITEM_COLORS[index % STATE_ITEM_COLORS.length]);
+    const badge = document.createElement("span");
+    badge.className = "state-list-index";
+    badge.textContent = `[${index}]`;
+    const pre = document.createElement("pre");
+    pre.textContent = JSON.stringify(item, null, 2);
+    card.append(badge, pre);
+    list.append(card);
+  });
+  return list;
+}
+
+function renderRuntimeState(snapshotId = null) {
+  if (state.view !== "runtime") return;
+  const snapshot = runtimeStateSnapshots[snapshotId];
+  els.runtimeStateScope.textContent = snapshot?.scope || "เลือก Play flow เพื่อดู State";
+
+  if (!snapshot) {
+    const empty = document.createElement("p");
+    empty.className = "state-empty";
+    empty.textContent = "State จะเปลี่ยนตาม node ที่กำลังทำงาน";
+    els.runtimeStateGrid.replaceChildren(empty);
+    return;
+  }
+
+  const fields = Object.entries(snapshot.fields).map(([name, value]) => {
+    const card = document.createElement("section");
+    card.className = "state-field";
+    card.style.setProperty("--state-color", STATE_FIELD_COLORS[name] || "#edf5f2");
+    const label = document.createElement("div");
+    label.className = "state-field-name";
+    const fieldName = document.createElement("span");
+    fieldName.textContent = name;
+    const shape = document.createElement("small");
+    shape.textContent = Array.isArray(value) ? `list[${value.length}]` : typeof value;
+    label.append(fieldName, shape);
+    card.append(label, stateValueElement(value));
+    return card;
+  });
+  els.runtimeStateGrid.replaceChildren(...fields);
+}
+
 function updateStepCaption() {
   const view = VIEWS[state.view];
   if (!view) return;
@@ -799,6 +1064,7 @@ function updateStepCaption() {
     els.stepTitle.textContent = "พร้อมสำรวจ";
     els.stepDescription.textContent = "กด Play flow หรือเลือกกล่องใดก็ได้เพื่อดูรายละเอียด";
     els.progressFill.style.width = "0%";
+    renderRuntimeState();
     return;
   }
   const step = steps[state.step];
@@ -806,7 +1072,9 @@ function updateStepCaption() {
   els.stepTitle.textContent = step[2];
   els.stepDescription.textContent = step[3];
   els.progressFill.style.width = `${((state.step + 1) / steps.length) * 100}%`;
-  const activeNode = view.nodes.find(node => node.id === step[0]);
+  renderRuntimeState(step[4]);
+  const activeNodeId = Array.isArray(step[0]) ? step[0][0] : step[0];
+  const activeNode = view.nodes.find(node => node.id === activeNodeId);
   if (activeNode) {
     state.selectedNode = activeNode.id;
     updateInspector(activeNode);
@@ -925,7 +1193,8 @@ function setView(viewId) {
   els.scenarioControl.hidden = source;
   els.sourceSearchControl.hidden = !source;
   els.layerFilters.hidden = source;
-  els.ablationLens.hidden = source || viewId !== "runtime";
+  els.ablationLens.hidden = true;
+  els.runtimeStateBlock.hidden = viewId !== "runtime";
   els.stepCaption.hidden = source;
   document.querySelector(".zoom-controls").hidden = source;
   if (source) {

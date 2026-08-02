@@ -15,8 +15,10 @@ Then visit <http://127.0.0.1:8765>.
 
 ## Views
 
-- **Agent runtime** — `PlanRoute → Execute → Assess ↺ → Synthesize`, all four
-  planner-visible retrieval tools, Attempt Ledger, citations, and ablation lens.
+- **Agent runtime** — scenario `Parallel Tasks · State walkthrough` เดิน
+  `PlanRoute → Send fan-out → isolated Task workers → task_results reducer →
+  Collector → one Synthesis` พร้อม State inspector ที่แยกสีทุก field และสมาชิก
+  แต่ละตัวใน list.
 - **Graph search** — BGE query embedding, triple candidates, LLM recognition
   filter, entity seeds, reusable GDS projection, Personalized PageRank, and
   final evidence trace.
@@ -24,15 +26,20 @@ Then visit <http://127.0.0.1:8765>.
   path into PostgreSQL.
 - **Source map** — searchable ownership cards for all 59 Python modules under
   `src/semigraph`.
+- **Interface literacy** — อ่าน boundary ของ `AgentState`, `PlanRouteOutput`,
+  `RetrievalAction`, `AttemptRecord`, `AssessmentOutput`, `TaskResult` และ
+  Synthesis output แบบเดินทีละขั้น พร้อม Contract Model และลำดับ debug.
 
 The visualization intentionally describes the current source rather than older
-planning documents. In particular, the active Agent is the four-node harness,
+planning documents. In particular, the active Agent uses isolated parallel
+Task workers with deterministic collection before one Synthesis call,
 KG extraction is one LLM call per chunk, and the default Financial runtime
 backend is typed PostgreSQL retrieval.
 
 ## Maintenance
 
 When architecture changes, update the data declarations near the top of
-`app.js`: `runtimeNodes`, `graphNodes`, `factoryNodes`, their edge/scenario
-collections, and `MODULE_GROUPS`. Keep file ownership and configuration values
-grounded in the current source and `config/default.yaml`.
+`app.js`: `runtimeNodes`, `interfaceNodes`, `graphNodes`, `factoryNodes`, their
+edge/scenario collections, and `MODULE_GROUPS`. Keep file ownership,
+Contract Model field names, and configuration values grounded in the current
+source and `config/default.yaml`.

@@ -1,0 +1,23 @@
+{
+  "agent_graph": {
+    "queries": 20,
+    "successful": 20,
+    "errors": 0,
+    "chunk_hit_at_k": 0.4,
+    "chunk_recall_at_k": 0.275,
+    "group_recall_at_k": 0.275,
+    "answerable_at_k": 0.15,
+    "chunk_hit_all": 0.65,
+    "chunk_recall_all": 0.4333333333333333,
+    "group_recall_all": 0.4333333333333333,
+    "answerable_all": 0.25,
+    "synthesis_chunk_hit": 0.6,
+    "synthesis_chunk_recall": 0.39166666666666666,
+    "synthesis_group_recall": 0.39166666666666666,
+    "synthesis_answerable": 0.2,
+    "avg_latency_sec": 110.11749999999999,
+    "avg_tool_calls": 4.8,
+    "avg_orchestration_llm_calls": 6.8,
+    "avg_unique_retrieved": 16.35
+  }
+}

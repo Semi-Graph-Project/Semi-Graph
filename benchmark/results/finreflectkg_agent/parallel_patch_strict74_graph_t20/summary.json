@@ -1,0 +1,23 @@
+{
+  "agent_graph": {
+    "queries": 74,
+    "successful": 74,
+    "errors": 0,
+    "chunk_hit_at_k": 0.6621621621621622,
+    "chunk_recall_at_k": 0.3963963963963964,
+    "group_recall_at_k": 0.3963963963963964,
+    "answerable_at_k": 0.13513513513513514,
+    "chunk_hit_all": 0.7567567567567568,
+    "chunk_recall_all": 0.46846846846846846,
+    "group_recall_all": 0.4752252252252252,
+    "answerable_all": 0.17567567567567569,
+    "synthesis_chunk_hit": 0.7432432432432432,
+    "synthesis_chunk_recall": 0.45045045045045046,
+    "synthesis_group_recall": 0.45720720720720726,
+    "synthesis_answerable": 0.16216216216216217,
+    "avg_latency_sec": 84.19648648648649,
+    "avg_tool_calls": 3.72972972972973,
+    "avg_orchestration_llm_calls": 5.743243243243243,
+    "avg_unique_retrieved": 12.554054054054054
+  }
+}

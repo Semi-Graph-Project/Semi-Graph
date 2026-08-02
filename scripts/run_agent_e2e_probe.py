@@ -32,6 +32,9 @@ BOLD = "\033[1m"
 COLORS = {
     "query": "\033[96m",
     "plan_route": "\033[94m",
+    "dispatcher": "\033[36m",
+    "task_worker": "\033[93m",
+    "collector": "\033[35m",
     "execute": "\033[93m",
     "assess": "\033[95m",
     "synthesize": "\033[92m",
@@ -43,7 +46,7 @@ COLORS = {
 def _paint(text: str, color: str, enabled: bool, *, bold: bool = False) -> str:
     if not enabled:
         return text
-    prefix = COLORS[color]
+    prefix = COLORS.get(color, COLORS["dim"])
     if bold:
         prefix = BOLD + prefix
     return f"{prefix}{text}{RESET}"
@@ -81,6 +84,8 @@ def _citation_previews(citations: list[dict]) -> list[dict]:
 
 
 def _print_node_trace(node_name: str, update: dict, color: bool) -> None:
+    update = update or {}
+
     if node_name == "plan_route":
         _print_json(
             "PLAN",
@@ -88,6 +93,66 @@ def _print_node_trace(node_name: str, update: dict, color: bool) -> None:
                 "tasks": update.get("tasks", []),
                 "current_action": update.get("current_action", {}),
                 "plan_trace": update.get("plan_trace", {}),
+            },
+            node_name,
+            color,
+        )
+        return
+
+    if node_name == "dispatcher":
+        _print_json(
+            "DISPATCH",
+            {
+                "status": "fan_out_scheduled",
+                "next_node": "task_worker",
+            },
+            node_name,
+            color,
+        )
+        return
+
+    if node_name == "task_worker":
+        results = update.get("task_results") or []
+        _print_json(
+            "TASK WORKER RESULT",
+            [
+                {
+                    "task_id": result.get("task_id"),
+                    "attempts": [
+                        {
+                            "attempt_id": attempt.get("attempt_id"),
+                            "tool": (attempt.get("action") or {}).get("tool"),
+                            "retrieval_status": attempt.get("retrieval_status"),
+                            "chunk_ids": [
+                                chunk.get("chunk_id")
+                                for chunk in (attempt.get("chunks") or [])
+                                if isinstance(chunk, dict)
+                            ],
+                            "assessment_status": (
+                                attempt.get("assessment") or {}
+                            ).get("status"),
+                        }
+                        for attempt in (result.get("attempts") or [])
+                    ],
+                    "completion": result.get("completion"),
+                }
+                for result in results
+            ],
+            node_name,
+            color,
+        )
+        return
+
+    if node_name == "collector":
+        _print_json(
+            "COLLECTED STATE",
+            {
+                "attempt_order": [
+                    attempt.get("attempt_id")
+                    for attempt in (update.get("attempts") or [])
+                ],
+                "completed_tasks": update.get("completed_tasks") or [],
+                "stop_reason": update.get("stop_reason"),
             },
             node_name,
             color,

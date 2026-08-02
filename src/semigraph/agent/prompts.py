@@ -2,6 +2,7 @@ from semigraph.agent.retry_policy import (
     TOOL_RETRY_PROFILES,
     build_tool_retry_capability_summary,
 )
+from semigraph.agent.contracts import MAX_PLANNED_TASKS
 from semigraph.config import Config, get_config
 
 
@@ -48,20 +49,20 @@ These are the only valid tools. Never produce `hybrid` or another tool name.
 
 ## Planning rules
 
-1. Return 1-3 tasks in the order they should be executed.
-2. A task is one self-contained retrieval objective that can start with exactly one tool.
-3. Do not split a question mechanically by clauses or relationship hops.
-4. Keep a connected multi-hop relationship chain as ONE `graph` task. Represent the individual hops or claims as separate evidence requirements inside that task.
-5. Split tasks only when the question needs independent evidence or different retrieval capabilities. For example, an entity relationship and an exact metric may become separate `graph` and `financial` tasks.
+1. Return 1-{{MAX_PLANNED_TASKS}} tasks in the order they should be executed.
+2. Each task is one coherent retrieval objective that starts with exactly one tool. A task may contain multiple Evidence Requirements when they use the same tool.
+3. List every independently retrievable fact as a separate Evidence Requirement. Do not collapse several facts, values, periods, or comparison sides into one broad Requirement.
+4. A connected multi-hop relationship chain is the exception: keep it as ONE `graph` task and describe the complete chain as ONE composite Evidence Requirement so all linked hops stay together.
+5. Start a separate task when evidence needs a different retrieval capability. For example, an entity relationship and an exact metric become separate `graph` and `financial` tasks.
 6. Keep a supported financial comparison, trend, rank, aggregate, or derived metric as one `financial` task. Never expand a registered derived metric into its formula inputs.
 7. Choose the tool from the evidence source required to answer the task, not from isolated keywords. A metric word or fiscal period does not automatically require `financial` when the user asks for narrative explanation; recency wording does not automatically require `news` when the user asks for a structured metric.
 8. Preserve the original language. Thai input must produce Thai task queries and requirements; English input must produce English output text.
 9. Preserve every relevant explicit anchor: company, ticker, product, geography, relationship, metric, fiscal period, date, comparison target, and constraint.
 10. Make every task self-contained. Replace pronouns or vague references with entities already present in the original question, but do not invent new facts, entities, metrics, or dates.
-11. Each evidence requirement must describe one observable claim or fact that retrieval should support. Requirements are evidence needs, not reasoning steps or instructions to the answer model.
-12. The `initial_action.query` may be retrieval-oriented, but it must preserve the task's entities, relationships, metrics, periods, and intent.
+11. Every Evidence Requirement must be independently retrievable and self-contained, repeating its relevant explicit anchors. Requirements are evidence needs, not reasoning steps or instructions to the answer model.
+12. For `graph`, copy the complete `task.query` exactly into `initial_action.query`; do not freely rewrite it into keywords. For other tools, the action query may be retrieval-oriented but must preserve every explicit anchor and the task intent.
 13. Set `top_k_chunks` to a positive integer. Use `5` for a normal initial retrieval; do not inflate it merely because a question is complex.
-14. Use globally unique IDs in execution order: `T1`, `T2`, `T3` for tasks and `T1-R1`, `T1-R2`, `T2-R1`, and so on for requirements.
+14. Use globally unique IDs in execution order: `T1` through `T5` for tasks and `T1-R1`, `T1-R2`, `T2-R1`, and so on for Requirements.
 15. Return raw JSON only. No markdown fences, explanation, comments, or extra keys.
 
 ## Tool-choice checks
@@ -100,13 +101,17 @@ The root object must contain exactly `tasks`. Each task must contain exactly `ta
 
 Example 1 — preserve a connected Graph chain:
 Input: "How could TSMC capacity constraints expose AMD's data-center products through AMD's foundry dependency?"
-Output: {"tasks":[{"task_id":"T1","query":"How could TSMC capacity constraints expose AMD's data-center products through AMD's foundry dependency?","requirements":[{"requirement_id":"T1-R1","description":"Evidence of AMD's foundry or manufacturing dependency on TSMC."},{"requirement_id":"T1-R2","description":"Evidence connecting TSMC capacity constraints to AMD's data-center products or supply exposure."}],"initial_action":{"tool":"graph","query":"AMD TSMC foundry dependency capacity constraints data-center products supply exposure","top_k_chunks":5}}]}
+Output: {"tasks":[{"task_id":"T1","query":"How could TSMC capacity constraints expose AMD's data-center products through AMD's foundry dependency?","requirements":[{"requirement_id":"T1-R1","description":"Evidence of the connected path from AMD's data-center products through AMD's foundry dependency to TSMC capacity constraints and supply exposure."}],"initial_action":{"tool":"graph","query":"How could TSMC capacity constraints expose AMD's data-center products through AMD's foundry dependency?","top_k_chunks":5}}]}
 
 Example 2 — split independent Graph and Financial evidence:
 Input: "AMD พึ่งพา TSMC อย่างไร และ gross margin ของ AMD ใน FY2025 เท่าไร?"
-Output: {"tasks":[{"task_id":"T1","query":"AMD พึ่งพา TSMC อย่างไร?","requirements":[{"requirement_id":"T1-R1","description":"หลักฐานความสัมพันธ์ด้าน supplier, foundry หรือ dependency ระหว่าง AMD และ TSMC"}],"initial_action":{"tool":"graph","query":"AMD TSMC supplier foundry dependency","top_k_chunks":5}},{"task_id":"T2","query":"gross margin ของ AMD ใน FY2025 เท่าไร?","requirements":[{"requirement_id":"T2-R1","description":"ค่า gross margin ของ AMD สำหรับ FY2025"}],"initial_action":{"tool":"financial","query":"AMD gross margin FY2025","top_k_chunks":5}}]}
+Output: {"tasks":[{"task_id":"T1","query":"AMD พึ่งพา TSMC อย่างไร?","requirements":[{"requirement_id":"T1-R1","description":"หลักฐานความสัมพันธ์ด้าน supplier, foundry หรือ dependency ระหว่าง AMD และ TSMC"}],"initial_action":{"tool":"graph","query":"AMD พึ่งพา TSMC อย่างไร?","top_k_chunks":5}},{"task_id":"T2","query":"gross margin ของ AMD ใน FY2025 เท่าไร?","requirements":[{"requirement_id":"T2-R1","description":"ค่า gross margin ของ AMD สำหรับ FY2025"}],"initial_action":{"tool":"financial","query":"AMD gross margin FY2025","top_k_chunks":5}}]}
 
-Example 3 — metric wording does not force Financial for narrative evidence:
+Example 3 — expose independent facts as separate Requirements:
+Input: "What was the ratio of software amortization in 2021 to Other segment operating profit in 2022?"
+Output: {"tasks":[{"task_id":"T1","query":"Evidence needed to calculate the ratio of software amortization in 2021 to Other segment operating profit in 2022.","requirements":[{"requirement_id":"T1-R1","description":"Evidence of software amortization in 2021."},{"requirement_id":"T1-R2","description":"Evidence of Other segment operating profit in 2022."}],"initial_action":{"tool":"graph","query":"Evidence needed to calculate the ratio of software amortization in 2021 to Other segment operating profit in 2022.","top_k_chunks":5}}]}
+
+Example 4 — metric wording does not force Financial for narrative evidence:
 Input: "What does NVIDIA's filing say caused its gross-margin pressure in FY2025?"
 Output: {"tasks":[{"task_id":"T1","query":"What does NVIDIA's filing say caused its gross-margin pressure in FY2025?","requirements":[{"requirement_id":"T1-R1","description":"Filing narrative identifying causes of NVIDIA's gross-margin pressure in FY2025."}],"initial_action":{"tool":"vector","query":"NVIDIA filing causes of gross-margin pressure FY2025","top_k_chunks":5}}]}
 
@@ -116,6 +121,9 @@ Now produce the retrieval plan for the original question.
 PLAN_ROUTE_SYSTEM_PROMPT: str = _PLAN_ROUTE_SYSTEM_PROMPT_TEMPLATE.replace(
     "{{FINANCIAL_CAPABILITY_SUMMARY}}",
     build_financial_capability_summary(get_config()),
+).replace(
+    "{{MAX_PLANNED_TASKS}}",
+    str(MAX_PLANNED_TASKS),
 )
 
 _ASSESS_SYSTEM_PROMPT_TEMPLATE: str = """You are Assess for SemiGraph, an agentic heterogeneous RAG system for semiconductor stock research.
@@ -126,8 +134,8 @@ You receive the Original Query, current Task, latest Action and chunks, accepted
 
 ## Rules
 
-1. `accepted_chunk_ids` contains only useful chunk IDs from the latest Attempt.
-2. `covered_requirement_ids` contains only current Task Requirements that the supplied current or historical accepted evidence fully covers.
+1. `accepted_chunk_ids` contains every useful chunk ID from the latest Attempt. A chunk is useful when it supports any part of a current Requirement, even when it is insufficient to fully cover that Requirement. Keep useful partial evidence during `retry` or `stop`; exclude merely topical chunks.
+2. `covered_requirement_ids` contains only current Task Requirements that the supplied current or historical accepted evidence fully covers. Partial support belongs in `accepted_chunk_ids`, not `covered_requirement_ids`.
 3. Choose `accept` only when every current Requirement is covered and at least one latest chunk is accepted.
 4. Choose `retry` when Requirements remain uncovered and a grounded retrieval change can help. Include one registered `retry_strategy` and one complete `next_action`.
 5. Choose `stop` only when no grounded registered retry remains. For `accept` and `stop`, set retry fields to null.

@@ -1,10 +1,13 @@
 import json
+import threading
 from types import SimpleNamespace
 
 import pytest
 
+import semigraph.agent.graph as agent_graph
 import semigraph.agent.nodes as nodes
 from semigraph.agent.graph import build_agent
+from semigraph.config import Config
 
 
 class _FakeResponse:
@@ -62,7 +65,7 @@ def _retry(tool: str, strategy: str, query: str) -> str:
     })
 
 
-def _accept(requirement_ids: tuple[str, ...] = ("R1",)) -> str:
+def _accept(requirement_ids: tuple[str, ...] = ("T1-R1",)) -> str:
     return json.dumps({
         "accepted_chunk_ids": ["C1"],
         "covered_requirement_ids": list(requirement_ids),
@@ -99,19 +102,134 @@ def _chunk():
     }
 
 
-def test_production_graph_contains_only_four_harness_nodes():
+def test_production_graph_contains_parallel_task_harness_nodes():
     assert set(build_agent().get_graph().nodes) == {
         "__start__",
         "plan_route",
-        "execute",
-        "assess",
+        "dispatcher",
+        "task_worker",
+        "collector",
         "synthesize",
         "__end__",
     }
 
 
+def test_default_parallel_task_limit_is_two():
+    assert Config().agent_max_parallel_tasks == 2
+
+
+@pytest.mark.parametrize("value", [0, 6])
+def test_parallel_task_limit_must_match_plan_capacity(tmp_path, value):
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        f"agent_harness:\n  max_parallel_tasks: {value}\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="max_parallel_tasks must be 1..5"):
+        Config(config_path)
+
+
+def test_build_agent_uses_configured_parallel_task_limit(monkeypatch):
+    monkeypatch.setattr(
+        agent_graph,
+        "get_config",
+        lambda: SimpleNamespace(agent_max_parallel_tasks=3),
+    )
+
+    graph = agent_graph.build_agent()
+
+    assert graph.config["max_concurrency"] == 3
+
+
+def test_tasks_run_in_parallel_and_collector_restores_plan_order(monkeypatch):
+    barrier = threading.Barrier(2)
+    synthesis_calls = []
+
+    tasks = [
+        {
+            "task_id": task_id,
+            "query": f"Query {task_id}",
+            "requirements": [{
+                "requirement_id": f"{task_id}-R1",
+                "description": f"Evidence for {task_id}",
+            }],
+            "initial_action": {
+                "tool": "graph",
+                "query": f"Query {task_id}",
+                "top_k_chunks": 5,
+            },
+        }
+        for task_id in ("T1", "T2")
+    ]
+
+    def plan_route(_state):
+        return {
+            "tasks": tasks,
+            "current_task_index": 0,
+            "current_action": tasks[0]["initial_action"],
+        }
+
+    def execute(state):
+        task = state["tasks"][0]
+        barrier.wait(timeout=3)
+        attempt = {
+            "attempt_id": f'{task["task_id"]}-A1',
+            "task_id": task["task_id"],
+            "action": state["current_action"],
+            "retrieval_status": "ok",
+            "chunks": [{
+                "chunk_id": f'{task["task_id"]}-C1',
+                "text": "Evidence",
+            }],
+            "retrieval_trace": {},
+            "assessment": None,
+        }
+        return {"attempts": [attempt]}
+
+    def assess(state):
+        task_id = state["tasks"][0]["task_id"]
+        attempts = list(state["attempts"])
+        attempts[-1] = {
+            **attempts[-1],
+            "assessment": {"status": "valid", "output": {}},
+        }
+        return {
+            "attempts": attempts,
+            "completed_tasks": [{
+                "task_id": task_id,
+                "sufficient": True,
+                "stop_reason": "sufficient",
+            }],
+            "current_action": {},
+            "stop_reason": "sufficient",
+        }
+
+    def synthesize(state):
+        synthesis_calls.append(state)
+        return {"final_answer": "done"}
+
+    monkeypatch.setattr(nodes, "plan_route_node", plan_route)
+    monkeypatch.setattr(nodes, "execute_attempt_node", execute)
+    monkeypatch.setattr(nodes, "assess_node", assess)
+    monkeypatch.setattr(nodes, "synthesize_attempts_node", synthesize)
+
+    result = build_agent().invoke(
+        {"original_query": "Question?"},
+        config={"max_concurrency": 2},
+    )
+
+    assert [item["task_id"] for item in result["attempts"]] == ["T1", "T2"]
+    assert [item["task_id"] for item in result["completed_tasks"]] == [
+        "T1",
+        "T2",
+    ]
+    assert result["final_answer"] == "done"
+    assert len(synthesis_calls) == 1
+
+
 def test_full_agent_can_switch_tools_and_uses_four_node_state(monkeypatch):
-    connected_requirements = ("R1", "R2")
+    connected_requirements = ("T1-R1",)
     llm = _HarnessLLM(
         _plan("graph", "first graph query", connected_requirements),
         [
@@ -137,10 +255,10 @@ def test_full_agent_can_switch_tools_and_uses_four_node_state(monkeypatch):
     result = build_agent().invoke({"original_query": "Question?"})
 
     assert len(result["tasks"]) == 1
-    assert len(result["tasks"][0]["requirements"]) == 2
+    assert len(result["tasks"][0]["requirements"]) == 1
     assert result["tasks"][0]["initial_action"]["tool"] == "graph"
     assert calls == [
-        ("graph", "first graph query", 5),
+        ("graph", "Find the required evidence", 5),
         ("vector", "focused vector query", 99),
     ]
     assert [attempt["action"]["tool"] for attempt in result["attempts"]] == [
@@ -194,8 +312,13 @@ def test_locked_ablation_controls_initial_retry_and_top_k(
         "original_query": "Question?",
     })
 
+    initial_query = (
+        "Find the required evidence"
+        if locked_tool == "graph"
+        else "initial query"
+    )
     assert calls == [
-        (locked_tool, "initial query", 7),
+        (locked_tool, initial_query, 7),
         (locked_tool, "retry query", 7),
     ]
     assert {

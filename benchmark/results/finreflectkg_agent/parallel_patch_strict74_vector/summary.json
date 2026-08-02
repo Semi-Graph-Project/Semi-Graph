@@ -1,0 +1,23 @@
+{
+  "agent_vector": {
+    "queries": 74,
+    "successful": 74,
+    "errors": 0,
+    "chunk_hit_at_k": 0.4189189189189189,
+    "chunk_recall_at_k": 0.20720720720720723,
+    "group_recall_at_k": 0.21171171171171171,
+    "answerable_at_k": 0.013513513513513514,
+    "chunk_hit_all": 0.5405405405405406,
+    "chunk_recall_all": 0.2927927927927928,
+    "group_recall_all": 0.3018018018018018,
+    "answerable_all": 0.06756756756756757,
+    "synthesis_chunk_hit": 0.5135135135135135,
+    "synthesis_chunk_recall": 0.2702702702702703,
+    "synthesis_group_recall": 0.2792792792792793,
+    "synthesis_answerable": 0.04054054054054054,
+    "avg_latency_sec": 33.965067567567566,
+    "avg_tool_calls": 4.945945945945946,
+    "avg_orchestration_llm_calls": 6.972972972972973,
+    "avg_unique_retrieved": 15.013513513513514
+  }
+}

@@ -110,6 +110,7 @@ agent_retrieval:
 
 # Agent harness budgets. Keep operational limits in config rather than Prompt.
 agent_harness:
+  max_parallel_tasks: 2
   max_attempts_per_task: 3
   max_assessment_attempts: 2
   max_technical_retries: 1

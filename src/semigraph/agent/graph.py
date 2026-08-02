@@ -1,7 +1,9 @@
 from langgraph.graph import END, START, StateGraph
+from langgraph.types import Send
 
 from semigraph.agent import nodes
 from semigraph.agent.state import AgentState
+from semigraph.config import get_config
 
 
 LOCKABLE_TOOLS = {"vector", "graph"}
@@ -39,8 +41,21 @@ def _apply_action_policy(
     return result
 
 
-def _route_after_plan(state: AgentState) -> str:
-    return "execute" if state.get("current_action") else "synthesize"
+def _dispatch_tasks(state: AgentState) -> list[Send] | str:
+    """Fan out one isolated worker for every planned Task."""
+    tasks = state.get("tasks") or []
+    if not tasks:
+        return "collector"
+    return [
+        Send(
+            "task_worker",
+            {
+                "original_query": state.get("original_query", ""),
+                "task": task,
+            },
+        )
+        for task in tasks
+    ]
 
 
 def _route_after_execute(state: AgentState) -> str:
@@ -60,11 +75,37 @@ def _route_after_execute(state: AgentState) -> str:
         and latest.get("assessment") is None
     ):
         return "assess"
-    return "execute" if state.get("current_action") else "synthesize"
+    return "execute" if state.get("current_action") else "end"
 
 
 def _route_after_assess(state: AgentState) -> str:
-    return "execute" if state.get("current_action") else "synthesize"
+    return "execute" if state.get("current_action") else "end"
+
+
+def _collect_task_results(state: AgentState) -> dict:
+    """Restore deterministic Plan order before the single Synthesis call."""
+    results_by_id = {
+        result["task_id"]: result
+        for result in (state.get("task_results") or [])
+    }
+    attempts = []
+    completed_tasks = []
+
+    for task in state.get("tasks") or []:
+        result = results_by_id.get(task.get("task_id"))
+        if not result:
+            continue
+        attempts.extend(result["attempts"])
+        completed_tasks.append(result["completion"])
+
+    update = {
+        "attempts": attempts,
+        "completed_tasks": completed_tasks,
+        "current_action": {},
+    }
+    if completed_tasks:
+        update["stop_reason"] = completed_tasks[-1]["stop_reason"]
+    return update
 
 
 def build_agent(
@@ -72,7 +113,7 @@ def build_agent(
     locked_tool: str | None = None,
     top_k: int | None = None,
 ):
-    """Build the Four-Node Agent harness.
+    """Build the Agent harness with isolated parallel Task workers.
 
     Production uses the default autonomous policy. Evaluations may lock every
     initial and retry action to Graph or Vector while keeping the same harness.
@@ -98,31 +139,63 @@ def build_agent(
             top_k,
         )
 
+    task_workflow = StateGraph(AgentState)
+    task_workflow.add_node("execute", nodes.execute_attempt_node)
+    task_workflow.add_node("assess", assess)
+    task_workflow.add_edge(START, "execute")
+    task_workflow.add_conditional_edges(
+        "execute",
+        _route_after_execute,
+        {"execute": "execute", "assess": "assess", "end": END},
+    )
+    task_workflow.add_conditional_edges(
+        "assess",
+        _route_after_assess,
+        {"execute": "execute", "end": END},
+    )
+    task_graph = task_workflow.compile()
+
+    def task_worker(state: dict) -> dict:
+        task = state["task"]
+        result = task_graph.invoke({
+            "original_query": state.get("original_query", ""),
+            "tasks": [task],
+            "current_task_index": 0,
+            "current_action": dict(task["initial_action"]),
+            "attempts": [],
+            "completed_tasks": [],
+        })
+        completion = (result.get("completed_tasks") or [{
+            "task_id": task["task_id"],
+            "sufficient": False,
+            "stop_reason": result.get("stop_reason") or "unsupported",
+        }])[-1]
+        return {
+            "task_results": [{
+                "task_id": task["task_id"],
+                "attempts": result.get("attempts") or [],
+                "completion": completion,
+            }],
+        }
+
     workflow = StateGraph(AgentState)
     workflow.add_node("plan_route", plan_route)
-    workflow.add_node("execute", nodes.execute_attempt_node)
-    workflow.add_node("assess", assess)
+    workflow.add_node("dispatcher", lambda _state: {})
+    workflow.add_node("task_worker", task_worker)
+    workflow.add_node("collector", _collect_task_results)
     workflow.add_node("synthesize", nodes.synthesize_attempts_node)
 
     workflow.add_edge(START, "plan_route")
+    workflow.add_edge("plan_route", "dispatcher")
     workflow.add_conditional_edges(
-        "plan_route",
-        _route_after_plan,
-        {"execute": "execute", "synthesize": "synthesize"},
+        "dispatcher",
+        _dispatch_tasks,
+        {"collector": "collector"},
     )
-    workflow.add_conditional_edges(
-        "execute",
-        _route_after_execute,
-        {
-            "execute": "execute",
-            "assess": "assess",
-            "synthesize": "synthesize",
-        },
-    )
-    workflow.add_conditional_edges(
-        "assess",
-        _route_after_assess,
-        {"execute": "execute", "synthesize": "synthesize"},
-    )
+    workflow.add_edge("task_worker", "collector")
+    workflow.add_edge("collector", "synthesize")
     workflow.add_edge("synthesize", END)
-    return workflow.compile()
+    max_parallel_tasks = get_config().agent_max_parallel_tasks
+    return workflow.compile().with_config({
+        "max_concurrency": max_parallel_tasks,
+    })

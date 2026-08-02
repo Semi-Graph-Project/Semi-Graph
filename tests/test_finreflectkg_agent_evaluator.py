@@ -167,8 +167,8 @@ def test_result_keeps_final_answer_and_ragas_contract():
     assert detail["metrics_all_retrieved"]["recall"] == 1.0
     assert detail["metrics_all_retrieved"]["answerable"] == 1
     assert detail["returned_chunk_ids"] == ["gold_1", "noise", "gold_2"]
-    assert detail["evidence_pool_chunk_ids"] == ["gold_1", "gold_2"]
-    assert detail["synthesis_chunk_ids"] == ["gold_1", "gold_2"]
+    assert detail["evidence_pool_chunk_ids"] == ["gold_1", "noise", "gold_2"]
+    assert detail["synthesis_chunk_ids"] == ["gold_1", "noise", "gold_2"]
     assert detail["stop_reason"] == "assessment_error"
     assert detail["completed_tasks"][-1]["stop_reason"] == "assessment_error"
     assert detail["retrieval_trace_history"][1]["attempt_id"] == "T2-A1"
@@ -192,7 +192,11 @@ def test_result_keeps_final_answer_and_ragas_contract():
     }
     assert ragas["user_input"] == item["query"]
     assert ragas["response"] == detail["final_answer"]
-    assert ragas["retrieved_contexts"] == ["First context.", "Second context."]
+    assert ragas["retrieved_contexts"] == [
+        "First context.",
+        "Rejected context.",
+        "Second context.",
+    ]
     assert ragas["reference"] == "Reference answer."
     assert set(ragas) == {
         "id",

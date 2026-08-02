@@ -54,7 +54,7 @@ def test_retrieval_action_uses_existing_default_top_k():
     assert plan.tasks[0].initial_action.top_k_chunks == DEFAULT_TOP_K
 
 
-@pytest.mark.parametrize("task_count", [0, 4])
+@pytest.mark.parametrize("task_count", [0, 6])
 def test_plan_route_output_rejects_invalid_task_count(task_count):
     payload = _valid_plan_payload()
     payload["tasks"] = [
@@ -66,6 +66,21 @@ def test_plan_route_output_rejects_invalid_task_count(task_count):
         task["requirements"][0]["requirement_id"] = f"T{index}-R1"
 
     with pytest.raises(ValidationError):
+        PlanRouteOutput.model_validate(payload)
+
+
+def test_plan_route_output_rejects_more_than_five_evidence_needs():
+    payload = _valid_plan_payload()
+    requirement = payload["tasks"][0]["requirements"][0]
+    payload["tasks"][0]["requirements"] = [
+        {
+            **requirement,
+            "requirement_id": f"T1-R{index}",
+        }
+        for index in range(1, 7)
+    ]
+
+    with pytest.raises(ValidationError, match="at most 5 evidence needs"):
         PlanRouteOutput.model_validate(payload)
 
 
@@ -267,6 +282,47 @@ def test_plan_route_node_valid_plan_uses_one_llm_call(monkeypatch):
     assert "original_query" not in result
 
 
+def test_plan_route_node_preserves_task_query_for_graph_action(monkeypatch):
+    payload = _valid_plan_payload()
+    task_query = payload["tasks"][0]["query"]
+    payload["tasks"][0]["initial_action"]["query"] = "AMD TSMC keywords"
+    _patch_plan_route_dependencies(monkeypatch, [json.dumps(payload)])
+
+    result = nodes.plan_route_node({"original_query": task_query})
+
+    assert result["tasks"][0]["initial_action"]["query"] == task_query
+    assert result["current_action"]["query"] == task_query
+
+
+def test_plan_route_node_splits_multi_requirement_task_deterministically(
+    monkeypatch,
+):
+    payload = _valid_plan_payload()
+    payload["tasks"][0]["requirements"].append({
+        "requirement_id": "T1-R2",
+        "description": "Evidence of TSMC capacity constraints.",
+    })
+    _patch_plan_route_dependencies(monkeypatch, [json.dumps(payload)])
+
+    result = nodes.plan_route_node({
+        "original_query": "How is AMD dependent on TSMC?",
+    })
+
+    assert [task["query"] for task in result["tasks"]] == [
+        "Evidence of AMD's foundry dependency on TSMC.",
+        "Evidence of TSMC capacity constraints.",
+    ]
+    assert [len(task["requirements"]) for task in result["tasks"]] == [1, 1]
+    assert [task["initial_action"]["query"] for task in result["tasks"]] == [
+        task["query"] for task in result["tasks"]
+    ]
+    assert result["plan_trace"]["normalization"] == {
+        "input_tasks": 1,
+        "input_requirements": 2,
+        "output_tasks": 2,
+    }
+
+
 def test_plan_route_node_repairs_once_then_accepts_valid_plan(monkeypatch):
     llm = _patch_plan_route_dependencies(
         monkeypatch,
@@ -339,8 +395,12 @@ def test_plan_route_prompt_keeps_connected_graph_chain_in_one_task():
 
     assert "connected multi-hop relationship chain" in prompt
     assert "one `graph` task" in prompt
-    assert "evidence requirements" in prompt
-    assert "individual hops or claims" in prompt
+    assert "evidence requirement" in prompt
+    assert "all linked hops" in prompt
+    assert "every independently retrievable fact" in prompt
+    assert "multiple evidence requirements" in prompt
+    assert "do not collapse" in prompt
+    assert "copy the complete `task.query` exactly" in prompt
 
 
 def test_plan_route_prompt_matches_contract_and_registry():
