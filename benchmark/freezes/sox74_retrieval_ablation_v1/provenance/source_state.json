@@ -1,0 +1,22 @@
+{
+  "captured_at_utc": "2026-08-02T09:16:40Z",
+  "git_head": "e3cb672c757be2eef36dbad1ac2f4b336292220e",
+  "git_head_committed_at": "2026-08-01T03:38:20+07:00",
+  "git_head_subject": "Perf: Redesign Agent",
+  "working_tree": "dirty",
+  "relevant_modified_paths_at_freeze": [
+    "config/default.yaml",
+    "src/semigraph/agent/contracts.py",
+    "src/semigraph/agent/graph.py",
+    "src/semigraph/agent/nodes.py",
+    "src/semigraph/agent/prompts.py",
+    "src/semigraph/agent/state.py",
+    "src/semigraph/config.py",
+    "tests/test_agent_attempt_retry.py",
+    "tests/test_agent_graph_phase_d.py",
+    "tests/test_agent_plan_route.py",
+    "tests/test_finreflectkg_agent_evaluator.py"
+  ],
+  "source_snapshot_semantics": "Freeze-time byte copies, not a claim of exact historical dirty-tree identity.",
+  "historical_run_source_commit_recorded": false
+}

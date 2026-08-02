@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "freeze_id": "sox74_retrieval_ablation_v1",
+  "freeze_created_at_utc": "2026-08-02T09:16:40Z",
+  "freeze_kind": "retrospective_local_run_evidence",
+  "repository_head_at_freeze": "e3cb672c757be2eef36dbad1ac2f4b336292220e",
+  "repository_worktree_at_freeze": "dirty",
+  "dataset": {
+    "name": "FinReflectKG SOX strict74",
+    "path": "inputs/finreflectkg_sox_strict74.yaml",
+    "sha256": "374ada2d8c00b701577e3a55ed46851d5554231742e47402255165362f645f6f",
+    "query_count": 74,
+    "source_question_count": 75,
+    "skipped_missing_evidence_question_ids": [354]
+  },
+  "comparison_contract": {
+    "same_query_ids": true,
+    "same_query_order": true,
+    "final_evidence_budget": 9,
+    "baseline_metric_view": "top_9_returned_chunks",
+    "agent_metric_view": "final_synthesis_context_up_to_9_chunks",
+    "agent_top_k_per_retrieval_attempt": 5,
+    "external_final_reranker": "none"
+  },
+  "runs": [
+    {
+      "id": "vector_only",
+      "system": "Vector-only",
+      "recorded_at_local": "2026-08-02T04:02:12+07:00",
+      "query_count": 74,
+      "successful": 74,
+      "errors": 0,
+      "metrics": {
+        "chunk_hit_at_9": 0.392,
+        "chunk_recall_at_9": 0.176,
+        "group_recall_at_9": 0.182,
+        "answerable_at_9": 0.014,
+        "mrr_at_9": 0.189,
+        "mean_latency_sec": 0.249081081081081
+      },
+      "parameters": {
+        "top_k": 9,
+        "candidate_pool_k": 100,
+        "final_rerank": "none"
+      },
+      "parameter_provenance": "runs/vector_only/report.md",
+      "primary_artifact": "runs/vector_only/details.jsonl"
+    },
+    {
+      "id": "agent_vector",
+      "system": "Agent + Vector (locked-tool control)",
+      "recorded_at_local": "2026-08-02T04:26:29.973463+07:00",
+      "query_count": 74,
+      "successful": 74,
+      "errors": 0,
+      "metrics": {
+        "synthesis_chunk_hit_at_9": 0.5135135135135135,
+        "synthesis_chunk_recall_at_9": 0.2702702702702703,
+        "synthesis_group_recall_at_9": 0.2792792792792793,
+        "synthesis_answerable_at_9": 0.04054054054054054,
+        "mean_latency_sec": 33.965067567567566,
+        "mean_tool_calls": 4.945945945945946,
+        "mean_orchestration_llm_calls": 6.972972972972973
+      },
+      "parameters": {
+        "top_k_chunks_per_attempt": 5,
+        "score_k": 9,
+        "candidate_pool_k": 100,
+        "final_rerank": "none",
+        "recursion_limit": 50
+      },
+      "parameter_provenance": "runs/agent_vector/run_config.json and per-query retrieval traces",
+      "primary_artifact": "runs/agent_vector/details.jsonl",
+      "checkpoint_artifact": "runs/agent_vector/checkpoint.jsonl",
+      "ragas_artifact": "runs/agent_vector/ragas.jsonl"
+    },
+    {
+      "id": "graph_only_t20",
+      "system": "Graph-only",
+      "recorded_at_local": "2026-08-02T04:25:33+07:00",
+      "query_count": 74,
+      "successful": 74,
+      "errors": 0,
+      "metrics": {
+        "chunk_hit_at_9": 0.649,
+        "chunk_recall_at_9": 0.390,
+        "group_recall_at_9": 0.392,
+        "answerable_at_9": 0.135,
+        "mrr_at_9": 0.334,
+        "mean_latency_sec": 18.222472972972977
+      },
+      "parameters": {
+        "top_k": 9,
+        "top_k_entities": 20,
+        "top_k_triples": 20,
+        "damping": 0.5,
+        "use_expansion": false,
+        "seed_mode": "triple",
+        "rerank_mode": "legacy",
+        "candidate_pool_k": 100,
+        "final_rerank": "none",
+        "ppr_seed_weight_mode": "uniform",
+        "ppr_graph_mode": "entity_chunk",
+        "triple_filter": "llm"
+      },
+      "parameter_provenance": "runs/graph_only_t20/report.md",
+      "primary_artifact": "runs/graph_only_t20/details.jsonl"
+    },
+    {
+      "id": "agent_graph_t20",
+      "system": "Agent + Graph (locked-tool control)",
+      "recorded_at_local": "2026-08-02T05:09:38.481957+07:00",
+      "query_count": 74,
+      "successful": 74,
+      "errors": 0,
+      "metrics": {
+        "synthesis_chunk_hit_at_9": 0.7432432432432432,
+        "synthesis_chunk_recall_at_9": 0.45045045045045046,
+        "synthesis_group_recall_at_9": 0.45720720720720726,
+        "synthesis_answerable_at_9": 0.16216216216216217,
+        "mean_latency_sec": 84.19648648648649,
+        "mean_tool_calls": 3.72972972972973,
+        "mean_orchestration_llm_calls": 5.743243243243243
+      },
+      "parameters": {
+        "top_k_chunks_per_attempt": 5,
+        "score_k": 9,
+        "top_k_entities": 20,
+        "top_k_triples": 20,
+        "damping": 0.5,
+        "use_expansion": false,
+        "seed_mode": "triple",
+        "rerank_mode": "legacy",
+        "candidate_pool_k": 100,
+        "final_rerank": "none",
+        "ppr_seed_weight_mode": "uniform",
+        "ppr_graph_mode": "entity_chunk",
+        "triple_filter": "llm",
+        "recursion_limit": 50
+      },
+      "parameter_provenance": "per-query retrieval traces in runs/agent_graph_t20/details.jsonl",
+      "observed_projection": {
+        "name": "semigraph_ppr_entity_chunk",
+        "mode": "entity_chunk",
+        "node_count": 24313,
+        "relationship_count": 159274
+      },
+      "primary_artifact": "runs/agent_graph_t20/details.jsonl",
+      "checkpoint_artifact": "runs/agent_graph_t20/checkpoint.jsonl",
+      "ragas_artifact": "runs/agent_graph_t20/ragas.jsonl"
+    }
+  ],
+  "model_provenance": {
+    "provider": "openrouter",
+    "model": "deepseek/deepseek-v4-flash",
+    "source": "config/default.yaml captured at freeze time",
+    "limitation": "The historical agent run_config files did not record provider/model explicitly."
+  },
+  "integrity": {
+    "algorithm": "SHA-256",
+    "digest_file": "checksums.sha256",
+    "verification_command": "python benchmark/freezes/sox74_retrieval_ablation_v1/verify_freeze.py"
+  },
+  "limitations": [
+    "This bundle was created after the four runs completed.",
+    "The evaluator did not record Git commit or dirty-tree patch at run start.",
+    "The source snapshot is the freeze-time state and cannot prove the exact historical dirty-tree state.",
+    "No original stdout/stderr logs were retained; raw per-query records, traces, checkpoints, and timestamps are preserved instead.",
+    "Neo4j database contents are not fully archived in this Git-sized bundle."
+  ]
+}

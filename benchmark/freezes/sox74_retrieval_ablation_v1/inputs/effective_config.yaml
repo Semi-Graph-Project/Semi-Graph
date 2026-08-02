@@ -1,0 +1,54 @@
+dataset:
+  file: finreflectkg_sox_strict74.yaml
+  sha256: 374ada2d8c00b701577e3a55ed46851d5554231742e47402255165362f645f6f
+  query_count: 74
+
+evaluation:
+  score_k: 9
+  external_final_rerank: none
+
+vector_only:
+  top_k: 9
+  candidate_pool_k: 100
+
+graph_only_t20:
+  top_k: 9
+  top_k_entities: 20
+  top_k_triples: 20
+  damping: 0.5
+  use_expansion: false
+  seed_mode: triple
+  rerank_mode: legacy
+  candidate_pool_k: 100
+  ppr_seed_weight_mode: uniform
+  ppr_graph_mode: entity_chunk
+  triple_filter: llm
+
+agent_vector:
+  locked_tool: vector
+  top_k_chunks_per_attempt: 5
+  final_synthesis_max_chunks: 9
+  candidate_pool_k: 100
+  recursion_limit: 50
+
+agent_graph_t20:
+  locked_tool: graph
+  top_k_chunks_per_attempt: 5
+  final_synthesis_max_chunks: 9
+  top_k_entities: 20
+  top_k_triples: 20
+  damping: 0.5
+  use_expansion: false
+  seed_mode: triple
+  rerank_mode: legacy
+  candidate_pool_k: 100
+  ppr_seed_weight_mode: uniform
+  ppr_graph_mode: entity_chunk
+  triple_filter: llm
+  recursion_limit: 50
+
+llm_at_freeze_time:
+  provider: openrouter
+  model: deepseek/deepseek-v4-flash
+  temperature: 0.0
+  provenance: freeze-time source snapshot; historical run artifact omitted model ID

@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "semigraph"
+version = "0.1.0"
+description = "GraphRAG-Enhanced Multi-Agent System for Fundamental Analysis of Semiconductor Stocks"
+requires-python = ">=3.10"
+dependencies = [
+    # SEC Data
+    "sec-edgar-downloader",
+    "feedparser",
+    # Document Processing
+    "html2text",
+    "beautifulsoup4",
+    "lxml",
+    # LangChain Core
+    "langchain",
+    "langchain-core",
+    "langchain-openai",
+    "langchain-community",
+    "langchain-neo4j",
+    "langchain-text-splitters",
+    # Neo4j
+    "neo4j",
+    # Data / ML
+    "pydantic>=2.0",
+    "pydantic-settings",
+    "pandas",
+    "pyarrow>=14.0",
+    "gliner",
+    "sentence-transformers>=3.0",
+    "rapidfuzz>=3.0",
+    # News
+    "GoogleNews",
+    "yfinance",
+    "newspaper3k",
+    # Financial data
+    "finnhub-python",
+    "psycopg[binary]>=3.2",
+    # Agent (Phase D)
+    "langgraph>=0.2.0",
+    "pyvis>=0.3.2",
+    # Config
+    "PyYAML",
+    "python-dotenv",
+    # CLI
+    "typer",
+    
+]
+
+[project.scripts]
+semigraph = "semigraph.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"

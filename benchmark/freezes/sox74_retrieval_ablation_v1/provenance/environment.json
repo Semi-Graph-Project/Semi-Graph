@@ -1,0 +1,33 @@
+{
+  "captured_at_utc": "2026-08-02T09:16:40Z",
+  "capture_semantics": "freeze_time_not_run_start",
+  "operating_system": "Linux 5.15.0-139-generic x86_64 GNU/Linux",
+  "python": "3.10.19",
+  "packages": {
+    "langgraph": "1.0.7",
+    "langchain": "1.2.7",
+    "langchain-core": "1.4.9",
+    "langchain-neo4j": "0.8.0",
+    "neo4j-python-driver": "6.1.0",
+    "pydantic": "2.12.5",
+    "openai": "2.15.0",
+    "numpy": "2.2.6",
+    "scipy": "1.15.3",
+    "sentence-transformers": "5.4.1",
+    "torch": "2.11.0",
+    "pyyaml": "6.0.3"
+  },
+  "database_at_freeze_time": {
+    "neo4j": "5.26.25 Community",
+    "gds": "2.13.9",
+    "node_count": 25975,
+    "relationship_count": 87383,
+    "uri_redacted": "bolt://localhost:<redacted>"
+  },
+  "projection_observed_in_agent_graph_run": {
+    "name": "semigraph_ppr_entity_chunk",
+    "mode": "entity_chunk",
+    "node_count": 24313,
+    "relationship_count": 159274
+  }
+}

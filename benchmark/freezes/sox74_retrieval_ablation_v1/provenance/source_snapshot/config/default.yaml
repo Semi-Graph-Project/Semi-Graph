@@ -1,0 +1,240 @@
+# SEC EDGAR settings
+edgar:
+  email: ${EDGAR_EMAIL}
+  organization: ${EDGAR_ORGANIZATION}
+  filing_types:
+    - "10-K"
+  limit: 3
+
+# Tickers in corpus — auto-synced from Neo4j by `scripts/pilot.py` (DB = source
+# of truth). _ticker.py CORPUS_TICKERS derives from this list. Do not edit by hand.
+tickers:
+  - ACLS
+  - ADI
+  - ALAB
+  - AMAT
+  - AMD
+  - AMKR
+  - AVGO
+  - COHR
+  - ENTG
+  - INTC
+  - KLAC
+  - LRCX
+  - MCHP
+  - MPWR
+  - MRVL
+  - MU
+  - NVDA
+  - "ON"
+  - QCOM
+  - RMBS
+  - SWKS
+  - TXN
+
+reextract_tickers:
+  - AMAT
+  - AMD
+  - AMKR
+  - AVGO
+  - COHR
+  - ENTG
+  - INTC
+  - KLAC
+  - LRCX
+  - MU
+  - NVDA
+  - QCOM
+  - RMBS
+  - TXN
+
+# Data paths
+paths:
+  raw: "data/raw"
+  processed: "data/processed"
+  logs: "log"
+  news: "data/news"
+  schemas: "data/schemas"
+  evaluate: "benchmark/datasets"
+
+# Preprocessing
+preprocess:
+  markdown_method: "html2text"  # html2text | markitdown | beautifulsoup
+  extract_sections: true
+  use_fallback_extraction: true
+  # KG extraction targets — narrative-rich sections only.
+  # Item 5 (stock perf) and Item 8 (financial tables) are skipped — their
+  # numeric data lives in PostgreSQL via the financial_query tool instead.
+  target_sections:
+    - "Item 1"
+    - "Item 1A"
+    - "Item 7"
+
+# Text splitting (for KG extraction)
+chunker:
+  chunk_size: 4500
+  chunk_overlap: 600
+
+# LLM
+llm:
+  provider: "openrouter"
+  model: "deepseek/deepseek-v4-flash"
+  temperature: 0.0
+  base_url: "https://openrouter.ai/api/v1"
+
+reranker:
+  provider: "openrouter"
+  model: "cohere/rerank-4-fast"
+  base_url: "https://openrouter.ai/api/v1"
+  timeout_seconds: 60
+  max_retries: 2
+
+# Retriever profile used by the LangGraph agent. These values are the winning
+# Phase T configuration; standalone evaluation scripts can still override them.
+agent_retrieval:
+  vector:
+    candidate_pool_k: 100
+    final_rerank: "none"
+  graph:
+    top_k_entities: 20
+    top_k_triples: 10
+    damping: 0.5
+    use_expansion: false
+    seed_mode: "triple"
+    rerank_mode: "legacy"
+    candidate_pool_k: 100
+    final_rerank: "none"
+    ppr_seed_weight_mode: "uniform"
+    ppr_graph_mode: "entity_chunk"
+    triple_filter: "llm"
+
+# Agent harness budgets. Keep operational limits in config rather than Prompt.
+agent_harness:
+  max_parallel_tasks: 2
+  max_attempts_per_task: 3
+  max_assessment_attempts: 2
+  max_technical_retries: 1
+  assess_context_max_chars: 60000
+
+# KG Extraction
+kg:
+  max_workers: 16
+  batch_size: 5
+
+# Domain edges used by graph retrieval and triple embedding.  Provenance edges
+# such as MENTIONS and HAS_CHUNK are intentionally excluded.
+graph:
+  informative_rel_types:
+    - ANNOUNCES
+    - CAUSES_SHORTAGE_OF
+    - COMPETES_WITH
+    - DEPENDS_ON
+    - DISCLOSES
+    - FACES
+    - GUIDES_ON
+    - HAS_STAKE_IN
+    - IMPACTED_BY
+    - IMPACTS
+    - INTRODUCES
+    - INVESTS_IN
+    - INVOLVED_IN
+    - LISTED_ON
+    - NEGATIVELY_IMPACTS
+    - OPERATES_IN
+    - PARTNERS_WITH
+    - POSITIVELY_IMPACTS
+    - PRODUCES
+    - SUBJECT_TO
+    - SUPPLIES
+
+# Evidence-grounded graph repair runs after KG extraction and before triple
+# embedding/specificity. It asks the LLM to create only relationships supported
+# by an exact evidence sentence, then prunes entities that remain mention-only.
+graph_repair:
+  enabled: true
+  method: "llm_evidence_graph_repair_v1"
+
+  filer_aliases:
+    "ADI": "analog devices"
+    "ALAB": "astera labs"
+    "AMAT": "applied materials"
+    "AMD": "amd"
+    "AMKR": "amkor"
+    "AVGO": "broadcom"
+    "COHR": "coherent"
+    "ENTG": "entegris"
+    "INTC": "intel"
+    "KLAC": "kla"
+    "LRCX": "lam research"
+    "MCHP": "microchip technology"
+    "MPWR": "monolithic power systems"
+    "MRVL": "marvell"
+    "MU": "micron"
+    "NVDA": "nvidia"
+    "ON": "on semiconductor"
+    "QCOM": "qualcomm"
+    "RMBS": "rambus"
+    "TXN": "texas instruments"
+
+# News tool (Phase E.v1 — Finnhub News API)
+news:
+  days_back: 90              # default date window (caller can override via param)
+  cache_dir: "data/news/cache"
+  default_depth: "headline"  # "headline" or "full" (newspaper3k scrape)
+
+# Embeddings (Phase B — local HuggingFace model, no API)
+embeddings:
+  model: "BAAI/bge-base-en-v1.5"   # 768 dim, ~1.5 GB RAM, MTEB 63.5
+  dimensions: 768
+  batch_size: 32                    # CPU-friendly; raise on GPU
+  device: "cpu"                     # "cpu" | "cuda" | "mps"
+  normalize: true                   # L2-normalize → cosine sim works as dot product
+
+
+financial:
+  backend: "postgresql"
+  expected_company_count: 14
+  annual_reports: 3
+  quarterly_reports: 8
+  request_interval_seconds: 1.1
+  max_retries: 3
+  query_timeout_ms: 5000
+  max_query_rows: 50
+  # Metrics that FinancialQuerySpec may send to the deterministic SQL compiler.
+  # Keep unsupported metrics out of this registry; the LLM must never replace
+  # them with a merely similar metric.
+  metric_registry:
+    reported:
+      - revenue
+      - cost_of_revenue
+      - gross_profit
+      - research_and_development
+      - operating_income
+      - net_income
+      - diluted_eps
+      - cash_and_equivalents
+      - current_assets
+      - total_assets
+      - current_liabilities
+      - total_liabilities
+      - stockholders_equity
+      - operating_cash_flow
+      - capital_expenditure
+    derived:
+      - gross_margin
+      - operating_margin
+      - net_margin
+      - rd_intensity
+      - free_cash_flow
+      - free_cash_flow_margin
+      - revenue_growth_yoy
+      - net_income_growth_yoy
+      - current_ratio
+      - roa
+      - roe
+    snapshot:
+      - current_price
+      - previous_close
+      - day_change_percent
+      - market_cap
+      - pe_ttm
