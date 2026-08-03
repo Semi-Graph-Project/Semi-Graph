@@ -51,13 +51,20 @@ def triple_candidates_to_seeds(
             key = (name, entity_type)
 
             current = seeds.get(key)
-            if current is None or current["similarity"] < candidate["similarity"]:
+            if current is None:
                 seeds[key] = {
                     "name": name,
                     "type": entity_type,
                     "similarity": candidate["similarity"],
                     "specificity": specificity,
+                    "triple_similarities": [candidate["similarity"]],
                 }
+                continue
+
+            current["triple_similarities"].append(candidate["similarity"])
+            if current["similarity"] < candidate["similarity"]:
+                current["similarity"] = candidate["similarity"]
+                current["specificity"] = specificity
 
     return sorted(seeds.values(), key=lambda seed: -seed["similarity"])
 

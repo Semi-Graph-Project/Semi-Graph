@@ -28,6 +28,7 @@ def test_entity_chunk_mode_returns_direct_ppr_chunks_without_mapping(monkeypatch
             "chunks": passage_chunks,
             "ppr_entities": [{"name": "intel", "type": "COMP", "score": 0.4}],
             "projection": {"node_count": 12, "relationship_count": 24},
+            "seeds": seeds,
         }
 
     monkeypatch.setattr(

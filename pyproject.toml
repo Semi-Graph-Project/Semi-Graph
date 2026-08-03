@@ -42,6 +42,8 @@ dependencies = [
     # Agent (Phase D)
     "langgraph>=0.2.0",
     "pyvis>=0.3.2",
+    # Demo UI
+    "streamlit>=1.57",
     # Config
     "PyYAML",
     "python-dotenv",

@@ -940,6 +940,7 @@ def trace_graph_search(
             cfg=cfg,
         )
 
+        trace["seeds"] = passage_result["seeds"]
         trace["ppr_entities"] = passage_result["ppr_entities"]
         trace["chunk_candidates"] = passage_result["chunks"]
         trace["raw_chunk_candidates"] = trace["chunk_candidates"]

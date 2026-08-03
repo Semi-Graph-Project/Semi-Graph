@@ -161,11 +161,12 @@ def test_graph_sends_candidates_to_reranker(monkeypatch, ppr_graph_mode):
         monkeypatch.setattr(
             graph_search_module,
             "run_passage_ppr",
-            lambda seeds, **kwargs: {
-                "chunks": candidates,
-                "ppr_entities": [],
-                "projection": {},
-            },
+                lambda seeds, **kwargs: {
+                    "chunks": candidates,
+                    "ppr_entities": [],
+                    "projection": {},
+                    "seeds": seeds,
+                },
         )
     else:
         monkeypatch.setattr(

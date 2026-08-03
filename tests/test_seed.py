@@ -56,6 +56,7 @@ def test_triple_candidates_deduplicate_entity_seeds():
 
     assert intel["similarity"] == 0.9
     assert intel["specificity"] == 0.5
+    assert intel["triple_similarities"] == [0.9, 0.8]
     assert sum(seed["name"] == "intel" for seed in seeds) == 1
     assert [seed["name"] for seed in seeds] == [
         "intel",

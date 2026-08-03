@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SemiGraph — Progress Update</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --panel: #0d1b2e;
+      --panel-2: #12243b;
+      --ink: #eef6ff;
+      --muted: #9fb2c8;
+      --cyan: #5de1e6;
+      --blue: #73a7ff;
+      --green: #8ce5a3;
+      --amber: #ffd37a;
+      --red: #ff9c9c;
+      --line: rgba(196, 221, 255, .16);
+      --shadow: 0 24px 70px rgba(0, 0, 0, .28);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--ink); }
+    body {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+
+    .deck { min-height: 100vh; position: relative; }
+    .slide {
+      display: none;
+      min-height: 100vh;
+      padding: 52px 7vw 74px;
+      position: relative;
+      overflow: auto;
+      background:
+        radial-gradient(circle at 88% 8%, rgba(93, 225, 230, .13), transparent 25rem),
+        radial-gradient(circle at 8% 92%, rgba(115, 167, 255, .10), transparent 24rem),
+        var(--bg);
+    }
+    .slide.active { display: block; animation: enter .25s ease-out; }
+    @keyframes enter { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+
+    .eyebrow {
+      color: var(--cyan); font-size: .76rem; font-weight: 800; letter-spacing: .18em;
+      text-transform: uppercase; margin-bottom: 14px;
+    }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { max-width: 900px; font-size: clamp(2.7rem, 6vw, 6.4rem); line-height: .98; letter-spacing: -.055em; margin-bottom: 24px; }
+    h2 { font-size: clamp(2rem, 4vw, 4.2rem); line-height: 1; letter-spacing: -.04em; margin-bottom: 28px; }
+    h3 { font-size: 1.05rem; margin-bottom: 10px; }
+    p { color: var(--muted); line-height: 1.65; }
+    .lead { font-size: clamp(1.05rem, 1.7vw, 1.45rem); max-width: 850px; }
+    .accent { color: var(--cyan); }
+    .green { color: var(--green); }
+    .amber { color: var(--amber); }
+    .muted { color: var(--muted); }
+    .small { font-size: .82rem; }
+
+    .hero-grid, .two-col, .three-col, .four-col { display: grid; gap: 18px; }
+    .hero-grid { grid-template-columns: 1.25fr .75fr; align-items: end; min-height: 72vh; }
+    .two-col { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .three-col { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .four-col { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    @media (max-width: 900px) {
+      body { overflow: auto; }
+      .slide { padding: 34px 5vw 82px; }
+      .hero-grid, .two-col, .three-col, .four-col { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: linear-gradient(145deg, rgba(18, 36, 59, .94), rgba(10, 24, 41, .94));
+      border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow);
+    }
+    .card.tight { padding: 16px 18px; }
+    .card h3 { color: var(--ink); }
+    .badge {
+      display: inline-flex; align-items: center; gap: 7px; border-radius: 999px; padding: 6px 11px;
+      border: 1px solid var(--line); color: var(--muted); font-size: .76rem; font-weight: 750;
+    }
+    .badge.done { color: var(--green); border-color: rgba(140, 229, 163, .35); background: rgba(140, 229, 163, .08); }
+    .badge.work { color: var(--amber); border-color: rgba(255, 211, 122, .35); background: rgba(255, 211, 122, .08); }
+    .badge.next { color: var(--blue); border-color: rgba(115, 167, 255, .35); background: rgba(115, 167, 255, .08); }
+
+    .pipeline { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 22px; }
+    .pipeline .node { padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); min-width: 128px; }
+    .pipeline .node strong { display: block; font-size: .92rem; }
+    .pipeline .node span { color: var(--muted); font-size: .73rem; }
+    .arrow { color: var(--cyan); font-size: 1.3rem; }
+
+    .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .metric { padding: 18px; border: 1px solid var(--line); border-radius: 15px; background: rgba(13, 27, 46, .72); }
+    .metric .value { display: block; color: var(--ink); font-size: 2rem; font-weight: 850; letter-spacing: -.04em; }
+    .metric .label { display: block; color: var(--muted); font-size: .78rem; line-height: 1.35; }
+    @media (max-width: 900px) { .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+    .status-row { display: grid; grid-template-columns: 1.1fr .9fr; gap: 18px; margin-top: 20px; }
+    .status-list { display: grid; gap: 9px; }
+    .status-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+    .status-item:last-child { border-bottom: 0; }
+    .status-item span:first-child { color: var(--ink); }
+    .status-item small { color: var(--muted); display: block; margin-top: 3px; }
+    @media (max-width: 900px) { .status-row { grid-template-columns: 1fr; } }
+
+    .bar-chart { display: grid; gap: 15px; margin-top: 16px; }
+    .bar-line { display: grid; grid-template-columns: 150px 1fr 62px; gap: 12px; align-items: center; font-size: .82rem; }
+    .bar-line .track { height: 13px; border-radius: 99px; background: rgba(255,255,255,.08); overflow: hidden; }
+    .bar-line .fill { height: 100%; width: var(--value); border-radius: inherit; background: linear-gradient(90deg, var(--blue), var(--cyan)); }
+    .bar-line .fill.green-fill { background: linear-gradient(90deg, #57bd85, var(--green)); }
+    .bar-line .fill.amber-fill { background: linear-gradient(90deg, #d49d44, var(--amber)); }
+    .bar-line .fill.red-fill { background: linear-gradient(90deg, #c96674, var(--red)); }
+    .bar-line .num { text-align: right; color: var(--ink); font-weight: 800; }
+    @media (max-width: 650px) { .bar-line { grid-template-columns: 1fr 55px; } .bar-line .track { grid-column: 1 / -1; grid-row: 2; } }
+
+    .placeholder {
+      min-height: 170px; border: 1px dashed rgba(93, 225, 230, .58); border-radius: 15px; padding: 22px;
+      display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+      background: repeating-linear-gradient(-45deg, rgba(93,225,230,.06), rgba(93,225,230,.06) 8px, transparent 8px, transparent 16px);
+    }
+    .placeholder .tag { color: var(--cyan); font-size: .7rem; font-weight: 850; letter-spacing: .15em; margin-bottom: 9px; }
+    .placeholder strong { max-width: 430px; }
+    .placeholder code { color: var(--muted); font-size: .72rem; margin-top: 10px; white-space: pre-wrap; }
+
+    .quote { border-left: 3px solid var(--cyan); padding: 14px 0 14px 20px; margin: 22px 0; color: var(--ink); font-size: 1.2rem; line-height: 1.55; }
+    .callout { border: 1px solid rgba(255, 211, 122, .32); background: rgba(255, 211, 122, .07); border-radius: 14px; padding: 15px 18px; color: #ffe5ac; }
+    .callout strong { color: var(--amber); }
+    .evidence { color: var(--muted); font-size: .72rem; border-top: 1px solid var(--line); padding-top: 10px; margin-top: 18px; line-height: 1.55; }
+    .evidence code { color: #bed0e4; }
+
+    .timeline { display: grid; gap: 0; margin-top: 25px; }
+    .timeline-item { display: grid; grid-template-columns: 28px 120px 1fr; gap: 14px; min-height: 68px; align-items: start; }
+    .timeline-dot { width: 13px; height: 13px; border: 3px solid var(--cyan); border-radius: 50%; margin-top: 4px; position: relative; }
+    .timeline-item:not(:last-child) .timeline-dot::after { content: ""; position: absolute; left: 3px; top: 10px; width: 2px; height: 64px; background: rgba(93,225,230,.35); }
+    .timeline-time { color: var(--cyan); font-size: .78rem; font-weight: 850; }
+    .timeline-content strong { display: block; margin-bottom: 4px; }
+    .timeline-content span { color: var(--muted); font-size: .82rem; }
+
+    .footer { position: absolute; left: 7vw; right: 7vw; bottom: 22px; display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: .72rem; }
+    .footer .page { color: var(--cyan); font-weight: 800; }
+    .controls { position: fixed; right: 20px; bottom: 17px; z-index: 20; display: flex; gap: 6px; }
+    .controls button { border: 1px solid var(--line); background: rgba(13,27,46,.9); color: var(--ink); border-radius: 9px; padding: 8px 10px; cursor: pointer; }
+    .controls button:hover { border-color: var(--cyan); color: var(--cyan); }
+    .progress { position: fixed; top: 0; left: 0; height: 4px; background: linear-gradient(90deg, var(--blue), var(--cyan)); width: 0; z-index: 30; transition: width .2s ease; }
+    .hint { position: fixed; left: 20px; bottom: 19px; color: rgba(159,178,200,.68); font-size: .7rem; z-index: 20; }
+    .kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 1px 5px; color: var(--ink); }
+
+    @media print {
+      body { overflow: visible; background: white; color: #111; }
+      .slide { display: block !important; min-height: 100vh; page-break-after: always; background: white; color: #111; }
+      .card, .metric { background: #f6f8fb; color: #111; box-shadow: none; border-color: #ccd6e2; }
+      p, .muted, .label, .evidence, .small, .timeline-content span { color: #526174; }
+      .footer, .controls, .hint, .progress { display: none; }
+      .placeholder { border-color: #159ba1; background: #f3ffff; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress" id="progress"></div>
+  <main class="deck" id="deck">
+
+    <section class="slide active" data-title="Opening">
+      <div class="hero-grid">
+        <div>
+          <div class="eyebrow">Progress Update · KMUTNB Senior Project</div>
+          <h1>SemiGraph<span class="accent">.</span></h1>
+          <p class="lead">Agentic Heterogeneous Retrieval สำหรับการค้นหลักฐานวิเคราะห์บริษัท Semiconductor</p>
+          <div class="quote">เราไม่ได้สร้างระบบแนะนำหุ้น เราสร้างระบบที่พาผู้ใช้จากคำถาม → ไปยังหลักฐานที่ตรวจสอบย้อนหลังได้</div>
+          <div class="badge done">● Backend retrieval core ใช้งานได้</div>
+          <div class="badge work">● Production stress test อยู่ระหว่างพัฒนา</div>
+        </div>
+        <div class="card">
+          <h3>Progress snapshot</h3>
+          <div class="metric-grid">
+            <div class="metric"><span class="value">4</span><span class="label">retrieval tools</span></div>
+            <div class="metric"><span class="value">74</span><span class="label">SOX multi-hop queries</span></div>
+            <div class="metric"><span class="value">60</span><span class="label">financial E2E queries</span></div>
+            <div class="metric"><span class="value">3</span><span class="label">evaluation layers</span></div>
+          </div>
+          <div class="evidence">สถานะนี้เป็น Progress Update ไม่ใช่ Final claim ของ Full Agent ทุกมิติ</div>
+        </div>
+      </div>
+      <div class="footer"><span>SEMI­GRAPH · PROGRESS UPDATE</span><span class="page">01 / 12</span></div>
+    </section>
+
+    <section class="slide" data-title="Question">
+      <div class="eyebrow">01 · Why this system</div>
+      <h2>คำถามเดียว<br><span class="accent">ไม่ได้ต้องการหลักฐานแบบเดียวกัน</span></h2>
+      <div class="three-col">
+        <div class="card"><span class="badge">ข้อความ</span><h3>“บริษัทเปิดเผยอะไรไว้?”</h3><p>เหมาะกับ Semantic Vector Search</p></div>
+        <div class="card"><span class="badge">ความสัมพันธ์</span><h3>“A → B → C เกี่ยวกันอย่างไร?”</h3><p>ต้องรักษา Multi-hop signal ด้วย Graph Search + PPR</p></div>
+        <div class="card"><span class="badge">ตัวเลข</span><h3>“Margin / Growth เท่าไร?”</h3><p>ควรใช้ Structured Financial Search แทนการเดาจากข้อความ</p></div>
+      </div>
+      <div class="callout" style="margin-top:22px"><strong>Research question:</strong> ถ้าเลือกกลไกค้นให้ตรงกับชนิดหลักฐาน จะเพิ่ม Evidence Coverage ได้หรือไม่ โดยยังตรวจสอบย้อนกลับได้?</div>
+      <div class="footer"><span>FRAMING: HETEROGENEOUS RETRIEVAL</span><span class="page">02 / 12</span></div>
+    </section>
+
+    <section class="slide" data-title="Scope">
+      <div class="eyebrow">02 · Current scope</div>
+      <h2>จากข้อมูลต้นทาง<br>ถึงหลักฐานสำหรับตอบคำถาม</h2>
+      <div class="pipeline">
+        <div class="node"><strong>SEC / APIs</strong><span>Fetch</span></div><div class="arrow">→</div>
+        <div class="node"><strong>Clean + Chunk</strong><span>Normalize</span></div><div class="arrow">→</div>
+        <div class="node"><strong>Neo4j KG</strong><span>Entities + relations</span></div><div class="arrow">→</div>
+        <div class="node"><strong>PostgreSQL</strong><span>Typed financial facts</span></div><div class="arrow">→</div>
+        <div class="node"><strong>Retrievers</strong><span>Vector / Graph / Financial / News</span></div><div class="arrow">→</div>
+        <div class="node"><strong>Agent</strong><span>Route + retry + trace</span></div>
+      </div>
+      <div class="status-row">
+        <div class="card">
+          <h3>ทำเสร็จและใช้งานได้</h3>
+          <div class="status-list">
+            <div class="status-item"><span>Fetch → Clean → KG pipeline</span><span class="badge done">Done</span></div>
+            <div class="status-item"><span>Vector / Graph(PPR) Retriever</span><span class="badge done">Done</span></div>
+            <div class="status-item"><span>Financial ETL → PostgreSQL</span><span class="badge done">Done</span></div>
+            <div class="status-item"><span>Agent attempts + evidence trace</span><span class="badge done">Prototype</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>ยังไม่ใช่ Final Claim</h3>
+          <div class="status-list">
+            <div class="status-item"><span>KG extraction accuracy</span><span class="badge work">Evaluate</span></div>
+            <div class="status-item"><span>News benchmark</span><span class="badge work">Evaluate</span></div>
+            <div class="status-item"><span>Full Agent final-answer benchmark</span><span class="badge next">Next</span></div>
+            <div class="status-item"><span>Production stress test UI</span><span class="badge next">Next</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>SCOPE IS EXPLICIT: FUNCTIONAL CORE ≠ COMPLETE EVALUATION</span><span class="page">03 / 12</span></div>
+    </section>
+
+    <section class="slide" data-title="Data stores">
+      <div class="eyebrow">03 · Data foundation</div>
+      <h2>สอง Store<br>สองชนิดของหลักฐาน</h2>
+      <div class="two-col">
+        <div class="card">
+          <span class="badge done">Neo4j · Narrative + Relations</span>
+          <h3 style="margin-top:16px">Graph Corpus</h3>
+          <div class="metric-grid">
+            <div class="metric"><span class="value">22</span><span class="label">tickers</span></div>
+            <div class="metric"><span class="value">65</span><span class="label">documents / filings</span></div>
+            <div class="metric"><span class="value">3,576</span><span class="label">chunks</span></div>
+            <div class="metric"><span class="value">14,692</span><span class="label">entities</span></div>
+          </div>
+          <p class="small">ใช้สำหรับ narrative evidence และคำถามที่ต้องเชื่อมหลายทอด</p>
+        </div>
+        <div class="card">
+          <span class="badge done">PostgreSQL · Structured Facts</span>
+          <h3 style="margin-top:16px">Financial Staging</h3>
+          <div class="metric-grid">
+            <div class="metric"><span class="value">4,890</span><span class="label">periodic rows</span></div>
+            <div class="metric"><span class="value">26</span><span class="label">companies</span></div>
+            <div class="metric"><span class="value">12</span><span class="label">derived metric families</span></div>
+            <div class="metric"><span class="value">3,847</span><span class="label">canonical facts</span></div>
+          </div>
+          <p class="small">ใช้สำหรับตัวเลข สูตร และ provenance ที่ deterministic</p>
+        </div>
+      </div>
+      <div class="evidence">ตัวเลขเป็น local production audit snapshot; ก่อน Defend ให้เติมวันตรวจและ Git/DB snapshot ID ของคุณใน footer หรือ appendix</div>
+      <div class="footer"><span>DATA LAYER: PROVENANCE FIRST</span><span class="page">04 / 12</span></div>
+    </section>
+
+    <section class="slide" data-title="PPR">
+      <div class="eyebrow">04 · Core algorithm</div>
+      <h2>Graph Search ไม่ได้ค้นแค่คำเหมือน<br>แต่เดินตาม <span class="accent">เส้นทางความสัมพันธ์</span></h2>
+      <div class="two-col">
+        <div class="card">
+          <h3>Execution flow</h3>
+          <div class="timeline">
+            <div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-time">01 · Seed</div><div class="timeline-content"><strong>Query → entity / triple seeds</strong><span>หา anchor ที่อยู่ในคำถาม</span></div></div>
+            <div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-time">02 · Walk</div><div class="timeline-content"><strong>Personalized PageRank</strong><span>กระจายน้ำหนักบน Graph ที่เกี่ยวข้อง</span></div></div>
+            <div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-time">03 · Bridge</div><div class="timeline-content"><strong>Entity → Chunk projection</strong><span>แปลงผล Graph กลับเป็น evidence ที่อ่านได้</span></div></div>
+            <div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-time">04 · Trace</div><div class="timeline-content"><strong>เก็บ seed, candidates, ranking</strong><span>ตรวจสอบได้ว่าได้หลักฐานมาอย่างไร</span></div></div>
+          </div>
+        </div>
+        <div class="placeholder">
+          <div class="tag">IMAGE PLACEHOLDER · PPR WALK</div>
+          <strong>ใส่ภาพ Animation หรือ Screenshot จาก Neo4j ที่เห็น Seed → Relation → Chunk</strong>
+          <code>แนะนำ: ใช้ PPR animation หรือ crop graph เฉพาะ 1 query
+ไม่ใช้ภาพ Graph ทั้งฐาน เพราะอ่านไม่ออก</code>
+        </div>
+      </div>
+      <div class="quote">Graph มีคุณค่าเมื่อคำตอบกระจายอยู่หลาย Chunk แต่เชื่อมกันด้วย Entity หรือ Relation เดียวกัน</div>
+      <div class="footer"><span>ALGORITHM: PASSAGE-AWARE PPR</span><span class="page">05 / 12</span></div>
+    </section>
+
+    <section class="slide" data-title="Tools">
+      <div class="eyebrow">05 · Tool layer</div>
+      <h2>Tool แต่ละตัว<br>รับผิดชอบหลักฐานคนละแบบ</h2>
+      <div class="four-col">
+        <div class="card"><span class="badge">Vector</span><h3 style="margin-top:14px">Semantic similarity</h3><p class="small">คำถามทั่วไปและ Fact ที่อยู่ใกล้เชิงความหมาย</p><div class="badge done">Measured</div></div>
+        <div class="card"><span class="badge done">Graph</span><h3 style="margin-top:14px">Relational evidence</h3><p class="small">Multi-hop, cross-section, cross-company</p><div class="badge done">Measured</div></div>
+        <div class="card"><span class="badge">Financial</span><h3 style="margin-top:14px">Structured numeric</h3><p class="small">SQL, derived metrics, exact/tolerance values</p><div class="badge done">Measured</div></div>
+        <div class="card"><span class="badge">News</span><h3 style="margin-top:14px">Fresh events</h3><p class="small">เหตุการณ์ล่าสุดและแหล่งข่าวที่มีเวลาอ้างอิง</p><div class="badge work">Not benchmarked</div></div>
+      </div>
+      <div class="callout" style="margin-top:22px"><strong>Design decision:</strong> ไม่บังคับให้ Vector หรือ Graph ตอบทุกคำถาม เพราะชนิดหลักฐานเป็นตัวกำหนด Retriever ที่เหมาะสม</div>
+      <div class="footer"><span>TOOL LAYER: MATCH EVIDENCE TYPE TO RETRIEVER</span><span class="page">06 / 12</span></div>
+    </section>
+
+    <section class="slide" data-title="Evaluation design">
+      <div class="eyebrow">06 · Evaluation design</div>
+      <h2>วัดแยกเป็นชั้น<br>เพื่อรู้ว่า <span class="accent">จุดไหนสร้างผล</span></h2>
+      <div class="three-col">
+        <div class="card"><span class="badge done">Layer 1</span><h3 style="margin-top:14px">Retriever Quality</h3><p>Hit@k, Recall@k, group recall และ latency</p><p class="small">FinReflectKG / SOX74 multi-hop</p></div>
+        <div class="card"><span class="badge done">Layer 2</span><h3 style="margin-top:14px">Structured Correctness</h3><p>ETL completeness, exact/tolerance values, formulas, provenance</p><p class="small">SEC comparison + Financial E2E</p></div>
+        <div class="card"><span class="badge work">Layer 3</span><h3 style="margin-top:14px">Agent / Routing</h3><p>Tool selection, trajectory, final answer และ RAGAS projection</p><p class="small">Full Agent benchmark เป็นงานถัดไป</p></div>
+      </div>
+      <div class="placeholder" style="margin-top:22px; min-height:130px">
+        <div class="tag">IMAGE PLACEHOLDER · EVALUATION MAP</div>
+        <strong>ใส่ภาพตาราง Evaluation Matrix: claim → dataset → metric → artifact</strong>
+        <code>แนะนำ: ทำเป็น 3 แถว ไม่ใส่รายละเอียดทุก Test Case บน Slide</code>
+      </div>
+      <div class="footer"><span>METHOD: SEPARATE RETRIEVAL FROM GENERATION</span><span class="page">07 / 12</span></div>
+    </section>
+
+    <section class="slide" data-title="Ablation results">
+      <div class="eyebrow">07 · Real evidence · SOX74</div>
+      <h2>Graph ช่วยเพิ่ม Evidence Coverage<br>แต่ Agent เพิ่ม <span class="amber">Latency</span></h2>
+      <div class="card">
+        <div class="bar-chart">
+          <div class="bar-line"><span>Vector-only · Hit@9</span><div class="track"><div class="fill" style="--value:39.2%"></div></div><span class="num">0.392</span></div>
+          <div class="bar-line"><span>Agent + Vector · Hit@9</span><div class="track"><div class="fill" style="--value:51.4%"></div></div><span class="num">0.514</span></div>
+          <div class="bar-line"><span>Graph-only · Hit@9</span><div class="track"><div class="fill green-fill" style="--value:64.9%"></div></div><span class="num">0.649</span></div>
+          <div class="bar-line"><span>Agent + Graph · Hit@9</span><div class="track"><div class="fill green-fill" style="--value:74.3%"></div></div><span class="num">0.743</span></div>
+        </div>
+        <div class="bar-chart" style="margin-top:28px">
+          <div class="bar-line"><span>Vector-only · Recall@9</span><div class="track"><div class="fill" style="--value:17.6%"></div></div><span class="num">0.176</span></div>
+          <div class="bar-line"><span>Agent + Vector · Recall@9</span><div class="track"><div class="fill" style="--value:27%"></div></div><span class="num">0.270</span></div>
+          <div class="bar-line"><span>Graph-only · Recall@9</span><div class="track"><div class="fill green-fill" style="--value:39%"></div></div><span class="num">0.390</span></div>
+          <div class="bar-line"><span>Agent + Graph · Recall@9</span><div class="track"><div class="fill green-fill" style="--value:45%"></div></div><span class="num">0.450</span></div>
+        </div>
+      </div>
+      <div class="two-col" style="margin-top:18px">
+        <div class="card tight"><h3 class="green">Evidence</h3><p class="small">Agent + Graph ดีที่สุดใน matched evidence budget 9 chunks</p></div>
+        <div class="card tight"><h3 class="amber">Trade-off</h3><p class="small">Agent + Graph เฉลี่ย 84.196s เทียบ Graph-only 18.222s</p></div>
+      </div>
+      <div class="evidence">Source: <code>benchmark/freezes/sox74_retrieval_ablation_v1/README.md</code> · 74 queries · 0 errors · top_k_triples=20</div>
+      <div class="footer"><span>RESULT: QUALITY ↑ · LATENCY ↑</span><span class="page">08 / 12</span></div>
+    </section>
+
+    <section class="slide" data-title="Financial results">
+      <div class="eyebrow">08 · Real evidence · Financial</div>
+      <h2>ตัวเลขต้องตรวจด้วย<br><span class="accent">สูตรและต้นทาง</span> ไม่ใช่ความจำของ LLM</h2>
+      <div class="two-col">
+        <div class="card">
+          <h3>ETL correctness</h3>
+          <div class="metric-grid">
+            <div class="metric"><span class="value">364/370</span><span class="label">records matched SEC</span></div>
+            <div class="metric"><span class="value">98.38%</span><span class="label">completeness</span></div>
+            <div class="metric"><span class="value">100%</span><span class="label">unit/period correct among found</span></div>
+            <div class="metric"><span class="value">0</span><span class="label">duplicate business keys</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Financial Agent E2E</h3>
+          <div class="metric-grid">
+            <div class="metric"><span class="value">60</span><span class="label">queries</span></div>
+            <div class="metric"><span class="value">100%</span><span class="label">tool/query/SQL success</span></div>
+            <div class="metric"><span class="value">96.67%</span><span class="label">automated pass</span></div>
+            <div class="metric"><span class="value">98.33%</span><span class="label">human-adjusted pass</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="callout" style="margin-top:22px"><strong>Boundary:</strong> Derived Metrics 56-row Human Fact Check ยังรอการตรวจครบ จึงไม่เคลม external accuracy เต็มรูปแบบ</div>
+      <div class="evidence">Source: <code>07_Evaluation/Reports/Financial_Tool_Evaluation_Summary.md</code></div>
+      <div class="footer"><span>RESULT: STRUCTURED NUMERIC RETRIEVAL IS DETERMINISTIC</span><span class="page">09 / 12</span></div>
+    </section>
+
+    <section class="slide" data-title="Demo plan">
+      <div class="eyebrow">09 · Demo plan</div>
+      <h2>Demo เป็น <span class="accent">Evidence Workbench</span><br>ไม่ใช่ Chatbotโชว์คำตอบ</h2>
+      <div class="three-col">
+        <div class="card"><span class="badge done">Demo A · 2 min</span><h3 style="margin-top:14px">Graph Showdown</h3><p>FRKG071: Vector เทียบ Graph บนคำถามเดียวกัน</p><div class="badge">แสดง seed → PPR → chunks</div></div>
+        <div class="card"><span class="badge done">Demo B · 2 min</span><h3 style="margin-top:14px">Financial Trace</h3><p>Natural language → Query Spec → SQL → value + provenance</p><div class="badge">รัน Local สดได้</div></div>
+        <div class="card"><span class="badge work">Demo C · optional</span><h3 style="margin-top:14px">Agent Routing</h3><p>แสดง Tool ที่ถูกเลือกจาก Query 4 ชนิด</p><div class="badge">ยังไม่ใช้เป็น Full-Agent claim</div></div>
+      </div>
+      <div class="placeholder" style="margin-top:22px; min-height:190px">
+        <div class="tag">IMAGE PLACEHOLDER · STREAMLIT WORKBENCH</div>
+        <strong>ใส่ Screenshot ของหน้า Query / Evidence / Trace</strong>
+        <code>ควร crop ให้เห็น: query, selected tool, retrieved chunks, latency, citation
+ไม่ต้องโชว์หน้า Chat ยาว ๆ</code>
+      </div>
+      <div class="footer"><span>DEMO PRINCIPLE: SHOW HOW EVIDENCE WAS FOUND</span><span class="page">10 / 12</span></div>
+    </section>
+
+    <section class="slide" data-title="Risks and next steps">
+      <div class="eyebrow">10 · Honest status</div>
+      <h2>สิ่งที่พิสูจน์แล้ว<br>และสิ่งที่ยังต้องพิสูจน์</h2>
+      <div class="two-col">
+        <div class="card">
+          <h3 class="green">พิสูจน์แล้ว</h3>
+          <div class="status-list">
+            <div class="status-item"><span>Graph เพิ่ม Hit/Recall เมื่อเทียบ Vector ใน SOX74</span><span class="badge done">Evidence</span></div>
+            <div class="status-item"><span>Financial ETL มี provenance และตรวจ SEC ได้</span><span class="badge done">Evidence</span></div>
+            <div class="status-item"><span>Agent trace เก็บ tool/attempt/evidence ได้</span><span class="badge done">Functional</span></div>
+            <div class="status-item"><span>Retrieval modes ทำงานบน corpus จริง</span><span class="badge done">Functional</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3 class="amber">ยังต้องพิสูจน์</h3>
+          <div class="status-list">
+            <div class="status-item"><span>KG extraction precision/recall</span><span class="badge work">Next</span></div>
+            <div class="status-item"><span>News retrieval benchmark</span><span class="badge work">Next</span></div>
+            <div class="status-item"><span>Full heterogeneous Agent answer quality</span><span class="badge work">Next</span></div>
+            <div class="status-item"><span>Latency optimization ของ Agent + Graph</span><span class="badge work">Next</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="quote">ข้อจำกัดที่ระบุได้ชัดเจน คือผลการทดลองของ Agent + Graph ดีขึ้นด้านหลักฐาน แต่ยังแพงด้านเวลา — นี่คือผลวิจัย ไม่ใช่สิ่งที่ต้องซ่อน</div>
+      <div class="footer"><span>LIMITATIONS ARE PART OF THE RESULT</span><span class="page">11 / 12</span></div>
+    </section>
+
+    <section class="slide" data-title="Close">
+      <div class="hero-grid">
+        <div>
+          <div class="eyebrow">11 · Takeaway</div>
+          <h2>จากคำถาม<br>สู่หลักฐานที่ <span class="accent">ตรวจสอบได้</span></h2>
+          <p class="lead">SemiGraph แสดงให้เห็นว่า Graph Retrieval และ Structured Financial Retrieval เติมช่องว่างของ Vector RAG ได้ในโดเมน Semiconductor</p>
+          <div class="quote">งานที่เหลือคือทำให้ระบบ Production เร็วขึ้น และวัด Full Agent ให้ครบ ไม่ใช่เริ่มสร้างแกนระบบใหม่</div>
+          <div class="badge done">Backend algorithm scope: ready for defense</div>
+        </div>
+        <div class="card">
+          <h3>Final message</h3>
+          <p>“ระบบไม่ได้สัญญาว่าจะรู้ทุกอย่าง แต่บอกได้ว่าได้หลักฐานจากไหน หลักฐานพอหรือไม่ และส่วนไหนยังขาด”</p>
+          <div class="placeholder" style="min-height:145px; margin-top:16px">
+            <div class="tag">IMAGE PLACEHOLDER · FINAL SYSTEM SCREEN</div>
+            <strong>ใส่ภาพรวม Evidence Workbench หรือ Architecture ที่สวยที่สุด</strong>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>SEMI­GRAPH · END OF PROGRESS UPDATE</span><span class="page">12 / 12</span></div>
+    </section>
+  </main>
+
+  <div class="hint"><span class="kbd">←</span> <span class="kbd">→</span> เปลี่ยน Slide · <span class="kbd">F</span> Fullscreen · <span class="kbd">P</span> Print</div>
+  <div class="controls">
+    <button id="prev" aria-label="Previous slide">←</button>
+    <button id="next" aria-label="Next slide">→</button>
+    <button id="full" aria-label="Fullscreen">⛶</button>
+  </div>
+
+  <script>
+    (() => {
+      const slides = [...document.querySelectorAll('.slide')];
+      const progress = document.getElementById('progress');
+      let current = 0;
+
+      function show(index) {
+        current = Math.max(0, Math.min(index, slides.length - 1));
+        slides.forEach((slide, i) => slide.classList.toggle('active', i === current));
+        progress.style.width = `${((current + 1) / slides.length) * 100}%`;
+        document.title = `SemiGraph — ${slides[current].dataset.title}`;
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
+
+      document.getElementById('prev').addEventListener('click', () => show(current - 1));
+      document.getElementById('next').addEventListener('click', () => show(current + 1));
+      document.getElementById('full').addEventListener('click', () => {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+        else document.exitFullscreen?.();
+      });
+      document.addEventListener('keydown', (event) => {
+        if (['ArrowRight', 'PageDown', ' '].includes(event.key)) { event.preventDefault(); show(current + 1); }
+        if (['ArrowLeft', 'PageUp'].includes(event.key)) { event.preventDefault(); show(current - 1); }
+        if (event.key.toLowerCase() === 'f') document.getElementById('full').click();
+        if (event.key.toLowerCase() === 'p') window.print();
+        if (event.key === 'Home') show(0);
+        if (event.key === 'End') show(slides.length - 1);
+      });
+      show(0);
+    })();
+  </script>
+</body>
+</html>

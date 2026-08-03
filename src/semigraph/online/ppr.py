@@ -23,7 +23,7 @@ RETURN type(r) AS rel_type, count(*) AS cnt
 ORDER BY cnt DESC
 """
 
-_CYPHER_MAP_ID = """
+_CYPHER_RESOLVE_SEED_ENTITY_IDS = """
 UNWIND $seeds AS seed
 MATCH (e:Entity)
 WHERE e.name = seed.name AND e.type = seed.type
@@ -265,39 +265,75 @@ def _empty_passage_result() -> dict:
     return {
         "chunks": [],
         "ppr_entities": [],
+        "seeds": [],
         "projection": {"node_count": 0, "relationship_count": 0},
     }
 
 
-def _seed_weight(seed: dict, mode: SeedWeightMode) -> float:
-    similarity = max(float(seed.get("similarity", 0)), 0.0)
-    specificity = max(float(seed.get("specificity", 1.0)), 0.0)
+def ranking5seed(seeds: list[dict]) -> list[dict]:
+    """Rank entity seeds by mean triple similarity and specificity."""
+    ranked = []
+    for seed in seeds:
+        similarities = seed.get("triple_similarities") or [
+            seed.get("similarity", 0.0)
+        ]
+        average_similarity = sum(float(score) for score in similarities) / len(
+            similarities
+        )
+        ranked.append({**seed, "similarity": average_similarity})
 
-    if mode == "uniform":
-        return 1.0
-    if mode == "similarity":
-        return similarity
-    if mode == "similarity_specificity":
-        return similarity * specificity
+    return sorted(
+        ranked,
+        key=lambda seed: (
+            -float(seed["similarity"]) * float(seed.get("specificity", 1.0)),
+            str(seed["name"]),
+            str(seed["type"]),
+        ),
+    )[:5]
 
-    raise ValueError(f"Unknown seed weight mode: {mode}")
 
-
-def _normalize_seed_weights(
-    weight_seeds: list[tuple[int, float]],
+def _build_weighted_seed_ids(
+    id_rows: list[dict],
+    seeds: list[dict],
+    mode: SeedWeightMode,
 ) -> list[tuple[int, float]]:
-    if not weight_seeds:
+    seed_lookup = {
+        (seed["name"], seed["type"]): seed
+        for seed in seeds
+    }
+
+    weighted_seed_ids = []
+    for row in id_rows:
+        seed = seed_lookup[(row["name"], row["type"])]
+        similarity = max(float(seed.get("similarity", 0)), 0.0)
+        specificity = max(float(seed.get("specificity", 1.0)), 0.0)
+
+        if mode == "uniform":
+            weight = 1.0
+        elif mode == "similarity":
+            weight = similarity
+        elif mode == "similarity_specificity":
+            weight = similarity * specificity
+        else:
+            raise ValueError(f"Unknown seed weight mode: {mode}")
+
+        weighted_seed_ids.append((row["id"], weight))
+
+    if not weighted_seed_ids:
         return []
 
-    total_weight = sum(weight for _, weight in weight_seeds)
+    total_weight = sum(weight for _, weight in weighted_seed_ids)
 
     if total_weight <= 0:
-        uniform = 1.0 / len(weight_seeds)
-        return [(node_id, uniform) for node_id, _ in weight_seeds]
+        uniform = 1.0 / len(weighted_seed_ids)
+        return [
+            (node_id, uniform)
+            for node_id, _ in weighted_seed_ids
+        ]
 
     return [
         (node_id, weight / total_weight)
-        for node_id, weight in weight_seeds
+        for node_id, weight in weighted_seed_ids
     ]
 
 
@@ -324,31 +360,19 @@ def _run_ppr_rows(
             )
         ]
 
-    # ============= Curently Version Uniform ============
-
-    combined_scores: dict[int, float] = {}
-    for seed_id, seed_weight in weighted_seed_ids:
-        rows = session.run(
-            _CYPHER_PPR,
-            graph_name=graph_name,
-            source_ids=[seed_id],
-            damping=damping,
-            max_iter=max_iterations,
-        )
-        for row in rows:
-            node_id = row["nodeId"]
-            combined_scores[node_id] = (
-                combined_scores.get(node_id, 0.0)
-                + float(row["score"]) * seed_weight
-            )
-
+    rows = session.run(
+        _CYPHER_PPR,
+        graph_name=graph_name,
+        source_ids=[
+            [node_id, weight]
+            for node_id, weight in weighted_seed_ids
+        ],
+        damping=damping,
+        max_iter=max_iterations,
+    )
     return [
-        {"nodeId": node_id, "score": score}
-        for node_id, score in sorted(
-            combined_scores.items(),
-            key=lambda item: item[1],
-            reverse=True,
-        )
+        {"nodeId": row["nodeId"], "score": float(row["score"])}
+        for row in rows
     ]
 
 
@@ -468,12 +492,13 @@ def run_passage_ppr(
         print("[run_passage_ppr] No seeds provided.")
         return _empty_passage_result()
 
+    # seeds = ranking5seed(seeds)
     cfg = cfg or get_config()
     driver: Driver = get_neo4j_driver(cfg)
     try:
         with driver.session() as session:
             id_rows = list(session.run(
-                _CYPHER_MAP_ID,
+                _CYPHER_RESOLVE_SEED_ENTITY_IDS,
                 seeds=[
                     {
                         "name": seed["name"],
@@ -483,21 +508,15 @@ def run_passage_ppr(
                 ],
             ))
 
-            seed_lookup = {
-                (seed["name"], seed["type"]): seed
-                for seed in seeds
-            }
-
-            weighted_seed_ids = []
-            for row in id_rows:
-                seed = seed_lookup[(row["name"], row["type"])]
-                weight = _seed_weight(seed, seed_weight_mode)
-                weighted_seed_ids.append((row["id"], weight))
+            weighted_seed_ids = _build_weighted_seed_ids(
+                id_rows,
+                seeds,
+                seed_weight_mode,
+            )
 
             if not weighted_seed_ids:
                 print("[run_passage_ppr] No valid seed IDs - aborting walk.")
                 return _empty_passage_result()
-            weighted_seed_ids = _normalize_seed_weights(weighted_seed_ids)
 
             projection = ensure_projection(
                 session,
@@ -556,26 +575,33 @@ def run_passage_ppr(
                 chunk_node_ids,
                 top_k_chunks,
             )
-            chunk_ids = [row["nodeId"] for row in top_chunk_rows]
-            property_rows = list(session.run(_CYPHER_MAP_CHUNKS, ids=chunk_ids))
-            id_to_chunk = {row["id"]: dict(row) for row in property_rows}
+            chunk_by_id = {
+                row["id"]: dict(row)
+                for row in session.run(
+                    _CYPHER_MAP_CHUNKS,
+                    ids=[row["nodeId"] for row in top_chunk_rows],
+                )
+            }
 
-            chunks = [
-                {
-                    "chunk_id": id_to_chunk[row["nodeId"]]["chunk_id"],
-                    "text": id_to_chunk[row["nodeId"]]["text"],
-                    "ticker": id_to_chunk[row["nodeId"]]["ticker"],
-                    "fiscal_year": id_to_chunk[row["nodeId"]]["fiscal_year"],
-                    "section": id_to_chunk[row["nodeId"]]["section"],
+            chunks = []
+            for row in top_chunk_rows:
+                chunk = chunk_by_id.get(row["nodeId"])
+                if chunk is None:
+                    continue
+
+                chunks.append({
+                    "chunk_id": chunk["chunk_id"],
+                    "text": chunk["text"],
+                    "ticker": chunk["ticker"],
+                    "fiscal_year": chunk["fiscal_year"],
+                    "section": chunk["section"],
                     "score": float(row["score"]),
-                }
-                for row in top_chunk_rows
-                if row["nodeId"] in id_to_chunk
-            ]
+                })
 
             return {
                 "chunks": chunks,
                 "ppr_entities": top_entities,
+                "seeds": seeds,
                 "projection": projection,
             }
     finally:
@@ -616,7 +642,7 @@ def run_ppr(
     try:
         with driver.session() as session:
             id_rows = list(session.run(
-                _CYPHER_MAP_ID,
+                _CYPHER_RESOLVE_SEED_ENTITY_IDS,
                 seeds=[
                     {
                         "name": seed["name"],
@@ -625,20 +651,15 @@ def run_ppr(
                     for seed in seeds
                 ]
             ))
-            seed_lookup = {
-                (seed["name"], seed["type"]): seed
-                for seed in seeds
-            }
-            weighted_seed_ids = []
-            for row in id_rows:
-                seed = seed_lookup[(row["name"], row["type"])]
-                weight = _seed_weight(seed, seed_weight_mode)
-                weighted_seed_ids.append((row["id"], weight))
+            weighted_seed_ids = _build_weighted_seed_ids(
+                id_rows,
+                seeds,
+                seed_weight_mode,
+            )
 
             if not weighted_seed_ids:
                 print("[run_ppr] No valid seed IDs - aborting walk.")
                 return []
-            weighted_seed_ids = _normalize_seed_weights(weighted_seed_ids)
 
             projection = ensure_projection(
                 session,

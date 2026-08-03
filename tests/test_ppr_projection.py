@@ -54,6 +54,59 @@ def test_top_chunk_rows_filters_before_top_k():
     ]
 
 
+def test_ranking5seed_uses_mean_similarity_and_specificity():
+    seeds = [
+        {
+            "name": "shared",
+            "type": "CONCEPT",
+            "similarity": 0.9,
+            "triple_similarities": [0.9, 0.5],
+            "specificity": 1.0,
+        },
+        {
+            "name": "specific",
+            "type": "PRODUCT",
+            "similarity": 0.8,
+            "specificity": 1.2,
+        },
+        {"name": "third", "type": "ORG", "similarity": 0.7, "specificity": 1.0},
+        {"name": "fourth", "type": "ORG", "similarity": 0.6, "specificity": 1.0},
+        {"name": "fifth", "type": "ORG", "similarity": 0.5, "specificity": 1.0},
+        {"name": "dropped", "type": "ORG", "similarity": 0.4, "specificity": 1.0},
+    ]
+
+    ranked = ppr.ranking5seed(seeds)
+
+    assert [seed["name"] for seed in ranked] == [
+        "specific",
+        "shared",
+        "third",
+        "fourth",
+        "fifth",
+    ]
+    assert ranked[1]["similarity"] == pytest.approx(0.7)
+
+
+def test_weighted_ppr_passes_weighted_nodes_as_source_ids():
+    session = MagicMock()
+    session.run.return_value = [{"nodeId": 1, "score": 0.75}]
+
+    rows = ppr._run_ppr_rows(
+        session,
+        "semigraph_ppr_entity_chunk",
+        [(1, 0.75), (2, 0.25)],
+        damping=0.5,
+        max_iterations=20,
+        seed_weight_mode="similarity_specificity",
+    )
+
+    assert rows == [{"nodeId": 1, "score": 0.75}]
+    assert session.run.call_args.kwargs["source_ids"] == [
+        [1, 0.75],
+        [2, 0.25],
+    ]
+
+
 def test_ensure_projection_creates_then_reuses_named_graph():
     session = MagicMock()
     session.run.side_effect = [

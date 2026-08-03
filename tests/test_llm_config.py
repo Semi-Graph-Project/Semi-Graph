@@ -13,7 +13,8 @@ def test_default_llm_uses_openrouter_key(monkeypatch):
     cfg = Config()
 
     assert cfg.llm_provider == "openrouter"
-    assert cfg.llm_model == "deepseek/deepseek-v4-flash"
+    assert cfg.llm_model == "openai/gpt-5.6-luna"
+    assert cfg.llm_reasoning == {"effort": "max"}
     assert cfg.llm_base_url == "https://openrouter.ai/api/v1"
     assert cfg.llm_api_key == "test-openrouter-key"
 
@@ -31,6 +32,7 @@ def test_get_llm_uses_provider_selected_key(monkeypatch):
         llm_api_key="selected-provider-key",
         llm_base_url="https://openrouter.ai/api/v1",
         llm_temperature=0.0,
+        llm_reasoning={"effort": "max"},
     )
 
     connections.get_llm(cfg)
@@ -38,3 +40,4 @@ def test_get_llm_uses_provider_selected_key(monkeypatch):
     assert captured["model"] == "deepseek/deepseek-v4-flash"
     assert captured["api_key"] == "selected-provider-key"
     assert captured["base_url"] == "https://openrouter.ai/api/v1"
+    assert captured["reasoning"] == {"effort": "max"}
