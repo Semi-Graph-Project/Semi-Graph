@@ -16,8 +16,10 @@ from semigraph.offline.embeddings import get_embedding_model
 from semigraph.online.rerank import rerank_chunks
 
 
+DEFAULT_VECTOR_INDEX = "chunk_embedding"
+
 _CYPHER_VECTOR_SEARCH = """
-CALL db.index.vector.queryNodes('chunk_embedding', $top_k, $vec)
+CALL db.index.vector.queryNodes($index_name, $top_k, $vec)
 YIELD node, score
 RETURN node.chunk_id    AS chunk_id,
        node.text        AS text,
@@ -33,6 +35,7 @@ def _retrieve_chunks(
     query: str,
     top_k_chunks: int,
     cfg: Optional[Config] = None,
+    vector_index: str = DEFAULT_VECTOR_INDEX,
 ) -> list[dict]:
     """Retrieve a vector-ranked candidate pool from Neo4j."""
     if not query.strip() or top_k_chunks <= 0:
@@ -47,6 +50,7 @@ def _retrieve_chunks(
         with driver.session() as session:
             result = session.run(
                 _CYPHER_VECTOR_SEARCH,
+                index_name=vector_index,
                 top_k=top_k_chunks,
                 vec=vec,
             )
@@ -61,6 +65,7 @@ def trace_vector_search(
     candidate_pool_k: int = 100,
     final_rerank: str = "none",
     cfg: Optional[Config] = None,
+    vector_index: str = DEFAULT_VECTOR_INDEX,
 ) -> dict:
     """Run vector retrieval and keep raw/reranked results for evaluation."""
     if not query.strip() or top_k_chunks <= 0:
@@ -76,7 +81,15 @@ def trace_vector_search(
         }
 
     cfg = cfg or get_config()
-    candidates = _retrieve_chunks(query, candidate_pool_k, cfg=cfg)
+    if vector_index == DEFAULT_VECTOR_INDEX:
+        candidates = _retrieve_chunks(query, candidate_pool_k, cfg=cfg)
+    else:
+        candidates = _retrieve_chunks(
+            query,
+            candidate_pool_k,
+            cfg=cfg,
+            vector_index=vector_index,
+        )
     if final_rerank == "none":
         reranked = candidates[:top_k_chunks]
         reranker_trace = {
@@ -120,6 +133,7 @@ def vector_search(
     cfg: Optional[Config] = None,
     candidate_pool_k: Optional[int] = None,
     final_rerank: str = "none",
+    vector_index: str = DEFAULT_VECTOR_INDEX,
 ) -> list[dict]:
     """Return top-k vector chunks, optionally after external reranking.
 
@@ -128,6 +142,7 @@ def vector_search(
         top_k_chunks: Number of chunks to return.
         candidate_pool_k: Number of vector candidates before reranking.
         final_rerank: `none` or `cohere`.
+        vector_index: Neo4j vector index name; defaults to the production index.
         cfg: Optional Config; defaults to cached singleton.
 
     Returns:
@@ -140,6 +155,7 @@ def vector_search(
         candidate_pool_k=candidate_pool_k or top_k_chunks,
         final_rerank=final_rerank,
         cfg=cfg,
+        vector_index=vector_index,
     )
     return trace["chunks"]
 

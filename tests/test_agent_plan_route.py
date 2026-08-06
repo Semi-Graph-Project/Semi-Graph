@@ -282,7 +282,7 @@ def test_plan_route_node_valid_plan_uses_one_llm_call(monkeypatch):
     assert "original_query" not in result
 
 
-def test_plan_route_node_preserves_task_query_for_graph_action(monkeypatch):
+def test_plan_route_node_keeps_model_query_for_single_task(monkeypatch):
     payload = _valid_plan_payload()
     task_query = payload["tasks"][0]["query"]
     payload["tasks"][0]["initial_action"]["query"] = "AMD TSMC keywords"
@@ -290,8 +290,8 @@ def test_plan_route_node_preserves_task_query_for_graph_action(monkeypatch):
 
     result = nodes.plan_route_node({"original_query": task_query})
 
-    assert result["tasks"][0]["initial_action"]["query"] == task_query
-    assert result["current_action"]["query"] == task_query
+    assert result["tasks"][0]["initial_action"]["query"] == "AMD TSMC keywords"
+    assert result["current_action"]["query"] == "AMD TSMC keywords"
 
 
 def test_plan_route_node_splits_multi_requirement_task_deterministically(
@@ -400,7 +400,7 @@ def test_plan_route_prompt_keeps_connected_graph_chain_in_one_task():
     assert "every independently retrievable fact" in prompt
     assert "multiple evidence requirements" in prompt
     assert "do not collapse" in prompt
-    assert "copy the complete `task.query` exactly" in prompt
+    assert "copy the complete `task.query` exactly" not in prompt
 
 
 def test_plan_route_prompt_matches_contract_and_registry():

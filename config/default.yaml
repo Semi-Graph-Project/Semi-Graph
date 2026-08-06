@@ -81,8 +81,8 @@ llm:
   # model: "deepseek/deepseek-v4-flash"
   model: "openai/gpt-5.6-luna"
   temperature: 0.0
-  reasoning:
-    effort: "medium"
+  # reasoning:
+  #   effort: "medium"
   base_url: "https://openrouter.ai/api/v1"
 
 reranker:

@@ -258,7 +258,7 @@ def test_full_agent_can_switch_tools_and_uses_four_node_state(monkeypatch):
     assert len(result["tasks"][0]["requirements"]) == 1
     assert result["tasks"][0]["initial_action"]["tool"] == "graph"
     assert calls == [
-        ("graph", "Find the required evidence", 5),
+        ("graph", "first graph query", 5),
         ("vector", "focused vector query", 99),
     ]
     assert [attempt["action"]["tool"] for attempt in result["attempts"]] == [
@@ -312,13 +312,8 @@ def test_locked_ablation_controls_initial_retry_and_top_k(
         "original_query": "Question?",
     })
 
-    initial_query = (
-        "Find the required evidence"
-        if locked_tool == "graph"
-        else "initial query"
-    )
     assert calls == [
-        (locked_tool, initial_query, 7),
+        (locked_tool, "initial query", 7),
         (locked_tool, "retry query", 7),
     ]
     assert {

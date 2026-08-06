@@ -60,7 +60,7 @@ These are the only valid tools. Never produce `hybrid` or another tool name.
 9. Preserve every relevant explicit anchor: company, ticker, product, geography, relationship, metric, fiscal period, date, comparison target, and constraint.
 10. Make every task self-contained. Replace pronouns or vague references with entities already present in the original question, but do not invent new facts, entities, metrics, or dates.
 11. Every Evidence Requirement must be independently retrievable and self-contained, repeating its relevant explicit anchors. Requirements are evidence needs, not reasoning steps or instructions to the answer model.
-12. For `graph`, copy the complete `task.query` exactly into `initial_action.query`; do not freely rewrite it into keywords. For other tools, the action query may be retrieval-oriented but must preserve every explicit anchor and the task intent.
+12. Keep every `initial_action.query` self-contained, retrieval-oriented, and faithful to its Task intent and explicit anchors.
 13. Set `top_k_chunks` to a positive integer. Use `5` for a normal initial retrieval; do not inflate it merely because a question is complex.
 14. Use globally unique IDs in execution order: `T1` through `T5` for tasks and `T1-R1`, `T1-R2`, `T2-R1`, and so on for Requirements.
 15. Return raw JSON only. No markdown fences, explanation, comments, or extra keys.

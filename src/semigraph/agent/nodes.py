@@ -158,7 +158,6 @@ def _collect_plan_warnings(
 
 def _normalize_plan_tasks(
     plan: PlanRouteOutput,
-    locked_tool: str | None = None,
 ) -> list[dict]:
     """Return bounded, one-requirement Tasks ready for execution."""
     tasks: list[dict] = []
@@ -171,8 +170,7 @@ def _normalize_plan_tasks(
                 requirement.description if split_task else planned_task.query
             )
             action = planned_task.initial_action.model_dump(mode="json")
-            effective_tool = locked_tool or action["tool"]
-            if split_task or effective_tool == "graph":
+            if split_task:
                 action["query"] = query
 
             tasks.append({
@@ -276,7 +274,7 @@ def plan_route_node(state: AgentState) -> dict:
             "errors": [],
         })
         warnings = _collect_plan_warnings(original_query, plan_route, cfg)
-        tasks = _normalize_plan_tasks(plan_route, locked_tool)
+        tasks = _normalize_plan_tasks(plan_route)
 
         return {
             "tasks": tasks,
