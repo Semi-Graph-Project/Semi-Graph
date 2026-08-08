@@ -366,6 +366,33 @@ class KGStore:
 
         return {"nodes": n_count, "relationships": r_count}
 
+    def store_chunk_extraction(
+        self,
+        chunk: Chunk,
+        result: GraphExtractionResult,
+    ) -> dict:
+        """Store Entity, MENTIONS, and domain relations from an existing Chunk.
+
+        This controlled-evaluation mode does not create filing provenance.
+        """
+        with self.driver.session() as session:
+            def _tx(tx):
+                self._clear_chunk_extraction(tx, chunk.chunk_id)
+                mention_count = self._upsert_entities_and_mentions(
+                    tx, chunk.chunk_id, result.nodes
+                )
+                relationship_count = self._upsert_relationships(
+                    tx, chunk.chunk_id, result.relationships
+                )
+                return mention_count, relationship_count
+
+            mention_count, relationship_count = session.execute_write(_tx)
+
+        return {
+            "mentions": mention_count,
+            "relationships": relationship_count,
+        }
+
 
 # ===========================================================================
 # Convenience: store many chunks for a single filing

@@ -107,6 +107,33 @@ def test_weighted_ppr_passes_weighted_nodes_as_source_ids():
     ]
 
 
+def test_passage_seed_resolver_uses_chunk_ids():
+    session = MagicMock()
+    session.run.return_value = [{"id": 7, "seed_index": 0}]
+    seeds = [{"chunk_id": "chunk-1", "similarity": 0.9}]
+
+    rows = ppr._resolve_passage_seed_ids(session, seeds)
+
+    assert rows == [{"id": 7, "seed_index": 0}]
+    assert session.run.call_args.args[0] == ppr._CYPHER_RESOLVE_SEED_CHUNK_IDS
+    assert session.run.call_args.kwargs["seeds"] == seeds
+
+
+def test_weighted_seed_ids_use_resolved_seed_position():
+    seeds = [
+        {"chunk_id": "chunk-1", "similarity": 0.75},
+        {"chunk_id": "chunk-2", "similarity": 0.25},
+    ]
+
+    weighted = ppr._build_weighted_seed_ids(
+        [{"id": 11, "seed_index": 0}, {"id": 22, "seed_index": 1}],
+        seeds,
+        "similarity",
+    )
+
+    assert weighted == [(11, 0.75), (22, 0.25)]
+
+
 def test_ensure_projection_creates_then_reuses_named_graph():
     session = MagicMock()
     session.run.side_effect = [

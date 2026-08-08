@@ -204,3 +204,66 @@ def filter_triple_candidates(
         reason="llm_error",
         parse_error=last_error,
     )
+
+
+def _run_smoke_test() -> None:
+    """Run a small end-to-end filter example with the configured LLM."""
+    query = "Which products does Intel produce?"
+    candidates: list[TripleCandidate] = [
+        {
+            "candidate_id": 0,
+            "head": "Intel",
+            "head_type": "ORG",
+            "relation": "PRODUCES",
+            "tail": "Xeon processors",
+            "tail_type": "PRODUCT",
+            "similarity": 0.92,
+            "head_specificity": 0.90,
+            "tail_specificity": 0.85,
+        },
+        {
+            "candidate_id": 1,
+            "head": "Intel",
+            "head_type": "ORG",
+            "relation": "LOCATED_IN",
+            "tail": "California",
+            "tail_type": "LOCATION",
+            "similarity": 0.81,
+            "head_specificity": 0.90,
+            "tail_specificity": 0.70,
+        },
+        {
+            "candidate_id": 2,
+            "head": "AMD",
+            "head_type": "ORG",
+            "relation": "PRODUCES",
+            "tail": "Ryzen processors",
+            "tail_type": "PRODUCT",
+            "similarity": 0.79,
+            "head_specificity": 0.88,
+            "tail_specificity": 0.84,
+        },
+    ]
+
+    print("=== filter_triple_candidates: INPUT ===")
+    print(json.dumps(
+        {"query": query, "candidates": candidates},
+        ensure_ascii=False,
+        indent=2,
+    ))
+
+    selected, trace = filter_triple_candidates(
+        query,
+        candidates,
+        cfg=get_config(),
+    )
+
+    print("\n=== filter_triple_candidates: SELECTED ===")
+    print(json.dumps(selected, ensure_ascii=False, indent=2))
+
+    print("\n=== filter_triple_candidates: TRACE ===")
+    print(json.dumps(trace, ensure_ascii=False, indent=2))
+
+
+if __name__ == "__main__":
+    _run_smoke_test()

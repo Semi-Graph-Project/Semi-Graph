@@ -3,7 +3,11 @@ from __future__ import annotations
 
 from semigraph.offline.chunker import Chunk
 from semigraph.offline.kg_store import KGStore
-from semigraph.ontology.nodes import GraphExtractionResult
+from semigraph.ontology.nodes import (
+    GraphExtractionResult,
+    GraphNode,
+    GraphRelationship,
+)
 
 
 class _FakeResult:
@@ -114,3 +118,44 @@ def test_store_extraction_clears_previous_chunk_extraction_before_rewrite():
     assert any("WHERE r.source_chunk = $chunk_id" in q and "DELETE r" in q for q in queries)
     assert any("MATCH (:Chunk {chunk_id: $chunk_id})-[m:MENTIONS]->(:Entity)" in q for q in queries)
     assert any("WHERE NOT (e)<-[:MENTIONS]-(:Chunk)" in q and "DETACH DELETE e" in q for q in queries)
+
+
+def test_store_chunk_extraction_skips_filing_provenance():
+    tx = _FakeTx([])
+    session = _FakeSession(tx)
+    store = KGStore(driver=_FakeDriver(session))
+    chunk = Chunk(
+        chunk_id="AMD_2026_Item_1_0000_deadbeef",
+        text="sample text",
+        ticker="AMD",
+        fiscal_year="2026",
+        filing_type="10-K",
+        section="Item_1",
+        char_count=11,
+        token_estimate=3,
+    )
+
+    result = GraphExtractionResult(
+        nodes=[
+            GraphNode(id="amd", type="ORG"),
+            GraphNode(id="revenue", type="FIN_METRIC"),
+        ],
+        relationships=[
+            GraphRelationship(
+                source="amd",
+                source_type="ORG",
+                target="revenue",
+                target_type="FIN_METRIC",
+                type="discloses",
+            )
+        ],
+    )
+
+    counts = store.store_chunk_extraction(chunk, result)
+
+    assert counts == {"mentions": 2, "relationships": 1}
+    queries = [q for q, _ in tx.calls]
+    assert all("HAS_SECTION" not in q for q in queries)
+    assert all("HAS_CHUNK" not in q for q in queries)
+    assert any("MERGE (c)-[:MENTIONS]->(e)" in q for q in queries)
+    assert any("apoc.merge.relationship" in q for q in queries)

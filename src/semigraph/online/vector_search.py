@@ -84,6 +84,7 @@ def trace_vector_search(
     if vector_index == DEFAULT_VECTOR_INDEX:
         candidates = _retrieve_chunks(query, candidate_pool_k, cfg=cfg)
     else:
+        # Benchmark against a non-default vector index (e.g., gold_chunk_embedding)
         candidates = _retrieve_chunks(
             query,
             candidate_pool_k,

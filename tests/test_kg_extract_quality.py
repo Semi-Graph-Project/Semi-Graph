@@ -23,6 +23,36 @@ def test_validate_nodes_dedupes_after_normalization():
     assert keys == {("nvidia", "ORG")}
 
 
+def test_validate_nodes_accepts_case_insensitive_llm_types():
+    nodes, keys = kg_extract._validate_nodes([
+        {"id": "Revenue", "type": "fin_metric", "properties": {}},
+    ])
+
+    assert len(nodes) == 1
+    assert nodes[0].type == "FIN_METRIC"
+    assert keys == {("revenue", "FIN_METRIC")}
+
+
+def test_validate_relationships_accepts_uppercase_llm_types():
+    _, keys = kg_extract._validate_nodes([
+        {"id": "AMD", "type": "org", "properties": {}},
+        {"id": "Revenue", "type": "fin_metric", "properties": {}},
+    ])
+
+    rels = kg_extract._validate_relationships([
+        {
+            "source": "AMD",
+            "source_type": "ORG",
+            "target": "Revenue",
+            "target_type": "FIN_METRIC",
+            "type": "DISCLOSES",
+        }
+    ], keys)
+
+    assert len(rels) == 1
+    assert rels[0].type == "discloses"
+
+
 def test_validate_nodes_rejects_known_product_mislabeled_as_company():
     nodes, keys = kg_extract._validate_nodes([
         {"id": "Blackwell", "type": "ORG", "properties": {}},
@@ -86,3 +116,31 @@ def test_extract_chunk_enforces_node_and_relationship_caps():
 
     assert len(result.nodes) == 60
     assert len(result.relationships) == 59
+
+
+def test_extract_chunk_includes_chunk_context_in_user_prompt():
+    class _Response:
+        usage_metadata = {}
+        content = '{"nodes": [], "relationships": []}'
+
+    class _LLM:
+        def __init__(self):
+            self.messages = None
+
+        def invoke(self, messages):
+            self.messages = messages
+            return _Response()
+
+    llm = _LLM()
+    kg_extract.extract_chunk(
+        "The company disclosed revenue.",
+        "Full Ontology",
+        llm=llm,
+        chunk_id="TXN_10k_2024.pdf::page_31::chunk_1",
+        filer_ticker="TXN",
+    )
+
+    user_prompt = llm.messages[1]["content"]
+    assert "Chunk ID: TXN_10k_2024.pdf::page_31::chunk_1" in user_prompt
+    assert "Filer ticker: TXN" in user_prompt
+    assert "resolve the filing company as an ORG" in user_prompt

@@ -9,20 +9,22 @@ def _config() -> SimpleNamespace:
         agent_retrieval={
             "vector": {
                 "candidate_pool_k": 100,
-                "final_rerank": "cohere",
+                "final_rerank": "none",
             },
             "graph": {
                 "top_k_entities": 20,
-                "top_k_triples": 10,
+                "top_k_triples": 5,
+                "top_k_chunk_seeds": 5,
+                "chunk_seed_vector_index": "chunk_embedding",
                 "damping": 0.5,
                 "use_expansion": False,
                 "seed_mode": "triple",
                 "rerank_mode": "legacy",
                 "candidate_pool_k": 100,
-                "final_rerank": "cohere",
+                "final_rerank": "none",
                 "ppr_seed_weight_mode": "uniform",
                 "ppr_graph_mode": "entity_chunk",
-                "triple_filter": "llm",
+                "triple_filter": "none",
             },
         }
     )
@@ -33,20 +35,22 @@ def test_default_config_contains_phase_t_agent_profile():
 
     assert profiles["vector"] == {
         "candidate_pool_k": 100,
-        "final_rerank": "cohere",
+        "final_rerank": "none",
     }
     assert profiles["graph"] == {
         "top_k_entities": 20,
-        "top_k_triples": 10,
+        "top_k_triples": 5,
+        "top_k_chunk_seeds": 5,
+        "chunk_seed_vector_index": "chunk_embedding",
         "damping": 0.5,
         "use_expansion": False,
         "seed_mode": "triple",
         "rerank_mode": "legacy",
         "candidate_pool_k": 100,
-        "final_rerank": "cohere",
+        "final_rerank": "none",
         "ppr_seed_weight_mode": "uniform",
         "ppr_graph_mode": "entity_chunk",
-        "triple_filter": "llm",
+        "triple_filter": "none",
     }
 
 
@@ -71,7 +75,7 @@ def test_agent_vector_search_uses_phase_t_profile(monkeypatch):
 
     assert captured["top_k_chunks"] == 5
     assert captured["candidate_pool_k"] == 100
-    assert captured["final_rerank"] == "cohere"
+    assert captured["final_rerank"] == "none"
     assert result["chunks"][0]["chunk_id"] == "vector-1"
     assert result["trace"]["profile"] == "phase_t"
     assert result["trace"]["reranker"]["status"] == "ok"
@@ -115,16 +119,18 @@ def test_agent_graph_search_uses_phase_t_profile(monkeypatch):
     result = agent_tools.agent_graph_search("AMD TSMC dependency", 5, _config())
 
     assert captured["top_k_entities"] == 20
-    assert captured["top_k_triples"] == 10
+    assert captured["top_k_triples"] == 5
+    assert captured["top_k_chunk_seeds"] == 5
+    assert captured["chunk_seed_vector_index"] == "chunk_embedding"
     assert captured["damping"] == 0.5
     assert captured["use_expansion"] is False
     assert captured["seed_mode"] == "triple"
     assert captured["rerank_mode"] == "legacy"
     assert captured["candidate_pool_k"] == 100
-    assert captured["final_rerank"] == "cohere"
+    assert captured["final_rerank"] == "none"
     assert captured["ppr_seed_weight_mode"] == "uniform"
     assert captured["ppr_graph_mode"] == "entity_chunk"
-    assert captured["graph_triple_filter"] == "llm"
+    assert captured["graph_triple_filter"] == "none"
     assert result["trace"]["seed_count"] == 1
     assert result["trace"]["triple_filter"]["reason"] == "llm_selection"
     assert result["trace"]["returned_chunk_ids"] == ["graph-1"]

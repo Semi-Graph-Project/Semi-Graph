@@ -58,17 +58,17 @@ Return ONLY a valid JSON object with this exact structure:
   "nodes": [
     {{
       "id": "<actual name from text, lowercased, no extra punctuation>",
-      "type": "<one of the allowed entity types>",
+      "type": "<one of the allowed entity types, UPPERCASE>",
       "properties": {{}}
     }}
   ],
   "relationships": [
     {{
       "source": "<id of source node, must appear in nodes list>",
-      "source_type": "<entity type of source>",
+      "source_type": "<entity type of source, UPPERCASE>",
       "target": "<id of target node, must appear in nodes list>",
-      "target_type": "<entity type of target>",
-      "type": "<one of the allowed relationship types, lowercase>"
+      "target_type": "<entity type of target, UPPERCASE>",
+      "type": "<one of the allowed relationship types, UPPERCASE>"
     }}
   ]
 }}
@@ -79,7 +79,11 @@ Return ONLY a valid JSON object with this exact structure:
    "data center segment"). Never use generic ids like "Company_1" or "Risk_A".
 2. Lowercase all ids; strip surrounding quotes / punctuation.
 3. Both endpoints of every relationship MUST appear in the nodes list.
-4. Use ONLY entity types and relationship types from the schema above.
+4. Use ONLY entity types and relationship types from the schema above. Output
+   every entity type and relationship endpoint type in UPPERCASE (for example,
+   ORG, FIN_METRIC, PRODUCT). Output every relationship type in UPPERCASE
+   with underscores (for example, DISCLOSES, HAS_STAKE_IN). The schema may
+   display relationship names in lowercase; still output them in UPPERCASE.
 5. Respect source/target type constraints — do not link an entity to a
    relationship that does not allow that pair.
 6. Do not invent facts. If the text does not state a relationship, omit it.
@@ -173,6 +177,21 @@ def _normalize_id(value: str, entity_type: str | None = None) -> str:
     return normalize_entity_name(value, entity_type)
 
 
+def _canonical_catalog_key(value: object, catalog: dict) -> str | None:
+    """Resolve a case-insensitive LLM label to the catalog's canonical key."""
+    if not isinstance(value, str):
+        return None
+    candidate = value.strip()
+    if candidate in catalog:
+        return candidate
+
+    lowered = candidate.lower()
+    for key in catalog:
+        if key.lower() == lowered:
+            return key
+    return None
+
+
 def _validate_nodes(raw_nodes: list) -> tuple[List[GraphNode], set[tuple[str, str]]]:
     """
     Filter out nodes whose type is not in the ontology, then build a set of
@@ -189,10 +208,11 @@ def _validate_nodes(raw_nodes: list) -> tuple[List[GraphNode], set[tuple[str, st
             continue
         if "id" not in n or "type" not in n:
             continue
-        if n["type"] not in NODE_CATALOG:
+        node_type = _canonical_catalog_key(n["type"], NODE_CATALOG)
+        if node_type is None:
             continue
 
-        nid = _normalize_id(str(n["id"]), n["type"])
+        nid = _normalize_id(str(n["id"]), node_type)
         if not nid:
             continue
         if nid in _PRONOUN_BLACKLIST:
@@ -200,17 +220,17 @@ def _validate_nodes(raw_nodes: list) -> tuple[List[GraphNode], set[tuple[str, st
 
         # Defense in depth: product aliases such as "blackwell" or "rtx"
         # should not become company nodes just because the LLM chose ORG.
-        if n["type"] in _COMPANY_TYPES and is_known_product_name(nid):
+        if node_type in _COMPANY_TYPES and is_known_product_name(nid):
             continue
 
-        key = (nid, n["type"])
+        key = (nid, node_type)
         if key in keys:
             continue
 
         try:
             node = GraphNode(
                 id=nid,
-                type=n["type"],
+                type=node_type,
                 properties=n.get("properties") or {},
             )
         except ValidationError:
@@ -231,31 +251,30 @@ def _is_valid_triple(triple: dict, allowed_keys: set[tuple[str, str]]) -> bool:
     if not required.issubset(triple.keys()):
         return False
 
-    src_key = (
-        _normalize_id(str(triple["source"]), triple["source_type"]),
-        triple["source_type"],
-    )
-    tgt_key = (
-        _normalize_id(str(triple["target"]), triple["target_type"]),
-        triple["target_type"],
-    )
+    source_type = _canonical_catalog_key(triple["source_type"], NODE_CATALOG)
+    target_type = _canonical_catalog_key(triple["target_type"], NODE_CATALOG)
+    rel_type = _canonical_catalog_key(triple["type"], RELATIONSHIP_CATALOG)
+    if source_type is None or target_type is None or rel_type is None:
+        return False
+
+    src_key = (_normalize_id(str(triple["source"]), source_type), source_type)
+    tgt_key = (_normalize_id(str(triple["target"]), target_type), target_type)
     if src_key not in allowed_keys or tgt_key not in allowed_keys:
         return False
 
-    if triple["source_type"] not in NODE_CATALOG:
+    rel_info = RELATIONSHIP_CATALOG[rel_type]
+    if rel_info["source_type"] != "any" and rel_info["source_type"] != source_type:
         return False
-    if triple["target_type"] not in NODE_CATALOG:
-        return False
-    if triple["type"] not in RELATIONSHIP_CATALOG:
-        return False
-
-    rel_info = RELATIONSHIP_CATALOG[triple["type"]]
-    if rel_info["source_type"] != "any" and rel_info["source_type"] != triple["source_type"]:
-        return False
-    if rel_info["target_type"] != "any" and rel_info["target_type"] != triple["target_type"]:
+    if rel_info["target_type"] != "any" and rel_info["target_type"] != target_type:
         return False
 
-    if not _passes_semantic_direction_guard(triple):
+    normalized_triple = {
+        **triple,
+        "source_type": source_type,
+        "target_type": target_type,
+        "type": rel_type,
+    }
+    if not _passes_semantic_direction_guard(normalized_triple):
         return False
 
     return True
@@ -303,26 +322,48 @@ def _validate_relationships(
     valid: List[GraphRelationship] = []
     seen: set[tuple[str, str, str, str, str]] = set()
     for triple in raw_rels:
-        if not _is_valid_triple(triple, allowed_keys):
+        source_type = _canonical_catalog_key(
+            triple.get("source_type") if isinstance(triple, dict) else None,
+            NODE_CATALOG,
+        )
+        target_type = _canonical_catalog_key(
+            triple.get("target_type") if isinstance(triple, dict) else None,
+            NODE_CATALOG,
+        )
+        rel_type = _canonical_catalog_key(
+            triple.get("type") if isinstance(triple, dict) else None,
+            RELATIONSHIP_CATALOG,
+        )
+        if source_type is None or target_type is None or rel_type is None:
             continue
-        source = _normalize_id(str(triple["source"]), triple["source_type"])
-        target = _normalize_id(str(triple["target"]), triple["target_type"])
+
+        normalized_triple = {
+            **triple,
+            "source_type": source_type,
+            "target_type": target_type,
+            "type": rel_type,
+        }
+        if not _is_valid_triple(normalized_triple, allowed_keys):
+            continue
+
+        source = _normalize_id(str(normalized_triple["source"]), source_type)
+        target = _normalize_id(str(normalized_triple["target"]), target_type)
         key = (
             source,
-            triple["source_type"],
+            source_type,
             target,
-            triple["target_type"],
-            triple["type"],
+            target_type,
+            rel_type,
         )
         if key in seen:
             continue
         try:
             valid.append(GraphRelationship(
                 source=source,
-                source_type=triple["source_type"],
+                source_type=source_type,
                 target=target,
-                target_type=triple["target_type"],
-                type=triple["type"],
+                target_type=target_type,
+                type=rel_type,
                 properties=triple.get("properties") or {},
             ))
             seen.add(key)
@@ -341,6 +382,8 @@ def extract_chunk(
     section: str,
     llm=None,
     metrics_sink: Optional[list] = None,
+    chunk_id: str | None = None,
+    filer_ticker: str | None = None,
 ) -> GraphExtractionResult:
     """
     Extract nodes and relationships from a single chunk via one LLM call.
@@ -353,6 +396,8 @@ def extract_chunk(
                       {prompt_tokens, completion_tokens, total_tokens, latency_sec}.
                       Caller is responsible for thread-safety; list.append is atomic
                       under CPython GIL so safe for ThreadPoolExecutor use.
+        chunk_id:     Optional source Chunk ID supplied as extraction context.
+        filer_ticker: Optional ticker identifying the filing company.
 
     Returns:
         GraphExtractionResult with ontology-valid nodes and relationships.
@@ -365,7 +410,21 @@ def extract_chunk(
     schema_block = _build_schema_block(section_key)
 
     system_prompt = _EXTRACTION_PROMPT.format(schema_block=schema_block)
-    user_prompt = f"# Text chunk\n{text}\n\nNow extract nodes and relationships."
+    context_lines = ["# Chunk context"]
+    if chunk_id:
+        context_lines.append(f"Chunk ID: {chunk_id}")
+    if filer_ticker:
+        context_lines.append(f"Filer ticker: {filer_ticker}")
+    if len(context_lines) > 1:
+        context_lines.append(
+            "Use this metadata to resolve the filing company as an ORG when "
+            "the text uses 'we', 'our', or 'the company'."
+        )
+
+    user_prompt = (
+        "\n".join(context_lines)
+        + f"\n\n# Text chunk\n{text}\n\nNow extract nodes and relationships."
+    )
 
     t0 = time.time()
     response = llm.invoke([

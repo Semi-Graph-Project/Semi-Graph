@@ -34,6 +34,7 @@ from semigraph.online.ppr import run_passage_ppr, run_ppr
 from semigraph.online.query_expand import expand_query
 from semigraph.online.rerank import rerank_chunks
 from semigraph.online.seed import (
+    query_to_chunk_seeds,
     query_to_triple_candidates,
     query_to_hybrid_seeds,
     query_to_seeds,
@@ -41,6 +42,7 @@ from semigraph.online.seed import (
     triple_candidates_to_seeds,
 )
 from semigraph.online.triple_filter import filter_triple_candidates
+from semigraph.online.vector_search import DEFAULT_VECTOR_INDEX
 
 
 @dataclass(frozen=True)
@@ -772,16 +774,28 @@ def _collapse_clusters(
     return entries
 
 
-def _select_seed_entities(
+def _select_seeds(
     query: str,
     seed_mode: str,
     top_k_triples: int,
+    top_k_chunk_seeds: int = 5,
+    chunk_seed_vector_index: str = DEFAULT_VECTOR_INDEX,
     triple_filter_mode: str = "none",
     cfg: Optional[Config] = None,
 ) -> tuple[list[dict], dict]:
-    """Select seed entities for graph retrieval diagnostics.
+    """Select one homogeneous seed set for graph retrieval."""
+    if seed_mode == "chunk_only":
+        return query_to_chunk_seeds(
+            query,
+            top_k=top_k_chunk_seeds,
+            vector_index=chunk_seed_vector_index,
+            cfg=cfg,
+        ), {
+            "mode": "none",
+            "applied": False,
+            "reason": "chunk_only_mode",
+        }
 
-    """
     if triple_filter_mode not in {"none", "llm"}:
         raise ValueError(f"Unknown triple filter mode: {triple_filter_mode}")
 
@@ -864,6 +878,8 @@ def trace_graph_search(
     top_k_entities: int = 20,
     damping: float = 0.5,
     top_k_triples: int = 10,
+    top_k_chunk_seeds: int = 5,
+    chunk_seed_vector_index: str = DEFAULT_VECTOR_INDEX,
     use_expansion: bool = True,
     seed_mode: str = "triple",
     rerank_mode: str = "legacy",
@@ -897,6 +913,8 @@ def trace_graph_search(
         "top_k_chunks": top_k_chunks,
         "top_k_entities": top_k_entities,
         "top_k_triples": top_k_triples,
+        "top_k_chunk_seeds": top_k_chunk_seeds,
+        "chunk_seed_vector_index": chunk_seed_vector_index,
         "damping": damping,
         "seeds": [],
         "ppr_entities": [],
@@ -916,10 +934,17 @@ def trace_graph_search(
         "graph_triple_filter": graph_triple_filter,
     }
 
-    seeds, triple_filter_trace = _select_seed_entities(
+    if seed_mode == "chunk_only" and ppr_graph_mode != "entity_chunk":
+        raise ValueError(
+            "chunk_only seed mode requires ppr_graph_mode='entity_chunk'"
+        )
+
+    seeds, triple_filter_trace = _select_seeds(
         effective_query,
         seed_mode=seed_mode,
         top_k_triples=top_k_triples,
+        top_k_chunk_seeds=top_k_chunk_seeds,
+        chunk_seed_vector_index=chunk_seed_vector_index,
         triple_filter_mode=graph_triple_filter,
         cfg=cfg,
     )
@@ -977,8 +1002,8 @@ def trace_graph_search(
 
     cluster_entries = _collapse_clusters(ppr_entities, cluster_map)
     trace["cluster_entries"] = cluster_entries
-    print(f"[graph_search] {len(ppr_entities)} PPR entities → "
-          f"{len(cluster_entries)} unique clusters")
+    # print(f"[graph_search] {len(ppr_entities)} PPR entities → "
+    #       f"{len(cluster_entries)} unique clusters")
 
     chunk_candidates = _map_chunks(cluster_entries, top_k=candidate_pool_k, cfg=cfg)
     trace["chunk_candidates"] = chunk_candidates
@@ -991,7 +1016,7 @@ def trace_graph_search(
         cfg=cfg,
     )
     trace["chunks"] = trace["reranked_chunks"]
-    print(f"[graph_search] returning {len(trace['chunks'])} chunks")
+    # print(f"[graph_search] returning {len(trace['chunks'])} chunks")
     return trace
 
 
@@ -1001,6 +1026,8 @@ def graph_search(
     top_k_entities: int = 20,
     damping: float = 0.5,
     top_k_triples: int = 8,
+    top_k_chunk_seeds: int = 5,
+    chunk_seed_vector_index: str = DEFAULT_VECTOR_INDEX,
     use_expansion: bool = True,
     seed_mode: str = "triple",
     rerank_mode: str = "legacy",
@@ -1021,6 +1048,8 @@ def graph_search(
         top_k_entities=top_k_entities,
         damping=damping,
         top_k_triples=top_k_triples,
+        top_k_chunk_seeds=top_k_chunk_seeds,
+        chunk_seed_vector_index=chunk_seed_vector_index,
         use_expansion=use_expansion,
         seed_mode=seed_mode,
         rerank_mode=rerank_mode,

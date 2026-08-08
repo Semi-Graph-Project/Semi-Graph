@@ -24,12 +24,20 @@ ORDER BY cnt DESC
 """
 
 _CYPHER_RESOLVE_SEED_ENTITY_IDS = """
-UNWIND $seeds AS seed
+UNWIND range(0, size($seeds) - 1) AS seed_index
+WITH seed_index, $seeds[seed_index] AS seed
 MATCH (e:Entity)
 WHERE e.name = seed.name AND e.type = seed.type
 RETURN id(e) AS id,
-       e.name AS name,
-       e.type AS type
+       seed_index
+"""
+
+_CYPHER_RESOLVE_SEED_CHUNK_IDS = """
+UNWIND range(0, size($seeds) - 1) AS seed_index
+WITH seed_index, $seeds[seed_index] AS seed
+MATCH (c:Chunk {chunk_id: seed.chunk_id})
+RETURN id(c) AS id,
+       seed_index
 """
 
 
@@ -297,14 +305,9 @@ def _build_weighted_seed_ids(
     seeds: list[dict],
     mode: SeedWeightMode,
 ) -> list[tuple[int, float]]:
-    seed_lookup = {
-        (seed["name"], seed["type"]): seed
-        for seed in seeds
-    }
-
     weighted_seed_ids = []
     for row in id_rows:
-        seed = seed_lookup[(row["name"], row["type"])]
+        seed = seeds[int(row["seed_index"])]
         similarity = max(float(seed.get("similarity", 0)), 0.0)
         specificity = max(float(seed.get("specificity", 1.0)), 0.0)
 
@@ -335,6 +338,20 @@ def _build_weighted_seed_ids(
         (node_id, weight / total_weight)
         for node_id, weight in weighted_seed_ids
     ]
+
+
+def _resolve_passage_seed_ids(session, seeds: list[dict]) -> list[dict]:
+    """Resolve either Entity seeds or Chunk seeds to Neo4j node IDs."""
+    if all("chunk_id" in seed for seed in seeds):
+        query = _CYPHER_RESOLVE_SEED_CHUNK_IDS
+    elif all("name" in seed and "type" in seed for seed in seeds):
+        query = _CYPHER_RESOLVE_SEED_ENTITY_IDS
+    else:
+        raise ValueError(
+            "Passage PPR seeds must all be Entity or all be Chunk seeds"
+        )
+
+    return list(session.run(query, seeds=seeds))
 
 
 def _run_ppr_rows(
@@ -487,7 +504,7 @@ def run_passage_ppr(
     seed_weight_mode: SeedWeightMode = "uniform",
     cfg: Optional[Config] = None,
 ) -> dict:
-    """Run PPR over a reusable Entity+Chunk projection."""
+    """Run PPR over Entity+Chunk nodes from either Entity or Chunk seeds."""
     if not seeds:
         print("[run_passage_ppr] No seeds provided.")
         return _empty_passage_result()
@@ -497,16 +514,7 @@ def run_passage_ppr(
     driver: Driver = get_neo4j_driver(cfg)
     try:
         with driver.session() as session:
-            id_rows = list(session.run(
-                _CYPHER_RESOLVE_SEED_ENTITY_IDS,
-                seeds=[
-                    {
-                        "name": seed["name"],
-                        "type": seed["type"],
-                    }
-                    for seed in seeds
-                ],
-            ))
+            id_rows = _resolve_passage_seed_ids(session, seeds)
 
             weighted_seed_ids = _build_weighted_seed_ids(
                 id_rows,
@@ -643,13 +651,7 @@ def run_ppr(
         with driver.session() as session:
             id_rows = list(session.run(
                 _CYPHER_RESOLVE_SEED_ENTITY_IDS,
-                seeds=[
-                    {
-                        "name": seed["name"],
-                        "type": seed["type"],
-                    }
-                    for seed in seeds
-                ]
+                seeds=seeds,
             ))
             weighted_seed_ids = _build_weighted_seed_ids(
                 id_rows,

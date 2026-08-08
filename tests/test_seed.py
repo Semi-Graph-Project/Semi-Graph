@@ -65,6 +65,40 @@ def test_triple_candidates_deduplicate_entity_seeds():
     ]
 
 
+def test_query_to_chunk_seeds_uses_vector_results(monkeypatch):
+    captured = {}
+
+    def fake_vector_search(query, **kwargs):
+        captured["query"] = query
+        captured.update(kwargs)
+        return [
+            {"chunk_id": "chunk-1", "score": 0.91},
+            {"chunk_id": "chunk-2", "score": 0.82},
+        ]
+
+    monkeypatch.setattr(seed_module, "vector_search", fake_vector_search)
+
+    seeds = seed_module.query_to_chunk_seeds(
+        "AMD revenue",
+        top_k=2,
+        vector_index="gold_chunk_embedding",
+        cfg="cfg-sentinel",
+    )
+
+    assert seeds == [
+        {"chunk_id": "chunk-1", "similarity": 0.91, "specificity": 1.0},
+        {"chunk_id": "chunk-2", "similarity": 0.82, "specificity": 1.0},
+    ]
+    assert captured == {
+        "query": "AMD revenue",
+        "top_k_chunks": 2,
+        "candidate_pool_k": 2,
+        "final_rerank": "none",
+        "vector_index": "gold_chunk_embedding",
+        "cfg": "cfg-sentinel",
+    }
+
+
 def test_query_to_triple_candidates_returns_ranked_triples(monkeypatch):
     class FakeEmbeddingModel:
         def encode(self, queries):

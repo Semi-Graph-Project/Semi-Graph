@@ -98,6 +98,8 @@ def _compact_graph_trace(trace: dict) -> dict:
             "top_k_chunks": trace.get("top_k_chunks"),
             "top_k_entities": trace.get("top_k_entities"),
             "top_k_triples": trace.get("top_k_triples"),
+            "top_k_chunk_seeds": trace.get("top_k_chunk_seeds"),
+            "chunk_seed_vector_index": trace.get("chunk_seed_vector_index"),
             "damping": trace.get("damping"),
             "use_expansion": trace.get("use_expansion"),
             "seed_mode": trace.get("seed_mode"),
@@ -113,7 +115,7 @@ def _compact_graph_trace(trace: dict) -> dict:
         "seed_count": len(seeds),
         "seeds": _compact_items(
             seeds,
-            ("name", "type", "similarity", "specificity"),
+            ("chunk_id", "name", "type", "similarity", "specificity"),
         ),
         "triple_filter": {
             "reason": triple_filter.get("reason"),
@@ -170,6 +172,10 @@ def agent_graph_search(query: str, top_k_chunks: int, cfg) -> RetrieverResult:
         top_k_chunks=top_k_chunks,
         top_k_entities=int(profile["top_k_entities"]),
         top_k_triples=int(profile["top_k_triples"]),
+        top_k_chunk_seeds=int(profile.get("top_k_chunk_seeds", 5)),
+        chunk_seed_vector_index=str(
+            profile.get("chunk_seed_vector_index", "chunk_embedding")
+        ),
         damping=float(profile["damping"]),
         use_expansion=bool(profile["use_expansion"]),
         seed_mode=str(profile["seed_mode"]),

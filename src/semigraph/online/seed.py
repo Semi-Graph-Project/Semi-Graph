@@ -10,6 +10,7 @@ from neo4j import Driver
 from semigraph.config import Config, get_config
 from semigraph.connections import get_neo4j_driver
 from semigraph.offline.embeddings import get_embedding_model
+from semigraph.online.vector_search import DEFAULT_VECTOR_INDEX, vector_search
 
 
 # Cypher: $types is either NULL (no filter) or a non-empty LIST<STRING> from
@@ -181,6 +182,34 @@ def query_to_seeds(
             return result.data()
     finally:
         driver.close()
+
+
+def query_to_chunk_seeds(
+    query: str,
+    top_k: int = 5,
+    vector_index: str = DEFAULT_VECTOR_INDEX,
+    cfg: Optional[Config] = None,
+) -> list[dict]:
+    """Use vector-ranked Chunks as the starting nodes for passage PPR."""
+    if not query.strip() or top_k <= 0:
+        return []
+
+    chunks = vector_search(
+        query,
+        top_k_chunks=top_k,
+        candidate_pool_k=top_k,
+        final_rerank="none",
+        vector_index=vector_index,
+        cfg=cfg,
+    )
+    return [
+        {
+            "chunk_id": chunk["chunk_id"],
+            "similarity": float(chunk["score"]),
+            "specificity": 1.0,
+        }
+        for chunk in chunks
+    ]
 
 
 _CYPHER_LOAD_TRIPLES = """

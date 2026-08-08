@@ -12,7 +12,12 @@ from semigraph.ontology import (
     GraphRelationship,
     OntologyRegistry,
 )
-from semigraph.ontology.schema import NODE_CATALOG, RELATIONSHIP_CATALOG, SECTION_CONFIG
+from semigraph.ontology.schema import (
+    FULL_ONTOLOGY,
+    NODE_CATALOG,
+    RELATIONSHIP_CATALOG,
+    SECTION_CONFIG,
+)
 
 
 # ===========================================================================
@@ -269,6 +274,20 @@ class TestOntologyRegistryDetails:
         for nt in ("ORG", "COMP", "FIN_METRIC", "RISK_FACTOR", "RAW_MATERIAL"):
             assert nt in domain, f"Core domain type '{nt}' missing"
 
+    def test_full_ontology_contains_all_domain_types(self, registry):
+        """Full Ontology exposes all domain types but no provenance types."""
+        assert len(registry.get_nodes(FULL_ONTOLOGY)) == 20
+        assert len(registry.get_relationships(FULL_ONTOLOGY)) == 23
+        assert "MENTIONS" not in registry.get_relationships(FULL_ONTOLOGY)
+        assert "HAS_CHUNK" not in registry.get_relationships(FULL_ONTOLOGY)
+        assert "Document" not in registry.get_nodes(FULL_ONTOLOGY)
+
+    @pytest.mark.parametrize("mode", [FULL_ONTOLOGY, "all", "full_ontology"])
+    def test_full_ontology_aliases(self, registry, mode):
+        assert registry.is_full_ontology(mode)
+        assert registry.get_nodes(mode) == registry.all_domain_node_types()
+        assert registry.get_relationships(mode) == registry.all_domain_relationship_types()
+
 
 # ===========================================================================
 # OntologyRegistry — prompt building
@@ -298,6 +317,15 @@ class TestBuildSchemaPrompt:
     def test_prompt_contains_focus(self, registry):
         prompt = registry.build_schema_prompt("Item 1A")
         assert "EXTRACTION FOCUS" in prompt
+
+    def test_full_ontology_prompt_excludes_mentions(self, registry):
+        prompt = registry.build_schema_prompt(FULL_ONTOLOGY)
+        assert "EXTRACTION FOCUS" in prompt
+        assert "MENTIONS" not in prompt
+        for node_type in registry.all_domain_node_types():
+            assert f"**{node_type}**" in prompt
+        for rel_type in registry.all_domain_relationship_types():
+            assert f"**{rel_type}**" in prompt
 
     def test_prompt_unknown_section_returns_empty_ish(self, registry):
         prompt = registry.build_schema_prompt("Item 99")

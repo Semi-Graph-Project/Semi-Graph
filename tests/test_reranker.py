@@ -145,7 +145,7 @@ def test_graph_sends_candidates_to_reranker(monkeypatch, ppr_graph_mode):
 
     monkeypatch.setattr(
         graph_search_module,
-        "_select_seed_entities",
+        "_select_seeds",
         lambda *args, **kwargs: ([{"name": "seed"}], {}),
     )
     def fake_rerank(query, chunks, top_n, cfg, fail_open):

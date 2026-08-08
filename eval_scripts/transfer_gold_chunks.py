@@ -11,6 +11,7 @@ from neo4j import GraphDatabase
 
 ROOT = Path(__file__).resolve().parents[1]
 INPUT_FILE = ROOT / "data/neo4j/finreflectkg_gold_chunks.jsonl"
+DISTRACTOR_INPUT_FILE = ROOT / "data/neo4j/finreflectkg_distractor_820_chunks.jsonl"
 NEO4J_URI = "bolt://localhost:7690"
 
 
@@ -36,11 +37,32 @@ def write_chunks_to_neo4j(chunks: list[dict]) -> None:
             session.run(query, chunks=chunks).consume()
 
 
+def write_distractor() -> int:
+    """Load Distractor Chunks and mark them before writing to Neo4j."""
+    chunks = load_jsonl(DISTRACTOR_INPUT_FILE)
+    query = """
+    UNWIND $chunks AS chunk
+    MERGE (c:Chunk {chunk_id: chunk.chunk_id})
+    SET c += chunk,
+        c.is_distractor = true
+    """
+
+    with GraphDatabase.driver(
+        NEO4J_URI,
+        auth=(os.getenv("NEO4J_USER", "neo4j"), os.environ["NEO4J_PASSWORD"]),
+    ) as driver:
+        with driver.session() as session:
+            session.run(query, chunks=chunks).consume()
+    return len(chunks)
+
+
 def main() -> None:
     load_dotenv(ROOT / ".env")
     chunks = load_jsonl(INPUT_FILE)
     write_chunks_to_neo4j(chunks)
-    print(f"Loaded {len(chunks)} Chunks into {NEO4J_URI}")
+    distractor_count = write_distractor()
+    print(f"Loaded {len(chunks)} Gold Chunks into {NEO4J_URI}")
+    print(f"Loaded {distractor_count} Distractor Chunks into {NEO4J_URI}")
 
 
 if __name__ == "__main__":

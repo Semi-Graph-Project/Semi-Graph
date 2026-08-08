@@ -16,6 +16,7 @@ Usage:
     nodes = registry.get_nodes("Item 1A")     # entity types relevant for Item 1A
     rels  = registry.get_relationships("Item 1A")
     prompt_block = registry.build_schema_prompt("Item 1A")
+    full_prompt_block = registry.build_schema_prompt(FULL_ONTOLOGY)
 """
 from __future__ import annotations
 
@@ -489,6 +490,26 @@ SECTION_CONFIG: Dict[str, dict] = {
 
 
 # ---------------------------------------------------------------------------
+# Extraction modes and provenance boundaries
+# ---------------------------------------------------------------------------
+
+FULL_ONTOLOGY = "Full Ontology"
+
+_PROVENANCE_NODE_TYPES = frozenset({
+    "Document", "Section", "Chunk", "FiscalYear",
+})
+
+_PROVENANCE_RELATIONSHIP_TYPES = frozenset({
+    "CONTAINS_SECTION", "HAS_CHUNK", "NEXT_CHUNK", "MENTIONS",
+    "FILED_BY", "FOR_FISCAL_YEAR",
+})
+
+_FULL_ONTOLOGY_ALIASES = frozenset({
+    "all", "full ontology", "full_ontology",
+})
+
+
+# ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
 class OntologyRegistry:
@@ -501,12 +522,22 @@ class OntologyRegistry:
     # Section-level queries
     # ------------------------------------------------------------------ #
 
+    @staticmethod
+    def is_full_ontology(section: str) -> bool:
+        """Return whether ``section`` requests the complete domain ontology."""
+        normalized = section.strip().lower().replace("-", " ")
+        return normalized in _FULL_ONTOLOGY_ALIASES
+
     def get_nodes(self, section: str) -> List[str]:
-        """Return recommended node types for a 10-K section."""
+        """Return node types for a section or the complete domain ontology."""
+        if self.is_full_ontology(section):
+            return self.all_domain_node_types()
         return SECTION_CONFIG.get(section, {}).get("nodes", [])
 
     def get_relationships(self, section: str) -> List[str]:
-        """Return recommended relationship types for a section."""
+        """Return relationship types for a section or the complete domain ontology."""
+        if self.is_full_ontology(section):
+            return self.all_domain_relationship_types()
         return SECTION_CONFIG.get(section, {}).get("relationships", [])
 
     def get_all_sections(self) -> List[str]:
@@ -524,12 +555,14 @@ class OntologyRegistry:
 
     def all_domain_node_types(self) -> List[str]:
         """Domain-layer node types only (excludes provenance)."""
-        provenance = {"Document", "Section", "Chunk", "FiscalYear"}
-        return [t for t in NODE_CATALOG if t not in provenance]
+        return [t for t in NODE_CATALOG if t not in _PROVENANCE_NODE_TYPES]
 
     def all_domain_relationship_types(self) -> List[str]:
-        """Domain-layer relationship types (lowercase verbs)."""
-        return [r for r in RELATIONSHIP_CATALOG if r.islower() or "_" not in r or r[0].islower()]
+        """Domain-layer relationships, excluding structural provenance edges."""
+        return [
+            r for r in RELATIONSHIP_CATALOG
+            if r not in _PROVENANCE_RELATIONSHIP_TYPES
+        ]
 
     # ------------------------------------------------------------------ #
     # Prompt building
@@ -538,11 +571,22 @@ class OntologyRegistry:
     def build_schema_prompt(self, section: str) -> str:
         """
         Build a formatted string describing nodes and relationships for a section.
+
+        Passing ``Full Ontology`` (or the aliases ``all``/``full_ontology``)
+        selects all FinReflectKG domain types. Provenance relationships such as
+        ``MENTIONS`` are intentionally excluded because KGStore creates them.
+
         Designed to be embedded directly in an LLM extraction prompt.
         """
         node_types = self.get_nodes(section)
         rel_types = self.get_relationships(section)
-        focus = SECTION_CONFIG.get(section, {}).get("focus", "")
+        if self.is_full_ontology(section):
+            focus = (
+                "Extract every explicitly stated domain entity and relationship "
+                "using the complete FinReflectKG ontology."
+            )
+        else:
+            focus = SECTION_CONFIG.get(section, {}).get("focus", "")
 
         lines: List[str] = []
 
