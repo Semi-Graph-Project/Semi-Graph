@@ -461,11 +461,16 @@ def test_all_evaluation_modes_compile_without_running_external_services(mode):
 
 
 def test_agent_state_declares_plan_route_fields():
-    expected_fields = {
-        "tasks",
-        "current_task_index",
-        "current_action",
-        "plan_trace",
-    }
+    from semigraph.agent.state import TaskWorkerState
 
-    assert expected_fields <= set(AgentState.__annotations__)
+    assert {"tasks", "plan_trace"} <= set(AgentState.__annotations__)
+    assert "current_task_index" not in AgentState.__annotations__
+    assert "current_action" not in AgentState.__annotations__
+    assert {
+        "task",
+        "current_action",
+        "attempts",
+        "completion",
+    } <= set(TaskWorkerState.__annotations__)
+    assert "tasks" not in TaskWorkerState.__annotations__
+    assert "current_task_index" not in TaskWorkerState.__annotations__

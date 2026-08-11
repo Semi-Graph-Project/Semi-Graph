@@ -3,13 +3,12 @@ from typing import Annotated, TypedDict
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
-from semigraph.agent.tools import DEFAULT_TOP_K
-
 
 NonEmptyText = Annotated[
     str,
     StringConstraints(strip_whitespace=True, min_length=1, strict=True),
 ]
+DEFAULT_TOP_K = 5
 MAX_PLANNED_TASKS = 5
 
 
@@ -52,18 +51,10 @@ class RetrievalAction(BaseModel):
         DEFAULT_TOP_K
     )
 
-    @model_validator(mode="before")
-    def validate_query(cls, values):
-        query = values.get("query")
-        if not isinstance(query, str) or not query.strip():
-            raise ValueError("Query must be a non-empty string.")
-        return values
-
 
 class EvidenceRequirement(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    requirement_id: NonEmptyText
     description: Annotated[
         str,
         StringConstraints(
@@ -74,10 +65,10 @@ class EvidenceRequirement(BaseModel):
         ),
     ]
 
+
 class PlannedTask(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    task_id: NonEmptyText
     query: NonEmptyText
     requirements: list[EvidenceRequirement] = Field(min_length=1)
     initial_action: RetrievalAction
@@ -92,27 +83,12 @@ class PlanRouteOutput(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_unique_ids(self) -> "PlanRouteOutput":
-        task_ids = set()
-        requirement_ids = set()
-
+    def validate_evidence_need_count(self) -> "PlanRouteOutput":
         requirement_count = sum(len(task.requirements) for task in self.tasks)
         if requirement_count > MAX_PLANNED_TASKS:
             raise ValueError(
                 f"Plan supports at most {MAX_PLANNED_TASKS} evidence needs"
             )
-
-        for task in self.tasks:
-            if task.task_id in task_ids:
-                raise ValueError(f"Duplicate task_id found: {task.task_id}")
-            task_ids.add(task.task_id)
-
-            for req in task.requirements:
-                req_id = req.requirement_id
-                if req_id in requirement_ids:
-                    raise ValueError(f"Duplicate requirement_id found: {req_id}")
-                requirement_ids.add(req_id)
-
         return self
 
 
@@ -127,16 +103,6 @@ class AssessmentOutput(BaseModel):
 
     @model_validator(mode="after")
     def validate_decision_contract(self) -> "AssessmentOutput":
-        if len(self.accepted_chunk_ids) != len(set(self.accepted_chunk_ids)):
-            raise ValueError("accepted_chunk_ids must not contain duplicates")
-
-        if len(self.covered_requirement_ids) != len(
-            set(self.covered_requirement_ids)
-        ):
-            raise ValueError(
-                "covered_requirement_ids must not contain duplicates"
-            )
-
         if self.decision is AssessmentDecision.retry:
             if self.retry_strategy is None:
                 raise ValueError("retry decision requires retry_strategy")

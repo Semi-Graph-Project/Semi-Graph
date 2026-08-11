@@ -1,4 +1,6 @@
 import json
+import subprocess
+import sys
 from copy import deepcopy
 from types import SimpleNamespace
 
@@ -6,22 +8,26 @@ import pytest
 from pydantic import ValidationError
 
 import semigraph.agent.nodes as nodes
-from semigraph.agent.contracts import EvidenceRequirement, PlanRouteOutput, PlannedTask, RetrievalAction, ToolName
+from semigraph.agent.contracts import (
+    DEFAULT_TOP_K,
+    EvidenceRequirement,
+    PlannedTask,
+    PlanRouteOutput,
+    RetrievalAction,
+    ToolName,
+)
 from semigraph.agent.prompts import (
     PLAN_ROUTE_SYSTEM_PROMPT,
     build_financial_capability_summary,
 )
-from semigraph.agent.tools import DEFAULT_TOP_K
 from semigraph.config import get_config
 
 
 def _valid_plan_payload() -> dict:
     return {
         "tasks": [{
-            "task_id": "T1",
             "query": "How is AMD dependent on TSMC?",
             "requirements": [{
-                "requirement_id": "T1-R1",
                 "description": "Evidence of AMD's foundry dependency on TSMC.",
             }],
             "initial_action": {
@@ -38,6 +44,11 @@ def test_plan_route_output_accepts_one_graph_task():
 
     assert plan.tasks[0].initial_action.tool == ToolName.graph
     assert plan.tasks[0].initial_action.top_k_chunks == DEFAULT_TOP_K
+    assert "task_id" not in type(plan.tasks[0]).model_fields
+    assert (
+        "requirement_id"
+        not in type(plan.tasks[0].requirements[0]).model_fields
+    )
     assert set(plan.model_dump(mode="json")["tasks"][0]["initial_action"]) == {
         "tool",
         "query",
@@ -54,6 +65,25 @@ def test_retrieval_action_uses_existing_default_top_k():
     assert plan.tasks[0].initial_action.top_k_chunks == DEFAULT_TOP_K
 
 
+def test_contract_import_does_not_load_online_modules():
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import sys; import semigraph.agent.contracts; "
+                "assert not any(name.startswith('semigraph.online.') "
+                "for name in sys.modules)"
+            ),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
 @pytest.mark.parametrize("task_count", [0, 6])
 def test_plan_route_output_rejects_invalid_task_count(task_count):
     payload = _valid_plan_payload()
@@ -61,9 +91,6 @@ def test_plan_route_output_rejects_invalid_task_count(task_count):
         deepcopy(payload["tasks"][0])
         for _ in range(task_count)
     ]
-    for index, task in enumerate(payload["tasks"], start=1):
-        task["task_id"] = f"T{index}"
-        task["requirements"][0]["requirement_id"] = f"T{index}-R1"
 
     with pytest.raises(ValidationError):
         PlanRouteOutput.model_validate(payload)
@@ -73,11 +100,8 @@ def test_plan_route_output_rejects_more_than_five_evidence_needs():
     payload = _valid_plan_payload()
     requirement = payload["tasks"][0]["requirements"][0]
     payload["tasks"][0]["requirements"] = [
-        {
-            **requirement,
-            "requirement_id": f"T1-R{index}",
-        }
-        for index in range(1, 7)
+        deepcopy(requirement)
+        for _ in range(6)
     ]
 
     with pytest.raises(ValidationError, match="at most 5 evidence needs"):
@@ -108,9 +132,7 @@ def test_retrieval_action_rejects_invalid_fields(field, value):
 @pytest.mark.parametrize(
     ("container", "field"),
     [
-        ("task", "task_id"),
         ("task", "query"),
-        ("requirement", "requirement_id"),
         ("requirement", "description"),
     ],
 )
@@ -141,105 +163,22 @@ def test_plan_route_output_requires_at_least_one_requirement():
         PlanRouteOutput.model_validate(payload)
 
 
-def test_plan_route_output_rejects_duplicate_task_ids():
+@pytest.mark.parametrize(
+    ("container", "field", "value"),
+    [
+        ("task", "task_id", "T1"),
+        ("requirement", "requirement_id", "T1-R1"),
+    ],
+)
+def test_plan_route_output_rejects_model_supplied_ids(container, field, value):
     payload = _valid_plan_payload()
-    duplicate = deepcopy(payload["tasks"][0])
-    duplicate["requirements"][0]["requirement_id"] = "T2-R1"
-    payload["tasks"].append(duplicate)
+    target = payload["tasks"][0]
+    if container == "requirement":
+        target = target["requirements"][0]
+    target[field] = value
 
-    with pytest.raises(ValidationError, match="Duplicate task_id found: T1"):
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
         PlanRouteOutput.model_validate(payload)
-
-
-def test_plan_route_output_rejects_duplicate_requirement_ids_across_tasks():
-    payload = _valid_plan_payload()
-    second_task = deepcopy(payload["tasks"][0])
-    second_task["task_id"] = "T2"
-    payload["tasks"].append(second_task)
-
-    with pytest.raises(ValidationError, match="Duplicate requirement_id found: T1-R1"):
-        PlanRouteOutput.model_validate(payload)
-
-
-def _warning_test_config():
-    return SimpleNamespace(
-        tickers=["AMD", "NVDA"],
-        financial_metric_registry={
-            "reported": frozenset({"revenue"}),
-            "derived": frozenset({"gross_margin"}),
-            "snapshot": frozenset(),
-        },
-    )
-
-
-def test_collect_plan_warnings_returns_empty_when_anchors_are_preserved():
-    original_query = "Compare AMD revenue in FY2025 with NVDA in Q4."
-    payload = _valid_plan_payload()
-    payload["tasks"][0]["query"] = original_query
-    payload["tasks"][0]["requirements"][0]["description"] = (
-        "Evidence for AMD and NVDA revenue in FY2025 and Q4."
-    )
-    payload["tasks"][0]["initial_action"]["query"] = original_query
-    plan = PlanRouteOutput.model_validate(payload)
-
-    assert nodes._collect_plan_warnings(
-        original_query,
-        plan,
-        _warning_test_config(),
-    ) == []
-
-
-def test_collect_plan_warnings_reports_only_missing_explicit_anchors():
-    original_query = "Compare AMD gross margin in FY2025 with NVDA in Q4."
-    payload = _valid_plan_payload()
-    payload["tasks"][0]["query"] = "Compare AMD performance."
-    payload["tasks"][0]["requirements"][0]["description"] = "Evidence about AMD."
-    payload["tasks"][0]["initial_action"]["query"] = "AMD performance"
-    plan = PlanRouteOutput.model_validate(payload)
-
-    warnings = nodes._collect_plan_warnings(
-        original_query,
-        plan,
-        _warning_test_config(),
-    )
-
-    assert warnings == [
-        {
-            "code": "missing_explicit_anchor",
-            "anchor_type": "ticker",
-            "value": "NVDA",
-        },
-        {
-            "code": "missing_explicit_anchor",
-            "anchor_type": "period",
-            "value": "FY2025",
-        },
-        {
-            "code": "missing_explicit_anchor",
-            "anchor_type": "period",
-            "value": "Q4",
-        },
-        {
-            "code": "missing_explicit_anchor",
-            "anchor_type": "metric",
-            "value": "gross_margin",
-        },
-    ]
-
-
-def test_collect_plan_warnings_normalizes_case_and_separators():
-    original_query = "Compare amd GROSS MARGIN in FY 2025."
-    payload = _valid_plan_payload()
-    payload["tasks"][0]["query"] = "Compare AMD gross_margin in 2025."
-    payload["tasks"][0]["requirements"][0]["description"] = "Required evidence."
-    payload["tasks"][0]["initial_action"]["query"] = "AMD gross-margin 2025"
-    plan = PlanRouteOutput.model_validate(payload)
-
-    assert nodes._collect_plan_warnings(
-        original_query,
-        plan,
-        _warning_test_config(),
-    ) == []
 
 
 class _FakePlanRouteLLM:
@@ -257,7 +196,7 @@ class _FakePlanRouteLLM:
 
 def _patch_plan_route_dependencies(monkeypatch, responses):
     llm = _FakePlanRouteLLM(responses)
-    monkeypatch.setattr(nodes, "get_config", _warning_test_config)
+    monkeypatch.setattr(nodes, "get_config", lambda: SimpleNamespace())
     monkeypatch.setattr(nodes, "get_llm", lambda cfg: llm)
     return llm
 
@@ -271,8 +210,12 @@ def test_plan_route_node_valid_plan_uses_one_llm_call(monkeypatch):
     result = nodes.plan_route_node({"original_query": "How is AMD dependent on TSMC?"})
 
     assert len(llm.calls) == 1
-    assert result["current_task_index"] == 0
-    assert result["current_action"] == result["tasks"][0]["initial_action"]
+    assert "current_task_index" not in result
+    assert "current_action" not in result
+    assert result["tasks"][0]["task_id"] == "T1"
+    assert result["tasks"][0]["requirements"][0]["requirement_id"] == (
+        "T1-R1"
+    )
     assert result["plan_trace"]["status"] == "ok"
     assert result["plan_trace"]["llm_calls"] == 1
     assert result["plan_trace"]["attempts"] == [
@@ -291,7 +234,6 @@ def test_plan_route_node_keeps_model_query_for_single_task(monkeypatch):
     result = nodes.plan_route_node({"original_query": task_query})
 
     assert result["tasks"][0]["initial_action"]["query"] == "AMD TSMC keywords"
-    assert result["current_action"]["query"] == "AMD TSMC keywords"
 
 
 def test_plan_route_node_splits_multi_requirement_task_deterministically(
@@ -299,7 +241,6 @@ def test_plan_route_node_splits_multi_requirement_task_deterministically(
 ):
     payload = _valid_plan_payload()
     payload["tasks"][0]["requirements"].append({
-        "requirement_id": "T1-R2",
         "description": "Evidence of TSMC capacity constraints.",
     })
     _patch_plan_route_dependencies(monkeypatch, [json.dumps(payload)])
@@ -313,6 +254,11 @@ def test_plan_route_node_splits_multi_requirement_task_deterministically(
         "Evidence of TSMC capacity constraints.",
     ]
     assert [len(task["requirements"]) for task in result["tasks"]] == [1, 1]
+    assert [task["task_id"] for task in result["tasks"]] == ["T1", "T2"]
+    assert [
+        task["requirements"][0]["requirement_id"]
+        for task in result["tasks"]
+    ] == ["T1-R1", "T2-R1"]
     assert [task["initial_action"]["query"] for task in result["tasks"]] == [
         task["query"] for task in result["tasks"]
     ]
@@ -349,7 +295,7 @@ def test_plan_route_node_stops_after_two_invalid_responses(monkeypatch):
 
     assert len(llm.calls) == 2
     assert result["tasks"] == []
-    assert result["current_action"] == {}
+    assert "current_action" not in result
     assert result["stop_reason"] == "plan_error"
     assert result["plan_trace"]["fallback_source"] == (
         "validation_failed_after_repair"
@@ -367,7 +313,7 @@ def test_plan_route_node_empty_query_does_not_call_llm(monkeypatch):
     result = nodes.plan_route_node({"original_query": "   "})
 
     assert result["tasks"] == []
-    assert result["current_action"] == {}
+    assert "current_action" not in result
     assert result["stop_reason"] == "plan_error"
     assert result["plan_trace"]["fallback_source"] == "empty_query"
     assert result["plan_trace"]["llm_calls"] == 0
@@ -383,7 +329,7 @@ def test_plan_route_node_provider_error_is_terminal(monkeypatch):
 
     assert len(llm.calls) == 1
     assert result["tasks"] == []
-    assert result["current_action"] == {}
+    assert "current_action" not in result
     assert result["stop_reason"] == "plan_error"
     assert result["plan_trace"]["fallback_source"] == "provider_error"
     assert result["plan_trace"]["attempts"] == [
@@ -419,6 +365,8 @@ def test_plan_route_prompt_matches_contract_and_registry():
     for field in expected_fields:
         assert f'"{field}"' in prompt
 
+    assert '"task_id"' not in prompt
+    assert '"requirement_id"' not in prompt
     assert '"top_k_chunks"' in prompt
     assert str(DEFAULT_TOP_K) in prompt
 

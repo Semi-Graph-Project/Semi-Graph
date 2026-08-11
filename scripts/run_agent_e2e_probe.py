@@ -32,7 +32,6 @@ BOLD = "\033[1m"
 COLORS = {
     "query": "\033[96m",
     "plan_route": "\033[94m",
-    "dispatcher": "\033[36m",
     "task_worker": "\033[93m",
     "collector": "\033[35m",
     "execute": "\033[93m",
@@ -93,18 +92,6 @@ def _print_node_trace(node_name: str, update: dict, color: bool) -> None:
                 "tasks": update.get("tasks", []),
                 "current_action": update.get("current_action", {}),
                 "plan_trace": update.get("plan_trace", {}),
-            },
-            node_name,
-            color,
-        )
-        return
-
-    if node_name == "dispatcher":
-        _print_json(
-            "DISPATCH",
-            {
-                "status": "fan_out_scheduled",
-                "next_node": "task_worker",
             },
             node_name,
             color,
@@ -184,7 +171,7 @@ def _print_node_trace(node_name: str, update: dict, color: bool) -> None:
                 "attempt_id": latest.get("attempt_id"),
                 "assessment": latest.get("assessment"),
                 "next_action": update.get("current_action", {}),
-                "completed_tasks": update.get("completed_tasks", []),
+                "completion": update.get("completion"),
                 "stop_reason": update.get("stop_reason"),
             },
             node_name,

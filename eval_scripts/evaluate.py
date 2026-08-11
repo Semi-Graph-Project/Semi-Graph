@@ -14,6 +14,8 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
@@ -21,11 +23,19 @@ from semigraph.config import get_config  # noqa: E402
 from semigraph.connections import get_llm  # noqa: E402
 from semigraph.online.vector_search import vector_search as production_vector_search  # noqa: E402
 from semigraph.online.graph_search import graph_search as production_graph_search  # noqa: E402
-
+from eval_scripts.eval_agent import (
+    build_graph_eval_graph,
+    build_vector_eval_graph,
+)
 
 NEO4J_URI = "bolt://localhost:7690"
 VECTOR_INDEX = "gold_chunk_embedding"
 TOP_K = 10
+EVALUATION_MODES = ("retrieve_only", "full_answer")
+AGENT_BUILDERS = {
+    "agent_vector": build_vector_eval_graph,
+    "agent_graph": build_graph_eval_graph,
+}
 SOX_DATASET = ROOT / "benchmark/freezes/sox74_retrieval_ablation_v1/inputs/finreflectkg_sox_strict74.yaml"
 SOX_QUERY_COUNT = 74
 TRACE_OUTPUT_TEMPLATE = ROOT / "benchmark/results/controlled_{tool}_sox74_{version_name}.jsonl"
@@ -156,18 +166,104 @@ def write_yaml_trace(results: list[dict], output_path: Path) -> None:
         encoding="utf-8",
     )
 
+def _run_agent(
+    question: str,
+    top_k: int,
+    tool: str,
+    generate_answer: bool,
+) -> dict:
+    """Run one evaluation Agent and return its selected Chunks and answer."""
+    if not isinstance(question, str) or not question.strip():
+        return {"chunks": [], "final_answer": "", "answer_latency_ms": 0.0}
+    if not isinstance(top_k, int) or isinstance(top_k, bool) or top_k < 1:
+        raise ValueError("top_k must be a positive integer")
 
-def evaluate_sox_queries(tool: str = "vector", version_name: str = "v1") -> list[dict]:
+    graph = AGENT_BUILDERS[tool](
+        top_k=top_k,
+        generate_answer=generate_answer,
+    )
+    result = graph.invoke({"original_query": question})
+    synthesis_trace = result.get("synthesis_trace")
+    if not isinstance(synthesis_trace, dict):
+        raise RuntimeError("Agent result is missing synthesis_trace")
+
+    selected_chunk_ids = synthesis_trace.get("selected_chunk_ids")
+    if not isinstance(selected_chunk_ids, list):
+        raise RuntimeError(
+            "Agent synthesis_trace has invalid selected_chunk_ids"
+        )
+
+    chunks_by_id = {
+        chunk["chunk_id"]: chunk
+        for attempt in (result.get("attempts") or [])
+        for chunk in (attempt.get("chunks") or [])
+        if isinstance(chunk, dict) and chunk.get("chunk_id")
+    }
+    missing_ids = set(selected_chunk_ids) - set(chunks_by_id)
+    if missing_ids:
+        raise RuntimeError(f"Agent selected unknown Chunk IDs: {missing_ids}")
+
+    return {
+        "chunks": [chunks_by_id[chunk_id] for chunk_id in selected_chunk_ids],
+        "final_answer": str(result.get("final_answer") or ""),
+        "answer_latency_ms": (
+            float(synthesis_trace.get("latency_sec") or 0.0) * 1000
+            if synthesis_trace.get("llm_calls")
+            else 0.0
+        ),
+        "answer_error": synthesis_trace.get("error_type"),
+    }
+
+
+def agent_vector_search(question: str, top_k: int = TOP_K) -> list[dict]:
+    """Return the Chunks selected by the evaluation Vector Agent."""
+    return _run_agent(
+        question,
+        top_k,
+        tool="agent_vector",
+        generate_answer=False,
+    )["chunks"]
+
+
+def agent_graph_search(question: str, top_k: int = TOP_K) -> list[dict]:
+    """Return the Chunks selected by the evaluation Graph Agent."""
+    return _run_agent(
+        question,
+        top_k,
+        tool="agent_graph",
+        generate_answer=False,
+    )["chunks"]
+
+
+def evaluate_sox_queries(
+    tool: str = "vector",
+    version_name: str = "v1",
+    mode: str = "retrieve_only",
+) -> list[dict]:
     """Evaluate one production retriever on the 74 SOX queries."""
+    if mode not in EVALUATION_MODES:
+        raise ValueError(f"mode must be one of {EVALUATION_MODES}")
+
     queries = load_sox_queries()
-    search = vector_search if tool == "vector" else graph_search
+    searches = {
+        "vector": vector_search,
+        "graph": graph_search,
+        "agent_vector": agent_vector_search,
+        "agent_graph": agent_graph_search,
+    }
+    search = searches[tool]
     trace_output = Path(str(TRACE_OUTPUT_TEMPLATE).format(tool=tool, version_name=version_name))
     yaml_trace_output = Path(str(YAML_TRACE_OUTPUT_TEMPLATE).format(tool=tool, version_name=version_name))
 
 
     # Load the embedding model before measuring per-query latency.
-    search(queries[0]["query"], top_k=TOP_K)
-    llm = get_llm(get_config())
+    vector_search(queries[0]["query"], top_k=TOP_K)
+
+    llm = (
+        get_llm(get_config())
+        if mode == "full_answer" and tool not in AGENT_BUILDERS
+        else None
+    )
 
     # Start a fresh trace; each completed query is appended immediately.
     write_trace([], trace_output)
@@ -175,8 +271,18 @@ def evaluate_sox_queries(tool: str = "vector", version_name: str = "v1") -> list
     results = []
     for case in queries:
         started = time.perf_counter()
-        retrieved = search(case["query"], top_k=TOP_K)
-        latency_ms = (time.perf_counter() - started) * 1000
+        agent_result = None
+        if tool in AGENT_BUILDERS:
+            agent_result = _run_agent(
+                case["query"],
+                TOP_K,
+                tool=tool,
+                generate_answer=mode == "full_answer",
+            )
+            retrieved = agent_result["chunks"]
+        else:
+            retrieved = search(case["query"], top_k=TOP_K)
+        total_latency_ms = (time.perf_counter() - started) * 1000
 
         gold_ids = set(case["gold_chunks"])
         retrieved_ids = [chunk["chunk_id"] for chunk in retrieved]
@@ -184,18 +290,27 @@ def evaluate_sox_queries(tool: str = "vector", version_name: str = "v1") -> list
         hit = int(bool(hits))
         recall = len(hits) / len(gold_ids)
 
-        answer_started = time.perf_counter()
         answer_error = None
         final_answer = "None"
-        # try:
-        #     final_answer = generate_final_answer(llm, case["query"], retrieved)
-        # except Exception as exc:
-        #     final_answer = ""
-        #     answer_error = type(exc).__name__
-        answer_latency_ms = (time.perf_counter() - answer_started) * 1000
+        answer_latency_ms = 0.0
+        if mode == "full_answer" and agent_result is not None:
+            final_answer = agent_result["final_answer"]
+            answer_latency_ms = agent_result["answer_latency_ms"]
+            answer_error = agent_result.get("answer_error")
+        elif mode == "full_answer":
+            answer_started = time.perf_counter()
+            try:
+                final_answer = generate_final_answer(llm, case["query"], retrieved)
+            except Exception as exc:
+                final_answer = ""
+                answer_error = type(exc).__name__
+            answer_latency_ms = (time.perf_counter() - answer_started) * 1000
+
+        latency_ms = max(0.0, total_latency_ms - answer_latency_ms)
 
         result = {
             "id": case["id"],
+            "mode": mode,
             "query": case["query"],
             "gold_chunks": case["gold_chunks"],
             "top_chunk_ids": retrieved_ids,
@@ -224,6 +339,7 @@ def evaluate_sox_queries(tool: str = "vector", version_name: str = "v1") -> list
         f"{statistics.fmean(row['latency_ms'] for row in results):.1f} ms"
     )
     print(f"Tool: {tool}")
+    print(f"Mode: {mode}")
     print(f"Trace: {trace_output}")
     print(f"YAML trace: {yaml_trace_output}")
     return results
@@ -235,7 +351,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--tool",
-        choices=("vector", "graph"),
+        choices=("vector", "graph", "agent_vector", "agent_graph"),
         default="vector",
         help="retriever to evaluate (default: vector)",
         required=True,
@@ -245,10 +361,20 @@ def main() -> None:
         default="v1",
         help="Version name for the evaluation (default: v1)",
     )
+    parser.add_argument(
+        "--mode",
+        choices=EVALUATION_MODES,
+        default="retrieve_only",
+        help="retrieve only or also generate final answers",
+    )
     args = parser.parse_args()
 
     load_dotenv(ROOT / ".env")
-    evaluate_sox_queries(tool=args.tool, version_name=args.version_name)
+    evaluate_sox_queries(
+        tool=args.tool,
+        version_name=args.version_name,
+        mode=args.mode,
+    )
 
 
 if __name__ == "__main__":

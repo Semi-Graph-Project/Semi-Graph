@@ -1,6 +1,8 @@
 from types import SimpleNamespace
 
 import semigraph.agent.tools as agent_tools
+from semigraph.agent.contracts import ToolName
+from semigraph.agent.retry_policy import TOOL_RETRY_PROFILES
 from semigraph.config import Config
 
 
@@ -185,12 +187,23 @@ def test_agent_financial_search_passes_query_only_and_compacts_trace(monkeypatch
     assert result["trace"]["returned_chunk_ids"] == ["fin-1"]
 
 
-def test_financial_tool_schema_exposes_query_only():
-    schema = next(
-        item["function"]
-        for item in agent_tools.TOOL_SCHEMAS
-        if item["function"]["name"] == "financial"
-    )
+def test_agent_tool_registries_have_one_consistent_tool_set():
+    expected_tools = {tool.value for tool in ToolName}
 
-    assert set(schema["parameters"]["properties"]) == {"query"}
-    assert schema["parameters"]["required"] == ["query"]
+    assert set(agent_tools.RETRIEVERS) == expected_tools
+    assert set(TOOL_RETRY_PROFILES) == set(ToolName)
+    assert all(callable(retriever) for retriever in agent_tools.RETRIEVERS.values())
+
+
+def test_agent_news_search_returns_chunks_and_trace(monkeypatch):
+    chunks = [{"chunk_id": "news-1", "text": "headline"}]
+    monkeypatch.setattr(agent_tools, "news_search", lambda **_: chunks)
+
+    result = agent_tools.agent_news_search("NVDA latest news", 5, "cfg")
+
+    assert result["chunks"] == chunks
+    assert result["trace"] == {
+        "retriever": "news",
+        "profile": "finnhub_news_v1",
+        "returned_chunk_ids": ["news-1"],
+    }

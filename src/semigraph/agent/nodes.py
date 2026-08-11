@@ -10,39 +10,28 @@ from semigraph.agent.contracts import (
     PlanRouteOutput,
     RetrievalAction,
 )
+from semigraph.agent.ledger import build_assess_context, select_synthesis_chunks
 from semigraph.agent.prompts import (
     ASSESS_SYSTEM_PROMPT,
     PLAN_ROUTE_SYSTEM_PROMPT,
     SYNTHESIZE_ATTEMPTS_SYSTEM_PROMPT,
+    build_assess_system_prompt,
 )
 from semigraph.agent.retry_policy import (
     decide_retry,
     measure_evidence_gain,
     validate_assessment_context,
 )
-from semigraph.agent.state import AgentState
-from semigraph.agent.tools import DEFAULT_TOP_K, RETRIEVERS
-from semigraph.config import Config, get_config
+from semigraph.agent.state import AgentState, TaskWorkerState
+from semigraph.agent.tools import RETRIEVERS
+from semigraph.config import get_config
 from semigraph.connections import get_llm
 
 
 MAX_PLAN_ROUTE_ATTEMPTS = 2
 
 
-def _is_transient_retrieval_error(exc: Exception) -> bool:
-    if isinstance(exc, (TimeoutError, ConnectionError)):
-        return True
-
-    return type(exc).__name__ in {
-        "ServiceUnavailable",
-        "SessionExpired",
-        "ReadTimeout",
-        "ConnectTimeout",
-        "TimeoutException",
-        "ConnectError",
-        "RemoteProtocolError",
-    }
-
+# Plan
 
 def _parse_plan_route_response(raw: str) -> PlanRouteOutput:
     """
@@ -66,94 +55,6 @@ def _parse_plan_route_response(raw: str) -> PlanRouteOutput:
 
     except (json.JSONDecodeError, ValidationError, ValueError) as e:
         raise ValueError(f"Failed to parse and validate plan route response: {e}")
-
-
-def _collect_plan_warnings(
-    original_query: str,
-    plan: PlanRouteOutput,
-    cfg: Config,
-) -> list[dict]:
-    """Report explicit query anchors that disappeared from a valid plan.
-
-    This is a conservative diagnostic check. It never changes or rejects the
-    plan; semantic validation remains the planner's responsibility.
-    """
-
-    def normalize(text: str) -> str:
-        return re.sub(r"[_\-\s]+", " ", text).strip().casefold()
-
-    def contains_phrase(text: str, phrase: str) -> bool:
-        return bool(re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", text))
-
-    plan_parts: list[str] = []
-    for task in plan.tasks:
-        plan_parts.append(task.query)
-        plan_parts.extend(requirement.description for requirement in task.requirements)
-        plan_parts.append(task.initial_action.query)
-
-
-    plan_text = " ".join(plan_parts)
-    normalized_query = normalize(original_query)
-    normalized_plan = normalize(plan_text)
-    warnings: list[dict] = []
-
-    for ticker in cfg.tickers:
-        ticker_text = normalize(ticker)
-        if (
-            contains_phrase(normalized_query, ticker_text)
-            and not contains_phrase(normalized_plan, ticker_text)
-        ):
-            warnings.append({
-                "code": "missing_explicit_anchor",
-                "anchor_type": "ticker",
-                "value": ticker,
-            })
-
-    period_pattern = re.compile(
-        r"\b(?:fy\s*(?:19|20)\d{2}|(?:19|20)\d{2}|q[1-4])\b",
-        re.IGNORECASE,
-    )
-
-    def extract_periods(text: str) -> list[tuple[str, str]]:
-        periods: list[tuple[str, str]] = []
-        seen_keys: set[str] = set()
-        for match in period_pattern.finditer(text):
-            display_value = re.sub(r"\s+", "", match.group()).upper()
-            comparison_key = (
-                display_value[2:] if display_value.startswith("FY") else display_value
-            )
-            if comparison_key not in seen_keys:
-                periods.append((comparison_key, display_value))
-                seen_keys.add(comparison_key)
-        return periods
-
-    plan_periods = {key for key, _ in extract_periods(plan_text)}
-    for comparison_key, display_value in extract_periods(original_query):
-        if comparison_key not in plan_periods:
-            warnings.append({
-                "code": "missing_explicit_anchor",
-                "anchor_type": "period",
-                "value": display_value,
-            })
-
-    registered_metrics = sorted({
-        metric
-        for metric_group in cfg.financial_metric_registry.values()
-        for metric in metric_group
-    })
-    for metric in registered_metrics:
-        metric_text = normalize(metric)
-        if (
-            contains_phrase(normalized_query, metric_text)
-            and not contains_phrase(normalized_plan, metric_text)
-        ):
-            warnings.append({
-                "code": "missing_explicit_anchor",
-                "anchor_type": "metric",
-                "value": metric,
-            })
-
-    return warnings
 
 
 def _normalize_plan_tasks(
@@ -187,7 +88,6 @@ def _normalize_plan_tasks(
 
 
 def plan_route_node(state: AgentState) -> dict:
-    print(f"Node : Plan Route Node")
     started_at = time.perf_counter()
     original_query = state.get("original_query", "")
     attempts: list[dict] = []
@@ -196,14 +96,11 @@ def plan_route_node(state: AgentState) -> dict:
     def error_update(fallback_source: str) -> dict:
         return {
             "tasks": [],
-            "current_task_index": 0,
-            "current_action": {},
             "stop_reason": "plan_error",
             "plan_trace": {
                 "status": "error",
                 "validation_mode": "structural_only_v1",
                 "attempts": attempts,
-                "warnings": [],
                 "llm_calls": llm_calls,
                 "latency_sec": time.perf_counter() - started_at,
                 "fallback_source": fallback_source,
@@ -273,13 +170,10 @@ def plan_route_node(state: AgentState) -> dict:
             "status": "valid",
             "errors": [],
         })
-        warnings = _collect_plan_warnings(original_query, plan_route, cfg)
         tasks = _normalize_plan_tasks(plan_route)
 
         return {
             "tasks": tasks,
-            "current_task_index": 0,
-            "current_action": tasks[0]["initial_action"],
             "plan_trace": {
                 "status": "ok" if attempt_number == 1 else "repaired",
                 "validation_mode": "structural_only_v1",
@@ -291,7 +185,6 @@ def plan_route_node(state: AgentState) -> dict:
                     "output_tasks": len(tasks),
                 },
                 "attempts": attempts,
-                "warnings": warnings,
                 "llm_calls": llm_calls,
                 "latency_sec": time.perf_counter() - started_at,
                 "fallback_source": None,
@@ -301,29 +194,33 @@ def plan_route_node(state: AgentState) -> dict:
     return error_update("validation_failed_after_repair")
 
 
-def execute_attempt_node(state: AgentState) -> dict:
+# Execute
+
+def _is_transient_retrieval_error(exc: Exception) -> bool:
+    if isinstance(exc, (TimeoutError, ConnectionError)):
+        return True
+
+    return type(exc).__name__ in {
+        "ServiceUnavailable",
+        "SessionExpired",
+        "ReadTimeout",
+        "ConnectTimeout",
+        "TimeoutException",
+        "ConnectError",
+        "RemoteProtocolError",
+    }
+
+
+def execute_attempt_node(state: TaskWorkerState) -> dict:
     """Execute one retrieval action and append one cohesive Attempt."""
-    tasks = state.get("tasks") or []
-    current_index = state.get("current_task_index")
+    task = state["task"]
     attempts = state.get("attempts") or []
-
-    if (
-        not isinstance(tasks, list)
-        or not isinstance(current_index, int)
-        or not 0 <= current_index < len(tasks)
-        or not isinstance(attempts, list)
-    ):
-        return {"current_action": {}, "stop_reason": "unsupported"}
-
-    task = tasks[current_index]
-    task_id = task.get("task_id") if isinstance(task, dict) else None
-    if not task_id:
-        return {"current_action": {}, "stop_reason": "unsupported"}
+    task_id = task["task_id"]
 
     try:
         action = RetrievalAction.model_validate(state.get("current_action"))
     except (ValidationError, TypeError, ValueError):
-        return {"current_action": {}, "stop_reason": "unsupported"}
+        return _complete_task(state, attempts, "unsupported")
 
     attempt_number = 1 + sum(
         1
@@ -382,24 +279,15 @@ def execute_attempt_node(state: AgentState) -> dict:
             "retrieval_trace": retrieval_trace,
             "assessment": None,
         }
-        return _complete_current_task(
+        return _complete_task(
             state,
             [*attempts, attempt],
             "tool_error",
         )
 
 
-    if isinstance(retriever_result, dict):
-        raw_chunks = retriever_result.get("chunks") or []
-        raw_trace = retriever_result.get("trace")
-        retriever_trace = dict(raw_trace) if isinstance(raw_trace, dict) else {}
-    elif isinstance(retriever_result, list):
-        raw_chunks = retriever_result
-        retriever_trace = {}
-    else:
-        raw_chunks = []
-        retriever_trace = {}
-
+    raw_chunks = retriever_result["chunks"]
+    retriever_trace = retriever_result["trace"]
     chunks = [item for item in raw_chunks if isinstance(item, dict)]
     retrieval_trace = {
         **retriever_trace,
@@ -422,385 +310,7 @@ def execute_attempt_node(state: AgentState) -> dict:
     }
 
 
-def _select_synthesis_chunks(
-    attempts: list[dict],
-    max_per_task: int = 3,
-    max_total: int = 9,
-) -> list[dict]:
-    """Return prioritized, unique raw chunks ready for Synthesis."""
-    if max_per_task < 1 or max_total < 1:
-        raise ValueError("Synthesis chunk limits must be positive")
-
-    attempts_by_task: dict[str, list[dict]] = {}
-    for attempt in attempts:
-        task_id = attempt.get("task_id")
-        if task_id:
-            attempts_by_task.setdefault(task_id, []).append(attempt)
-
-    accepted: dict[str, list[dict]] = {}
-    fallback: dict[str, list[dict]] = {}
-
-    for task_id, task_attempts in attempts_by_task.items():
-        accepted[task_id] = []
-        fallback[task_id] = []
-        seen_task_ids: set[str] = set()
-
-        for attempt in reversed(task_attempts):
-            assessment = attempt.get("assessment") or {}
-            if assessment.get("status") not in {"valid", "repaired"}:
-                continue
-            output = assessment.get("output") or {}
-            accepted_ids = set(output.get("accepted_chunk_ids") or [])
-            for chunk in attempt.get("chunks") or []:
-                chunk_id = chunk.get("chunk_id")
-                if chunk_id in accepted_ids and chunk_id not in seen_task_ids:
-                    accepted[task_id].append(chunk)
-                    seen_task_ids.add(chunk_id)
-
-        # Prefer the first two results from every Attempt, then use remaining
-        # ranks only when the global synthesis budget still has room.
-        for attempt in reversed(task_attempts):
-            for chunk in (attempt.get("chunks") or [])[:2]:
-                chunk_id = chunk.get("chunk_id")
-                if chunk_id and chunk_id not in seen_task_ids:
-                    fallback[task_id].append(chunk)
-                    seen_task_ids.add(chunk_id)
-
-        for attempt in reversed(task_attempts):
-            for chunk in (attempt.get("chunks") or [])[2:]:
-                chunk_id = chunk.get("chunk_id")
-                if chunk_id and chunk_id not in seen_task_ids:
-                    fallback[task_id].append(chunk)
-                    seen_task_ids.add(chunk_id)
-
-    def fair_order(queues: dict[str, list[dict]]) -> list[dict]:
-        ordered = [
-            chunk
-            for task_id in attempts_by_task
-            for chunk in queues[task_id][:max_per_task]
-        ]
-        longest = max((len(queue) for queue in queues.values()), default=0)
-        ordered.extend(
-            queues[task_id][index]
-            for index in range(max_per_task, longest)
-            for task_id in attempts_by_task
-            if index < len(queues[task_id])
-        )
-        return ordered
-
-    selected: list[dict] = []
-    seen_ids: set[str] = set()
-    candidates = [*fair_order(accepted), *fair_order(fallback)]
-    for chunk in candidates:
-        chunk_id = chunk.get("chunk_id")
-        if not chunk_id or chunk_id in seen_ids:
-            continue
-        selected.append(chunk)
-        seen_ids.add(chunk_id)
-        if len(selected) == max_total:
-            break
-
-    return selected
-
-
-def synthesize_attempts_node(state: AgentState) -> dict:
-    """Synthesize once from evidence selected from the Attempt Ledger."""
-    started_at = time.perf_counter()
-    attempts = state.get("attempts") or []
-    selected_chunks = _select_synthesis_chunks(attempts)
-    eligible_ids_by_task: dict[str, set[str]] = {
-        task["task_id"]: set()
-        for task in (state.get("tasks") or [])
-        if isinstance(task, dict) and task.get("task_id")
-    }
-
-    for attempt in attempts:
-        task_id = attempt.get("task_id")
-        if not task_id:
-            continue
-        eligible_ids = eligible_ids_by_task.setdefault(task_id, set())
-        eligible_ids.update(
-            chunk["chunk_id"]
-            for chunk in (attempt.get("chunks") or [])
-            if isinstance(chunk, dict) and chunk.get("chunk_id")
-        )
-
-    selected_ids_by_task = {
-        task_id: [
-            chunk["chunk_id"]
-            for chunk in selected_chunks
-            if chunk["chunk_id"] in eligible_ids
-        ]
-        for task_id, eligible_ids in eligible_ids_by_task.items()
-    }
-
-    if not selected_chunks:
-        return {
-            "final_answer": (
-                "I do not have enough evidence to answer the question."
-            ),
-            "citation_map": [],
-            "synthesis_trace": {
-                "status": "no_evidence",
-                "selected_chunk_ids_by_task": selected_ids_by_task,
-                "llm_calls": 0,
-                "latency_sec": round(time.perf_counter() - started_at, 3),
-                "error_type": None,
-            },
-        }
-
-    evidence_text, citation_lookup = _format_chunks_for_synthesis(
-        selected_chunks
-    )
-    user_message = (
-        f"Original Query:\n{state.get('original_query', '')}\n\n"
-        f"Tasks:\n{json.dumps(state.get('tasks') or [], ensure_ascii=False)}"
-        "\n\n"
-        "Task Completions:\n"
-        f"{json.dumps(state.get('completed_tasks') or [], ensure_ascii=False)}"
-        "\n\n"
-        f"Selected Evidence Chunks:\n{evidence_text}"
-    )
-
-    try:
-        llm = get_llm(get_config())
-        response = llm.invoke([
-            {
-                "role": "system",
-                "content": SYNTHESIZE_ATTEMPTS_SYSTEM_PROMPT,
-            },
-            {"role": "user", "content": user_message},
-        ])
-        raw = response.content if hasattr(response, "content") else str(response)
-        answer = _remove_invalid_citations(
-            str(raw).strip(),
-            set(citation_lookup),
-        )
-        cited_indices = _extract_citation_indices(answer)
-        citation_map = [
-            {"citation_index": index, **citation_lookup[index]}
-            for index in cited_indices
-            if index in citation_lookup
-        ]
-        status = "ok"
-        error_type = None
-    except Exception as exc:
-        answer = (
-            "I could not synthesize a grounded final answer from the "
-            "current evidence."
-        )
-        citation_map = []
-        status = "provider_error"
-        error_type = type(exc).__name__
-
-    return {
-        "final_answer": answer,
-        "citation_map": citation_map,
-        "synthesis_trace": {
-            "status": status,
-            "selected_chunk_ids_by_task": selected_ids_by_task,
-            "llm_calls": 1,
-            "latency_sec": round(time.perf_counter() - started_at, 3),
-            "error_type": error_type,
-        },
-    }
-
-
-def _chunk_preview(
-    chunk: dict,
-    text_limit: int | None = None,
-) -> dict:
-    """Return Assess-facing chunk data without mutating the raw chunk.
-
-    Current evidence uses the full text by leaving ``text_limit`` unset.
-    Historical accepted evidence can pass a smaller explicit limit.
-    """
-    if text_limit is not None and text_limit < 0:
-        raise ValueError("text_limit must be non-negative")
-
-    metadata_fields = (
-        "chunk_id",
-        "rank",
-        "original_rank",
-        "score",
-        "rerank_score",
-        "ticker",
-        "fiscal_year",
-        "fiscal_quarter",
-        "period_end",
-        "section",
-        "metric",
-        "value",
-        "unit",
-        "frequency",
-        "source_kind",
-        "published_at",
-        "source_url",
-    )
-    preview = {
-        field: chunk[field]
-        for field in metadata_fields
-        if chunk.get(field) is not None
-    }
-    text = str(chunk.get("text") or "")
-    preview["text"] = text if text_limit is None else text[:text_limit]
-    return preview
-
-
-def _compact_assess_diagnostics(trace: dict) -> dict:
-    """Keep only retrieval diagnostics that help Assess make a decision."""
-    fields = (
-        "status",
-        "reason",
-        "abort_reason",
-        "returned_chunk_ids",
-        "seed_count",
-        "candidate_count",
-        "error_type",
-    )
-    diagnostics = {
-        field: trace[field]
-        for field in fields
-        if trace.get(field) is not None
-    }
-
-    seeds = [item for item in trace.get("seeds", []) if isinstance(item, dict)]
-    if seeds:
-        diagnostics["seeds"] = seeds[:5]
-
-    triple_filter = trace.get("triple_filter")
-    if isinstance(triple_filter, dict):
-        selected_triples = [
-            item
-            for item in triple_filter.get("selected_triples", [])
-            if isinstance(item, dict)
-        ][:5]
-        compact_filter = {
-            "reason": triple_filter.get("reason"),
-            "selected_triples": selected_triples,
-        }
-        diagnostics["triple_filter"] = {
-            field: value
-            for field, value in compact_filter.items()
-            if value is not None
-        }
-
-    return diagnostics
-
-
-def _build_assess_context(state: AgentState, cfg: Config) -> str:
-    """Derive a bounded Assess view from the Attempt Ledger."""
-    tasks = state.get("tasks") or []
-    current_index = state.get("current_task_index", 0)
-    current_task = (
-        tasks[current_index]
-        if isinstance(current_index, int) and 0 <= current_index < len(tasks)
-        else {}
-    )
-    task_id = (
-        current_task.get("task_id")
-        if isinstance(current_task, dict)
-        else None
-    )
-    task_attempts = [
-        attempt
-        for attempt in (state.get("attempts") or [])
-        if isinstance(attempt, dict) and attempt.get("task_id") == task_id
-    ]
-    latest_attempt = task_attempts[-1] if task_attempts else {}
-    latest_chunks = [
-        _chunk_preview(chunk)
-        for chunk in (latest_attempt.get("chunks") or [])
-        if isinstance(chunk, dict)
-    ]
-    accepted_ids: set[str] = set()
-    covered_ids: set[str] = set()
-    for attempt in task_attempts[:-1]:
-        assessment = attempt.get("assessment") or {}
-        output = assessment.get("output") or {}
-        accepted_ids.update(output.get("accepted_chunk_ids", []))
-        covered_ids.update(output.get("covered_requirement_ids", []))
-        if assessment.get("status") == "fail_open":
-            accepted_ids.update(
-                chunk.get("chunk_id")
-                for chunk in attempt.get("chunks", [])
-                if isinstance(chunk, dict) and chunk.get("chunk_id")
-            )
-
-    accepted_evidence = [
-        chunk
-        for attempt in task_attempts[:-1]
-        for chunk in attempt.get("chunks", [])
-        if isinstance(chunk, dict) and chunk.get("chunk_id") in accepted_ids
-    ][-9:]
-    prior_attempts = [
-        {
-            "attempt_id": attempt.get("attempt_id"),
-            "action": attempt.get("action"),
-            "retrieval_status": attempt.get("retrieval_status"),
-            "accepted_chunk_ids": (
-                ((attempt.get("assessment") or {}).get("output") or {}).get(
-                    "accepted_chunk_ids", []
-                )
-            ),
-            "returned_chunk_ids": [
-                chunk.get("chunk_id")
-                for chunk in (attempt.get("chunks") or [])
-                if isinstance(chunk, dict) and chunk.get("chunk_id")
-            ],
-        }
-        for attempt in task_attempts[:-1]
-    ]
-
-    context = {
-        "original_query": state.get("original_query", ""),
-        "current_task": current_task,
-        "current_action": latest_attempt.get("action")
-        or state.get("current_action", {}),
-        "latest_chunks": latest_chunks,
-        "covered_requirement_ids": sorted(covered_ids),
-        "accepted_evidence": [
-            _chunk_preview(chunk, text_limit=240)
-            for chunk in accepted_evidence
-        ],
-        "prior_attempts": prior_attempts,
-        "latest_diagnostics": _compact_assess_diagnostics(
-            latest_attempt.get("retrieval_trace", {})
-            if isinstance(latest_attempt.get("retrieval_trace"), dict)
-            else {}
-        ),
-    }
-
-    max_chars = cfg.agent_assess_context_max_chars
-    serialized = json.dumps(context, ensure_ascii=False, separators=(",", ":"))
-
-    while len(serialized) > max_chars and context["prior_attempts"]:
-        context["prior_attempts"].pop(0)
-        serialized = json.dumps(
-            context, ensure_ascii=False, separators=(",", ":")
-        )
-
-    while len(serialized) > max_chars and context["accepted_evidence"]:
-        context["accepted_evidence"].pop(0)
-        serialized = json.dumps(
-            context, ensure_ascii=False, separators=(",", ":")
-        )
-
-    while len(serialized) > max_chars:
-        for chunk in reversed(context["latest_chunks"]):
-            text = chunk.get("text", "")
-            if text:
-                excess = len(serialized) - max_chars
-                chunk["text"] = text[: max(0, len(text) - max(1, excess))]
-                break
-        else:
-            raise ValueError("Required Assess context exceeds configured limit")
-        serialized = json.dumps(
-            context, ensure_ascii=False, separators=(",", ":")
-        )
-
-    return serialized
-
+# Assess
 
 def _parse_assessment_response(raw: str) -> AssessmentOutput:
     """Parse one optional JSON fence and validate the Assess contract."""
@@ -858,67 +368,43 @@ def _normalize_assessment_error(
     ]
 
 
-def _complete_current_task(
-    state: AgentState,
+def _complete_task(
+    state: TaskWorkerState,
     attempts: list[dict],
     stop_reason: str,
 ) -> dict:
-    """Record one Task outcome and prepare the next Task, if any."""
-    tasks = state["tasks"]
-    current_index = state["current_task_index"]
-    task = tasks[current_index]
-    completed_tasks = [
-        *(state.get("completed_tasks") or []),
-        {
+    """Record the outcome of the single Task owned by this worker."""
+    task = state["task"]
+    return {
+        "attempts": attempts,
+        "completion": {
             "task_id": task["task_id"],
             "sufficient": stop_reason == "sufficient",
             "stop_reason": stop_reason,
         },
-    ]
-
-    next_index = current_index + 1
-    if next_index < len(tasks):
-        return {
-            "attempts": attempts,
-            "completed_tasks": completed_tasks,
-            "current_task_index": next_index,
-            "current_action": dict(tasks[next_index]["initial_action"]),
-            "stop_reason": None,
-        }
-
-    return {
-        "attempts": attempts,
-        "completed_tasks": completed_tasks,
         "current_action": {},
         "stop_reason": stop_reason,
     }
 
 
-def assess_node(state: AgentState) -> dict:
+def assess_node(state: TaskWorkerState) -> dict:
     """Assess the latest Attempt and let the controller approve any retry."""
-    try:
-        task = state["tasks"][state["current_task_index"]]
-        latest = state["attempts"][-1]
-    except (KeyError, IndexError, TypeError):
-        return {"current_action": {}, "stop_reason": "assessment_error"}
-
-    if (
-        latest.get("task_id") != task.get("task_id")
-        or latest.get("retrieval_status") != "ok"
-        or latest.get("assessment") is not None
-    ):
-        return {"current_action": {}, "stop_reason": "assessment_error"}
+    task = state["task"]
+    latest = state["attempts"][-1]
 
     cfg = get_config()
     llm = get_llm(cfg)
     locked_tool = state.get("_locked_tool")
-    system_prompt = ASSESS_SYSTEM_PROMPT
-    if locked_tool:
+    if state.get("_assess_prompt_mode") == "locked_eval":
+        system_prompt = build_assess_system_prompt(locked_tool)
+    else:
+        system_prompt = ASSESS_SYSTEM_PROMPT
+    if locked_tool and state.get("_assess_prompt_mode") != "locked_eval":
         system_prompt += (
             "\n\nEvaluation constraint: if decision is retry, next_action.tool "
             f'must remain "{locked_tool}". Tool switching is forbidden.'
         )
-    user_message = _build_assess_context(state, cfg)
+    user_message = build_assess_context(state, cfg)
     llm_calls = 0
     started_at = time.perf_counter()
     error_codes: list[str] = []
@@ -992,7 +478,7 @@ def assess_node(state: AgentState) -> dict:
             "trace": trace,
         }
         attempts[-1] = assessed_attempt
-        return _complete_current_task(
+        return _complete_task(
             state,
             attempts,
             "assessment_error",
@@ -1025,13 +511,10 @@ def assess_node(state: AgentState) -> dict:
         if controller["decision"] == "accept"
         else controller["stop_reason"] or "unsupported"
     )
-    return _complete_current_task(state, attempts, stop_reason)
+    return _complete_task(state, attempts, stop_reason)
 
 
-        
-
-
-# Helper
+# Synthesize
 
 
 _PERCENTAGE_METRICS = frozenset({
@@ -1210,55 +693,111 @@ def _remove_invalid_citations(answer: str, valid_indices: set[int]) -> str:
     return sanitized.strip()
 
 
-def _workbench() -> None:
-    """Show how synthesis-ready chunks are selected from Attempts."""
-    first_c1 = {"chunk_id": "C1", "text": "older raw C1 from A1"}
-    retry_c1 = {"chunk_id": "C1", "text": "newer raw C1 from A2"}
-    retry_c2 = {"chunk_id": "C2", "text": "raw C2 from A2"}
-    fallback_c3 = {"chunk_id": "C3", "text": "fail-open raw C3"}
-    attempts = [
-        {
-            "attempt_id": "T1-A1",
-            "task_id": "T1",
-            "chunks": [first_c1],
-            "assessment": {
-                "status": "valid",
-                "output": {"accepted_chunk_ids": ["C1"]},
-            },
-        },
-        {
-            "attempt_id": "T1-A2",
-            "task_id": "T1",
-            "chunks": [retry_c1, retry_c2],
-            "assessment": {
-                "status": "repaired",
-                "output": {"accepted_chunk_ids": ["C1", "C2"]},
-            },
-        },
-        {
-            "attempt_id": "T2-A1",
-            "task_id": "T2",
-            "chunks": [fallback_c3],
-            "assessment": {"status": "fail_open", "output": None},
-        },
-    ]
+def synthesize_attempts_node(state: AgentState) -> dict:
+    """Synthesize once from evidence selected from the Attempt Ledger."""
+    started_at = time.perf_counter()
+    cfg = get_config()
+    max_chunks = cfg.agent_max_synthesis_chunks
+    attempts = state.get("attempts") or []
+    selected_chunks = select_synthesis_chunks(
+        attempts,
+        max_total=max_chunks,
+    )
+    eligible_ids_by_task: dict[str, set[str]] = {
+        task["task_id"]: set()
+        for task in (state.get("tasks") or [])
+        if isinstance(task, dict) and task.get("task_id")
+    }
 
-    selected = _select_synthesis_chunks(attempts)
-    print("Attempts:")
     for attempt in attempts:
-        returned = [chunk["chunk_id"] for chunk in attempt["chunks"]]
-        output = attempt["assessment"].get("output") or {}
-        accepted_ids = output.get("accepted_chunk_ids", [])
-        status = attempt["assessment"]["status"]
-        print(
-            f"  {attempt['attempt_id']}: status={status}, "
-            f"returned={returned}, accepted={accepted_ids}"
+        task_id = attempt.get("task_id")
+        if not task_id:
+            continue
+        eligible_ids = eligible_ids_by_task.setdefault(task_id, set())
+        eligible_ids.update(
+            chunk["chunk_id"]
+            for chunk in (attempt.get("chunks") or [])
+            if isinstance(chunk, dict) and chunk.get("chunk_id")
         )
 
-    print("\nSynthesis-ready raw chunks:")
-    print(json.dumps(selected, indent=2, ensure_ascii=False))
-    print(f"\nNewer retry C1 preserved: {selected[0] is retry_c1}")
+    selected_ids_by_task = {
+        task_id: [
+            chunk["chunk_id"]
+            for chunk in selected_chunks
+            if chunk["chunk_id"] in eligible_ids
+        ]
+        for task_id, eligible_ids in eligible_ids_by_task.items()
+    }
 
+    if not selected_chunks:
+        return {
+            "final_answer": (
+                "I do not have enough evidence to answer the question."
+            ),
+            "citation_map": [],
+            "synthesis_trace": {
+                "status": "no_evidence",
+                "selected_chunk_ids_by_task": selected_ids_by_task,
+                "max_chunks": max_chunks,
+                "llm_calls": 0,
+                "latency_sec": round(time.perf_counter() - started_at, 3),
+                "error_type": None,
+            },
+        }
 
-if __name__ == "__main__":
-    _workbench()
+    evidence_text, citation_lookup = _format_chunks_for_synthesis(
+        selected_chunks
+    )
+    user_message = (
+        f"Original Query:\n{state.get('original_query', '')}\n\n"
+        f"Tasks:\n{json.dumps(state.get('tasks') or [], ensure_ascii=False)}"
+        "\n\n"
+        "Task Completions:\n"
+        f"{json.dumps(state.get('completed_tasks') or [], ensure_ascii=False)}"
+        "\n\n"
+        f"Selected Evidence Chunks:\n{evidence_text}"
+    )
+
+    try:
+        llm = get_llm(cfg)
+        response = llm.invoke([
+            {
+                "role": "system",
+                "content": SYNTHESIZE_ATTEMPTS_SYSTEM_PROMPT,
+            },
+            {"role": "user", "content": user_message},
+        ])
+        raw = response.content if hasattr(response, "content") else str(response)
+        answer = _remove_invalid_citations(
+            str(raw).strip(),
+            set(citation_lookup),
+        )
+        cited_indices = _extract_citation_indices(answer)
+        citation_map = [
+            {"citation_index": index, **citation_lookup[index]}
+            for index in cited_indices
+            if index in citation_lookup
+        ]
+        status = "ok"
+        error_type = None
+    except Exception as exc:
+        answer = (
+            "I could not synthesize a grounded final answer from the "
+            "current evidence."
+        )
+        citation_map = []
+        status = "provider_error"
+        error_type = type(exc).__name__
+
+    return {
+        "final_answer": answer,
+        "citation_map": citation_map,
+        "synthesis_trace": {
+            "status": status,
+            "selected_chunk_ids_by_task": selected_ids_by_task,
+            "max_chunks": max_chunks,
+            "llm_calls": 1,
+            "latency_sec": round(time.perf_counter() - started_at, 3),
+            "error_type": error_type,
+        },
+    }

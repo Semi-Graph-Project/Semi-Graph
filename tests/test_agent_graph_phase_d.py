@@ -1,5 +1,6 @@
 import json
 import threading
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -22,6 +23,7 @@ def _config():
         agent_max_attempts_per_task=3,
         agent_max_assessment_attempts=2,
         agent_max_technical_retries=0,
+        agent_max_synthesis_chunks=10,
         agent_assess_context_max_chars=60_000,
     )
 
@@ -33,11 +35,9 @@ def _plan(
 ) -> str:
     return json.dumps({
         "tasks": [{
-            "task_id": "T1",
             "query": "Find the required evidence",
             "requirements": [
                 {
-                    "requirement_id": requirement_id,
                     "description": f"Evidence for {requirement_id}",
                 }
                 for requirement_id in requirement_ids
@@ -106,7 +106,6 @@ def test_production_graph_contains_parallel_task_harness_nodes():
     assert set(build_agent().get_graph().nodes) == {
         "__start__",
         "plan_route",
-        "dispatcher",
         "task_worker",
         "collector",
         "synthesize",
@@ -118,6 +117,24 @@ def test_default_parallel_task_limit_is_two():
     assert Config().agent_max_parallel_tasks == 2
 
 
+def test_default_synthesis_limit_is_ten():
+    assert Config().agent_max_synthesis_chunks == 10
+
+
+def test_synthesis_limit_can_be_configured(tmp_path):
+    default_config = Path(__file__).parents[1] / "config" / "default.yaml"
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        default_config.read_text(encoding="utf-8").replace(
+            "  max_synthesis_chunks: 10",
+            "  max_synthesis_chunks: 4",
+        ),
+        encoding="utf-8",
+    )
+
+    assert Config(config_path).agent_max_synthesis_chunks == 4
+
+
 @pytest.mark.parametrize("value", [0, 6])
 def test_parallel_task_limit_must_match_plan_capacity(tmp_path, value):
     config_path = tmp_path / "config.yaml"
@@ -127,6 +144,18 @@ def test_parallel_task_limit_must_match_plan_capacity(tmp_path, value):
     )
 
     with pytest.raises(ValueError, match="max_parallel_tasks must be 1..5"):
+        Config(config_path)
+
+
+@pytest.mark.parametrize("value", [0, -1])
+def test_synthesis_limit_must_be_positive(tmp_path, value):
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        f"agent_harness:\n  max_synthesis_chunks: {value}\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="max_synthesis_chunks must be positive"):
         Config(config_path)
 
 
@@ -143,7 +172,11 @@ def test_build_agent_uses_configured_parallel_task_limit(monkeypatch):
 
 
 def test_tasks_run_in_parallel_and_collector_restores_plan_order(monkeypatch):
-    barrier = threading.Barrier(2)
+    lock = threading.Lock()
+    first_wave_ready = threading.Event()
+    running = 0
+    max_running = 0
+    started_tasks = []
     synthesis_calls = []
 
     tasks = [
@@ -160,19 +193,26 @@ def test_tasks_run_in_parallel_and_collector_restores_plan_order(monkeypatch):
                 "top_k_chunks": 5,
             },
         }
-        for task_id in ("T1", "T2")
+        for task_id in ("T1", "T2", "T3")
     ]
 
     def plan_route(_state):
-        return {
-            "tasks": tasks,
-            "current_task_index": 0,
-            "current_action": tasks[0]["initial_action"],
-        }
+        return {"tasks": tasks}
 
     def execute(state):
-        task = state["tasks"][0]
-        barrier.wait(timeout=3)
+        nonlocal running, max_running
+        task = state["task"]
+        with lock:
+            running += 1
+            max_running = max(max_running, running)
+            started_tasks.append(task["task_id"])
+            wait_for_first_wave = len(started_tasks) <= 2
+            if running == 2:
+                first_wave_ready.set()
+        if wait_for_first_wave:
+            assert first_wave_ready.wait(timeout=3)
+        with lock:
+            running -= 1
         attempt = {
             "attempt_id": f'{task["task_id"]}-A1',
             "task_id": task["task_id"],
@@ -188,7 +228,7 @@ def test_tasks_run_in_parallel_and_collector_restores_plan_order(monkeypatch):
         return {"attempts": [attempt]}
 
     def assess(state):
-        task_id = state["tasks"][0]["task_id"]
+        task_id = state["task"]["task_id"]
         attempts = list(state["attempts"])
         attempts[-1] = {
             **attempts[-1],
@@ -196,11 +236,11 @@ def test_tasks_run_in_parallel_and_collector_restores_plan_order(monkeypatch):
         }
         return {
             "attempts": attempts,
-            "completed_tasks": [{
+            "completion": {
                 "task_id": task_id,
                 "sufficient": True,
                 "stop_reason": "sufficient",
-            }],
+            },
             "current_action": {},
             "stop_reason": "sufficient",
         }
@@ -219,10 +259,17 @@ def test_tasks_run_in_parallel_and_collector_restores_plan_order(monkeypatch):
         config={"max_concurrency": 2},
     )
 
-    assert [item["task_id"] for item in result["attempts"]] == ["T1", "T2"]
+    assert set(started_tasks) == {"T1", "T2", "T3"}
+    assert max_running == 2
+    assert [item["task_id"] for item in result["attempts"]] == [
+        "T1",
+        "T2",
+        "T3",
+    ]
     assert [item["task_id"] for item in result["completed_tasks"]] == [
         "T1",
         "T2",
+        "T3",
     ]
     assert result["final_answer"] == "done"
     assert len(synthesis_calls) == 1
@@ -272,6 +319,8 @@ def test_full_agent_can_switch_tools_and_uses_four_node_state(monkeypatch):
     }]
     assert result["final_answer"] == "Grounded answer [1]. Invalid citation."
     assert result["citation_map"][0]["chunk_id"] == "C1"
+    assert "current_task_index" not in result
+    assert "current_action" not in result
     assert "reflection_history" not in result
     assert "observation_history" not in result
 

@@ -200,6 +200,14 @@ class Config:
                 "agent_harness.max_technical_retries must be 0..3"
             )
 
+        self.agent_max_synthesis_chunks: int = int(
+            agent_harness.get("max_synthesis_chunks", 10)
+        )
+        if self.agent_max_synthesis_chunks < 1:
+            raise ValueError(
+                "agent_harness.max_synthesis_chunks must be positive"
+            )
+
         self.agent_assess_context_max_chars: int = int(
             agent_harness.get("assess_context_max_chars", 12000)
         )

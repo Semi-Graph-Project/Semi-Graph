@@ -1,8 +1,8 @@
-# SemiGraph Agent Harness
+# SemiGraph
 
-คำศัพท์ร่วมของ Agent Harness ที่ควบคุมการเลือก Retriever การประเมินหลักฐาน และการลองค้นใหม่ใน SemiGraph
+คำศัพท์ร่วมของ Agent Harness และ Production Research Experience ที่ใช้ค้น เชื่อม และตรวจสอบหลักฐานสำหรับการวิเคราะห์ปัจจัยพื้นฐานบริษัท semiconductor
 
-## Language
+## Agent Harness Language
 
 **Retrieval Task**:
 หน่วยงานค้นหลักฐานหนึ่งเรื่องที่มีเป้าหมายและ Evidence Requirements ร่วมกัน โดยธรรมชาติของคำถามเป็นตัวกำหนดขอบเขตของ Task
@@ -59,3 +59,69 @@ _Avoid_: LLM confidence, latest result
 **Synthesis Context**:
 ชุด Accepted Evidence ที่คัดตาม coverage ภายในงบ context เพื่อใช้สร้างคำตอบสุดท้าย
 _Avoid_: Raw Evidence Pool
+
+## Production Research Language
+
+**Personal Workspace**:
+พื้นที่ส่วนตัวของผู้ใช้หนึ่งคน ซึ่งเป็นเจ้าของ Company Workspaces, Theses, Evidence Snapshots, User Sources และ Chat Threads ของตน
+_Avoid_: Account data, user session
+
+**Company Workspace**:
+พื้นที่วิจัยบริษัทหนึ่งแห่งภายใน Personal Workspace ที่รวม Research Lenses, Evidence Maps, Thesis Board และ Source Scope ของบริษัทนั้น
+_Avoid_: Company dashboard, ticker page
+
+**Coverage Mode**:
+ขอบเขตแหล่งข้อมูลที่ Company Workspace ใช้ได้ เช่น System + Personal Evidence หรือ Personal Evidence Only
+_Avoid_: Data completeness, confidence level
+
+**Research Lens**:
+มุมมองการวิจัยบริษัทที่มีเป้าหมายหลักฐานเฉพาะ โดย SemiGraph ใช้ห้า Lens คือ Core Business, Growth Thesis, Dependencies, Risks และ MOAT
+_Avoid_: Report section, analysis tab
+
+**Thesis**:
+ข้อความสมมติฐานที่ผู้ใช้เป็นเจ้าของและต้องการตรวจสอบด้วยหลักฐาน Agent เสนอหรือแนะนำการแก้ได้ แต่เปลี่ยนข้อความไม่ได้หากผู้ใช้ไม่ยืนยัน
+_Avoid_: Agent conclusion, investment recommendation
+
+**Growth Thesis**:
+Thesis ที่ระบุเส้นทางซึ่งอาจทำให้ธุรกิจเติบโต พร้อมตัวขับเคลื่อน เงื่อนไข หลักฐานท้าทาย และสิ่งที่ยังไม่รู้ โดยไม่ใช่ forecast
+_Avoid_: Growth prediction, revenue forecast
+
+**Evidence Map**:
+แผนที่ขนาดเล็กที่คัดเฉพาะข้ออ้าง ความสัมพันธ์ และหลักฐานที่เกี่ยวกับคำถามหรือ Research Lens ปัจจุบัน ไม่ใช่การแสดง Knowledge Graph ทั้งหมด
+_Avoid_: Knowledge Graph viewer, reasoning graph
+
+**Evidence Path**:
+ลำดับของ entity และ relationship ใน Evidence Map ที่แต่ละช่วงย้อนกลับไปยังหลักฐานต้นทางได้ แต่ไม่ได้พิสูจน์เหตุและผลโดยอัตโนมัติ
+_Avoid_: Causal chain, chain-of-thought
+
+**Disclosed Relationship**:
+ความสัมพันธ์ที่มีแหล่งข้อมูลยืนยันโดยตรงว่า entity สองตัวเกี่ยวข้องกันตาม relationship นั้น
+_Avoid_: Proven relationship, causal fact
+
+**Agent-Assembled Path**:
+Evidence Path ที่ Agent ประกอบจากหลาย Disclosed Relationships หรือหลายแหล่ง จึงเป็นข้ออนุมานที่ต้องแสดงต่างจากความสัมพันธ์ที่เปิดเผยโดยตรง
+_Avoid_: Disclosed Relationship, causal conclusion
+
+**Evidence Status**:
+สถานะความครบและสมดุลของหลักฐานต่อ Thesis โดยใช้ Evidence Supported, Evidence Mixed, Insufficient Evidence หรือ Review Due
+_Avoid_: Confidence score, bullish/bearish rating
+
+**Evidence Snapshot**:
+บันทึกผลประเมินที่แก้ย้อนหลังไม่ได้ของ Thesis version, Evidence Status, Evidence mappings และ source watermarks ณ เวลาที่ตรวจสอบรอบหนึ่ง โดยอนุญาตให้ redact เนื้อหาของ Source ที่ผู้ใช้ลบถาวรได้
+_Avoid_: Chat history, latest result
+
+**System Evidence**:
+หลักฐานจาก corpus และแหล่งข้อมูลที่ SemiGraph ดูแล ซึ่งแสดงแยกจากหลักฐานที่ผู้ใช้เพิ่ม
+_Avoid_: Trusted truth, default answer
+
+**User Source**:
+ไฟล์หรือเอกสารต้นทางที่ผู้ใช้อัปโหลดเข้า Personal Workspace ซึ่งยังไม่ถือเป็นหลักฐานจนกว่าจะสกัดข้อความหรือข้อเท็จจริงที่อ้างย้อนได้
+_Avoid_: User Evidence, uploaded evidence
+
+**User Evidence**:
+ข้อความ ข้อเท็จจริง หรือความสัมพันธ์ที่สกัดจาก User Source และมี provenance กลับไปยังตำแหน่งต้นทาง โดยรุ่นแรกติดสถานะ AI-extracted และ unreviewed
+_Avoid_: System Evidence, User Source
+
+**Source Scope**:
+ชุด System Evidence และ User Sources ที่อนุญาตให้ Agent ใช้กับคำถาม Company Workspace หรือ Chat Thread หนึ่ง
+_Avoid_: Search filter, corpus

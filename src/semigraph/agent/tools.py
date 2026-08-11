@@ -4,12 +4,8 @@ from typing import Callable, TypedDict
 
 from semigraph.online.financial_search import financial_search
 from semigraph.online.graph_search import trace_graph_search
-from semigraph.online.hybrid_search import hybrid_search
 from semigraph.online.news_search import news_search
 from semigraph.online.vector_search import trace_vector_search
-
-
-DEFAULT_TOP_K = 5
 
 
 class RetrieverResult(TypedDict):
@@ -63,7 +59,11 @@ def _compact_chunk_ranking(chunks: list[dict], limit: int = 20) -> list[dict]:
     )
 
 
-def _compact_vector_trace(trace: dict, top_k_chunks: int) -> dict:
+def _compact_vector_trace(
+    trace: dict,
+    top_k_chunks: int,
+    vector_index: str = "chunk_embedding",
+) -> dict:
     candidates = list(trace.get("raw_chunk_candidates") or [])
     reranked = list(trace.get("reranked_chunks") or [])
     chunks = list(trace.get("chunks") or [])
@@ -74,6 +74,7 @@ def _compact_vector_trace(trace: dict, top_k_chunks: int) -> dict:
             "top_k_chunks": top_k_chunks,
             "candidate_pool_k": trace.get("candidate_pool_k"),
             "final_rerank": trace.get("final_rerank"),
+            "vector_index": vector_index,
         },
         "candidate_count": len(candidates),
         "candidate_ranking": _compact_chunk_ranking(candidates),
@@ -151,16 +152,22 @@ def _compact_graph_trace(trace: dict) -> dict:
 def agent_vector_search(query: str, top_k_chunks: int, cfg) -> RetrieverResult:
     """Run vector retrieval with the Phase T profile used by the agent."""
     profile = _profile(cfg, "vector")
+    vector_index = str(profile.get("vector_index", "chunk_embedding"))
     trace = trace_vector_search(
         query=query,
         top_k_chunks=top_k_chunks,
         candidate_pool_k=int(profile["candidate_pool_k"]),
         final_rerank=str(profile["final_rerank"]),
         cfg=cfg,
+        vector_index=vector_index,
     )
     return {
         "chunks": trace["chunks"],
-        "trace": _compact_vector_trace(trace, top_k_chunks=top_k_chunks),
+        "trace": _compact_vector_trace(
+            trace,
+            top_k_chunks=top_k_chunks,
+            vector_index=vector_index,
+        ),
     }
 
 
@@ -248,96 +255,39 @@ def agent_financial_search(
     }
 
 
-# Graph, vector, and financial use agent-specific adapters so retrieval traces
-# stay compact and evaluation-ready. Other tools keep their existing contract.
-RETRIEVERS: dict[str, Callable] = {
-    "vector": agent_vector_search,
-    "graph": agent_graph_search,
-    "hybrid": hybrid_search,
-    "financial": agent_financial_search,
-    "news": news_search,
-}
+def agent_news_search(
+    query: str,
+    top_k_chunks: int,
+    cfg,
+) -> RetrieverResult:
+    """Adapt News retrieval to the Agent's shared chunks-plus-trace contract."""
+    result = news_search(
+        query=query,
+        top_k_chunks=top_k_chunks,
+        cfg=cfg,
+    )
+    if isinstance(result, dict):
+        chunks = list(result.get("chunks") or [])
+        trace = dict(result.get("trace") or {})
+    else:
+        chunks = list(result or [])
+        trace = {}
 
-
-TOOL_SCHEMAS: list[dict] = [
-    {
-        "type" : "function",
-        "function": {
-            "name": "graph",
-            "description": "Relational reasoning across entities — supplier chains, customer relationships, subsidiaries, competitive positioning (X → Y → Z multi-hop paths in a knowledge graph)",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "A natural language question to query the knowledge graph.",
-                    }
-                },
-                "required": ["query"],
-            }
-        }
-    },
-
-    {
-        "type" : "function",
-        "function": {
-            "name": "vector",
-            "description": "semantic similarity search over SEC filing narrative — business strategy, product descriptions, risk factors, management commentary. Use when the question asks what a company SAYS or DESCRIBES about a topic",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "The input text to retrieve vector embeddings for.",
-                    }
-                },
-                "required": ["query"],
-            }
-        }
-    },
-
-    {
-        "type": "function",
-        "function": {
-            "name": "financial",
-            "description": (
-                "Query structured financial facts and deterministic metrics "
-                "from local PostgreSQL. Use for revenue, profit, margins, "
-                "growth, ratios, cash flow, valuation snapshots, and comparisons."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": (
-                            "Natural-language financial question. The Financial "
-                            "Tool resolves ticker, metric, period, and operation."
-                        ),
-                    },
-                },
-                "required": ["query"],
-            },
+    return {
+        "chunks": chunks,
+        "trace": {
+            "retriever": "news",
+            "profile": "finnhub_news_v1",
+            **trace,
+            "returned_chunk_ids": _chunk_ids(chunks),
         },
-    },
-
-    {
-        "type" : "function",
-        "function": {
-            "name": "news",
-            "description": "Retrieve the latest news articles and updates based on a natural language query. This tool can access news databases and APIs to provide relevant information such as recent events, market news, company announcements, and other newsworthy topics.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "A natural language question to retrieve the latest news articles and updates.",
-                    }
-                },
-                "required": ["query"],
-            }
-        }
     }
 
 
-]
+# Every Agent Retriever returns the same chunks-plus-trace envelope.
+RETRIEVERS: dict[str, Callable[..., RetrieverResult]] = {
+    "vector": agent_vector_search,
+    "graph": agent_graph_search,
+    "financial": agent_financial_search,
+    "news": agent_news_search,
+}

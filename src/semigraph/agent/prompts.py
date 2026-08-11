@@ -62,8 +62,7 @@ These are the only valid tools. Never produce `hybrid` or another tool name.
 11. Every Evidence Requirement must be independently retrievable and self-contained, repeating its relevant explicit anchors. Requirements are evidence needs, not reasoning steps or instructions to the answer model.
 12. Keep every `initial_action.query` self-contained, retrieval-oriented, and faithful to its Task intent and explicit anchors.
 13. Set `top_k_chunks` to a positive integer. Use `5` for a normal initial retrieval; do not inflate it merely because a question is complex.
-14. Use globally unique IDs in execution order: `T1` through `T5` for tasks and `T1-R1`, `T1-R2`, `T2-R1`, and so on for Requirements.
-15. Return raw JSON only. No markdown fences, explanation, comments, or extra keys.
+14. Return raw JSON only. No markdown fences, explanation, comments, or extra keys.
 
 ## Tool-choice checks
 
@@ -78,11 +77,9 @@ These are the only valid tools. Never produce `hybrid` or another tool name.
 {
   "tasks": [
     {
-      "task_id": "T1",
       "query": "self-contained retrieval objective",
       "requirements": [
         {
-          "requirement_id": "T1-R1",
           "description": "one evidence claim required by this task"
         }
       ],
@@ -95,25 +92,25 @@ These are the only valid tools. Never produce `hybrid` or another tool name.
   ]
 }
 
-The root object must contain exactly `tasks`. Each task must contain exactly `task_id`, `query`, `requirements`, and `initial_action`. Each requirement must contain exactly `requirement_id` and `description`. Each initial action must contain exactly `tool`, `query`, and `top_k_chunks`.
+The root object must contain exactly `tasks`. Each task must contain exactly `query`, `requirements`, and `initial_action`. Each requirement must contain exactly `description`. Each initial action must contain exactly `tool`, `query`, and `top_k_chunks`.
 
 ## Examples
 
 Example 1 — preserve a connected Graph chain:
 Input: "How could TSMC capacity constraints expose AMD's data-center products through AMD's foundry dependency?"
-Output: {"tasks":[{"task_id":"T1","query":"How could TSMC capacity constraints expose AMD's data-center products through AMD's foundry dependency?","requirements":[{"requirement_id":"T1-R1","description":"Evidence of the connected path from AMD's data-center products through AMD's foundry dependency to TSMC capacity constraints and supply exposure."}],"initial_action":{"tool":"graph","query":"How could TSMC capacity constraints expose AMD's data-center products through AMD's foundry dependency?","top_k_chunks":5}}]}
+Output: {"tasks":[{"query":"How could TSMC capacity constraints expose AMD's data-center products through AMD's foundry dependency?","requirements":[{"description":"Evidence of the connected path from AMD's data-center products through AMD's foundry dependency to TSMC capacity constraints and supply exposure."}],"initial_action":{"tool":"graph","query":"How could TSMC capacity constraints expose AMD's data-center products through AMD's foundry dependency?","top_k_chunks":5}}]}
 
 Example 2 — split independent Graph and Financial evidence:
 Input: "AMD พึ่งพา TSMC อย่างไร และ gross margin ของ AMD ใน FY2025 เท่าไร?"
-Output: {"tasks":[{"task_id":"T1","query":"AMD พึ่งพา TSMC อย่างไร?","requirements":[{"requirement_id":"T1-R1","description":"หลักฐานความสัมพันธ์ด้าน supplier, foundry หรือ dependency ระหว่าง AMD และ TSMC"}],"initial_action":{"tool":"graph","query":"AMD พึ่งพา TSMC อย่างไร?","top_k_chunks":5}},{"task_id":"T2","query":"gross margin ของ AMD ใน FY2025 เท่าไร?","requirements":[{"requirement_id":"T2-R1","description":"ค่า gross margin ของ AMD สำหรับ FY2025"}],"initial_action":{"tool":"financial","query":"AMD gross margin FY2025","top_k_chunks":5}}]}
+Output: {"tasks":[{"query":"AMD พึ่งพา TSMC อย่างไร?","requirements":[{"description":"หลักฐานความสัมพันธ์ด้าน supplier, foundry หรือ dependency ระหว่าง AMD และ TSMC"}],"initial_action":{"tool":"graph","query":"AMD พึ่งพา TSMC อย่างไร?","top_k_chunks":5}},{"query":"gross margin ของ AMD ใน FY2025 เท่าไร?","requirements":[{"description":"ค่า gross margin ของ AMD สำหรับ FY2025"}],"initial_action":{"tool":"financial","query":"AMD gross margin FY2025","top_k_chunks":5}}]}
 
 Example 3 — expose independent facts as separate Requirements:
 Input: "What was the ratio of software amortization in 2021 to Other segment operating profit in 2022?"
-Output: {"tasks":[{"task_id":"T1","query":"Evidence needed to calculate the ratio of software amortization in 2021 to Other segment operating profit in 2022.","requirements":[{"requirement_id":"T1-R1","description":"Evidence of software amortization in 2021."},{"requirement_id":"T1-R2","description":"Evidence of Other segment operating profit in 2022."}],"initial_action":{"tool":"graph","query":"Evidence needed to calculate the ratio of software amortization in 2021 to Other segment operating profit in 2022.","top_k_chunks":5}}]}
+Output: {"tasks":[{"query":"Evidence needed to calculate the ratio of software amortization in 2021 to Other segment operating profit in 2022.","requirements":[{"description":"Evidence of software amortization in 2021."},{"description":"Evidence of Other segment operating profit in 2022."}],"initial_action":{"tool":"graph","query":"Evidence needed to calculate the ratio of software amortization in 2021 to Other segment operating profit in 2022.","top_k_chunks":5}}]}
 
 Example 4 — metric wording does not force Financial for narrative evidence:
 Input: "What does NVIDIA's filing say caused its gross-margin pressure in FY2025?"
-Output: {"tasks":[{"task_id":"T1","query":"What does NVIDIA's filing say caused its gross-margin pressure in FY2025?","requirements":[{"requirement_id":"T1-R1","description":"Filing narrative identifying causes of NVIDIA's gross-margin pressure in FY2025."}],"initial_action":{"tool":"vector","query":"NVIDIA filing causes of gross-margin pressure FY2025","top_k_chunks":5}}]}
+Output: {"tasks":[{"query":"What does NVIDIA's filing say caused its gross-margin pressure in FY2025?","requirements":[{"description":"Filing narrative identifying causes of NVIDIA's gross-margin pressure in FY2025."}],"initial_action":{"tool":"vector","query":"NVIDIA filing causes of gross-margin pressure FY2025","top_k_chunks":5}}]}
 
 Now produce the retrieval plan for the original question.
 """
@@ -183,6 +180,47 @@ ASSESS_SYSTEM_PROMPT: str = _ASSESS_SYSTEM_PROMPT_TEMPLATE.replace(
     "{{TOOL_RETRY_CAPABILITIES}}",
     build_tool_retry_capability_summary(TOOL_RETRY_PROFILES),
 )
+
+
+_LOCKED_ASSESS_POLICIES = {
+    "vector": """
+## !RULE : Locked Vector Evaluation
+
+This evaluation uses the `vector` Tool only.
+- `next_action.tool` must always be `vector`.
+- The only allowed same-Tool `retry_strategy` is `focus_missing`.
+- `focus_missing`: Rewrite the retrieval query to target only the uncovered
+  Requirement. Preserve the original company, year, metric, and other explicit
+  constraints. Do not repeat the previous query or change only `top_k`.
+- Do not use `switch_tool`, Graph, Financial, or News.
+""".strip(),
+    "graph": """
+## !RULE : Locked Graph Evaluation
+
+This evaluation uses the `graph` Tool only.
+- `next_action.tool` must always be `graph`.
+- Allowed same-Tool `retry_strategy` values are `anchor_enrichment`,
+  `focus_missing`, and `bridge_hint`.
+- Keep every retry query grounded in the original entities and relationships.
+- Do not use `switch_tool`, Vector, Financial, or News.
+""".strip(),
+}
+
+
+def build_assess_system_prompt(locked_tool: str | None = None) -> str:
+    """Return an optional tool-specific prompt for locked evaluations.
+
+    The legacy ``ASSESS_SYSTEM_PROMPT`` remains unchanged. Callers opt into
+    the extra locked-evaluation rules explicitly with ``locked_tool``.
+    """
+    if locked_tool is None:
+        return ASSESS_SYSTEM_PROMPT
+
+    try:
+        policy = _LOCKED_ASSESS_POLICIES[locked_tool]
+    except KeyError as exc:
+        raise ValueError(f"Unsupported locked tool: {locked_tool}") from exc
+    return f"{ASSESS_SYSTEM_PROMPT}\n\n{policy}"
 
 
 SYNTHESIZE_ATTEMPTS_SYSTEM_PROMPT: str = """

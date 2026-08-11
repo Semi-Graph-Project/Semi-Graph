@@ -2,7 +2,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
 
 from semigraph.agent import nodes
-from semigraph.agent.state import AgentState
+from semigraph.agent.state import AgentState, TaskWorkerState
 from semigraph.config import get_config
 
 
@@ -41,7 +41,7 @@ def _apply_action_policy(
     return result
 
 
-def _dispatch_tasks(state: AgentState) -> list[Send] | str:
+def _send_tasks(state: AgentState) -> list[Send] | str:
     """Fan out one isolated worker for every planned Task."""
     tasks = state.get("tasks") or []
     if not tasks:
@@ -58,15 +58,10 @@ def _dispatch_tasks(state: AgentState) -> list[Send] | str:
     ]
 
 
-def _route_after_execute(state: AgentState) -> str:
+def _route_after_execute(state: TaskWorkerState) -> str:
     attempts = state.get("attempts") or []
-    tasks = state.get("tasks") or []
-    index = state.get("current_task_index")
-    task_id = (
-        tasks[index].get("task_id")
-        if isinstance(index, int) and 0 <= index < len(tasks)
-        else None
-    )
+    task = state.get("task") or {}
+    task_id = task.get("task_id") if isinstance(task, dict) else None
     latest = attempts[-1] if attempts else {}
 
     if (
@@ -78,7 +73,7 @@ def _route_after_execute(state: AgentState) -> str:
     return "execute" if state.get("current_action") else "end"
 
 
-def _route_after_assess(state: AgentState) -> str:
+def _route_after_assess(state: TaskWorkerState) -> str:
     return "execute" if state.get("current_action") else "end"
 
 
@@ -101,7 +96,6 @@ def _collect_task_results(state: AgentState) -> dict:
     update = {
         "attempts": attempts,
         "completed_tasks": completed_tasks,
-        "current_action": {},
     }
     if completed_tasks:
         update["stop_reason"] = completed_tasks[-1]["stop_reason"]
@@ -131,7 +125,7 @@ def build_agent(
             top_k,
         )
 
-    def assess(state: AgentState) -> dict:
+    def assess(state: TaskWorkerState) -> dict:
         policy_state = {**state, "_locked_tool": locked_tool}
         return _apply_action_policy(
             nodes.assess_node(policy_state),
@@ -139,7 +133,7 @@ def build_agent(
             top_k,
         )
 
-    task_workflow = StateGraph(AgentState)
+    task_workflow = StateGraph(TaskWorkerState)
     task_workflow.add_node("execute", nodes.execute_attempt_node)
     task_workflow.add_node("assess", assess)
     task_workflow.add_edge(START, "execute")
@@ -159,17 +153,15 @@ def build_agent(
         task = state["task"]
         result = task_graph.invoke({
             "original_query": state.get("original_query", ""),
-            "tasks": [task],
-            "current_task_index": 0,
+            "task": task,
             "current_action": dict(task["initial_action"]),
             "attempts": [],
-            "completed_tasks": [],
         })
-        completion = (result.get("completed_tasks") or [{
+        completion = result.get("completion") or {
             "task_id": task["task_id"],
             "sufficient": False,
             "stop_reason": result.get("stop_reason") or "unsupported",
-        }])[-1]
+        }
         return {
             "task_results": [{
                 "task_id": task["task_id"],
@@ -180,16 +172,14 @@ def build_agent(
 
     workflow = StateGraph(AgentState)
     workflow.add_node("plan_route", plan_route)
-    workflow.add_node("dispatcher", lambda _state: {})
     workflow.add_node("task_worker", task_worker)
     workflow.add_node("collector", _collect_task_results)
     workflow.add_node("synthesize", nodes.synthesize_attempts_node)
 
     workflow.add_edge(START, "plan_route")
-    workflow.add_edge("plan_route", "dispatcher")
     workflow.add_conditional_edges(
-        "dispatcher",
-        _dispatch_tasks,
+        "plan_route",
+        _send_tasks,
         {"collector": "collector"},
     )
     workflow.add_edge("task_worker", "collector")

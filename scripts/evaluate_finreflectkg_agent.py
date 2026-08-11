@@ -34,13 +34,14 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from semigraph.agent.graph import build_agent  # noqa: E402
+from semigraph.agent.contracts import DEFAULT_TOP_K  # noqa: E402
 from semigraph.agent.ledger import (  # noqa: E402
     retrieval_traces,
     retrieved_chunks,
+    select_synthesis_chunks,
     tool_calls,
 )
-from semigraph.agent.nodes import _select_synthesis_chunks  # noqa: E402
-from semigraph.agent.tools import DEFAULT_TOP_K  # noqa: E402
+from semigraph.config import get_config  # noqa: E402
 
 
 DEFAULT_DATASET = ROOT / "benchmark" / "datasets" / "finreflectkg_sox_strict74.yaml"
@@ -169,7 +170,10 @@ def _deduped_chunks(state: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _synthesis_chunks(state: dict[str, Any]) -> list[dict[str, Any]]:
     """Recreate the exact Attempt Ledger selection used by Synthesis."""
-    return _select_synthesis_chunks(state.get("attempts", []) or [])
+    return select_synthesis_chunks(
+        state.get("attempts", []) or [],
+        max_total=get_config().agent_max_synthesis_chunks,
+    )
 
 
 def _evidence_pool_chunks(state: dict[str, Any]) -> list[dict[str, Any]]:
@@ -177,7 +181,7 @@ def _evidence_pool_chunks(state: dict[str, Any]) -> list[dict[str, Any]]:
     attempts = state.get("attempts", []) or []
     raw_count = sum(len(attempt.get("chunks") or []) for attempt in attempts)
     limit = max(1, raw_count)
-    return _select_synthesis_chunks(
+    return select_synthesis_chunks(
         attempts,
         max_per_task=limit,
         max_total=limit,

@@ -100,7 +100,7 @@ agent_retrieval:
     final_rerank: "none"
   graph:
     top_k_entities: 20
-    top_k_triples: 10
+    top_k_triples: 5
     top_k_chunk_seeds: 5
     chunk_seed_vector_index: "chunk_embedding"
     damping: 0.3
@@ -111,7 +111,7 @@ agent_retrieval:
     final_rerank: "none"
     ppr_seed_weight_mode: "similarity_specificity"
     ppr_graph_mode: "entity_chunk"
-    triple_filter: "llm"
+    triple_filter: "none"
 
 # Agent harness budgets. Keep operational limits in config rather than Prompt.
 agent_harness:
@@ -119,6 +119,7 @@ agent_harness:
   max_attempts_per_task: 3
   max_assessment_attempts: 2
   max_technical_retries: 1
+  max_synthesis_chunks: 10
   assess_context_max_chars: 60000
 
 # KG Extraction

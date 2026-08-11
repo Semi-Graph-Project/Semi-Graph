@@ -6,6 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 import semigraph.agent.contracts as contracts
+import semigraph.agent.ledger as ledger
 import semigraph.agent.nodes as nodes
 from semigraph.agent.contracts import AssessmentOutput
 from semigraph.agent.retry_policy import (
@@ -75,7 +76,7 @@ def test_retry_requires_strategy_and_action(field):
         AssessmentOutput.model_validate(payload)
 
 
-def test_non_retry_forbids_retry_fields_and_duplicate_ids():
+def test_non_retry_forbids_retry_fields_and_requires_accepted_evidence():
     payload = _accept_payload()
     payload["retry_strategy"] = "focus_missing"
     with pytest.raises(ValidationError):
@@ -86,21 +87,28 @@ def test_non_retry_forbids_retry_fields_and_duplicate_ids():
     with pytest.raises(ValidationError):
         AssessmentOutput.model_validate(payload)
 
+
+def test_assessment_contract_leaves_duplicate_ids_to_context_handling():
     payload = _accept_payload()
     payload["accepted_chunk_ids"] *= 2
-    with pytest.raises(ValidationError):
-        AssessmentOutput.model_validate(payload)
-
-    payload = _accept_payload()
     payload["covered_requirement_ids"] *= 2
-    with pytest.raises(ValidationError):
-        AssessmentOutput.model_validate(payload)
+
+    output = AssessmentOutput.model_validate(payload)
+
+    assert output.accepted_chunk_ids == ["C1", "C1"]
+    assert output.covered_requirement_ids == ["R1", "R1"]
+    assert validate_assessment_context(output, _task(), {"C1"}) == []
 
 
 def test_contract_and_state_keep_only_lean_ticket03_models():
-    from semigraph.agent.state import AgentState
+    from semigraph.agent.state import AgentState, TaskWorkerState
 
     assert "attempts" in AgentState.__annotations__
+    assert "current_task_index" not in AgentState.__annotations__
+    assert "current_action" not in AgentState.__annotations__
+    assert "task" in TaskWorkerState.__annotations__
+    assert "current_task_index" not in TaskWorkerState.__annotations__
+    assert "tasks" not in TaskWorkerState.__annotations__
     for field in ("evidence_pool", "accepted_evidence", "requirement_coverage"):
         assert field not in AgentState.__annotations__
     for model in ("RequirementCoverage", "RetryFeedback", "FailureType"):
@@ -127,6 +135,23 @@ def test_assess_prompt_matches_lean_contract_and_retry_registry():
     assert "generic HyDE" in ASSESS_SYSTEM_PROMPT
     assert "hybrid" not in ASSESS_SYSTEM_PROMPT.casefold()
     assert "useful partial evidence" in ASSESS_SYSTEM_PROMPT
+
+
+def test_locked_eval_assess_prompt_is_opt_in_and_vector_specific():
+    from semigraph.agent.prompts import (
+        ASSESS_SYSTEM_PROMPT,
+        build_assess_system_prompt,
+    )
+
+    assert build_assess_system_prompt() == ASSESS_SYSTEM_PROMPT
+
+    prompt = build_assess_system_prompt("vector")
+    assert "Locked Vector Evaluation" in prompt
+    assert "focus_missing" in prompt
+    assert "next_action.tool` must always be `vector`" in prompt
+
+    with pytest.raises(ValueError, match="Unsupported locked tool"):
+        build_assess_system_prompt("financial")
 
 
 def test_context_validator_checks_only_real_task_and_chunk_ids():
@@ -324,15 +349,14 @@ def _working_context_state() -> dict:
     }
     return {
         "original_query": "How does NVDA depend on TSMC in FY2025?",
-        "tasks": [_task()],
-        "current_task_index": 0,
+        "task": _task(),
         "current_action": latest["action"],
         "attempts": [previous, latest],
     }
 
 
 def test_working_context_is_derived_from_ledger_and_compact():
-    context = nodes._build_assess_context(
+    context = ledger.build_assess_context(
         _working_context_state(),
         SimpleNamespace(agent_assess_context_max_chars=60_000),
     )
@@ -353,7 +377,7 @@ def test_working_context_is_bounded_without_old_raw_history():
     state["attempts"][-1]["chunks"][0]["text"] = "latest " * 1_000
     cfg = SimpleNamespace(agent_assess_context_max_chars=2_000)
 
-    context = nodes._build_assess_context(state, cfg)
+    context = ledger.build_assess_context(state, cfg)
 
     assert len(context) <= cfg.agent_assess_context_max_chars
     assert "OLD_SECRET_TAIL" not in context
@@ -421,46 +445,13 @@ def test_assess_accepts_task_and_stores_lean_envelope(monkeypatch):
     assert envelope["output"]["accepted_chunk_ids"] == ["C1"]
     assert envelope["controller"]["decision"] == "accept"
     assert result["stop_reason"] == "sufficient"
-    assert result["completed_tasks"] == [{
+    assert result["completion"] == {
         "task_id": "T1",
         "sufficient": True,
         "stop_reason": "sufficient",
-    }]
+    }
     assert "accepted_evidence" not in result
     assert "requirement_coverage" not in result
-
-
-def test_assess_completed_task_starts_next_task_initial_action(monkeypatch):
-    state = _assess_state()
-    next_action = {
-        "tool": "vector",
-        "query": "NVDA FY2025 revenue filing narrative",
-        "top_k_chunks": 5,
-    }
-    state["tasks"].append({
-        "task_id": "T2",
-        "query": next_action["query"],
-        "requirements": [{
-            "requirement_id": "R2",
-            "description": "Filing narrative evidence",
-        }],
-        "initial_action": next_action,
-    })
-
-    result, _ = _run_assess(
-        monkeypatch,
-        state,
-        [json.dumps(_accept_payload())],
-    )
-
-    assert result["completed_tasks"] == [{
-        "task_id": "T1",
-        "sufficient": True,
-        "stop_reason": "sufficient",
-    }]
-    assert result["current_task_index"] == 1
-    assert result["current_action"] == next_action
-    assert result["stop_reason"] is None
 
 
 def test_assess_stop_records_insufficient_completion(monkeypatch):
@@ -470,11 +461,11 @@ def test_assess_stop_records_insufficient_completion(monkeypatch):
         [json.dumps(_stop_payload())],
     )
 
-    assert result["completed_tasks"] == [{
+    assert result["completion"] == {
         "task_id": "T1",
         "sufficient": False,
         "stop_reason": "unsupported",
-    }]
+    }
     assert result["current_action"] == {}
     assert result["stop_reason"] == "unsupported"
 
@@ -494,8 +485,7 @@ def test_assess_returns_controller_approved_retry(monkeypatch):
     )
 
     assert result["current_action"] == payload["next_action"]
-    assert "current_task_index" not in result
-    assert "completed_tasks" not in result
+    assert "completion" not in result
     gain = result["attempts"][-1]["assessment"]["trace"]["evidence_gain"]
     assert gain["new_accepted_chunk_ids"] == ["C1"]
 
@@ -535,84 +525,47 @@ def test_assess_provider_error_fails_open_without_repair(monkeypatch):
     ]
 
 
-def _build_ticket03_component_graph():
+def _build_task_worker_component_graph():
     from langgraph.graph import END, START, StateGraph
-    from semigraph.agent.state import AgentState
+    from semigraph.agent.state import TaskWorkerState
 
     def route_after_execute(state):
         attempts = state.get("attempts") or []
-        if not attempts:
-            return "end"
-        if attempts[-1].get("retrieval_status") == "tool_error":
-            return "next_task" if state.get("current_action") else "end"
-        return "assess"
+        latest = attempts[-1] if attempts else {}
+        if (
+            latest.get("retrieval_status") == "ok"
+            and latest.get("assessment") is None
+        ):
+            return "assess"
+        return "execute" if state.get("current_action") else "end"
 
     def route_after_assess(state):
-        if state.get("stop_reason") or not state.get("current_action"):
-            return "end"
-        return "retry"
+        return "execute" if state.get("current_action") else "end"
 
-    workflow = StateGraph(AgentState)
+    workflow = StateGraph(TaskWorkerState)
     workflow.add_node("execute", nodes.execute_attempt_node)
     workflow.add_node("assess", nodes.assess_node)
     workflow.add_edge(START, "execute")
     workflow.add_conditional_edges(
         "execute",
         route_after_execute,
-        {"assess": "assess", "next_task": "execute", "end": END},
+        {"execute": "execute", "assess": "assess", "end": END},
     )
     workflow.add_conditional_edges(
         "assess",
         route_after_assess,
-        {"retry": "execute", "end": END},
+        {"execute": "execute", "end": END},
     )
     return workflow.compile()
 
 
-def _build_ticket04_component_graph(synthesis_calls):
-    from langgraph.graph import END, START, StateGraph
-    from semigraph.agent.state import AgentState
-
-    def route_after_execute(state):
-        latest = (state.get("attempts") or [])[-1]
-        if latest.get("retrieval_status") == "tool_error":
-            return "execute" if state.get("current_action") else "synthesize"
-        return "assess"
-
-    def route_after_assess(state):
-        return "execute" if state.get("current_action") else "synthesize"
-
-    def synthesize(state):
-        synthesis_calls.append(True)
-        return nodes.synthesize_attempts_node(state)
-
-    workflow = StateGraph(AgentState)
-    workflow.add_node("execute", nodes.execute_attempt_node)
-    workflow.add_node("assess", nodes.assess_node)
-    workflow.add_node("synthesize", synthesize)
-    workflow.add_edge(START, "execute")
-    workflow.add_conditional_edges(
-        "execute",
-        route_after_execute,
-        {"execute": "execute", "assess": "assess", "synthesize": "synthesize"},
-    )
-    workflow.add_conditional_edges(
-        "assess",
-        route_after_assess,
-        {"execute": "execute", "synthesize": "synthesize"},
-    )
-    workflow.add_edge("synthesize", END)
-    return workflow.compile()
-
-
-def _ticket03_state(query="NVDA FY2025 revenue") -> dict:
+def _task_worker_state(query="NVDA FY2025 revenue") -> dict:
     action = {"tool": "graph", "query": query, "top_k_chunks": 5}
     task = _task()
     task.update(query=query, initial_action=action)
     return {
         "original_query": query,
-        "tasks": [task],
-        "current_task_index": 0,
+        "task": task,
         "current_action": action,
         "attempts": [],
     }
@@ -624,6 +577,7 @@ def _patch_component(monkeypatch, llm, retrievers):
         agent_max_assessment_attempts=2,
         agent_assess_context_max_chars=60_000,
         agent_max_attempts_per_task=3,
+        agent_max_synthesis_chunks=10,
     )
     monkeypatch.setattr(nodes, "get_config", lambda: cfg)
     monkeypatch.setattr(nodes, "get_llm", lambda _: llm)
@@ -636,12 +590,12 @@ def _sequenced_retriever(tool, outputs, calls):
 
     def retrieve(**kwargs):
         calls.append((tool, kwargs["query"]))
-        return next(outputs)
+        return {"chunks": next(outputs), "trace": {}}
 
     return retrieve
 
 
-def test_component_recovers_with_graph_hint(monkeypatch):
+def test_task_worker_recovers_with_graph_hint(monkeypatch):
     retry = _retry_payload()
     accept = _accept_payload()
     llm = _FakeAssessLLM([json.dumps(retry), json.dumps(accept)])
@@ -653,8 +607,8 @@ def test_component_recovers_with_graph_hint(monkeypatch):
     )
     _patch_component(monkeypatch, llm, {"graph": graph})
 
-    result = _build_ticket03_component_graph().invoke(
-        _ticket03_state(), config={"recursion_limit": 8}
+    result = _build_task_worker_component_graph().invoke(
+        _task_worker_state(), config={"recursion_limit": 8}
     )
 
     assert len(result["attempts"]) == 2
@@ -665,7 +619,7 @@ def test_component_recovers_with_graph_hint(monkeypatch):
     assert result["stop_reason"] == "sufficient"
 
 
-def test_component_uses_llm_selected_tool_switch(monkeypatch):
+def test_task_worker_uses_llm_selected_tool_switch(monkeypatch):
     retry = _retry_payload()
     retry.update(retry_strategy="switch_tool")
     retry["next_action"].update(
@@ -687,15 +641,15 @@ def test_component_uses_llm_selected_tool_switch(monkeypatch):
     }
     _patch_component(monkeypatch, llm, retrievers)
 
-    result = _build_ticket03_component_graph().invoke(
-        _ticket03_state(), config={"recursion_limit": 8}
+    result = _build_task_worker_component_graph().invoke(
+        _task_worker_state(), config={"recursion_limit": 8}
     )
 
     assert [tool for tool, _ in calls] == ["graph", "vector"]
     assert result["stop_reason"] == "sufficient"
 
 
-def test_component_requires_second_attempt_gain_for_third(monkeypatch):
+def test_task_worker_requires_second_attempt_gain_for_third(monkeypatch):
     first = _retry_payload()
     second = deepcopy(first)
     second["next_action"]["query"] = "NVDA FY2025 revenue bridge"
@@ -704,133 +658,17 @@ def test_component_requires_second_attempt_gain_for_third(monkeypatch):
     graph = _sequenced_retriever("graph", [[], []], calls)
     _patch_component(monkeypatch, llm, {"graph": graph})
 
-    result = _build_ticket03_component_graph().invoke(
-        _ticket03_state(), config={"recursion_limit": 8}
+    result = _build_task_worker_component_graph().invoke(
+        _task_worker_state(), config={"recursion_limit": 8}
     )
 
     assert len(calls) == 2
     assert result["stop_reason"] == "no_evidence_gain"
 
 
-def test_component_tool_error_does_not_block_next_task(monkeypatch):
-    second_action = {
-        "tool": "vector",
-        "query": "NVDA FY2025 revenue filing narrative",
-        "top_k_chunks": 5,
-    }
-    state = _ticket03_state()
-    state["tasks"].append({
-        "task_id": "T2",
-        "query": second_action["query"],
-        "requirements": [{
-            "requirement_id": "R2",
-            "description": "Filing narrative evidence",
-        }],
-        "initial_action": second_action,
-    })
-
-    accepted = _accept_payload("C2")
-    accepted["covered_requirement_ids"] = ["R2"]
-    calls = []
-
-    def broken_graph(**kwargs):
-        calls.append(("graph", kwargs["query"]))
-        raise TimeoutError("unavailable")
-
-    retrievers = {
-        "graph": broken_graph,
-        "vector": _sequenced_retriever(
-            "vector",
-            [[{"chunk_id": "C2", "text": "filing evidence"}]],
-            calls,
-        ),
-    }
-    _patch_component(
-        monkeypatch,
-        _FakeAssessLLM([json.dumps(accepted)]),
-        retrievers,
-    )
-
-    result = _build_ticket03_component_graph().invoke(
-        state, config={"recursion_limit": 8}
-    )
-
-    assert [tool for tool, _ in calls] == ["graph", "vector"]
-    assert [item["retrieval_status"] for item in result["attempts"]] == [
-        "tool_error",
-        "ok",
-    ]
-    assert result["completed_tasks"] == [
-        {"task_id": "T1", "sufficient": False, "stop_reason": "tool_error"},
-        {"task_id": "T2", "sufficient": True, "stop_reason": "sufficient"},
-    ]
-
-
-def test_two_tasks_run_in_order_with_retry_and_one_synthesis(monkeypatch):
-    state = _ticket03_state()
-    state["tasks"].append({
-        "task_id": "T2",
-        "query": "NVDA FY2025 revenue filing narrative",
-        "requirements": [{
-            "requirement_id": "R2",
-            "description": "Filing narrative evidence",
-        }],
-        "initial_action": {
-            "tool": "vector",
-            "query": "NVDA FY2025 revenue filing narrative",
-            "top_k_chunks": 5,
-        },
-    })
-
-    retry = _retry_payload()
-    accept_t2 = _accept_payload("C2")
-    accept_t2["covered_requirement_ids"] = ["R2"]
-    llm = _FakeAssessLLM([
-        json.dumps(retry),
-        json.dumps(_accept_payload("C1")),
-        json.dumps(accept_t2),
-        "Combined answer [1] [2].",
-    ])
-    retrieval_calls = []
-    _patch_component(monkeypatch, llm, {
-        "graph": _sequenced_retriever(
-            "graph",
-            [[], [{"chunk_id": "C1", "text": "graph evidence"}]],
-            retrieval_calls,
-        ),
-        "vector": _sequenced_retriever(
-            "vector",
-            [[{"chunk_id": "C2", "text": "vector evidence"}]],
-            retrieval_calls,
-        ),
-    })
-    synthesis_calls = []
-
-    result = _build_ticket04_component_graph(synthesis_calls).invoke(
-        state, config={"recursion_limit": 12}
-    )
-
-    assert [tool for tool, _ in retrieval_calls] == [
-        "graph", "graph", "vector",
-    ]
-    assert [attempt["task_id"] for attempt in result["attempts"]] == [
-        "T1", "T1", "T2",
-    ]
-    assert [item["task_id"] for item in result["completed_tasks"]] == [
-        "T1", "T2",
-    ]
-    assert len(synthesis_calls) == 1
-    assert llm.calls == 4
-    assert result["final_answer"] == "Combined answer [1] [2]."
-    assert [item["chunk_id"] for item in result["citation_map"]] == [
-        "C1", "C2",
-    ]
-
-
 def _execute_state(attempts=None) -> dict:
     return {
-        "tasks": [{"task_id": "T1"}],
-        "current_task_index": 0,
+        "task": {"task_id": "T1"},
         "current_action": {
             "tool": "graph",
             "query": "NVDA FY2024 operating risk",
@@ -843,7 +681,14 @@ def _execute_state(attempts=None) -> dict:
 def _patch_execute(monkeypatch, retriever, technical_retries=1):
     cfg = SimpleNamespace(agent_max_technical_retries=technical_retries)
     monkeypatch.setattr(nodes, "get_config", lambda: cfg)
-    monkeypatch.setitem(nodes.RETRIEVERS, "graph", retriever)
+
+    def contract_retriever(**kwargs):
+        result = retriever(**kwargs)
+        if isinstance(result, dict):
+            return result
+        return {"chunks": result, "trace": {}}
+
+    monkeypatch.setitem(nodes.RETRIEVERS, "graph", contract_retriever)
 
 
 def test_execute_appends_raw_attempt_and_preserves_trace(monkeypatch):
@@ -921,6 +766,11 @@ def test_execute_records_terminal_tool_error(
     assert calls == expected_calls
     assert attempt["retrieval_status"] == "tool_error"
     assert attempt["chunks"] == []
+    assert result["completion"] == {
+        "task_id": "T1",
+        "sufficient": False,
+        "stop_reason": "tool_error",
+    }
     assert result["stop_reason"] == "tool_error"
 
 
@@ -972,7 +822,7 @@ def test_synthesis_selector_prioritizes_validated_newer_and_fail_open_last():
         },
     ]
 
-    result = nodes._select_synthesis_chunks(attempts)
+    result = ledger.select_synthesis_chunks(attempts)
 
     assert result == [new_c1, c2, accepted_other_task, fallback]
     assert result[0] is new_c1
@@ -999,7 +849,7 @@ def test_synthesis_selector_adds_bounded_raw_fallback_after_accepted():
         },
     ]
 
-    result = nodes._select_synthesis_chunks(attempts)
+    result = ledger.select_synthesis_chunks(attempts)
 
     assert result == [accepted, rejected_raw, fail_open]
 
@@ -1015,7 +865,7 @@ def test_synthesis_selector_uses_lower_ranks_when_budget_has_room():
         },
     }]
 
-    result = nodes._select_synthesis_chunks(attempts, max_total=4)
+    result = ledger.select_synthesis_chunks(attempts, max_total=4)
 
     assert result == chunks
 
@@ -1038,18 +888,27 @@ def test_synthesis_selector_allocates_per_task_then_global_fill():
         assessed_attempt("T3", ["C11", "C12"]),
     ]
 
-    result = nodes._select_synthesis_chunks(attempts)
+    result = ledger.select_synthesis_chunks(attempts)
 
     assert [chunk["chunk_id"] for chunk in result] == [
-        "C1", "C2", "C3", "C8", "C9", "C11", "C12", "C4", "C10",
+        "C1",
+        "C2",
+        "C3",
+        "C8",
+        "C9",
+        "C11",
+        "C12",
+        "C4",
+        "C10",
+        "C5",
     ]
-    assert len({chunk["chunk_id"] for chunk in result}) == 9
+    assert len({chunk["chunk_id"] for chunk in result}) == 10
 
 
-@pytest.mark.parametrize("max_per_task,max_total", [(0, 9), (3, 0)])
+@pytest.mark.parametrize("max_per_task,max_total", [(0, 10), (3, 0)])
 def test_synthesis_selector_requires_positive_limits(max_per_task, max_total):
     with pytest.raises(ValueError):
-        nodes._select_synthesis_chunks([], max_per_task, max_total)
+        ledger.select_synthesis_chunks([], max_per_task, max_total)
 
 
 class _FakeSynthesisLLM:
@@ -1093,7 +952,11 @@ def test_synthesize_attempts_node_returns_grounded_citations(monkeypatch):
     llm = _FakeSynthesisLLM(
         "AMD relies on TSMC for wafer fabrication [1]. Invalid [9]."
     )
-    monkeypatch.setattr(nodes, "get_config", lambda: SimpleNamespace())
+    monkeypatch.setattr(
+        nodes,
+        "get_config",
+        lambda: SimpleNamespace(agent_max_synthesis_chunks=10),
+    )
     monkeypatch.setattr(nodes, "get_llm", lambda _: llm)
 
     result = nodes.synthesize_attempts_node(_synthesis_state())
@@ -1109,6 +972,7 @@ def test_synthesize_attempts_node_returns_grounded_citations(monkeypatch):
         "ticker": "AMD",
     }]
     assert result["synthesis_trace"]["status"] == "ok"
+    assert result["synthesis_trace"]["max_chunks"] == 10
     assert result["synthesis_trace"]["selected_chunk_ids_by_task"] == {
         "T1": ["C1"],
     }
@@ -1123,6 +987,35 @@ def test_synthesize_attempts_node_returns_grounded_citations(monkeypatch):
         assert label in user_message
     assert "retrieval_trace" not in user_message
     assert "assessment" not in user_message
+
+
+def test_synthesize_attempts_node_uses_configured_chunk_limit(monkeypatch):
+    state = _synthesis_state()
+    chunks = [
+        {"chunk_id": f"C{index}", "text": f"Evidence {index}"}
+        for index in range(1, 5)
+    ]
+    state["attempts"][0]["chunks"] = chunks
+    state["attempts"][0]["assessment"]["output"]["accepted_chunk_ids"] = [
+        chunk["chunk_id"] for chunk in chunks
+    ]
+    llm = _FakeSynthesisLLM("Grounded answer [1] [2].")
+    monkeypatch.setattr(
+        nodes,
+        "get_config",
+        lambda: SimpleNamespace(agent_max_synthesis_chunks=2),
+    )
+    monkeypatch.setattr(nodes, "get_llm", lambda _: llm)
+
+    result = nodes.synthesize_attempts_node(state)
+
+    assert result["synthesis_trace"]["max_chunks"] == 2
+    assert result["synthesis_trace"]["selected_chunk_ids_by_task"] == {
+        "T1": ["C1", "C2"],
+    }
+    user_message = llm.calls[0][1]["content"]
+    assert "chunk_id=C2" in user_message
+    assert "chunk_id=C3" not in user_message
 
 
 def test_synthesize_attempts_node_skips_llm_without_evidence(monkeypatch):
@@ -1145,7 +1038,11 @@ def test_synthesize_attempts_node_skips_llm_without_evidence(monkeypatch):
 
 def test_synthesize_attempts_node_records_provider_error(monkeypatch):
     llm = _FakeSynthesisLLM(TimeoutError("provider unavailable"))
-    monkeypatch.setattr(nodes, "get_config", lambda: SimpleNamespace())
+    monkeypatch.setattr(
+        nodes,
+        "get_config",
+        lambda: SimpleNamespace(agent_max_synthesis_chunks=10),
+    )
     monkeypatch.setattr(nodes, "get_llm", lambda _: llm)
 
     result = nodes.synthesize_attempts_node(_synthesis_state())
@@ -1173,7 +1070,11 @@ def test_synthesis_trace_groups_selected_ids_by_task(monkeypatch):
         "assessment": {"status": "fail_open", "output": None},
     })
     llm = _FakeSynthesisLLM("Grounded answer [1] [2].")
-    monkeypatch.setattr(nodes, "get_config", lambda: SimpleNamespace())
+    monkeypatch.setattr(
+        nodes,
+        "get_config",
+        lambda: SimpleNamespace(agent_max_synthesis_chunks=10),
+    )
     monkeypatch.setattr(nodes, "get_llm", lambda _: llm)
 
     result = nodes.synthesize_attempts_node(state)
