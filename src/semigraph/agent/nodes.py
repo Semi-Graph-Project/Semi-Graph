@@ -12,10 +12,9 @@ from semigraph.agent.contracts import (
 )
 from semigraph.agent.ledger import build_assess_context, select_synthesis_chunks
 from semigraph.agent.prompts import (
-    ASSESS_SYSTEM_PROMPT,
-    PLAN_ROUTE_SYSTEM_PROMPT,
     SYNTHESIZE_ATTEMPTS_SYSTEM_PROMPT,
     build_assess_system_prompt,
+    build_plan_route_system_prompt,
 )
 from semigraph.agent.retry_policy import (
     decide_retry,
@@ -87,7 +86,10 @@ def _normalize_plan_tasks(
     return tasks
 
 
-def plan_route_node(state: AgentState) -> dict:
+def plan_route_node(
+    state: AgentState,
+    locked_tool: str | None = None,
+) -> dict:
     started_at = time.perf_counter()
     original_query = state.get("original_query", "")
     attempts: list[dict] = []
@@ -113,8 +115,7 @@ def plan_route_node(state: AgentState) -> dict:
     original_query = original_query.strip()
     cfg = get_config()
     llm = get_llm(cfg)
-    system_prompt = PLAN_ROUTE_SYSTEM_PROMPT
-    locked_tool = state.get("_locked_tool")
+    system_prompt = build_plan_route_system_prompt(cfg)
     if locked_tool:
         system_prompt += (
             "\n\nEvaluation constraint: every initial_action.tool must be "
@@ -387,23 +388,17 @@ def _complete_task(
     }
 
 
-def assess_node(state: TaskWorkerState) -> dict:
+def assess_node(
+    state: TaskWorkerState,
+    locked_tool: str | None = None,
+) -> dict:
     """Assess the latest Attempt and let the controller approve any retry."""
     task = state["task"]
     latest = state["attempts"][-1]
 
     cfg = get_config()
     llm = get_llm(cfg)
-    locked_tool = state.get("_locked_tool")
-    if state.get("_assess_prompt_mode") == "locked_eval":
-        system_prompt = build_assess_system_prompt(locked_tool)
-    else:
-        system_prompt = ASSESS_SYSTEM_PROMPT
-    if locked_tool and state.get("_assess_prompt_mode") != "locked_eval":
-        system_prompt += (
-            "\n\nEvaluation constraint: if decision is retry, next_action.tool "
-            f'must remain "{locked_tool}". Tool switching is forbidden.'
-        )
+    system_prompt = build_assess_system_prompt(locked_tool)
     user_message = build_assess_context(state, cfg)
     llm_calls = 0
     started_at = time.perf_counter()

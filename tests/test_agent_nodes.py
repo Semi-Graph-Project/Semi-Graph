@@ -1,7 +1,10 @@
 from types import SimpleNamespace
 
 import semigraph.agent.nodes as nodes
-from semigraph.agent.prompts import build_financial_capability_summary
+from semigraph.agent.prompts import (
+    build_financial_capability_summary,
+    build_plan_route_system_prompt,
+)
 
 
 def _financial_chunk(**overrides):
@@ -40,12 +43,13 @@ def test_plan_route_financial_capabilities_come_from_registry():
     })
 
     summary = build_financial_capability_summary(cfg)
+    prompt = build_plan_route_system_prompt(cfg)
 
     assert "Reported metrics: revenue" in summary
     assert "Derived metrics: revenue_growth_yoy, roe" in summary
     assert "Snapshot metrics: pe_ttm" in summary
     assert "Never expand a derived metric" in summary
-    assert "revenue_growth_yoy" in nodes.PLAN_ROUTE_SYSTEM_PROMPT
+    assert summary in prompt
 
 
 def test_financial_synthesis_format_is_readable_and_keeps_raw_citation():

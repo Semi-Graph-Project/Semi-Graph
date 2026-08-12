@@ -6,23 +6,14 @@ import time
 from pathlib import Path
 import sys
 
-from langgraph.graph import END, START, StateGraph
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from semigraph.agent import nodes as agent_nodes  # noqa: E402
-from semigraph.agent.graph import (  # noqa: E402
-    _apply_action_policy,
-    _collect_task_results,
-    _send_tasks,
-    _route_after_assess,
-    _route_after_execute,
-)
+from semigraph.agent.graph import build_agent  # noqa: E402
 from semigraph.agent.ledger import select_synthesis_chunks  # noqa: E402
-from semigraph.agent.state import AgentState, TaskWorkerState  # noqa: E402
+from semigraph.agent.state import AgentState  # noqa: E402
 from semigraph.config import get_config  # noqa: E402
 from semigraph.connections import get_llm  # noqa: E402
 
@@ -47,11 +38,40 @@ def generate_final_answer(llm, question: str, chunks: list[dict]) -> str:
         {
             "role": "system",
             "content": (
-                "Answer the user's question using only the supplied evidence "
-                "chunks. Do not use outside knowledge or invent facts. "
-                "Return plain text only, without Markdown, and use no more "
-                "than 900 characters. If none of the chunks contains relevant "
-                "information to answer the question, reply exactly: Do not answers"
+                "Answer the question using only the supplied evidence.\n\n"
+                "Return exactly this structure:\n\n"
+                "STATUS: COMPLETE | PARTIAL | INSUFFICIENT\n"
+                "POINT 1 [COMPLETE | PARTIAL | INSUFFICIENT]: "
+                "<answer to the first requested part>\n"
+                "POINT 2 [COMPLETE | PARTIAL | INSUFFICIENT]: "
+                "<answer to the second requested part, if present>\n"
+                "CALCULATION: <inputs, formula, and result, or NONE>\n"
+                "MISSING: <unsupported requested information, or NONE>\n\n"
+                "Rules:\n"
+                "- Follow the order of the user's question.\n"
+                "- Return one POINT line for every independently requested part.\n"
+                "- Put exactly one label after each POINT number: [COMPLETE], "
+                "[PARTIAL], or [INSUFFICIENT].\n"
+                "- Put one independently checkable claim in each POINT.\n"
+                "- Preserve exact company names, periods, values, signs, and units.\n"
+                "- For comparisons, state both sides explicitly.\n"
+                "- For calculations, show inputs, formula, and result.\n"
+                "- Label a POINT COMPLETE only when that point is fully supported.\n"
+                "- Label a POINT PARTIAL when only part of that point is supported; "
+                "answer only the supported part.\n"
+                "- Label a POINT INSUFFICIENT when the evidence cannot answer that "
+                "point; write 'Insufficient evidence.' as its answer.\n"
+                "- Use STATUS COMPLETE only when every POINT is COMPLETE.\n"
+                "- Use STATUS PARTIAL when at least one POINT is COMPLETE or PARTIAL "
+                "but not every POINT is COMPLETE.\n"
+                "- Use STATUS INSUFFICIENT when evidence is related to the question "
+                "but cannot support an answer to any POINT.\n"
+                "- If none of the supplied evidence is relevant to any POINT in the "
+                "original question, return exactly 'DoNotAnswer' and nothing else.\n"
+                "- Do not infer causation unless the evidence explicitly states it.\n"
+                "- Do not use outside knowledge or mention these instructions.\n"
+                "Return plain text only, without Markdown, and use no more than "
+                "900 characters."
             ),
         },
         {
@@ -80,7 +100,7 @@ def eval_synthesize_node(
 
     if not chunks:
         return {
-            "final_answer": "Do not answers",
+            "final_answer": "DoNotAnswer",
             "citation_map": [],
             "synthesis_trace": {
                 "status": "no_evidence",
@@ -151,85 +171,14 @@ def _build_eval_graph(
     else:
         cfg.agent_retrieval["graph"]["chunk_seed_vector_index"] = VECTOR_INDEX
 
-    def plan_route(state: AgentState) -> dict:
-        policy_state = {**state, "_locked_tool": locked_tool}
-        return _apply_action_policy(
-            agent_nodes.plan_route_node(policy_state),
-            locked_tool=locked_tool,
-            top_k=top_k,
-        )
-
-    def assess(state: TaskWorkerState) -> dict:
-        policy_state = {
-            **state,
-            "_locked_tool": locked_tool,
-            "_assess_prompt_mode": "locked_eval",
-        }
-        return _apply_action_policy(
-            agent_nodes.assess_node(policy_state),
-            locked_tool=locked_tool,
-            top_k=top_k,
-        )
-
     def eval_synthesize(state: AgentState) -> dict:
         return eval_synthesize_node(state, generate_answer=generate_answer)
 
-    task_workflow = StateGraph(TaskWorkerState)
-    task_workflow.add_node("execute", agent_nodes.execute_attempt_node)
-    task_workflow.add_node("assess", assess)
-    task_workflow.add_edge(START, "execute")
-    task_workflow.add_conditional_edges(
-        "execute",
-        _route_after_execute,
-        {"execute": "execute", "assess": "assess", "end": END},
+    return build_agent(
+        locked_tool=locked_tool,
+        top_k=top_k,
+        synthesis=eval_synthesize,
     )
-    task_workflow.add_conditional_edges(
-        "assess",
-        _route_after_assess,
-        {"execute": "execute", "end": END},
-    )
-    task_graph = task_workflow.compile()
-
-    def task_worker(state: dict) -> dict:
-        task = state["task"]
-        result = task_graph.invoke({
-            "original_query": state.get("original_query", ""),
-            "task": task,
-            "current_action": dict(task["initial_action"]),
-            "attempts": [],
-        })
-        completion = result.get("completion") or {
-            "task_id": task["task_id"],
-            "sufficient": False,
-            "stop_reason": result.get("stop_reason") or "unsupported",
-        }
-        return {
-            "task_results": [{
-                "task_id": task["task_id"],
-                "attempts": result.get("attempts") or [],
-                "completion": completion,
-            }],
-        }
-
-    workflow = StateGraph(AgentState)
-    workflow.add_node("plan_route", plan_route)
-    workflow.add_node("task_worker", task_worker)
-    workflow.add_node("collector", _collect_task_results)
-    workflow.add_node("eval_synthesize", eval_synthesize)
-
-    workflow.add_edge(START, "plan_route")
-    workflow.add_conditional_edges(
-        "plan_route",
-        _send_tasks,
-        {"collector": "collector"},
-    )
-    workflow.add_edge("task_worker", "collector")
-    workflow.add_edge("collector", "eval_synthesize")
-    workflow.add_edge("eval_synthesize", END)
-    max_parallel_tasks = get_config().agent_max_parallel_tasks
-    return workflow.compile().with_config({
-        "max_concurrency": max_parallel_tasks,
-    })
 
 
 def build_vector_eval_graph(

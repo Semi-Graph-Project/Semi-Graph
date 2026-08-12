@@ -8,6 +8,7 @@ import pytest
 import semigraph.agent.graph as agent_graph
 import semigraph.agent.nodes as nodes
 from semigraph.agent.graph import build_agent
+from semigraph.agent.prompts import ASSESS_SYSTEM_PROMPT
 from semigraph.config import Config
 
 
@@ -19,7 +20,11 @@ class _FakeResponse:
 def _config():
     return SimpleNamespace(
         tickers=[],
-        financial_metric_registry={},
+        financial_metric_registry={
+            "reported": (),
+            "derived": (),
+            "snapshot": (),
+        },
         agent_max_attempts_per_task=3,
         agent_max_assessment_attempts=2,
         agent_max_technical_retries=0,
@@ -84,9 +89,9 @@ class _HarnessLLM:
     def invoke(self, messages):
         system = messages[0]["content"]
         self.system_prompts.append(system)
-        if system.startswith(nodes.PLAN_ROUTE_SYSTEM_PROMPT):
+        if system.startswith("You are PlanRoute for SemiGraph"):
             return _FakeResponse(self.plan)
-        if system.startswith(nodes.ASSESS_SYSTEM_PROMPT):
+        if system.startswith(ASSESS_SYSTEM_PROMPT):
             return _FakeResponse(next(self.assessments))
         if system == nodes.SYNTHESIZE_ATTEMPTS_SYSTEM_PROMPT:
             return _FakeResponse("Grounded answer [1]. Invalid citation [99].")
@@ -196,7 +201,7 @@ def test_tasks_run_in_parallel_and_collector_restores_plan_order(monkeypatch):
         for task_id in ("T1", "T2", "T3")
     ]
 
-    def plan_route(_state):
+    def plan_route(_state, locked_tool=None):
         return {"tasks": tasks}
 
     def execute(state):
@@ -227,7 +232,7 @@ def test_tasks_run_in_parallel_and_collector_restores_plan_order(monkeypatch):
         }
         return {"attempts": [attempt]}
 
-    def assess(state):
+    def assess(state, locked_tool=None):
         task_id = state["task"]["task_id"]
         attempts = list(state["attempts"])
         attempts[-1] = {
@@ -372,9 +377,9 @@ def test_locked_ablation_controls_initial_retry_and_top_k(
         attempt["action"]["top_k_chunks"] for attempt in result["attempts"]
     } == {7}
     assert all(
-        f'must remain "{locked_tool}"' in prompt
+        f"must always be `{locked_tool}`" in prompt
         for prompt in llm.system_prompts
-        if prompt.startswith(nodes.ASSESS_SYSTEM_PROMPT)
+        if prompt.startswith(ASSESS_SYSTEM_PROMPT)
     )
     assert result["stop_reason"] == "sufficient"
 

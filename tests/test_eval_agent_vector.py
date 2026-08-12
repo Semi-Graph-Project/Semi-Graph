@@ -1,5 +1,8 @@
-from eval_scripts import eval_agent
 from types import SimpleNamespace
+
+from eval_scripts import eval_agent
+import semigraph.agent.graph as agent_graph
+import semigraph.agent.nodes as agent_nodes
 
 
 class _FakeResponse:
@@ -41,6 +44,9 @@ def test_eval_synthesize_uses_assess_selected_chunks(monkeypatch):
     assert result["synthesis_trace"]["status"] == "ok"
     assert result["synthesis_trace"]["max_chunks"] == 10
     assert "chunk_id=C1" in llm.messages[0][1]["content"]
+    system_prompt = llm.messages[0][0]["content"]
+    assert "POINT 1 [COMPLETE | PARTIAL | INSUFFICIENT]" in system_prompt
+    assert "return exactly 'DoNotAnswer' and nothing else" in system_prompt
 
 
 def test_eval_synthesize_returns_exact_no_evidence_answer(monkeypatch):
@@ -57,32 +63,35 @@ def test_eval_synthesize_returns_exact_no_evidence_answer(monkeypatch):
         "attempts": [],
     })
 
-    assert result["final_answer"] == "Do not answers"
+    assert result["final_answer"] == "DoNotAnswer"
     assert result["synthesis_trace"]["status"] == "no_evidence"
 
 
-def test_vector_eval_graph_has_production_fanout_fanin_flow(monkeypatch):
-    monkeypatch.setattr(
-        eval_agent,
-        "get_config",
-        lambda: SimpleNamespace(
-            agent_max_parallel_tasks=2,
-            agent_max_synthesis_chunks=10,
-            neo4j_uri="",
-            agent_retrieval={"vector": {}},
-        ),
+def test_vector_eval_graph_uses_production_builder(monkeypatch):
+    cfg = SimpleNamespace(
+        neo4j_uri="",
+        agent_retrieval={"vector": {}},
     )
+    captured = {}
+    graph = object()
 
-    graph = eval_agent.build_vector_eval_graph(top_k=5)
+    def fake_build_agent(**kwargs):
+        captured.update(kwargs)
+        return graph
 
-    assert set(graph.get_graph().nodes) == {
-        "__start__",
-        "plan_route",
-        "task_worker",
-        "collector",
-        "eval_synthesize",
-        "__end__",
-    }
+    monkeypatch.setattr(eval_agent, "get_config", lambda: cfg)
+    monkeypatch.setattr(eval_agent, "build_agent", fake_build_agent)
+
+    result = eval_agent.build_vector_eval_graph(top_k=5)
+
+    assert result is graph
+    assert captured["locked_tool"] == "vector"
+    assert captured["top_k"] == 5
+    assert callable(captured["synthesis"])
+    assert cfg.neo4j_uri == eval_agent.NEO4J_URI
+    assert cfg.agent_retrieval["vector"]["vector_index"] == (
+        eval_agent.VECTOR_INDEX
+    )
 
 
 def test_agent_vector_search_accepts_eval_vector_index(monkeypatch):
@@ -122,16 +131,14 @@ def test_agent_vector_search_accepts_eval_vector_index(monkeypatch):
 
 
 def test_vector_eval_graph_runs_plan_execute_assess_and_eval_synthesis(monkeypatch):
-    monkeypatch.setattr(
-        eval_agent,
-        "get_config",
-        lambda: SimpleNamespace(
-            agent_max_parallel_tasks=2,
-            agent_max_synthesis_chunks=10,
-            neo4j_uri="",
-            agent_retrieval={"vector": {}},
-        ),
+    cfg = SimpleNamespace(
+        agent_max_parallel_tasks=2,
+        agent_max_synthesis_chunks=10,
+        neo4j_uri="",
+        agent_retrieval={"vector": {}},
     )
+    monkeypatch.setattr(eval_agent, "get_config", lambda: cfg)
+    monkeypatch.setattr(agent_graph, "get_config", lambda: cfg)
     monkeypatch.setattr(
         eval_agent,
         "get_llm",
@@ -152,7 +159,7 @@ def test_vector_eval_graph_runs_plan_execute_assess_and_eval_synthesis(monkeypat
         },
     }
 
-    def plan_route(_state):
+    def plan_route(_state, locked_tool=None):
         return {"tasks": [task]}
 
     def execute(state):
@@ -170,7 +177,7 @@ def test_vector_eval_graph_runs_plan_execute_assess_and_eval_synthesis(monkeypat
             "current_action": dict(state["current_action"]),
         }
 
-    def assess(state):
+    def assess(state, locked_tool=None):
         attempt = {
             **state["attempts"][-1],
             "assessment": {
@@ -192,9 +199,9 @@ def test_vector_eval_graph_runs_plan_execute_assess_and_eval_synthesis(monkeypat
             "stop_reason": "sufficient",
         }
 
-    monkeypatch.setattr(eval_agent.agent_nodes, "plan_route_node", plan_route)
-    monkeypatch.setattr(eval_agent.agent_nodes, "execute_attempt_node", execute)
-    monkeypatch.setattr(eval_agent.agent_nodes, "assess_node", assess)
+    monkeypatch.setattr(agent_nodes, "plan_route_node", plan_route)
+    monkeypatch.setattr(agent_nodes, "execute_attempt_node", execute)
+    monkeypatch.setattr(agent_nodes, "assess_node", assess)
 
     result = eval_agent.build_vector_eval_graph().invoke({
         "original_query": "What did Intel report?",

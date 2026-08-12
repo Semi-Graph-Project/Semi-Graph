@@ -17,8 +17,8 @@ from semigraph.agent.contracts import (
     ToolName,
 )
 from semigraph.agent.prompts import (
-    PLAN_ROUTE_SYSTEM_PROMPT,
     build_financial_capability_summary,
+    build_plan_route_system_prompt,
 )
 from semigraph.config import get_config
 
@@ -196,7 +196,15 @@ class _FakePlanRouteLLM:
 
 def _patch_plan_route_dependencies(monkeypatch, responses):
     llm = _FakePlanRouteLLM(responses)
-    monkeypatch.setattr(nodes, "get_config", lambda: SimpleNamespace())
+    monkeypatch.setattr(
+        nodes,
+        "get_config",
+        lambda: SimpleNamespace(financial_metric_registry={
+            "reported": (),
+            "derived": (),
+            "snapshot": (),
+        }),
+    )
     monkeypatch.setattr(nodes, "get_llm", lambda cfg: llm)
     return llm
 
@@ -337,7 +345,7 @@ def test_plan_route_node_provider_error_is_terminal(monkeypatch):
     ]
 
 def test_plan_route_prompt_keeps_connected_graph_chain_in_one_task():
-    prompt = PLAN_ROUTE_SYSTEM_PROMPT.lower()
+    prompt = build_plan_route_system_prompt(get_config()).lower()
 
     assert "connected multi-hop relationship chain" in prompt
     assert "one `graph` task" in prompt
@@ -350,7 +358,7 @@ def test_plan_route_prompt_keeps_connected_graph_chain_in_one_task():
 
 
 def test_plan_route_prompt_matches_contract_and_registry():
-    prompt = PLAN_ROUTE_SYSTEM_PROMPT.lower()
+    prompt = build_plan_route_system_prompt(get_config()).lower()
 
     for tool in ToolName:
         assert f"`{tool.value}`" in prompt

@@ -109,6 +109,9 @@ def test_contract_and_state_keep_only_lean_ticket03_models():
     assert "task" in TaskWorkerState.__annotations__
     assert "current_task_index" not in TaskWorkerState.__annotations__
     assert "tasks" not in TaskWorkerState.__annotations__
+    assert "_locked_tool" not in AgentState.__annotations__
+    assert "_locked_tool" not in TaskWorkerState.__annotations__
+    assert "_assess_prompt_mode" not in TaskWorkerState.__annotations__
     for field in ("evidence_pool", "accepted_evidence", "requirement_coverage"):
         assert field not in AgentState.__annotations__
     for model in ("RequirementCoverage", "RetryFeedback", "FailureType"):

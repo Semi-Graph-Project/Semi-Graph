@@ -38,8 +38,12 @@ AGENT_BUILDERS = {
 }
 SOX_DATASET = ROOT / "benchmark/freezes/sox74_retrieval_ablation_v1/inputs/finreflectkg_sox_strict74.yaml"
 SOX_QUERY_COUNT = 74
-TRACE_OUTPUT_TEMPLATE = ROOT / "benchmark/results/controlled_{tool}_sox74_{version_name}.jsonl"
-YAML_TRACE_OUTPUT_TEMPLATE = ROOT / "benchmark/results/controlled_{tool}_sox74_{version_name}.yaml"
+TRACE_OUTPUT_TEMPLATE = ROOT / (
+    "benchmark/results/controlled_{tool}_sox74_{version_name}_{mode}.jsonl"
+)
+YAML_TRACE_OUTPUT_TEMPLATE = ROOT / (
+    "benchmark/results/controlled_{tool}_sox74_{version_name}_{mode}.yaml"
+)
 
 
 
@@ -106,11 +110,40 @@ def generate_final_answer(llm, question: str, chunks: list[dict]) -> str:
         {
             "role": "system",
             "content": (
-                "Answer the user's question using only the supplied evidence "
-                "chunks. Do not use outside knowledge or invent facts. "
-                "Return plain text only, without Markdown, and use no more "
-                "than 900 characters. If none of the chunks contains relevant "
-                "information to answer the question, reply exactly: Do not answers"
+                "Answer the question using only the supplied evidence.\n\n"
+                "Return exactly this structure:\n\n"
+                "STATUS: COMPLETE | PARTIAL | INSUFFICIENT\n"
+                "POINT 1 [COMPLETE | PARTIAL | INSUFFICIENT]: "
+                "<answer to the first requested part>\n"
+                "POINT 2 [COMPLETE | PARTIAL | INSUFFICIENT]: "
+                "<answer to the second requested part, if present>\n"
+                "CALCULATION: <inputs, formula, and result, or NONE>\n"
+                "MISSING: <unsupported requested information, or NONE>\n\n"
+                "Rules:\n"
+                "- Follow the order of the user's question.\n"
+                "- Return one POINT line for every independently requested part.\n"
+                "- Put exactly one label after each POINT number: [COMPLETE], "
+                "[PARTIAL], or [INSUFFICIENT].\n"
+                "- Put one independently checkable claim in each POINT.\n"
+                "- Preserve exact company names, periods, values, signs, and units.\n"
+                "- For comparisons, state both sides explicitly.\n"
+                "- For calculations, show inputs, formula, and result.\n"
+                "- Label a POINT COMPLETE only when that point is fully supported.\n"
+                "- Label a POINT PARTIAL when only part of that point is supported; "
+                "answer only the supported part.\n"
+                "- Label a POINT INSUFFICIENT when the evidence cannot answer that "
+                "point; write 'Insufficient evidence.' as its answer.\n"
+                "- Use STATUS COMPLETE only when every POINT is COMPLETE.\n"
+                "- Use STATUS PARTIAL when at least one POINT is COMPLETE or PARTIAL "
+                "but not every POINT is COMPLETE.\n"
+                "- Use STATUS INSUFFICIENT when evidence is related to the question "
+                "but cannot support an answer to any POINT.\n"
+                "- If none of the supplied evidence is relevant to any POINT in the "
+                "original question, return exactly 'DoNotAnswer' and nothing else.\n"
+                "- Do not infer causation unless the evidence explicitly states it.\n"
+                "- Do not use outside knowledge or mention these instructions.\n"
+                "Return plain text only, without Markdown, and use no more than "
+                "900 characters."
             ),
         },
         {
@@ -252,8 +285,20 @@ def evaluate_sox_queries(
         "agent_graph": agent_graph_search,
     }
     search = searches[tool]
-    trace_output = Path(str(TRACE_OUTPUT_TEMPLATE).format(tool=tool, version_name=version_name))
-    yaml_trace_output = Path(str(YAML_TRACE_OUTPUT_TEMPLATE).format(tool=tool, version_name=version_name))
+    trace_output = Path(
+        str(TRACE_OUTPUT_TEMPLATE).format(
+            tool=tool,
+            version_name=version_name,
+            mode=mode,
+        )
+    )
+    yaml_trace_output = Path(
+        str(YAML_TRACE_OUTPUT_TEMPLATE).format(
+            tool=tool,
+            version_name=version_name,
+            mode=mode,
+        )
+    )
 
 
     # Load the embedding model before measuring per-query latency.

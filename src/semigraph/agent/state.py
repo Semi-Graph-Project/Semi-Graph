@@ -21,8 +21,6 @@ class TaskWorkerState(TypedDict, total=False):
     attempts: list[AttemptRecord]
     completion: dict
     stop_reason: str
-    _locked_tool: str
-    _assess_prompt_mode: str
 
 
 class AgentState(TypedDict, total=False):
@@ -38,4 +36,3 @@ class AgentState(TypedDict, total=False):
     stop_reason: str
     final_answer: str
     citation_map: list[dict]
-    _locked_tool: str

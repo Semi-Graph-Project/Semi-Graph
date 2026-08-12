@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
 
@@ -106,6 +108,7 @@ def build_agent(
     *,
     locked_tool: str | None = None,
     top_k: int | None = None,
+    synthesis: Callable[[AgentState], dict] | None = None,
 ):
     """Build the Agent harness with isolated parallel Task workers.
 
@@ -118,17 +121,15 @@ def build_agent(
         raise ValueError("top_k must be positive")
 
     def plan_route(state: AgentState) -> dict:
-        policy_state = {**state, "_locked_tool": locked_tool}
         return _apply_action_policy(
-            nodes.plan_route_node(policy_state),
+            nodes.plan_route_node(state, locked_tool=locked_tool),
             locked_tool,
             top_k,
         )
 
     def assess(state: TaskWorkerState) -> dict:
-        policy_state = {**state, "_locked_tool": locked_tool}
         return _apply_action_policy(
-            nodes.assess_node(policy_state),
+            nodes.assess_node(state, locked_tool=locked_tool),
             locked_tool,
             top_k,
         )
@@ -174,7 +175,10 @@ def build_agent(
     workflow.add_node("plan_route", plan_route)
     workflow.add_node("task_worker", task_worker)
     workflow.add_node("collector", _collect_task_results)
-    workflow.add_node("synthesize", nodes.synthesize_attempts_node)
+    workflow.add_node(
+        "synthesize",
+        synthesis or nodes.synthesize_attempts_node,
+    )
 
     workflow.add_edge(START, "plan_route")
     workflow.add_conditional_edges(

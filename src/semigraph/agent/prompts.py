@@ -3,7 +3,7 @@ from semigraph.agent.retry_policy import (
     build_tool_retry_capability_summary,
 )
 from semigraph.agent.contracts import MAX_PLANNED_TASKS
-from semigraph.config import Config, get_config
+from semigraph.config import Config
 
 
 def build_financial_capability_summary(cfg: Config) -> str:
@@ -115,13 +115,16 @@ Output: {"tasks":[{"query":"What does NVIDIA's filing say caused its gross-margi
 Now produce the retrieval plan for the original question.
 """
 
-PLAN_ROUTE_SYSTEM_PROMPT: str = _PLAN_ROUTE_SYSTEM_PROMPT_TEMPLATE.replace(
-    "{{FINANCIAL_CAPABILITY_SUMMARY}}",
-    build_financial_capability_summary(get_config()),
-).replace(
-    "{{MAX_PLANNED_TASKS}}",
-    str(MAX_PLANNED_TASKS),
-)
+def build_plan_route_system_prompt(cfg: Config) -> str:
+    """Build the Planner prompt from the Config used by this Agent call."""
+    return _PLAN_ROUTE_SYSTEM_PROMPT_TEMPLATE.replace(
+        "{{FINANCIAL_CAPABILITY_SUMMARY}}",
+        build_financial_capability_summary(cfg),
+    ).replace(
+        "{{MAX_PLANNED_TASKS}}",
+        str(MAX_PLANNED_TASKS),
+    )
+
 
 _ASSESS_SYSTEM_PROMPT_TEMPLATE: str = """You are Assess for SemiGraph, an agentic heterogeneous RAG system for semiconductor stock research.
 
@@ -208,11 +211,7 @@ This evaluation uses the `graph` Tool only.
 
 
 def build_assess_system_prompt(locked_tool: str | None = None) -> str:
-    """Return an optional tool-specific prompt for locked evaluations.
-
-    The legacy ``ASSESS_SYSTEM_PROMPT`` remains unchanged. Callers opt into
-    the extra locked-evaluation rules explicitly with ``locked_tool``.
-    """
+    """Build the Assess prompt for autonomous or locked evaluation mode."""
     if locked_tool is None:
         return ASSESS_SYSTEM_PROMPT
 
