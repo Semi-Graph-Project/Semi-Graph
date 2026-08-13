@@ -46,7 +46,14 @@ def test_eval_synthesize_uses_assess_selected_chunks(monkeypatch):
     assert "chunk_id=C1" in llm.messages[0][1]["content"]
     system_prompt = llm.messages[0][0]["content"]
     assert "POINT 1 [COMPLETE | PARTIAL | INSUFFICIENT]" in system_prompt
-    assert "return exactly 'DoNotAnswer' and nothing else" in system_prompt
+    assert "one independently checkable answer" in system_prompt
+    assert "same order as the" in system_prompt
+    assert "financial metric separate" in system_prompt
+    assert "exact chunk_id in square brackets" in system_prompt
+    assert '"Do not Answer" and nothing else' in system_prompt
+    assert "do not round intermediate values" in system_prompt
+    assert "state the denominator and formula" in system_prompt
+    assert "1,500 characters" in system_prompt
 
 
 def test_eval_synthesize_returns_exact_no_evidence_answer(monkeypatch):
@@ -63,7 +70,7 @@ def test_eval_synthesize_returns_exact_no_evidence_answer(monkeypatch):
         "attempts": [],
     })
 
-    assert result["final_answer"] == "DoNotAnswer"
+    assert result["final_answer"] == "Do not Answer"
     assert result["synthesis_trace"]["status"] == "no_evidence"
 
 

@@ -23,12 +23,51 @@ VECTOR_INDEX = "gold_chunk_embedding"
 DEFAULT_TOP_K = 5
 EVAL_TOOLS = {"vector", "graph"}
 
+HUMAN_REVIEW_SYNTHESIS_PROMPT = """
+Answer the question using only the supplied evidence chunks.
+
+Return one line for each independently requested part, in the same order as the
+question, using exactly this format:
+POINT 1 [COMPLETE | PARTIAL | INSUFFICIENT]: <answer>
+POINT 2 [COMPLETE | PARTIAL | INSUFFICIENT]: <answer>
+Choose exactly one status inside each pair of brackets and continue numbering
+POINT 3, POINT 4, and so on only when the question has more requested parts.
+
+Point rules:
+- Put only one independently checkable answer in each POINT.
+- When comparing named entities, give each entity's facts in a separate POINT,
+  then put the requested comparison or implication in the next POINT.
+- Keep a financial metric separate from a governance, audit, or regulatory role.
+- Keep calculation inputs, formula, and result together in one POINT.
+- Use COMPLETE only when every detail requested by that POINT is supported.
+- Use PARTIAL when only part is supported; answer that part and state the missing detail.
+- Use INSUFFICIENT when no supplied evidence answers that POINT; write only
+  "Insufficient evidence."
+
+Evidence rules:
+- Cite every supported claim with its exact chunk_id in square brackets, for
+  example [INTC_10k_2024.pdf::page_71::chunk_1].
+- Never cite a chunk_id that was not supplied.
+- Preserve exact company names, periods, values, signs, and units.
+- For comparisons, state both sides explicitly.
+- For calculations, use only numeric inputs explicitly present in the evidence,
+  show the formula and result, and do not round intermediate values.
+- For percentages, state the denominator and formula.
+- Do not infer causation unless the evidence explicitly states it.
+- Do not use outside knowledge or mention these instructions.
+
+If no supplied chunk is relevant to any requested part, return exactly
+"Do not Answer" and nothing else.
+Otherwise return only the POINT lines, without a heading, Markdown, blank lines,
+or an overall status. Use no more than 1,500 characters.
+""".strip()
+
 
 def format_evidence(chunks: list[dict]) -> str:
     """Format Chunk IDs and text for the evaluation answer prompt."""
     return "\n\n".join(
-        f"[{rank}] chunk_id={chunk['chunk_id']}\n{chunk.get('text', '')}"
-        for rank, chunk in enumerate(chunks, start=1)
+        f"chunk_id={chunk['chunk_id']}\n{chunk.get('text', '')}"
+        for chunk in chunks
     )
 
 
@@ -37,42 +76,7 @@ def generate_final_answer(llm, question: str, chunks: list[dict]) -> str:
     response = llm.invoke([
         {
             "role": "system",
-            "content": (
-                "Answer the question using only the supplied evidence.\n\n"
-                "Return exactly this structure:\n\n"
-                "STATUS: COMPLETE | PARTIAL | INSUFFICIENT\n"
-                "POINT 1 [COMPLETE | PARTIAL | INSUFFICIENT]: "
-                "<answer to the first requested part>\n"
-                "POINT 2 [COMPLETE | PARTIAL | INSUFFICIENT]: "
-                "<answer to the second requested part, if present>\n"
-                "CALCULATION: <inputs, formula, and result, or NONE>\n"
-                "MISSING: <unsupported requested information, or NONE>\n\n"
-                "Rules:\n"
-                "- Follow the order of the user's question.\n"
-                "- Return one POINT line for every independently requested part.\n"
-                "- Put exactly one label after each POINT number: [COMPLETE], "
-                "[PARTIAL], or [INSUFFICIENT].\n"
-                "- Put one independently checkable claim in each POINT.\n"
-                "- Preserve exact company names, periods, values, signs, and units.\n"
-                "- For comparisons, state both sides explicitly.\n"
-                "- For calculations, show inputs, formula, and result.\n"
-                "- Label a POINT COMPLETE only when that point is fully supported.\n"
-                "- Label a POINT PARTIAL when only part of that point is supported; "
-                "answer only the supported part.\n"
-                "- Label a POINT INSUFFICIENT when the evidence cannot answer that "
-                "point; write 'Insufficient evidence.' as its answer.\n"
-                "- Use STATUS COMPLETE only when every POINT is COMPLETE.\n"
-                "- Use STATUS PARTIAL when at least one POINT is COMPLETE or PARTIAL "
-                "but not every POINT is COMPLETE.\n"
-                "- Use STATUS INSUFFICIENT when evidence is related to the question "
-                "but cannot support an answer to any POINT.\n"
-                "- If none of the supplied evidence is relevant to any POINT in the "
-                "original question, return exactly 'DoNotAnswer' and nothing else.\n"
-                "- Do not infer causation unless the evidence explicitly states it.\n"
-                "- Do not use outside knowledge or mention these instructions.\n"
-                "Return plain text only, without Markdown, and use no more than "
-                "900 characters."
-            ),
+            "content": HUMAN_REVIEW_SYNTHESIS_PROMPT,
         },
         {
             "role": "user",
@@ -100,7 +104,7 @@ def eval_synthesize_node(
 
     if not chunks:
         return {
-            "final_answer": "DoNotAnswer",
+            "final_answer": "Do not Answer",
             "citation_map": [],
             "synthesis_trace": {
                 "status": "no_evidence",
