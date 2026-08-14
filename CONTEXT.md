@@ -60,6 +60,18 @@ _Avoid_: LLM confidence, latest result
 ชุด Accepted Evidence ที่คัดตาม coverage ภายในงบ context เพื่อใช้สร้างคำตอบสุดท้าย
 _Avoid_: Raw Evidence Pool
 
+**Question Point**:
+ส่วนหนึ่งของ Original Query ที่สามารถตรวจคำตอบแยกจากส่วนอื่นได้ โดยต้องดึงจากคำถามเท่านั้น ไม่ใช่จาก Gold Answer หรือแผนของ Agent
+_Avoid_: Evidence Requirement, Gold Answer Point
+
+**Draft Answer**:
+คำตอบจากการอ่าน Original Query และหลักฐานที่ค้นได้รอบแรก ซึ่งยังไม่ถือเป็นคำตอบสุดท้ายจนกว่าจะผ่าน Evidence Audit
+_Avoid_: Final Answer
+
+**Evidence Audit**:
+การตรวจ Draft Answer เทียบกับ Original Query และหลักฐานทั้งหมดอีกครั้ง เพื่อเติม Question Point ที่มีหลักฐานรองรับแต่ตกหล่น และแก้รายละเอียดที่ผิดก่อนสร้าง Final Answer
+_Avoid_: Agent Assess, Answer reranking
+
 ## Production Research Language
 
 **Personal Workspace**:

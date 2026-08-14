@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 from pathlib import Path
 import sys
@@ -22,6 +23,8 @@ NEO4J_URI = "bolt://localhost:7690"
 VECTOR_INDEX = "gold_chunk_embedding"
 DEFAULT_TOP_K = 5
 EVAL_TOOLS = {"vector", "graph"}
+DO_NOT_ANSWER = "Do not Answer"
+GENERATION_ERROR_ANSWER = "Can't Generate Answer"
 
 HUMAN_REVIEW_SYNTHESIS_PROMPT = """
 Answer the question using only the supplied evidence chunks.
@@ -62,6 +65,26 @@ Otherwise return only the POINT lines, without a heading, Markdown, blank lines,
 or an overall status. Use no more than 1,500 characters.
 """.strip()
 
+HUMAN_REVIEW_AUDIT_PROMPT = f"""
+Act as the final evidence auditor. Rewrite the complete final answer after
+checking the original question, every supplied evidence chunk, and the draft.
+
+Audit rules:
+- Derive all requested parts again from the original question; do not assume
+  the draft found every part.
+- Check every evidence chunk against every requested part.
+- Add any omitted supported part and split combined parts when needed.
+- Keep correct supported content, but correct wrong companies, periods, values,
+  signs, units, calculations, statuses, and citations.
+- Recalculate numeric answers from the explicit inputs in the chunks and show
+  the formula briefly. Never invent a missing input.
+- When multiple chunks support the same answer, cite all of them.
+- Return the whole revised answer, not comments about the draft.
+
+Final answer rules:
+{HUMAN_REVIEW_SYNTHESIS_PROMPT}
+""".strip()
+
 
 def format_evidence(chunks: list[dict]) -> str:
     """Format Chunk IDs and text for the evaluation answer prompt."""
@@ -71,23 +94,65 @@ def format_evidence(chunks: list[dict]) -> str:
     )
 
 
-def generate_final_answer(llm, question: str, chunks: list[dict]) -> str:
-    """Generate a grounded answer from the retrieved Chunks only."""
+def _invoke_answer(llm, system_prompt: str, user_prompt: str) -> str:
     response = llm.invoke([
-        {
-            "role": "system",
-            "content": HUMAN_REVIEW_SYNTHESIS_PROMPT,
-        },
-        {
-            "role": "user",
-            "content": (
-                f"Question:\n{question}\n\n"
-                f"Evidence Chunks:\n{format_evidence(chunks)}"
-            ),
-        },
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
     ])
     content = response.content if hasattr(response, "content") else response
     return str(content).strip()
+
+
+def _has_answer_format(answer: str) -> bool:
+    return bool(answer) and (
+        answer == DO_NOT_ANSWER
+        or bool(
+            re.search(
+                r"^POINT \d+ \[(?:COMPLETE|PARTIAL|INSUFFICIENT)\]:",
+                answer,
+                re.MULTILINE,
+            )
+        )
+    )
+
+
+def generate_final_answer(llm, question: str, chunks: list[dict]) -> str:
+    """Draft an answer, then audit it against every retrieved Chunk."""
+    if not chunks:
+        return DO_NOT_ANSWER
+
+    evidence_input = (
+        f"Question:\n{question}\n\n"
+        f"Evidence Chunks:\n{format_evidence(chunks)}"
+    )
+
+    try:
+        draft = _invoke_answer(
+            llm,
+            HUMAN_REVIEW_SYNTHESIS_PROMPT,
+            evidence_input,
+        )
+    except Exception:
+        draft = ""
+
+    audit_input = (
+        f"{evidence_input}\n\n"
+        f"Draft Answer:\n{draft or 'Draft unavailable. Build the answer directly.'}"
+    )
+    try:
+        final_answer = _invoke_answer(
+            llm,
+            HUMAN_REVIEW_AUDIT_PROMPT,
+            audit_input,
+        )
+    except Exception:
+        final_answer = ""
+
+    if _has_answer_format(final_answer):
+        return final_answer
+    if _has_answer_format(draft):
+        return draft
+    return GENERATION_ERROR_ANSWER
 
 
 def eval_synthesize_node(
@@ -104,7 +169,7 @@ def eval_synthesize_node(
 
     if not chunks:
         return {
-            "final_answer": "Do not Answer",
+            "final_answer": DO_NOT_ANSWER,
             "citation_map": [],
             "synthesis_trace": {
                 "status": "no_evidence",
@@ -130,16 +195,19 @@ def eval_synthesize_node(
             },
         }
 
+    llm_calls = 0
     try:
         answer = generate_final_answer(
             get_llm(cfg),
             str(state.get("original_query") or ""),
             chunks,
         )
-        status = "ok"
-        error_type = None
+        llm_calls = 2
+        failed = answer == GENERATION_ERROR_ANSWER
+        status = "generation_error" if failed else "ok"
+        error_type = "AnswerGenerationError" if failed else None
     except Exception as exc:
-        answer = ""
+        answer = GENERATION_ERROR_ANSWER
         status = "provider_error"
         error_type = type(exc).__name__
 
@@ -150,7 +218,7 @@ def eval_synthesize_node(
             "status": status,
             "selected_chunk_ids": chunk_ids,
             "max_chunks": max_chunks,
-            "llm_calls": 1,
+            "llm_calls": llm_calls,
             "latency_sec": round(time.perf_counter() - started_at, 3),
             "error_type": error_type,
         },

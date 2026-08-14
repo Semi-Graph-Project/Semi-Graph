@@ -24,9 +24,10 @@ from semigraph.connections import get_llm  # noqa: E402
 from semigraph.online.vector_search import vector_search as production_vector_search  # noqa: E402
 from semigraph.online.graph_search import graph_search as production_graph_search  # noqa: E402
 from eval_scripts.eval_agent import (
-    HUMAN_REVIEW_SYNTHESIS_PROMPT,
+    GENERATION_ERROR_ANSWER,
     build_graph_eval_graph,
     build_vector_eval_graph,
+    generate_final_answer,
 )
 
 NEO4J_URI = "bolt://localhost:7690"
@@ -97,33 +98,6 @@ def graph_search(question: str, top_k: int = TOP_K) -> list[dict]:
     )
 
 
-def format_evidence(chunks: list[dict]) -> str:
-    """Format retrieved Chunk IDs and text for the final LLM."""
-    return "\n\n".join(
-        f"[{rank}] chunk_id={chunk['chunk_id']}\n{chunk.get('text', '')}"
-        for rank, chunk in enumerate(chunks, start=1)
-    )
-
-
-def generate_final_answer(llm, question: str, chunks: list[dict]) -> str:
-    """Generate a grounded answer from the retrieved Chunks only."""
-    response = llm.invoke([
-        {
-            "role": "system",
-            "content": HUMAN_REVIEW_SYNTHESIS_PROMPT,
-        },
-        {
-            "role": "user",
-            "content": (
-                f"Question:\n{question}\n\n"
-                f"Evidence Chunks:\n{format_evidence(chunks)}"
-            ),
-        },
-    ])
-    content = response.content if hasattr(response, "content") else response
-    return str(content).strip()
-
-
 def write_trace(results: list[dict], output_path: Path) -> None:
     """Write one query trace per line as JSONL."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -173,7 +147,11 @@ def _run_agent(
 ) -> dict:
     """Run one evaluation Agent and return its selected Chunks and answer."""
     if not isinstance(question, str) or not question.strip():
-        return {"chunks": [], "final_answer": "", "answer_latency_ms": 0.0}
+        return {
+            "chunks": [],
+            "final_answer": "Do not Answer" if generate_answer else "",
+            "answer_latency_ms": 0.0,
+        }
     if not isinstance(top_k, int) or isinstance(top_k, bool) or top_k < 1:
         raise ValueError("top_k must be a positive integer")
 
@@ -312,8 +290,10 @@ def evaluate_sox_queries(
             answer_started = time.perf_counter()
             try:
                 final_answer = generate_final_answer(llm, case["query"], retrieved)
+                if final_answer == GENERATION_ERROR_ANSWER:
+                    answer_error = "AnswerGenerationError"
             except Exception as exc:
-                final_answer = ""
+                final_answer = GENERATION_ERROR_ANSWER
                 answer_error = type(exc).__name__
             answer_latency_ms = (time.perf_counter() - answer_started) * 1000
 

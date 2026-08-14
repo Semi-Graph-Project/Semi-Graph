@@ -1,0 +1,575 @@
+{
+  "reference": "finreflectkg_sox_strict74_human_review.yaml",
+  "result_file": "controlled_vector_sox74_baseline_v2_full_answer.yaml",
+  "reviewed_on": "2026-08-14",
+  "scoring_rule": "A point is correct only when the final answer covers its important claims, numbers, units, periods, and relationships without contradicting the original answer point.",
+  "summary": {
+    "matched_queries": 74,
+    "total_queries": 74,
+    "answer_hits": 36,
+    "answer_hit_rate": 0.4864864864864865,
+    "correct_points": 56,
+    "total_points": 240,
+    "answer_recall": 0.23333333333333334,
+    "fully_correct_queries": 5,
+    "fully_correct_rate": 0.06756756756756757
+  },
+  "correct_point_numbers": {
+    "FRKG003": [
+      2,
+      3,
+      4
+    ],
+    "FRKG009": [
+      2
+    ],
+    "FRKG010": [],
+    "FRKG011": [],
+    "FRKG070": [],
+    "FRKG071": [
+      2
+    ],
+    "FRKG073": [],
+    "FRKG082": [
+      1
+    ],
+    "FRKG084": [],
+    "FRKG093": [
+      1,
+      2
+    ],
+    "FRKG096": [
+      1,
+      2
+    ],
+    "FRKG098": [
+      1,
+      2,
+      3
+    ],
+    "FRKG100": [],
+    "FRKG102": [],
+    "FRKG103": [
+      2
+    ],
+    "FRKG104": [
+      5
+    ],
+    "FRKG105": [
+      2
+    ],
+    "FRKG107": [],
+    "FRKG108": [
+      1
+    ],
+    "FRKG111": [],
+    "FRKG138": [],
+    "FRKG141": [
+      2
+    ],
+    "FRKG142": [],
+    "FRKG161": [
+      1
+    ],
+    "FRKG163": [],
+    "FRKG173": [],
+    "FRKG177": [],
+    "FRKG179": [
+      2,
+      3
+    ],
+    "FRKG182": [
+      1,
+      2
+    ],
+    "FRKG185": [],
+    "FRKG187": [],
+    "FRKG192": [],
+    "FRKG239": [],
+    "FRKG240": [],
+    "FRKG241": [],
+    "FRKG249": [
+      1,
+      2
+    ],
+    "FRKG273": [
+      1
+    ],
+    "FRKG274": [
+      2
+    ],
+    "FRKG275": [
+      2
+    ],
+    "FRKG276": [],
+    "FRKG279": [
+      1
+    ],
+    "FRKG284": [],
+    "FRKG288": [
+      1
+    ],
+    "FRKG290": [
+      1
+    ],
+    "FRKG300": [],
+    "FRKG356": [],
+    "FRKG357": [
+      1,
+      2,
+      3
+    ],
+    "FRKG358": [
+      1,
+      2
+    ],
+    "FRKG359": [],
+    "FRKG360": [
+      1,
+      2
+    ],
+    "FRKG393": [],
+    "FRKG395": [
+      1,
+      2
+    ],
+    "FRKG396": [],
+    "FRKG397": [
+      1
+    ],
+    "FRKG405": [
+      1
+    ],
+    "FRKG436": [],
+    "FRKG437": [],
+    "FRKG451": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "FRKG455": [
+      1,
+      2
+    ],
+    "FRKG456": [
+      1
+    ],
+    "FRKG458": [],
+    "FRKG463": [
+      1
+    ],
+    "FRKG515": [],
+    "FRKG516": [],
+    "FRKG517": [],
+    "FRKG520": [],
+    "FRKG522": [],
+    "FRKG523": [
+      2
+    ],
+    "FRKG525": [
+      1
+    ],
+    "FRKG528": [],
+    "FRKG529": [
+      1,
+      2,
+      3
+    ],
+    "FRKG531": [],
+    "FRKG533": [],
+    "FRKG534": [
+      1
+    ]
+  },
+  "point_statuses": {
+    "FRKG003": [
+      "incorrect",
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "FRKG009": [
+      "incorrect",
+      "correct",
+      "incorrect"
+    ],
+    "FRKG010": [
+      "incorrect",
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG011": [
+      "incorrect",
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG070": [
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG071": [
+      "incorrect",
+      "correct",
+      "incorrect"
+    ],
+    "FRKG073": [
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG082": [
+      "correct",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG084": [
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG093": [
+      "correct",
+      "correct",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG096": [
+      "correct",
+      "correct",
+      "incorrect"
+    ],
+    "FRKG098": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "FRKG100": [
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG102": [
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG103": [
+      "incorrect",
+      "correct",
+      "incorrect"
+    ],
+    "FRKG104": [
+      "incorrect",
+      "incorrect",
+      "incorrect",
+      "incorrect",
+      "correct",
+      "incorrect"
+    ],
+    "FRKG105": [
+      "incorrect",
+      "correct"
+    ],
+    "FRKG107": [
+      "incorrect",
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG108": [
+      "correct",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG111": [
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG138": [
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG141": [
+      "incorrect",
+      "correct",
+      "incorrect"
+    ],
+    "FRKG142": [
+      "incorrect",
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG161": [
+      "correct",
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG163": [
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG173": [
+      "incorrect",
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG177": [
+      "incorrect",
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG179": [
+      "incorrect",
+      "correct",
+      "correct",
+      "incorrect"
+    ],
+    "FRKG182": [
+      "correct",
+      "correct",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG185": [
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG187": [
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG192": [
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG239": [
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG240": [
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG241": [
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG249": [
+      "correct",
+      "correct",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG273": [
+      "correct",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG274": [
+      "incorrect",
+      "correct",
+      "incorrect"
+    ],
+    "FRKG275": [
+      "incorrect",
+      "correct",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG276": [
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG279": [
+      "correct",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG284": [
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG288": [
+      "correct",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG290": [
+      "correct",
+      "incorrect"
+    ],
+    "FRKG300": [
+      "incorrect",
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG356": [
+      "incorrect",
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG357": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "FRKG358": [
+      "correct",
+      "correct"
+    ],
+    "FRKG359": [
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG360": [
+      "correct",
+      "correct",
+      "incorrect"
+    ],
+    "FRKG393": [
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG395": [
+      "correct",
+      "correct"
+    ],
+    "FRKG396": [
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG397": [
+      "correct",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG405": [
+      "correct",
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG436": [
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG437": [
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG451": [
+      "correct",
+      "correct",
+      "correct",
+      "correct",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG455": [
+      "correct",
+      "correct",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG456": [
+      "correct",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG458": [
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG463": [
+      "correct",
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG515": [
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG516": [
+      "incorrect",
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG517": [
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG520": [
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG522": [
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG523": [
+      "incorrect",
+      "correct",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG525": [
+      "correct",
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG528": [
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG529": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "FRKG531": [
+      "incorrect",
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG533": [
+      "incorrect",
+      "incorrect",
+      "incorrect",
+      "incorrect"
+    ],
+    "FRKG534": [
+      "correct",
+      "incorrect",
+      "incorrect"
+    ]
+  }
+}

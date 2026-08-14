@@ -1,21 +1,29 @@
 from types import SimpleNamespace
 
 from eval_scripts import eval_agent
+from eval_scripts import evaluate
 import semigraph.agent.graph as agent_graph
 import semigraph.agent.nodes as agent_nodes
 
 
 class _FakeResponse:
-    content = "Grounded evaluation answer"
+    def __init__(self, content):
+        self.content = content
 
 
 class _FakeLLM:
-    def __init__(self):
+    DEFAULT_ANSWER = "POINT 1 [COMPLETE]: Grounded evaluation answer [C1]"
+
+    def __init__(self, responses=None):
         self.messages = []
+        self.responses = list(responses or [])
 
     def invoke(self, messages):
         self.messages.append(messages)
-        return _FakeResponse()
+        response = self.responses.pop(0) if self.responses else self.DEFAULT_ANSWER
+        if isinstance(response, Exception):
+            raise response
+        return _FakeResponse(response)
 
 
 def test_eval_synthesize_uses_assess_selected_chunks(monkeypatch):
@@ -39,10 +47,12 @@ def test_eval_synthesize_uses_assess_selected_chunks(monkeypatch):
         }],
     })
 
-    assert result["final_answer"] == "Grounded evaluation answer"
+    assert result["final_answer"] == _FakeLLM.DEFAULT_ANSWER
     assert result["synthesis_trace"]["selected_chunk_ids"] == ["C1"]
     assert result["synthesis_trace"]["status"] == "ok"
     assert result["synthesis_trace"]["max_chunks"] == 10
+    assert result["synthesis_trace"]["llm_calls"] == 2
+    assert len(llm.messages) == 2
     assert "chunk_id=C1" in llm.messages[0][1]["content"]
     system_prompt = llm.messages[0][0]["content"]
     assert "POINT 1 [COMPLETE | PARTIAL | INSUFFICIENT]" in system_prompt
@@ -54,6 +64,55 @@ def test_eval_synthesize_uses_assess_selected_chunks(monkeypatch):
     assert "do not round intermediate values" in system_prompt
     assert "state the denominator and formula" in system_prompt
     assert "1,500 characters" in system_prompt
+    assert "final evidence auditor" in llm.messages[1][0]["content"]
+    assert "Draft Answer" in llm.messages[1][1]["content"]
+    assert _FakeLLM.DEFAULT_ANSWER in llm.messages[1][1]["content"]
+
+
+def test_answer_audit_runs_when_draft_call_fails():
+    llm = _FakeLLM([
+        TimeoutError("draft failed"),
+        "POINT 1 [COMPLETE]: Audited answer [C1]",
+    ])
+
+    answer = eval_agent.generate_final_answer(
+        llm,
+        "Question?",
+        [{"chunk_id": "C1", "text": "Evidence"}],
+    )
+
+    assert answer == "POINT 1 [COMPLETE]: Audited answer [C1]"
+    assert len(llm.messages) == 2
+    assert "Draft unavailable" in llm.messages[1][1]["content"]
+
+
+def test_valid_draft_is_fallback_when_audit_call_fails():
+    draft = "POINT 1 [PARTIAL]: Supported part [C1]"
+    llm = _FakeLLM([draft, TimeoutError("audit failed")])
+
+    answer = eval_agent.generate_final_answer(
+        llm,
+        "Question?",
+        [{"chunk_id": "C1", "text": "Evidence"}],
+    )
+
+    assert answer == draft
+
+
+def test_answer_generation_never_returns_blank():
+    llm = _FakeLLM(["invalid draft", "invalid audit"])
+
+    answer = eval_agent.generate_final_answer(
+        llm,
+        "Question?",
+        [{"chunk_id": "C1", "text": "Evidence"}],
+    )
+
+    assert answer == eval_agent.GENERATION_ERROR_ANSWER
+
+
+def test_all_full_answer_modes_share_the_same_generator():
+    assert evaluate.generate_final_answer is eval_agent.generate_final_answer
 
 
 def test_eval_synthesize_returns_exact_no_evidence_answer(monkeypatch):
@@ -215,5 +274,5 @@ def test_vector_eval_graph_runs_plan_execute_assess_and_eval_synthesis(monkeypat
     })
 
     assert result["attempts"][0]["action"]["tool"] == "vector"
-    assert result["final_answer"] == "Grounded evaluation answer"
+    assert result["final_answer"] == _FakeLLM.DEFAULT_ANSWER
     assert result["synthesis_trace"]["selected_chunk_ids"] == ["C1"]
