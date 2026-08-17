@@ -32,6 +32,8 @@ dependencies = [
     "gliner",
     "sentence-transformers>=3.0",
     "rapidfuzz>=3.0",
+    # Evaluation
+    "ragas>=0.4.3,<0.5",
     # News
     "GoogleNews",
     "yfinance",

@@ -72,7 +72,7 @@ def _route_after_execute(state: TaskWorkerState) -> str:
         and latest.get("assessment") is None
     ):
         return "assess"
-    return "execute" if state.get("current_action") else "end"
+    return "end"
 
 
 def _route_after_assess(state: TaskWorkerState) -> str:
@@ -141,7 +141,7 @@ def build_agent(
     task_workflow.add_conditional_edges(
         "execute",
         _route_after_execute,
-        {"execute": "execute", "assess": "assess", "end": END},
+        {"assess": "assess", "end": END},
     )
     task_workflow.add_conditional_edges(
         "assess",

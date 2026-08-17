@@ -337,6 +337,16 @@
       gap: 8px;
     }
     .point-heading .point-text { flex: 1; min-width: 0; }
+    .expected-anchor {
+      padding: 1px 3px;
+      border-radius: 4px;
+      font-weight: 700;
+      box-decoration-break: clone;
+      -webkit-box-decoration-break: clone;
+    }
+    .expected-anchor.value { background: #fff0b8; color: #744b00; }
+    .expected-anchor.entity { background: #e7f0ff; color: #174ea6; }
+    .expected-anchor.metric { background: #f0e8ff; color: #6331a8; }
     .point-role {
       flex: 0 0 auto;
       border-radius: 999px;
@@ -713,16 +723,195 @@
       FRKG531: [2],
       FRKG533: [1, 2]
     };
+    const AGENT_VECTOR_REVIEW_FILE = 'controlled_agent_vector_sox74_AGENT_VECT_full_answer.yaml';
+    const AGENT_VECTOR_CORRECT_POINTS = {
+      FRKG003: [2, 3, 4],
+      FRKG009: [1, 2],
+      FRKG010: [1, 2],
+      FRKG011: [],
+      FRKG070: [1],
+      FRKG071: [],
+      FRKG073: [],
+      FRKG082: [1, 2],
+      FRKG084: [2],
+      FRKG093: [1, 2, 3],
+      FRKG096: [1, 2],
+      FRKG098: [1, 2, 3],
+      FRKG100: [1],
+      FRKG102: [3],
+      FRKG103: [2],
+      FRKG104: [5],
+      FRKG105: [1, 2],
+      FRKG107: [1, 2, 4],
+      FRKG108: [1, 2],
+      FRKG111: [],
+      FRKG138: [],
+      FRKG141: [],
+      FRKG142: [],
+      FRKG161: [1],
+      FRKG163: [],
+      FRKG173: [1],
+      FRKG177: [],
+      FRKG179: [2, 3],
+      FRKG182: [1, 2, 3],
+      FRKG185: [1, 2],
+      FRKG187: [1],
+      FRKG192: [],
+      FRKG239: [],
+      FRKG240: [1],
+      FRKG241: [1],
+      FRKG249: [1, 2],
+      FRKG273: [1, 2],
+      FRKG274: [],
+      FRKG275: [1, 2],
+      FRKG276: [],
+      FRKG279: [1],
+      FRKG284: [1],
+      FRKG288: [1, 2],
+      FRKG290: [1],
+      FRKG300: [],
+      FRKG356: [2],
+      FRKG357: [2],
+      FRKG358: [1],
+      FRKG359: [],
+      FRKG360: [1, 2],
+      FRKG393: [],
+      FRKG395: [1, 2],
+      FRKG396: [1, 2],
+      FRKG397: [1, 2],
+      FRKG405: [1],
+      FRKG436: [2],
+      FRKG437: [1],
+      FRKG451: [1, 2, 3, 4],
+      FRKG455: [1, 2],
+      FRKG456: [1],
+      FRKG458: [],
+      FRKG463: [1, 2],
+      FRKG515: [2],
+      FRKG516: [],
+      FRKG517: [],
+      FRKG520: [],
+      FRKG522: [],
+      FRKG523: [2],
+      FRKG525: [1],
+      FRKG528: [1],
+      FRKG529: [1, 2, 3],
+      FRKG531: [2, 4],
+      FRKG533: [1, 2],
+      FRKG534: [1, 2, 3]
+    };
+    const AGENT_GRAPH_FILTER_REVIEW_FILE = 'controlled_agent_graph_sox74_AGENT_GRAPH_FILT_full_answer.yaml';
+    const AGENT_GRAPH_FILTER_CORRECT_POINTS = {
+      FRKG003: [2, 3, 4],
+      FRKG009: [1, 2],
+      FRKG010: [1, 2],
+      FRKG011: [1],
+      FRKG070: [],
+      FRKG071: [1, 2],
+      FRKG073: [],
+      FRKG082: [1],
+      FRKG084: [],
+      FRKG093: [1, 2, 3],
+      FRKG096: [1, 2],
+      FRKG098: [1, 2, 3],
+      FRKG100: [1],
+      FRKG102: [1, 2, 3],
+      FRKG103: [2],
+      FRKG104: [],
+      FRKG105: [1, 2],
+      FRKG107: [1, 2, 4],
+      FRKG108: [1],
+      FRKG111: [1, 2, 3],
+      FRKG138: [],
+      FRKG141: [1],
+      FRKG142: [1, 2, 3],
+      FRKG161: [],
+      FRKG163: [1, 2],
+      FRKG173: [1],
+      FRKG177: [],
+      FRKG179: [1, 2],
+      FRKG182: [1, 2, 3],
+      FRKG185: [1, 2],
+      FRKG187: [1, 2],
+      FRKG192: [],
+      FRKG239: [],
+      FRKG240: [1],
+      FRKG241: [],
+      FRKG249: [1, 2, 3],
+      FRKG273: [1],
+      FRKG274: [1],
+      FRKG275: [1, 2],
+      FRKG276: [],
+      FRKG279: [1],
+      FRKG284: [1],
+      FRKG288: [1, 2],
+      FRKG290: [],
+      FRKG300: [],
+      FRKG356: [],
+      FRKG357: [2],
+      FRKG358: [1, 2],
+      FRKG359: [1],
+      FRKG360: [1, 2],
+      FRKG393: [],
+      FRKG395: [1, 2],
+      FRKG396: [],
+      FRKG397: [1, 2],
+      FRKG405: [1],
+      FRKG436: [],
+      FRKG437: [],
+      FRKG451: [1, 2, 3, 4],
+      FRKG455: [1, 2, 3],
+      FRKG456: [1],
+      FRKG458: [1, 3],
+      FRKG463: [1, 2],
+      FRKG515: [1, 2],
+      FRKG516: [],
+      FRKG517: [],
+      FRKG520: [1, 2, 3],
+      FRKG522: [],
+      FRKG523: [2],
+      FRKG525: [1],
+      FRKG528: [1],
+      FRKG529: [1, 2, 3],
+      FRKG531: [],
+      FRKG533: [1, 2, 3],
+      FRKG534: [1]
+    };
     const REVIEWED_POINTS_BY_FILE = {
       [VECTOR_V2_REVIEW_FILE]: VECTOR_V2_CORRECT_POINTS,
       [GRAPH_LLM_FILTER_REVIEW_FILE]: GRAPH_LLM_FILTER_CORRECT_POINTS,
-      [GRAPH_1S_TTIME_REVIEW_FILE]: GRAPH_1S_TTIME_CORRECT_POINTS
+      [GRAPH_1S_TTIME_REVIEW_FILE]: GRAPH_1S_TTIME_CORRECT_POINTS,
+      [AGENT_VECTOR_REVIEW_FILE]: AGENT_VECTOR_CORRECT_POINTS,
+      [AGENT_GRAPH_FILTER_REVIEW_FILE]: AGENT_GRAPH_FILTER_CORRECT_POINTS
     };
     const STATUS_LABELS = {
       correct: 'ถูก',
       incorrect: 'ผิด',
       unsure: 'ไม่แน่ใจ'
     };
+    const EXPECTED_ENTITIES = [
+      'Non-Volatile Memory Solutions Group', 'Programmable Solutions Group',
+      'Michelle Johnston Holthaus', 'PricewaterhouseCoopers LLP',
+      'Richard K. Templeton', 'Texas Instruments', 'Ernst & Young LLP',
+      'Infrastructure Software', 'Client Computing Group', 'Embedded Processing',
+      'Network and Edge', 'Intel Foundry Services', 'Analog segment',
+      'Other segment', 'All Other', 'Rafael R. Lizardi', 'Kirsten M. Spears',
+      'Sylvia Acevedo', 'Cristiano R. Amon', 'Mark D. McLaughlin',
+      'Jeffrey W. Henderson', 'Kornelis Smit', 'Haviv Ilan', 'Eric Meurice',
+      'Mobileye', 'Broadcom', 'Qualcomm', 'NVIDIA', 'Intel', 'AMD',
+      'QCT', 'QCOM', 'AVGO', 'TXN', 'PCAOB', 'SEC', 'CDP'
+    ];
+    const EXPECTED_METRICS = [
+      'internal control over financial reporting', 'net cash provided by operating activities',
+      'cash flows from financing activities', 'customer incentive arrangements',
+      'stock-based compensation', 'non-controlling interest', 'unrecognized tax benefit',
+      'cash payments for interest', 'deferred tax liabilities', 'deferred tax liability',
+      'restructuring charges', 'Research and Development', 'accounts receivable',
+      'operating income', 'operating profit', 'operating loss', 'effective tax rate',
+      'shares repurchased', 'acquisition costs', 'litigation charges',
+      'capitalized software', 'return on assets', 'interest expense', 'discount rate',
+      'net revenue', 'total revenue', 'net income', 'goodwill', 'revenue', 'R&D'
+    ];
 
     const app = {
       fileName: '',
@@ -739,6 +928,34 @@
       if (className) node.className = className;
       if (text !== undefined) node.textContent = text;
       return node;
+    }
+
+    function appendHighlightedExpectedText(container, value) {
+      const escapePattern = function (term) {
+        return term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      };
+      const terms = [...EXPECTED_ENTITIES, ...EXPECTED_METRICS]
+        .sort(function (left, right) { return right.length - left.length; })
+        .map(escapePattern)
+        .join('|');
+      const pattern = new RegExp(
+        "'[^']+'|\"[^\"]+\"|[-+]?\\$\\(?[\\d,]+(?:\\.\\d+)?\\)?\\s*(?:million|billion|M|B)?|" +
+        '-?\\d+(?:\\.\\d+)?%|\\b(?:19|20)\\d{2}\\b|\\b\\d+(?:\\.\\d+)?\\s*(?:million|billion|percentage points?|shares)\\b|' +
+        '\\b-?\\d+\\.\\d+\\b|\\b(?:' + terms + ')\\b',
+        'gi'
+      );
+      const entitySet = new Set(EXPECTED_ENTITIES.map(function (term) { return term.toLowerCase(); }));
+      let offset = 0;
+      for (const match of value.matchAll(pattern)) {
+        container.appendChild(document.createTextNode(value.slice(offset, match.index)));
+        const matched = match[0];
+        let kind = 'metric';
+        if (entitySet.has(matched.toLowerCase()) || /^['\"]/.test(matched)) kind = 'entity';
+        if (/[-+]?\$|\d/.test(matched[0])) kind = 'value';
+        container.appendChild(makeElement('mark', 'expected-anchor ' + kind, matched));
+        offset = match.index + matched.length;
+      }
+      container.appendChild(document.createTextNode(value.slice(offset)));
     }
 
     function cleanText(value) {
@@ -1123,7 +1340,9 @@
         const mainPoint = isMainPoint(query, pointIndex);
         const heading = makeElement('div', 'point-heading');
         heading.appendChild(makeElement('span', 'point-role ' + (mainPoint ? 'main' : 'supporting'), mainPoint ? 'MAIN' : 'SUPPORTING'));
-        heading.appendChild(makeElement('div', 'point-text', point));
+        const pointText = makeElement('div', 'point-text');
+        appendHighlightedExpectedText(pointText, point);
+        heading.appendChild(pointText);
         card.appendChild(heading);
         const actions = makeElement('div', 'point-actions');
         ['correct', 'incorrect', 'unsure'].forEach(function (nextStatus) {
@@ -1146,6 +1365,10 @@
       legend.appendChild(makeElement('span', 'legend-item unsure', 'ไม่แน่ใจ = ยังไม่ผ่าน'));
       legend.appendChild(makeElement('span', '', 'MAIN = สิ่งที่คำถามขอโดยตรง'));
       legend.appendChild(makeElement('span', '', 'SUPPORTING = ข้อมูลตั้งต้นหรือบริบท'));
+      legend.appendChild(makeElement('mark', 'expected-anchor value', 'ตัวเลข / ปี'));
+      legend.appendChild(makeElement('mark', 'expected-anchor entity', 'บริษัท / ชื่อเฉพาะ'));
+      legend.appendChild(makeElement('mark', 'expected-anchor metric', 'ตัวชี้วัดทางการเงิน'));
+      legend.appendChild(makeElement('span', '', 'สีช่วยกวาดตาเท่านั้น ความสัมพันธ์ยังต้องตรวจครบทั้ง POINT'));
       pointsPanel.appendChild(legend);
       panel.appendChild(pointsPanel);
 

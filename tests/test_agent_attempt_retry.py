@@ -540,7 +540,7 @@ def _build_task_worker_component_graph():
             and latest.get("assessment") is None
         ):
             return "assess"
-        return "execute" if state.get("current_action") else "end"
+        return "end"
 
     def route_after_assess(state):
         return "execute" if state.get("current_action") else "end"
@@ -552,7 +552,7 @@ def _build_task_worker_component_graph():
     workflow.add_conditional_edges(
         "execute",
         route_after_execute,
-        {"execute": "execute", "assess": "assess", "end": END},
+        {"assess": "assess", "end": END},
     )
     workflow.add_conditional_edges(
         "assess",
