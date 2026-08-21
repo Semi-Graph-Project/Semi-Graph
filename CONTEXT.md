@@ -4,6 +4,10 @@
 
 ## Agent Harness Language
 
+**Agentic GraphRAG**:
+ระบบหลักของ SemiGraph ที่ให้ Agent วางแผน ค้น และประเมินหลักฐานจาก Knowledge Graph/PPR โดยใช้ Vector RAG และการค้นที่ไม่มี Agent เป็นตัวควบคุมในการเปรียบเทียบ
+_Avoid_: Full Agent, generic Agentic RAG
+
 **Retrieval Task**:
 หน่วยงานค้นหลักฐานหนึ่งเรื่องที่มีเป้าหมายและ Evidence Requirements ร่วมกัน โดยธรรมชาติของคำถามเป็นตัวกำหนดขอบเขตของ Task
 _Avoid_: Subquery step, workflow step

@@ -13,7 +13,7 @@ Backlinks: [[00_INDEX]] · [[Project_Track_Evaluation_Plan]] · [[draft_eval]] �
 
 Phase T คือช่วง Quality Tuning ก่อนเข้า Eval จริง เป้าหมายไม่ใช่แค่ "ทำให้ตอบดูดีขึ้น" แต่ต้องทำให้ claim ของโปรเจกต์ defend ได้:
 
-> Agentic Heterogeneous GraphRAG ที่มี PPR-based graph retrieval ต้องชนะ Vanilla Vector RAG อย่างมีนัยสำคัญ โดยเฉพาะคำถาม multi-hop / supply-chain / risk / cross-company relationship
+> Agentic GraphRAG ที่ใช้ PPR-based graph retrieval ต้องค้นพบหลักฐานได้ดีกว่า Vector-only RAG อย่างมีนัยสำคัญ โดยเฉพาะคำถาม multi-hop, supply-chain, risk และ cross-company relationship
 
 หลักคิดแบบ First Principles:
 
@@ -92,7 +92,7 @@ Agent metrics:
 
 ### Exit Criteria
 
-- มี benchmark slice อย่างน้อย 30 queries: 10 vector-friendly, 15 graph/multi-hop, 5 mixed heterogeneous
+- มี benchmark slice อย่างน้อย 30 queries: 10 vector-friendly, 15 graph/multi-hop และ 5 mixed relationship-heavy
 - evaluator รันซ้ำแล้วได้ผล deterministic
 - trace มีข้อมูลพอไล่ได้ว่าแพ้ที่ stage ไหน
 
@@ -294,7 +294,7 @@ Plan:
 
 ## 7. T4 - News and Financial Tool Quality
 
-News is not the core PPR claim, but weak news can pollute Agentic Heterogeneous RAG.
+News is not part of the core Agentic GraphRAG claim, but weak news retrieval can still pollute supporting answer context.
 
 ### News Tuning
 
@@ -324,7 +324,7 @@ Minimum useful set: 50 queries.
 | Vector-friendly single chunk | 10 | ensure graph tuning does not break simple QA |
 | Graph multi-hop | 20 | primary PPR claim |
 | Supply-chain/risk | 8 | semiconductor-specific graph advantage |
-| Financial exact metric | 5 | heterogeneous tool sanity |
+| Financial exact metric | 5 | supporting-tool sanity check |
 | News/recent event | 3 | news noise guard |
 | Off-corpus / insufficient | 4 | hallucination/refusal test |
 
@@ -350,9 +350,8 @@ Each query should store:
 |---|---|---|
 | `vanilla_vector` | direct vector retrieval + simple synthesis | baseline |
 | `graph_only` | graph_search + synthesis | isolate PPR |
-| `hybrid` | graph + vector RRF/rerank | expected strongest retriever |
-| `agentic_vector` | agent with only vector/financial/news as allowed | isolate agent effect |
-| `agentic_heterogeneous` | full current system | final project claim |
+| `agentic_vector` | evidence-adaptive Agent locked to vector retrieval | isolate Agent effect |
+| `agentic_graph` | evidence-adaptive Agent locked to graph retrieval | final project configuration |
 
 ## 9. T6 - Implementation Order
 
@@ -475,7 +474,7 @@ Implement in this order:
 | LLM judge variance | answer metric unstable | run judge 3 times or use deterministic rubric first |
 | Graph noise from extraction | PPR walks through bad edges | relation filtering + entity alias audit |
 | Latency too high | demo/eval impractical | projection cache + graph retry cap |
-| News noise hurts full agent | heterogeneous config looks worse | strict news relevance and safe empty result |
+| News noise contaminates supporting context | answer quality becomes harder to attribute to GraphRAG | strict news relevance and safe empty result |
 
 ## 12. Phase T Tracking Checklist
 
@@ -491,15 +490,15 @@ Implement in this order:
 - [ ] T3 observe/reflect stop rule done
 - [ ] T3 synthesis citation audit done
 - [ ] T4 news rerank/filter done
-- [ ] T5 final 3-config ablation rerun
+- [ ] T5 final 4-config ablation rerun
 - [ ] Advisor-ready result table produced
 
 ## 13. Advisor-Facing Claim Template
 
 ถ้าผลออกมาดี ให้สรุปแบบนี้:
 
-> We first diagnosed retrieval failures stage-by-stage: seed selection, PPR propagation, chunk mapping, and agent routing. After tuning graph reranking and agent tool selection, Agentic Heterogeneous GraphRAG improved multi-hop Recall@5 over Vanilla Vector RAG, while preserving citation faithfulness through provenance-grounded answer synthesis.
+> We first diagnosed retrieval failures stage-by-stage: seed selection, PPR propagation, chunk mapping, and Agent control. After tuning graph reranking and evidence-adaptive retrieval, Agentic GraphRAG improved multi-hop Recall@5 over Vector-only RAG while preserving citation faithfulness through provenance-grounded answer synthesis.
 
 ถ้าผลออกมาไม่ชนะทุก subset ให้พูดให้ถูก:
 
-> Vector RAG remains competitive on single-chunk lexical questions, but Graph/PPR improves evidence discovery on relationship-heavy semiconductor questions. The system contribution is therefore strongest on heterogeneous multi-hop analysis, not generic QA.
+> Vector RAG remains competitive on single-chunk lexical questions, while Graph/PPR improves evidence discovery on relationship-intensive semiconductor questions. The system contribution is therefore strongest on multi-hop relational analysis rather than generic QA.

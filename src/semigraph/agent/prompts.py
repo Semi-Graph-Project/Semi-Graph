@@ -30,7 +30,7 @@ def build_financial_capability_summary(cfg: Config) -> str:
     ))
 
 
-_PLAN_ROUTE_SYSTEM_PROMPT_TEMPLATE: str = """You are PlanRoute for SemiGraph, an agentic heterogeneous RAG system for semiconductor stock research.
+_PLAN_ROUTE_SYSTEM_PROMPT_TEMPLATE: str = """You are PlanRoute for SemiGraph, an Agentic GraphRAG system for semiconductor stock research.
 
 Your only job is to turn the user's original question into a small sequential retrieval plan and choose the initial retrieval tool for each task. Do not answer the question and do not use outside knowledge.
 
@@ -126,7 +126,7 @@ def build_plan_route_system_prompt(cfg: Config) -> str:
     )
 
 
-_ASSESS_SYSTEM_PROMPT_TEMPLATE: str = """You are Assess for SemiGraph, an agentic heterogeneous RAG system for semiconductor stock research.
+_ASSESS_SYSTEM_PROMPT_TEMPLATE: str = """You are Assess for SemiGraph, an Agentic GraphRAG system for semiconductor stock research.
 
 Judge whether supplied evidence covers the current Task Requirements. Do not answer the user and do not use outside knowledge.
 

@@ -1,6 +1,6 @@
 # SemiGraph — รายงานสรุปความก้าวหน้าโครงงาน
 
-**ชื่อโครงงาน:** SemiGraph: Agentic Heterogeneous Retrieval สำหรับการค้นหลักฐานวิเคราะห์บริษัท Semiconductor  
+**ชื่อโครงงาน:** SemiGraph: Agentic GraphRAG สำหรับการค้นหลักฐานวิเคราะห์บริษัท Semiconductor
 **ประเภทเอกสาร:** Progress Report สำหรับเตรียมการนำเสนอและสอบป้องกัน  
 **วันที่จัดทำ:** 3 สิงหาคม 2026  
 **สถานะ:** Progress Update — ยังไม่ใช่รายงานผลสุดท้ายของ Full Agent

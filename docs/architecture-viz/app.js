@@ -270,7 +270,7 @@ const graphNodes = [
   },
   {
     id: "g_neo4j", x: 710, y: 540, w: 420, h: 112, layer: "data", kicker: "PERSISTED GRAPH", title: "Neo4j knowledge + provenance", subtitle: "Document → Section → Chunk → Entity · domain edges · embeddings", chip: "APOC + GDS",
-    description: "ฐานเดียวเก็บทั้งข้อความ SEC, entity graph, provenance hierarchy, synonymy/specificity และ vector properties", contract: "Document/Section/Chunk/Entity + 29 relationship types", points: ["Entity unique ด้วย (name,type)", "domain relationship ผูก source_chunk", "Chunk, Entity และ triple embeddings ถูกสร้าง offline"], files: [FILE("src/semigraph/offline/kg_store.py", "KGStore"), FILE("src/semigraph/ontology/schema.py", "NODE_CATALOG / RELATIONSHIP_CATALOG")], note: "Neo4j รองรับทั้ง homogeneous Vector RAG และ heterogeneous GraphRAG จาก corpus เดียวกัน ทำให้เทียบ retrieval ได้ยุติธรรม",
+    description: "ฐานเดียวเก็บทั้งข้อความ SEC, entity graph, provenance hierarchy, synonymy/specificity และ vector properties", contract: "Document/Section/Chunk/Entity + 29 relationship types", points: ["Entity unique ด้วย (name,type)", "domain relationship ผูก source_chunk", "Chunk, Entity และ triple embeddings ถูกสร้าง offline"], files: [FILE("src/semigraph/offline/kg_store.py", "KGStore"), FILE("src/semigraph/ontology/schema.py", "NODE_CATALOG / RELATIONSHIP_CATALOG")], note: "Neo4j รองรับทั้ง Vector RAG และ GraphRAG จาก corpus เดียวกัน ทำให้เทียบ retrieval ได้ยุติธรรม",
   },
   {
     id: "g_seed_modes", x: 1180, y: 540, w: 255, h: 112, layer: "shared", kicker: "ABLATION SWITCH", title: "Node / Triple / Hybrid seeds", subtitle: "same downstream PPR", chip: "seed_mode",
@@ -728,7 +728,7 @@ const state = {
   dragStart: null,
   selectedNode: null,
   enabledLayers: new Set(Object.keys(LAYERS)),
-  lens: "heterogeneous",
+  lens: "full-system",
 };
 
 const els = {
@@ -845,7 +845,7 @@ function activeStep() {
 }
 
 function isNodeMutedByLens(node) {
-  if (state.view !== "runtime" || state.lens === "heterogeneous") return false;
+  if (state.view !== "runtime" || state.lens === "full-system") return false;
   if (state.lens === "agentic-vector") return Boolean(node.tool && node.tool !== "vector");
   if (state.lens === "vanilla-vector") {
     const visible = new Set(["query", "vector_tool", "answer"]);

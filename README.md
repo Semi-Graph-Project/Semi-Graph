@@ -1,17 +1,18 @@
 # SemiGraph
 
-**Agentic Heterogeneous GraphRAG for evidence-grounded semiconductor fundamental analysis.**
+**Agentic GraphRAG for evidence-grounded semiconductor fundamental analysis.**
 
 SemiGraph is a KMUTNB computer science senior thesis project. It studies whether
 an evidence-adaptive Agent can answer multi-hop questions over semiconductor
 company disclosures more effectively than a conventional vector-only RAG
 pipeline.
 
-The contribution is retrieval and Agent engineering—not a new investment
-strategy. SemiGraph connects an ontology-grounded knowledge graph, filing-chunk
-retrieval, structured financial facts, and news evidence through one auditable
-Agent workflow. It is a research prototype and does not provide investment
-advice.
+The contribution is GraphRAG and Agent engineering—not a new investment
+strategy. SemiGraph combines ontology-grounded graph retrieval, filing-chunk
+evidence, evidence-adaptive Agent control, and provenance-aware synthesis in
+one auditable workflow. Structured financial facts and news remain supporting
+capabilities outside the primary research claim. SemiGraph is a research
+prototype and does not provide investment advice.
 
 ## Research Positioning
 
@@ -20,14 +21,16 @@ connected through entities such as companies, products, suppliers, risks, and
 geographies. Vector similarity is useful for finding locally relevant text, but
 it does not explicitly model those relationships.
 
-SemiGraph therefore frames the main comparison as **Agentic Heterogeneous RAG
-vs. Homogeneous Vector RAG** through three controlled configurations:
+SemiGraph therefore evaluates two independent variables: the retrieval
+backbone (Vector or Graph) and the presence of an evidence-adaptive Agent. The
+main comparison uses a controlled `2 × 2` ablation:
 
 | Configuration | Retrieval | Controller | Purpose |
 |---|---|---|---|
-| **Vanilla Vector RAG** | Filing chunks by vector similarity | Single retrieval pass | Homogeneous baseline |
+| **Vector-only RAG** | Filing chunks by vector similarity | Single retrieval pass | Establish the semantic-retrieval baseline |
+| **Graph-only RAG** | Knowledge Graph and Personalized PageRank | Single graph retrieval pass | Isolate the value of graph retrieval |
 | **Agentic Vector RAG** | Vector retrieval only | Plan, assess evidence, and retry | Isolate the value of the Agent controller |
-| **Agentic Heterogeneous RAG** | Graph, vector, structured financial, and news tools | Evidence-adaptive Agent | Test retrieval across different evidence types |
+| **Agentic GraphRAG** | Knowledge Graph and Personalized PageRank | Plan, assess evidence, and retry | Evaluate the complete project configuration |
 
 This separation matters: Graph retrieval and Agent control are different
 variables. SemiGraph evaluates them independently instead of treating every
@@ -38,9 +41,10 @@ gain as a generic “GraphRAG improvement.”
 ![SemiGraph Agentic GraphRAG architecture](docs/architecture-viz/semigraph-agentic-graphrag-readme.png)
 
 The figure intentionally zooms into the core SEC-to-GraphRAG path. Financial
-and news tools are omitted from the diagram to keep the Graph retrieval flow
-readable; the full Agent still exposes `graph`, `vector`, `financial`, and
-`news` retrieval adapters.
+and news tools are omitted to keep the primary Graph retrieval flow readable.
+The runtime still exposes those adapters as supporting capabilities, but the
+main evaluation claim is based on the controlled Vector/Graph and Agent/no-Agent
+comparison.
 
 ### 1. Offline indexing
 
@@ -119,14 +123,14 @@ retrieval trace, and assessment. This makes tool choice, retries, accepted
 evidence, and final citations inspectable without exposing hidden
 chain-of-thought.
 
-## Heterogeneous Evidence Tools
+## Retrieval and Supporting Evidence Tools
 
 | Tool | Evidence source | Current role |
 |---|---|---|
-| **Graph Search** | Neo4j entities, relationships, chunks, and GDS PPR | Multi-hop relational retrieval |
-| **Vector Search** | Neo4j chunk vector index | Homogeneous baseline and semantic passage retrieval |
-| **Financial Search** | Typed PostgreSQL views populated from Finnhub | Deterministic reported, derived, and snapshot metrics |
-| **News Search** | Finnhub company news | Recent event context with source metadata |
+| **Graph Search** | Neo4j entities, relationships, chunks, and GDS PPR | Primary multi-hop relational retrieval |
+| **Vector Search** | Neo4j chunk vector index | Semantic baseline and controlled Agent comparison |
+| **Financial Search** | Typed PostgreSQL views populated from Finnhub | Supporting reported, derived, and snapshot metrics |
+| **News Search** | Finnhub company news | Supporting recent-event context with source metadata |
 
 Financial numerics are kept out of the narrative KG as the authoritative value
 store. The graph may contain financial concepts such as “gross margin,” while
@@ -270,8 +274,8 @@ python scripts/evaluate_retrieval_quality.py \
   trading engine or buy/sell recommender.
 - A graph relationship is retrieved evidence, not proof of causality.
 - HippoRAG-style triple linking and PPR are foundations. SemiGraph's project
-  contribution is their integration with domain constraints, heterogeneous
-  evidence, adaptive retrieval control, provenance, and controlled evaluation.
+  contribution is their integration with domain constraints, evidence-adaptive
+  Agent control, provenance, and controlled Vector/Graph evaluation.
 - Tunable runtime values belong in `config/default.yaml`; secrets belong in
   `.env`.
 - Generated corpora, local database volumes, credentials, and temporary Agent
