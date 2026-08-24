@@ -12,6 +12,20 @@ PAGE_CONFIG = {
 }
 
 
+BACKEND_CORPORA = (
+    {
+        "key": "benchmark",
+        "label": "Benchmark (7690)",
+        "description": "Controlled retrieval benchmark backend",
+    },
+    {
+        "key": "production",
+        "label": "Production (7687)",
+        "description": "Main production Neo4j backend",
+    },
+)
+
+
 CONFIGURATIONS = (
     {
         "number": "01",
@@ -116,6 +130,7 @@ def render_topbar():
 
 def render_comparison_workspace(query=None):
     """Render the shared controls and four independently inspectable panels."""
+    corpus = render_backend_corpus_selector()
     cards = "".join(_build_comparison_card(config, query) for config in CONFIGURATIONS)
     run_label = "RUN COMPLETE" if query else "READY FOR QUERY"
     run_class = "run-complete" if query else "run-waiting"
@@ -142,14 +157,14 @@ def render_comparison_workspace(query=None):
         """
     )
     controls = _markup(
-        """
+        f"""
         <section class="shared-controls" aria-label="Shared comparison controls">
             <div class="shared-controls-title">
                 <span>CONTROLLED VARIABLES</span>
                 <small>Held constant for a fair comparison</small>
             </div>
             <div><small>QUESTION</small><strong>Shared</strong></div>
-            <div><small>CORPUS</small><strong>Main snapshot</strong></div>
+            <div><small>CORPUS</small><strong>{html.escape(corpus['label'])}</strong></div>
             <div><small>LLM + PROMPT</small><strong>Shared</strong></div>
             <div><small>EVIDENCE BUDGET</small><strong>Shared</strong></div>
         </section>
@@ -175,6 +190,19 @@ def render_comparison_workspace(query=None):
         "</div></main>"
     )
     st.markdown(markup, unsafe_allow_html=True)
+
+
+def render_backend_corpus_selector():
+    """Render the shared backend selector used by all four configurations."""
+    labels = [corpus["label"] for corpus in BACKEND_CORPORA]
+    selected_label = st.selectbox(
+        "Backend Corpus",
+        labels,
+        index=0,
+        key="backend_corpus",
+        label_visibility="collapsed",
+    )
+    return next(corpus for corpus in BACKEND_CORPORA if corpus["label"] == selected_label)
 
 
 def render_comparison_input():

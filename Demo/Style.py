@@ -257,6 +257,33 @@ footer,
     font-weight: 600;
 }
 
+/* Shared backend selector */
+[data-testid="stSelectbox"] {
+    max-width: 360px;
+    margin: 18px 0 0;
+}
+
+[data-testid="stSelectbox"] label {
+    display: none;
+}
+
+[data-testid="stSelectbox"] [data-baseweb="select"] > div {
+    min-height: 44px;
+    color: var(--sg-body-strong);
+    background: var(--sg-surface-card);
+    border: 1px solid var(--sg-hairline-strong);
+    border-radius: 0;
+}
+
+[data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within {
+    border-color: var(--sg-primary);
+    box-shadow: none;
+}
+
+[data-testid="stSelectbox"] [data-baseweb="select"] svg {
+    fill: var(--sg-primary);
+}
+
 .comparison-section-heading {
     display: flex;
     align-items: flex-end;
