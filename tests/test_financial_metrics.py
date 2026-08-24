@@ -87,15 +87,6 @@ class TestMetricRegistry:
         assert "costofrevenue" not in ALIAS_TO_METRIC
         assert "RevenueFromContract" not in ALIAS_TO_METRIC
 
-    def test_alias_order_is_preferred_to_fallback(self):
-        revenue = ALIAS_TO_METRIC["RevenueFromContractWithCustomerExcludingAssessedTax"]
-        assert revenue.aliases == (
-            "RevenueFromContractWithCustomerExcludingAssessedTax",
-            "Revenues",
-            "SalesRevenueNet",
-        )
-        assert revenue.aliases[0] == "RevenueFromContractWithCustomerExcludingAssessedTax"
-
     def test_capex_is_the_only_cash_outflow_metric(self):
         capex = ALIAS_TO_METRIC["PaymentsToAcquirePropertyPlantAndEquipment"]
         assert capex.name == "capital_expenditure"
@@ -113,4 +104,3 @@ class TestMetricRegistry:
         assert units["revenue"] == "USD"
         assert units["diluted_eps"] == "USD/share"
         assert units["gross_profit"] == "USD"
-

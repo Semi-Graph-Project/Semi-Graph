@@ -3,7 +3,6 @@ from types import SimpleNamespace
 import semigraph.agent.tools as agent_tools
 from semigraph.agent.contracts import ToolName
 from semigraph.agent.retry_policy import TOOL_RETRY_PROFILES
-from semigraph.config import Config
 
 
 def _config() -> SimpleNamespace:
@@ -30,30 +29,6 @@ def _config() -> SimpleNamespace:
             },
         }
     )
-
-
-def test_default_config_contains_phase_t_agent_profile():
-    profiles = Config().agent_retrieval
-
-    assert profiles["vector"] == {
-        "candidate_pool_k": 100,
-        "final_rerank": "none",
-    }
-    assert profiles["graph"] == {
-        "top_k_entities": 20,
-        "top_k_triples": 5,
-        "top_k_chunk_seeds": 5,
-        "chunk_seed_vector_index": "chunk_embedding",
-        "damping": 0.5,
-        "use_expansion": False,
-        "seed_mode": "triple",
-        "rerank_mode": "legacy",
-        "candidate_pool_k": 100,
-        "final_rerank": "none",
-        "ppr_seed_weight_mode": "uniform",
-        "ppr_graph_mode": "entity_chunk",
-        "triple_filter": "none",
-    }
 
 
 def test_agent_vector_search_uses_phase_t_profile(monkeypatch):

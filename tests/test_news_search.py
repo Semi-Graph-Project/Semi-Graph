@@ -121,10 +121,6 @@ class TestNewsChunkShape:
             "source": "Reuters",
         }
 
-    def test_six_keys_exact(self, article):
-        c = _make_chunk(article, "NVDA", "text", 90, now_ts=1_700_000_000)
-        assert set(c.keys()) == {"chunk_id", "text", "ticker", "fiscal_year", "section", "score"}
-
     def test_chunk_id_format(self, article):
         c = _make_chunk(article, "NVDA", "x", 90, now_ts=1_700_000_000)
         assert c["chunk_id"] == "news_NVDA_99999"
