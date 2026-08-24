@@ -13,7 +13,7 @@ import json
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 from uuid import uuid4
@@ -104,41 +104,8 @@ class GraphRepairStats:
     created_by_rel: dict[str, int] = field(default_factory=dict)
     rejected_by_reason: dict[str, int] = field(default_factory=dict)
 
-    @property
-    def total_created(self) -> int:
-        return self.relationships_created
-
-    @property
-    def filer_anchor_created(self) -> int:
-        """Backward-compatible field for older pipeline logging."""
-        return 0
-
-    @property
-    def item_1a_risk_bridge_created(self) -> int:
-        """Backward-compatible field for older pipeline logging."""
-        return self.relationships_created
-
     def as_dict(self) -> dict:
-        return {
-            "ticker": self.ticker,
-            "fiscal_year": self.fiscal_year,
-            "filing_type": self.filing_type,
-            "method": self.method,
-            "filer_name": self.filer_name,
-            "skipped": self.skipped,
-            "reason": self.reason,
-            "candidate_chunks": self.candidate_chunks,
-            "candidate_entities": self.candidate_entities,
-            "llm_calls": self.llm_calls,
-            "llm_failed": self.llm_failed,
-            "relationships_proposed": self.relationships_proposed,
-            "relationships_rejected": self.relationships_rejected,
-            "relationships_created": self.relationships_created,
-            "pruned_entities": self.pruned_entities,
-            "pruned_mentions": self.pruned_mentions,
-            "created_by_rel": dict(self.created_by_rel),
-            "rejected_by_reason": dict(self.rejected_by_reason),
-        }
+        return asdict(self)
 
 
 def _repair_method(cfg: Config) -> str:
@@ -301,73 +268,6 @@ def _relationship_guide_text() -> str:
         guide = RELATIONSHIP_GUIDE.get(rel_type, "")
         lines.append(f"- {rel_type}: {guide}")
     return "\n".join(lines)
-
-
-def _build_llm_prompt(chunk: RepairChunk, *, filer_name: str) -> str:
-    id_by_eid = {entity.eid: f"E{i + 1}" for i, entity in enumerate(chunk.entities)}
-    entity_lines = []
-    candidate_ids = []
-    for entity in chunk.entities:
-        display_id = id_by_eid[entity.eid]
-        marker = " candidate_dead_end=true" if entity.eid in chunk.candidate_eids else ""
-        if marker:
-            candidate_ids.append(display_id)
-        entity_lines.append(f"- {display_id}: name={json.dumps(entity.name)} type={entity.type}{marker}")
-
-    chunk_text = chunk.text[:DEFAULT_MAX_TEXT_CHARS]
-    return f"""
-You repair a financial knowledge graph for PPR multi-hop retrieval.
-
-Filer context:
-- ticker: {chunk.ticker}
-- filer_name: {filer_name}
-- fiscal_year: {chunk.fiscal_year}
-- filing_type: {chunk.filing_type}
-- section: {chunk.section}
-- chunk_id: {chunk.chunk_id}
-
-Task:
-Only repair candidate_dead_end entities. Create a relationship only when the
-chunk text explicitly states that relationship. Every relationship MUST include
-one exact evidence_sentence copied from the chunk text. If the text merely lists
-entities together, do not create a relationship.
-
-Allowed entity ids:
-{chr(10).join(entity_lines)}
-
-Candidate ids that need repair:
-{", ".join(candidate_ids)}
-
-Allowed relationship types and direction:
-{_relationship_guide_text()}
-
-Return strict JSON only:
-{{
-  "relationships": [
-    {{
-      "source_id": "E1",
-      "target_id": "E2",
-      "type": "PRODUCES",
-      "evidence_sentence": "Exact sentence copied from the chunk.",
-      "confidence": 0.0
-    }}
-  ]
-}}
-
-Rules:
-- Use only source_id/target_id from the allowed entity ids.
-- At least one endpoint of every relationship must be a candidate_dead_end id.
-- The evidence_sentence must be a sentence or clause copied exactly from the
-  chunk text and must mention or directly support both endpoints.
-- Prefer no relationship over a weak, inferred, generic, or co-mention-only edge.
-- Do not invent entities.
-- Do not output markdown.
-
-Chunk text:
-\"\"\"
-{chunk_text}
-\"\"\"
-""".strip()
 
 
 def _build_llm_batch_prompt(chunks: list[RepairChunk], *, filer_name: str) -> str:
@@ -542,38 +442,6 @@ def _validate_llm_relationships(
         })
 
     return rows, rejected, proposed
-
-
-def _repair_one_chunk(
-    chunk: RepairChunk,
-    *,
-    llm,
-    filer_name: str,
-    method: str,
-    run_id: str,
-    created_at: str,
-) -> tuple[list[dict], dict[str, int], int, Optional[str]]:
-    prompt = _build_llm_prompt(chunk, filer_name=filer_name)
-    try:
-        response = llm.invoke([
-            (
-                "system",
-                "You output strict JSON only. You reject weak or inferred graph edges.",
-            ),
-            ("human", prompt),
-        ])
-        content = response.content if hasattr(response, "content") else str(response)
-        payload = _extract_json_object(content)
-        rows, rejected, proposed = _validate_llm_relationships(
-            chunk,
-            payload,
-            method=method,
-            run_id=run_id,
-            created_at=created_at,
-        )
-        return rows, rejected, proposed, None
-    except Exception as exc:  # pragma: no cover - integration safety net
-        return [], {"llm_error": 1}, 0, f"{type(exc).__name__}: {exc}"
 
 
 def _repair_chunk_batch(

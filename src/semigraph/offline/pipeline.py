@@ -220,9 +220,9 @@ def process_filing(
     print(f"[pipeline] {filing_key}: {len(all_chunks)} chunks across "
           f"{len(section_to_chunks)} sections (workers={workers})")
 
-    driver = get_neo4j_driver()
-    store = KGStore(driver=driver)
     llm = get_llm()
+    store = KGStore()
+    driver = store.driver
 
     try:
         if overwrite:
@@ -268,14 +268,13 @@ def process_filing(
             print(f"  [repair] skipped: {repair_stats.reason}")
         else:
             print(
-                f"  [repair] {repair_stats.total_created} rels "
-                f"(anchor={repair_stats.filer_anchor_created}, "
-                f"risk_bridge={repair_stats.item_1a_risk_bridge_created})"
+                f"  [repair] {repair_stats.relationships_created} rels "
+                f"(anchor=0, risk_bridge={repair_stats.relationships_created})"
             )
 
         elapsed = time.time() - t0
         status = "done" if fail == 0 else "partial"
-        repaired_rels = repair_stats.total_created
+        repaired_rels = repair_stats.relationships_created
 
         return FilingResult(
             filing_key=filing_key,

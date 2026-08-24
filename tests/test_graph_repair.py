@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from semigraph.offline.graph_repair import (
     EntityRef,
+    GraphRepairStats,
     RepairChunk,
     _evidence_in_text,
     _validate_llm_relationships,
@@ -27,6 +28,23 @@ def _chunk() -> RepairChunk:
         ],
         candidate_eids=frozenset({"node-2"}),
     )
+
+
+def test_graph_repair_stats_serializes_all_fields_without_sharing_dicts():
+    stats = GraphRepairStats(
+        ticker="NVDA",
+        fiscal_year="2026",
+        filing_type="10K",
+        relationships_created=2,
+        created_by_rel={"PRODUCES": 2},
+    )
+
+    payload = stats.as_dict()
+
+    assert payload["relationships_created"] == 2
+    assert payload["created_by_rel"] == {"PRODUCES": 2}
+    payload["created_by_rel"]["PRODUCES"] = 0
+    assert stats.created_by_rel == {"PRODUCES": 2}
 
 
 def test_evidence_sentence_must_be_present_in_chunk_text():

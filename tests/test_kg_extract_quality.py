@@ -53,6 +53,26 @@ def test_validate_relationships_accepts_uppercase_llm_types():
     assert rels[0].type == "discloses"
 
 
+def test_validate_relationships_ignores_malformed_entries():
+    _, keys = kg_extract._validate_nodes([
+        {"id": "AMD", "type": "ORG", "properties": {}},
+        {"id": "Revenue", "type": "FIN_METRIC", "properties": {}},
+    ])
+
+    rels = kg_extract._validate_relationships([
+        None,
+        {},
+        {
+            "source_type": "ORG",
+            "target": "Revenue",
+            "target_type": "FIN_METRIC",
+            "type": "DISCLOSES",
+        },
+    ], keys)
+
+    assert rels == []
+
+
 def test_validate_nodes_rejects_known_product_mislabeled_as_company():
     nodes, keys = kg_extract._validate_nodes([
         {"id": "Blackwell", "type": "ORG", "properties": {}},
