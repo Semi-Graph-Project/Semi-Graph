@@ -242,44 +242,6 @@ def _validate_nodes(raw_nodes: list) -> tuple[List[GraphNode], set[tuple[str, st
     return valid, keys
 
 
-def _is_valid_triple(triple: dict, allowed_keys: set[tuple[str, str]]) -> bool:
-    """A triple is valid only if both endpoints exist as nodes and the
-    relationship type respects the ontology's source/target constraints."""
-    if not isinstance(triple, dict):
-        return False
-    required = {"source", "source_type", "target", "target_type", "type"}
-    if not required.issubset(triple.keys()):
-        return False
-
-    source_type = _canonical_catalog_key(triple["source_type"], NODE_CATALOG)
-    target_type = _canonical_catalog_key(triple["target_type"], NODE_CATALOG)
-    rel_type = _canonical_catalog_key(triple["type"], RELATIONSHIP_CATALOG)
-    if source_type is None or target_type is None or rel_type is None:
-        return False
-
-    src_key = (_normalize_id(str(triple["source"]), source_type), source_type)
-    tgt_key = (_normalize_id(str(triple["target"]), target_type), target_type)
-    if src_key not in allowed_keys or tgt_key not in allowed_keys:
-        return False
-
-    rel_info = RELATIONSHIP_CATALOG[rel_type]
-    if rel_info["source_type"] != "any" and rel_info["source_type"] != source_type:
-        return False
-    if rel_info["target_type"] != "any" and rel_info["target_type"] != target_type:
-        return False
-
-    normalized_triple = {
-        **triple,
-        "source_type": source_type,
-        "target_type": target_type,
-        "type": rel_type,
-    }
-    if not _passes_semantic_direction_guard(normalized_triple):
-        return False
-
-    return True
-
-
 def _passes_semantic_direction_guard(triple: dict) -> bool:
     """Reject triples whose endpoint semantics are clearly backwards.
 
@@ -321,20 +283,30 @@ def _validate_relationships(
 
     valid: List[GraphRelationship] = []
     seen: set[tuple[str, str, str, str, str]] = set()
+    required = {"source", "source_type", "target", "target_type", "type"}
+
     for triple in raw_rels:
-        source_type = _canonical_catalog_key(
-            triple.get("source_type") if isinstance(triple, dict) else None,
-            NODE_CATALOG,
-        )
-        target_type = _canonical_catalog_key(
-            triple.get("target_type") if isinstance(triple, dict) else None,
-            NODE_CATALOG,
-        )
-        rel_type = _canonical_catalog_key(
-            triple.get("type") if isinstance(triple, dict) else None,
-            RELATIONSHIP_CATALOG,
-        )
+        if not isinstance(triple, dict) or not required.issubset(triple):
+            continue
+
+        source_type = _canonical_catalog_key(triple["source_type"], NODE_CATALOG)
+        target_type = _canonical_catalog_key(triple["target_type"], NODE_CATALOG)
+        rel_type = _canonical_catalog_key(triple["type"], RELATIONSHIP_CATALOG)
         if source_type is None or target_type is None or rel_type is None:
+            continue
+
+        source = _normalize_id(str(triple["source"]), source_type)
+        target = _normalize_id(str(triple["target"]), target_type)
+        if (
+            (source, source_type) not in allowed_keys
+            or (target, target_type) not in allowed_keys
+        ):
+            continue
+
+        rel_info = RELATIONSHIP_CATALOG[rel_type]
+        if rel_info["source_type"] not in {"any", source_type}:
+            continue
+        if rel_info["target_type"] not in {"any", target_type}:
             continue
 
         normalized_triple = {
@@ -343,11 +315,9 @@ def _validate_relationships(
             "target_type": target_type,
             "type": rel_type,
         }
-        if not _is_valid_triple(normalized_triple, allowed_keys):
+        if not _passes_semantic_direction_guard(normalized_triple):
             continue
 
-        source = _normalize_id(str(normalized_triple["source"]), source_type)
-        target = _normalize_id(str(normalized_triple["target"]), target_type)
         key = (
             source,
             source_type,
@@ -444,9 +414,6 @@ def extract_chunk(
         })
 
     parsed = _extract_json_object(raw)
-    if not isinstance(parsed, dict):
-        return GraphExtractionResult(nodes=[], relationships=[])
-
     raw_nodes = parsed.get("nodes", [])
     raw_rels = parsed.get("relationships", [])
     if isinstance(raw_nodes, list):
@@ -457,6 +424,4 @@ def extract_chunk(
     nodes, allowed_keys = _validate_nodes(raw_nodes)
     relationships = _validate_relationships(raw_rels, allowed_keys)
 
-
-    
     return GraphExtractionResult(nodes=nodes, relationships=relationships)
