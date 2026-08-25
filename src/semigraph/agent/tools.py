@@ -6,6 +6,7 @@ from semigraph.online.financial_search import financial_search
 from semigraph.online.graph_search import trace_graph_search
 from semigraph.online.news_search import news_search
 from semigraph.online.vector_search import trace_vector_search
+from semigraph.trace import TraceCallback
 
 
 class RetrieverResult(TypedDict):
@@ -149,7 +150,12 @@ def _compact_graph_trace(trace: dict) -> dict:
     }
 
 
-def agent_vector_search(query: str, top_k_chunks: int, cfg) -> RetrieverResult:
+def agent_vector_search(
+    query: str,
+    top_k_chunks: int,
+    cfg,
+    trace_callback: TraceCallback | None = None,
+) -> RetrieverResult:
     """Run vector retrieval with the Phase T profile used by the agent."""
     profile = _profile(cfg, "vector")
     vector_index = str(profile.get("vector_index", "chunk_embedding"))
@@ -160,6 +166,7 @@ def agent_vector_search(query: str, top_k_chunks: int, cfg) -> RetrieverResult:
         final_rerank=str(profile["final_rerank"]),
         cfg=cfg,
         vector_index=vector_index,
+        trace_callback=trace_callback,
     )
     return {
         "chunks": trace["chunks"],
@@ -171,7 +178,12 @@ def agent_vector_search(query: str, top_k_chunks: int, cfg) -> RetrieverResult:
     }
 
 
-def agent_graph_search(query: str, top_k_chunks: int, cfg) -> RetrieverResult:
+def agent_graph_search(
+    query: str,
+    top_k_chunks: int,
+    cfg,
+    trace_callback: TraceCallback | None = None,
+) -> RetrieverResult:
     """Run graph retrieval with the winning Phase T profile used by the agent."""
     profile = _profile(cfg, "graph")
     trace = trace_graph_search(
@@ -193,6 +205,7 @@ def agent_graph_search(query: str, top_k_chunks: int, cfg) -> RetrieverResult:
         ppr_graph_mode=str(profile["ppr_graph_mode"]),
         graph_triple_filter=str(profile["triple_filter"]),
         cfg=cfg,
+        trace_callback=trace_callback,
     )
     return {"chunks": trace["chunks"], "trace": _compact_graph_trace(trace)}
 

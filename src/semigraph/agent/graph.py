@@ -5,7 +5,7 @@ from langgraph.types import Send
 
 from semigraph.agent import nodes
 from semigraph.agent.state import AgentState, TaskWorkerState
-from semigraph.config import get_config
+from semigraph.config import Config, get_config
 
 
 LOCKABLE_TOOLS = {"vector", "graph"}
@@ -109,33 +109,59 @@ def build_agent(
     locked_tool: str | None = None,
     top_k: int | None = None,
     synthesis: Callable[[AgentState], dict] | None = None,
+    cfg: Config | None = None,
 ):
     """Build the Agent harness with isolated parallel Task workers.
 
     Production uses the default autonomous policy. Evaluations may lock every
     initial and retry action to Graph or Vector while keeping the same harness.
+    An explicit Config keeps a selected demo corpus isolated from the default
+    process-wide configuration.
     """
     if locked_tool is not None and locked_tool not in LOCKABLE_TOOLS:
         raise ValueError(f"Unsupported locked tool: {locked_tool}")
     if top_k is not None and top_k < 1:
         raise ValueError("top_k must be positive")
 
+    agent_config = cfg or get_config()
+
     def plan_route(state: AgentState) -> dict:
+        if cfg is None:
+            update = nodes.plan_route_node(state, locked_tool=locked_tool)
+        else:
+            update = nodes.plan_route_node(
+                state,
+                locked_tool=locked_tool,
+                cfg=agent_config,
+            )
         return _apply_action_policy(
-            nodes.plan_route_node(state, locked_tool=locked_tool),
+            update,
             locked_tool,
             top_k,
         )
 
     def assess(state: TaskWorkerState) -> dict:
+        if cfg is None:
+            update = nodes.assess_node(state, locked_tool=locked_tool)
+        else:
+            update = nodes.assess_node(
+                state,
+                locked_tool=locked_tool,
+                cfg=agent_config,
+            )
         return _apply_action_policy(
-            nodes.assess_node(state, locked_tool=locked_tool),
+            update,
             locked_tool,
             top_k,
         )
 
+    def execute_attempt(state: TaskWorkerState) -> dict:
+        if cfg is None:
+            return nodes.execute_attempt_node(state)
+        return nodes.execute_attempt_node(state, cfg=agent_config)
+
     task_workflow = StateGraph(TaskWorkerState)
-    task_workflow.add_node("execute", nodes.execute_attempt_node)
+    task_workflow.add_node("execute", execute_attempt)
     task_workflow.add_node("assess", assess)
     task_workflow.add_edge(START, "execute")
     task_workflow.add_conditional_edges(
@@ -175,10 +201,16 @@ def build_agent(
     workflow.add_node("plan_route", plan_route)
     workflow.add_node("task_worker", task_worker)
     workflow.add_node("collector", _collect_task_results)
-    workflow.add_node(
-        "synthesize",
-        synthesis or nodes.synthesize_attempts_node,
-    )
+    if synthesis is not None:
+        synthesis_node = synthesis
+    elif cfg is None:
+        synthesis_node = nodes.synthesize_attempts_node
+    else:
+        synthesis_node = lambda state: nodes.synthesize_attempts_node(
+            state,
+            cfg=agent_config,
+        )
+    workflow.add_node("synthesize", synthesis_node)
 
     workflow.add_edge(START, "plan_route")
     workflow.add_conditional_edges(
@@ -189,7 +221,7 @@ def build_agent(
     workflow.add_edge("task_worker", "collector")
     workflow.add_edge("collector", "synthesize")
     workflow.add_edge("synthesize", END)
-    max_parallel_tasks = get_config().agent_max_parallel_tasks
+    max_parallel_tasks = agent_config.agent_max_parallel_tasks
     return workflow.compile().with_config({
         "max_concurrency": max_parallel_tasks,
     })

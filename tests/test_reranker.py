@@ -111,6 +111,7 @@ def test_rerank_empty_input_is_skipped():
 def test_vector_sends_only_top_20_candidates_to_reranker(monkeypatch):
     candidates = _chunks(100)
     calls = {}
+    events = []
 
     monkeypatch.setattr(
         vector_search_module,
@@ -130,18 +131,29 @@ def test_vector_sends_only_top_20_candidates_to_reranker(monkeypatch):
         candidate_pool_k=100,
         final_rerank="cohere",
         cfg=_config(),
+        trace_callback=events.append,
     )
 
     assert len(trace["raw_chunk_candidates"]) == 100
     assert calls["count"] == 20
     assert len(trace["chunks"]) == 5
     assert trace["reranker_trace"]["enabled"] is True
+    assert [event["stage"] for event in events] == [
+        "vector_candidates",
+        "vector_candidates",
+        "reranking",
+        "reranking",
+        "retrieval_complete",
+    ]
+    assert events[1]["details"]["candidate_count"] == 100
+    assert len(events[-1]["details"]["returned_chunk_ids"]) == 5
 
 
 @pytest.mark.parametrize("ppr_graph_mode", ["entity_only", "entity_chunk"])
 def test_graph_sends_candidates_to_reranker(monkeypatch, ppr_graph_mode):
     candidates = _chunks(3)
     calls = {}
+    events = []
 
     monkeypatch.setattr(
         graph_search_module,
@@ -197,9 +209,17 @@ def test_graph_sends_candidates_to_reranker(monkeypatch, ppr_graph_mode):
         use_expansion=False,
         final_rerank="cohere",
         ppr_graph_mode=ppr_graph_mode,
+        trace_callback=events.append,
     )
 
     assert calls["count"] == 3
     assert trace["raw_chunk_candidates"] == candidates
     assert trace["reranker_trace"]["enabled"] is True
     assert len(trace["chunks"]) == 2
+    assert [
+        event["status"]
+        for event in events
+        if event["stage"] == "personalized_pagerank"
+    ] == ["running", "complete"]
+    assert events[-1]["stage"] == "retrieval_complete"
+    assert len(events[-1]["details"]["returned_chunk_ids"]) == 2

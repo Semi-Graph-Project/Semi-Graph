@@ -14,6 +14,7 @@ from semigraph.config import Config, get_config
 from semigraph.connections import get_neo4j_driver
 from semigraph.offline.embeddings import get_embedding_model
 from semigraph.online.rerank import rerank_chunks
+from semigraph.trace import TraceCallback, notify_trace
 
 
 DEFAULT_VECTOR_INDEX = "chunk_embedding"
@@ -66,6 +67,7 @@ def trace_vector_search(
     final_rerank: str = "none",
     cfg: Optional[Config] = None,
     vector_index: str = DEFAULT_VECTOR_INDEX,
+    trace_callback: TraceCallback | None = None,
 ) -> dict:
     """Run vector retrieval and keep raw/reranked results for evaluation."""
     if not query.strip() or top_k_chunks <= 0:
@@ -81,6 +83,15 @@ def trace_vector_search(
         }
 
     cfg = cfg or get_config()
+    notify_trace(trace_callback, {
+        "stage": "vector_candidates",
+        "status": "running",
+        "message": "Encoding the query and searching the vector index",
+        "details": {
+            "vector_index": vector_index,
+            "candidate_pool_k": candidate_pool_k,
+        },
+    })
     if vector_index == DEFAULT_VECTOR_INDEX:
         candidates = _retrieve_chunks(query, candidate_pool_k, cfg=cfg)
     else:
@@ -91,6 +102,28 @@ def trace_vector_search(
             cfg=cfg,
             vector_index=vector_index,
         )
+    notify_trace(trace_callback, {
+        "stage": "vector_candidates",
+        "status": "complete",
+        "message": f"Retrieved {len(candidates)} vector candidates",
+        "details": {
+            "candidate_count": len(candidates),
+            "candidate_chunk_ids": [
+                str(chunk["chunk_id"])
+                for chunk in candidates[:20]
+                if chunk.get("chunk_id")
+            ],
+        },
+    })
+    notify_trace(trace_callback, {
+        "stage": "reranking",
+        "status": "running",
+        "message": f"Applying {final_rerank} reranking",
+        "details": {
+            "mode": final_rerank,
+            "candidate_count": len(candidates),
+        },
+    })
     if final_rerank == "none":
         reranked = candidates[:top_k_chunks]
         reranker_trace = {
@@ -115,6 +148,28 @@ def trace_vector_search(
         }
     else:
         raise ValueError(f"Unknown final_rerank: {final_rerank}")
+
+    returned_chunk_ids = [
+        str(chunk["chunk_id"])
+        for chunk in reranked
+        if chunk.get("chunk_id")
+    ]
+    notify_trace(trace_callback, {
+        "stage": "reranking",
+        "status": "complete",
+        "message": f"Selected {len(reranked)} final chunks",
+        "details": {
+            "mode": final_rerank,
+            "returned_chunk_ids": returned_chunk_ids,
+            "reranker": reranker_trace,
+        },
+    })
+    notify_trace(trace_callback, {
+        "stage": "retrieval_complete",
+        "status": "complete",
+        "message": "Vector retrieval completed",
+        "details": {"returned_chunk_ids": returned_chunk_ids},
+    })
 
     return {
         "query": query,

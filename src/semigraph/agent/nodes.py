@@ -23,7 +23,7 @@ from semigraph.agent.retry_policy import (
 )
 from semigraph.agent.state import AgentState, TaskWorkerState
 from semigraph.agent.tools import RETRIEVERS
-from semigraph.config import get_config
+from semigraph.config import Config, get_config
 from semigraph.connections import get_llm
 
 
@@ -89,6 +89,7 @@ def _normalize_plan_tasks(
 def plan_route_node(
     state: AgentState,
     locked_tool: str | None = None,
+    cfg: Config | None = None,
 ) -> dict:
     started_at = time.perf_counter()
     original_query = state.get("original_query", "")
@@ -113,7 +114,7 @@ def plan_route_node(
         return error_update("empty_query")
 
     original_query = original_query.strip()
-    cfg = get_config()
+    cfg = cfg or get_config()
     llm = get_llm(cfg)
     system_prompt = build_plan_route_system_prompt(cfg)
     if locked_tool:
@@ -212,7 +213,10 @@ def _is_transient_retrieval_error(exc: Exception) -> bool:
     }
 
 
-def execute_attempt_node(state: TaskWorkerState) -> dict:
+def execute_attempt_node(
+    state: TaskWorkerState,
+    cfg: Config | None = None,
+) -> dict:
     """Execute one retrieval action and append one cohesive Attempt."""
     task = state["task"]
     attempts = state.get("attempts") or []
@@ -229,7 +233,7 @@ def execute_attempt_node(state: TaskWorkerState) -> dict:
         if isinstance(attempt, dict) and attempt.get("task_id") == task_id
     )
 
-    cfg = get_config()
+    cfg = cfg or get_config()
     retriever = RETRIEVERS[action.tool.value]
     technical_tries = []
     retriever_result = None
@@ -391,12 +395,13 @@ def _complete_task(
 def assess_node(
     state: TaskWorkerState,
     locked_tool: str | None = None,
+    cfg: Config | None = None,
 ) -> dict:
     """Assess the latest Attempt and let the controller approve any retry."""
     task = state["task"]
     latest = state["attempts"][-1]
 
-    cfg = get_config()
+    cfg = cfg or get_config()
     llm = get_llm(cfg)
     system_prompt = build_assess_system_prompt(locked_tool)
     user_message = build_assess_context(state, cfg)
@@ -688,10 +693,13 @@ def _remove_invalid_citations(answer: str, valid_indices: set[int]) -> str:
     return sanitized.strip()
 
 
-def synthesize_attempts_node(state: AgentState) -> dict:
+def synthesize_attempts_node(
+    state: AgentState,
+    cfg: Config | None = None,
+) -> dict:
     """Synthesize once from evidence selected from the Attempt Ledger."""
     started_at = time.perf_counter()
-    cfg = get_config()
+    cfg = cfg or get_config()
     max_chunks = cfg.agent_max_synthesis_chunks
     attempts = state.get("attempts") or []
     selected_chunks = select_synthesis_chunks(
