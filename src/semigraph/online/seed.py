@@ -1,7 +1,6 @@
 
 from __future__ import annotations
 
-from functools import lru_cache
 from typing import Optional, TypedDict
 
 import numpy as np
@@ -84,7 +83,7 @@ def query_to_triple_candidates(
     model = get_embedding_model()
     q_vec = model.encode([query])[0].astype(np.float32)
 
-    vectors, metadata = _load_triple_index() 
+    vectors, metadata = _load_triple_index(cfg)
     
     if vectors.shape[0] == 0:
         return []
@@ -226,23 +225,34 @@ RETURN s.name AS head,
 """
 
 
-@lru_cache(maxsize=1)
-def _load_triple_index(cfg_id: int = 0) -> tuple[np.ndarray, list[dict]]:
-    """Load all relationship triples + embeddings into memory once per process.
+_TRIPLE_INDEX_CACHE: dict[
+    tuple[str, str, int], tuple[np.ndarray, list[dict]]
+] = {}
+
+
+def _load_triple_index(cfg: Optional[Config] = None) -> tuple[np.ndarray, list[dict]]:
+    """Load relationship triples once per Neo4j backend in this process.
 
     Returns:
         (vectors, metadata) where:
           vectors  — (N, 768) float32, L2-normalized (BGE output)
           metadata — list[dict] aligned with vectors, no `embedding` key
     """
-    cfg = get_config()
+    cfg = cfg or get_config()
+    cache_key = (cfg.neo4j_uri, cfg.neo4j_user, cfg.embed_dim)
+    cached = _TRIPLE_INDEX_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
     driver = get_neo4j_driver(cfg)
     try:
         with driver.session() as session:
             rows = list(session.run(_CYPHER_LOAD_TRIPLES))
         if not rows:
             print("[triple_index] EMPTY — run `python scripts/embed_triples.py` first")
-            return np.empty((0, cfg.embed_dim), dtype=np.float32), []
+            result = (np.empty((0, cfg.embed_dim), dtype=np.float32), [])
+            _TRIPLE_INDEX_CACHE[cache_key] = result
+            return result
 
         vectors = np.asarray(
             [row["embedding"] for row in rows], dtype=np.float32
@@ -261,7 +271,9 @@ def _load_triple_index(cfg_id: int = 0) -> tuple[np.ndarray, list[dict]]:
         ]
         mb = vectors.nbytes / (1024 * 1024)
         print(f"[triple_index] loaded {len(rows)} triples ({mb:.1f} MB)")
-        return vectors, metadata
+        result = (vectors, metadata)
+        _TRIPLE_INDEX_CACHE[cache_key] = result
+        return result
     finally:
         driver.close()
 

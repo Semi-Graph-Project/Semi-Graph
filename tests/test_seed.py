@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 
@@ -139,7 +141,7 @@ def test_query_to_triple_candidates_returns_ranked_triples(monkeypatch):
     monkeypatch.setattr(
         seed_module,
         "_load_triple_index",
-        lambda: (
+        lambda _cfg: (
             np.asarray([
                 [0.90, 0.10],
                 [0.80, 0.20],
@@ -193,7 +195,7 @@ def test_query_to_triple_candidates_deduplicates_typed_triples(monkeypatch):
     monkeypatch.setattr(
         seed_module,
         "_load_triple_index",
-        lambda: (
+        lambda _cfg: (
             np.asarray([
                 [0.95, 0.05],
                 [0.94, 0.06],
@@ -222,6 +224,82 @@ def test_query_to_triple_candidates_deduplicates_typed_triples(monkeypatch):
         pytest.approx(0.93),
         pytest.approx(0.92),
     ]
+
+
+def test_load_triple_index_cache_is_scoped_to_backend(monkeypatch):
+    def row(head):
+        return {
+            "head": head,
+            "head_type": "ORG",
+            "head_spec": 1.0,
+            "rel_type": "PRODUCES",
+            "tail": "cpu",
+            "tail_type": "PRODUCT",
+            "tail_spec": 1.0,
+            "embedding": [1.0, 0.0],
+        }
+
+    rows_by_uri = {
+        "bolt://localhost:7690": [row("benchmark")],
+        "bolt://localhost:7687": [row("production")],
+    }
+    driver_calls = []
+
+    class FakeSession:
+        def __init__(self, uri):
+            self.uri = uri
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def run(self, _query):
+            return rows_by_uri[self.uri]
+
+    class FakeDriver:
+        def __init__(self, uri):
+            self.uri = uri
+
+        def session(self):
+            return FakeSession(self.uri)
+
+        def close(self):
+            return None
+
+    def fake_get_neo4j_driver(cfg):
+        driver_calls.append(cfg.neo4j_uri)
+        return FakeDriver(cfg.neo4j_uri)
+
+    monkeypatch.setattr(
+        seed_module, "get_neo4j_driver", fake_get_neo4j_driver
+    )
+    seed_module._TRIPLE_INDEX_CACHE.clear()
+
+    benchmark_cfg = SimpleNamespace(
+        neo4j_uri="bolt://localhost:7690",
+        neo4j_user="neo4j",
+        embed_dim=2,
+    )
+    production_cfg = SimpleNamespace(
+        neo4j_uri="bolt://localhost:7687",
+        neo4j_user="neo4j",
+        embed_dim=2,
+    )
+
+    benchmark_index = seed_module._load_triple_index(benchmark_cfg)
+    production_index = seed_module._load_triple_index(production_cfg)
+    benchmark_index_again = seed_module._load_triple_index(benchmark_cfg)
+
+    assert benchmark_index[1][0]["head"] == "benchmark"
+    assert production_index[1][0]["head"] == "production"
+    assert benchmark_index_again is benchmark_index
+    assert driver_calls == [
+        "bolt://localhost:7690",
+        "bolt://localhost:7687",
+    ]
+    seed_module._TRIPLE_INDEX_CACHE.clear()
 
 
 def test_query_to_triple_seeds_is_compatibility_wrapper(monkeypatch):
