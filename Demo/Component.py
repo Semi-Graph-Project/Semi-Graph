@@ -1,11 +1,12 @@
 import html
 import json
+from datetime import datetime
 from textwrap import dedent
 
 from markdown_it import MarkdownIt
 import streamlit as st
 
-from semigraph.demo import get_backend_corpora
+from semigraph.demo import COMPARISON_MODES, get_backend_corpora
 
 
 PAGE_CONFIG = {
@@ -16,6 +17,68 @@ PAGE_CONFIG = {
 
 
 BACKEND_CORPORA = get_backend_corpora()
+
+
+TRACE_STAGE_LABELS = {
+    "config": "Configuration",
+    "plan": "Retrieval planning",
+    "retrieval": "Evidence search",
+    "query_expansion": "Query expansion",
+    "seed_selection": "Graph seed selection",
+    "personalized_pagerank": "Personalized PageRank",
+    "alias_clustering": "Alias grouping",
+    "chunk_mapping": "Evidence mapping",
+    "vector_candidates": "Vector search",
+    "reranking": "Evidence reranking",
+    "retrieval_complete": "Retrieval complete",
+    "retrieval_summary": "Retrieval summary",
+    "synthesis": "Answer synthesis",
+    "runner": "Runner",
+}
+
+
+TRACE_FIELD_LABELS = {
+    "corpus": "Corpus",
+    "retriever": "Retriever",
+    "tool": "Tool",
+    "vector_index": "Vector index",
+    "candidate_pool_k": "Candidate budget",
+    "candidate_count": "Candidates",
+    "returned_chunk_ids": "Selected chunks",
+    "candidate_chunk_ids": "Candidate chunks",
+    "seed_mode": "Seed mode",
+    "seed_count": "Graph seeds",
+    "seed_weight_mode": "Seed weighting",
+    "top_k_triples": "Triple budget",
+    "top_k_chunk_seeds": "Chunk-seed budget",
+    "graph_mode": "Graph mode",
+    "damping": "PPR damping",
+    "entity_count": "Ranked entities",
+    "cluster_count": "Alias clusters",
+    "mode": "Mode",
+    "llm_calls": "LLM calls",
+    "latency_sec": "Duration",
+    "error_type": "Error type",
+    "abort_reason": "Stop reason",
+}
+
+
+TRACE_FIELD_PRIORITY = tuple(TRACE_FIELD_LABELS)
+
+
+GRAPH_TRACE_STAGES = (
+    "seed_selection",
+    "personalized_pagerank",
+    "retrieval_complete",
+    "synthesis",
+)
+
+GRAPH_TRACE_STAGE_LABELS = {
+    "seed_selection": "Graph seed selection",
+    "personalized_pagerank": "PPR",
+    "retrieval_complete": "Retrieve Complete",
+    "synthesis": "Synthesize",
+}
 
 
 CONFIGURATIONS = (
@@ -47,6 +110,9 @@ CONFIGURATIONS = (
 )
 
 
+PANEL_KEYS = COMPARISON_MODES
+
+
 def configure_page():
     """Configure the Streamlit page before any UI is rendered."""
     st.set_page_config(**PAGE_CONFIG)
@@ -62,7 +128,7 @@ def render_topbar():
                 <div class="topbar-title">Four-way comparison</div>
             </div>
             <div class="topbar-actions">
-                <span class="mode-badge"><span class="mode-dot"></span> VECTOR · GRAPH LIVE</span>
+                <span class="mode-badge"><span class="mode-dot"></span> 4 CONFIGS LIVE</span>
             </div>
         </header>
         """,
@@ -78,7 +144,7 @@ def render_comparison_workspace(
     corpus=None,
     container=None,
 ):
-    """Render the shared controls and four independently inspectable panels."""
+    """Render the backend selector and four independently inspectable panels."""
     corpus = corpus or render_backend_corpus_selector()
     if st.session_state.pop("backend_corpus_changed", False):
         query = None
@@ -95,81 +161,11 @@ def render_comparison_workspace(
         )
         for config in CONFIGURATIONS
     )
-    connected_results = [
-        live_results.get(key)
-        for key in ("vector", "graph")
-        if live_results.get(key)
-    ]
-    connected_statuses = {
-        result.get("status")
-        for result in connected_results
-    }
-    if "running" in connected_statuses:
-        run_label = "RUNNING"
-        run_class = "run-running"
-    elif "error" in connected_statuses:
-        run_label = "RUN ERROR"
-        run_class = "run-error"
-    elif connected_statuses and connected_statuses.issubset({"complete"}):
-        run_label = "RUN COMPLETE"
-        run_class = "run-complete"
-    else:
-        run_label = "READY FOR QUERY"
-        run_class = "run-waiting"
-    intro = _markup(
-        f"""
-        <section class="comparison-intro">
-            <div class="comparison-intro-copy">
-                <div class="hero-badge">CONTROLLED 2 × 2 ABLATION</div>
-                <h1>One question. <span>Four configurations.</span></h1>
-                <p>
-                    Compare what changes when Graph Retrieval and Agent Control
-                    are introduced while the generation conditions stay fixed.
-                </p>
-            </div>
-            <div class="run-summary {run_class}">
-                <span class="run-summary-dot"></span>
-                <div>
-                    <small>COMPARISON RUN</small>
-                    <strong>{run_label}</strong>
-                </div>
-                <span class="run-count">4 PANELS</span>
-            </div>
-        </section>
-        """
-    )
-    controls = _markup(
-        f"""
-        <section class="shared-controls" aria-label="Shared comparison controls">
-            <div class="shared-controls-title">
-                <span>CONTROLLED VARIABLES</span>
-                <small>Held constant for a fair comparison</small>
-            </div>
-            <div><small>QUESTION</small><strong>Shared</strong></div>
-            <div><small>CORPUS</small><strong>{html.escape(corpus.label)}</strong></div>
-            <div><small>LLM + PROMPT</small><strong>Shared</strong></div>
-            <div><small>EVIDENCE BUDGET</small><strong>Shared</strong></div>
-        </section>
-        """
-    )
-    heading = _markup(
-        """
-        <section class="comparison-section-heading">
-            <div>
-                <div class="eyebrow">CONFIGURATION OUTPUTS</div>
-                <h2>Comparison matrix</h2>
-            </div>
-            <p>Each panel reports its own status, answer, citations, and trace.</p>
-        </section>
-        """
-    )
     markup = (
         '<main class="comparison-workspace">'
-        f"{intro}{controls}{heading}"
-        f'<section class="comparison-grid">{cards}</section>'
-        '<div class="composer-hint">'
-        "SUBMIT A NEW QUESTION TO START A NEW COMPARISON RUN"
-        "</div></main>"
+        f'<section class="comparison-grid" '
+        f'aria-label="Comparison chats">{cards}</section>'
+        "</main>"
     )
     target = container if container is not None else st
     target.markdown(markup, unsafe_allow_html=True)
@@ -192,12 +188,11 @@ def render_backend_corpus_selector():
     previous_key = st.session_state.get("backend_corpus_key")
     if previous_key is not None and previous_key != selected.key:
         st.session_state["comparison_query"] = None
-        st.session_state["vector_result"] = None
-        st.session_state["vector_pending_query"] = None
-        st.session_state["graph_result"] = None
-        st.session_state["graph_pending_query"] = None
+        for panel_key in PANEL_KEYS:
+            st.session_state[f"{panel_key}_result"] = None
+            st.session_state[f"{panel_key}_pending_query"] = None
         st.session_state["comparison_history"] = {
-            config["key"]: [] for config in CONFIGURATIONS
+            panel_key: [] for panel_key in PANEL_KEYS
         }
         st.session_state["backend_corpus_changed"] = True
     st.session_state["backend_corpus_key"] = selected.key
@@ -289,7 +284,9 @@ def _build_running_body(configuration, query, result=None, history=None):
         for event in (result or {}).get("trace", [])
         if isinstance(event, dict)
     ]
-    current_event = trace[-1] if trace else {
+    graph_trace = _is_graph_configuration(configuration)
+    trace_groups = _trace_groups_for_configuration(configuration, trace)
+    current_event = trace_groups[-1]["event"] if trace_groups else {
         "stage": "runner",
         "status": "running",
         "message": "Starting the retrieval pipeline",
@@ -297,41 +294,23 @@ def _build_running_body(configuration, query, result=None, history=None):
     current_message = html.escape(
         str(current_event.get("message") or _trace_label(current_event))
     )
-    trace_rows = []
-    for index, event in enumerate(trace, start=1):
-        active_class = " is-active" if index == len(trace) else ""
-        stage = html.escape(str(event.get("stage") or "TRACE").upper())
-        message = html.escape(
-            str(event.get("message") or _trace_label(event))
-        )
-        details = event.get("details")
-        details_markup = ""
-        if details:
-            payload = html.escape(
-                json.dumps(details, ensure_ascii=False, indent=2, default=str)
+    if trace_groups:
+        trace_rows = "".join(
+            _build_trace_row(
+                index,
+                group["event"],
+                raw_events=group["raw_events"],
+                is_active=index == len(trace_groups),
+                graph=graph_trace,
             )
-            details_markup = (
-                '<details class="thinking-step-details">'
-                "<summary>VIEW JSON</summary>"
-                f"<pre>{payload}</pre>"
-                "</details>"
-            )
-        trace_rows.append(
-            f'<div class="thinking-trace-row{active_class}">'
-            f'<span class="thinking-step-index">{index:02d}</span>'
-            '<span class="thinking-step-dot"></span>'
-            '<div class="thinking-step-copy">'
-            f"<b>{stage}</b><small>{message}</small>{details_markup}"
-            "</div></div>"
+            for index, group in enumerate(trace_groups, start=1)
         )
-    if not trace_rows:
-        trace_rows.append(
-            '<div class="thinking-trace-row is-active">'
-            '<span class="thinking-step-index">01</span>'
-            '<span class="thinking-step-dot"></span>'
-            '<div class="thinking-step-copy">'
-            "<b>RUNNER</b><small>Starting the retrieval pipeline</small>"
-            "</div></div>"
+    else:
+        trace_rows = _build_trace_row(
+            1,
+            current_event,
+            is_active=True,
+            graph=graph_trace,
         )
     thinking_message = "".join(
         (
@@ -343,14 +322,14 @@ def _build_running_body(configuration, query, result=None, history=None):
             '<span class="thinking-mark" aria-label="Thinking">'
             '<i></i><i></i><i></i></span>',
             '<div><strong>Thinking</strong>',
-            f'<small>LIVE TRACE · {len(trace) or 1} STEPS</small></div>',
+            f'<small>LIVE TRACE · {len(trace_groups) or 1} STEPS</small></div>',
             '</div>',
             '<div class="thinking-current">',
             '<span>CURRENT STEP</span>',
             f'<p>{current_message}</p>',
             '</div>',
             '<div class="thinking-trace" aria-label="Live RAG trace">',
-            "".join(trace_rows),
+            trace_rows,
             '</div>',
             f'<p class="thinking-caption">Running {mode_label} against the selected corpus…</p>',
             '</div></section></div>',
@@ -358,11 +337,11 @@ def _build_running_body(configuration, query, result=None, history=None):
     )
     exchanges = "".join(
         (
+            _build_history_exchanges(configuration, history),
             '<div class="chat-exchange current-exchange">',
             _build_user_message(query),
             thinking_message,
             '</div>',
-            _build_history_exchanges(configuration, history),
         )
     )
     return "".join(
@@ -372,7 +351,8 @@ def _build_running_body(configuration, query, result=None, history=None):
             "<span>RUNNER STATUS</span>",
             "<small>IN PROGRESS</small>",
             "</div>",
-            '<div class="panel-scroll chat-history" tabindex="0" '
+            '<div class="panel-scroll chat-history" '
+            'tabindex="0" '
             f'aria-label="{mode_label} chat history">',
             exchanges,
             "</div>",
@@ -400,11 +380,11 @@ def _build_unconnected_body(configuration, query, history=None):
     )
     exchanges = "".join(
         (
+            _build_history_exchanges(configuration, history),
             '<div class="chat-exchange current-exchange">',
             _build_user_message(query),
             notice,
             '</div>',
-            _build_history_exchanges(configuration, history),
         )
     )
     return "".join(
@@ -413,7 +393,8 @@ def _build_unconnected_body(configuration, query, history=None):
             '<div class="result-toolbar">',
             '<span>CHAT HISTORY</span><small>RUNNER NOT CONNECTED</small>',
             '</div>',
-            '<div class="panel-scroll chat-history" tabindex="0" '
+            '<div class="panel-scroll chat-history" '
+            'tabindex="0" '
             f'aria-label="{mode_label} chat history">',
             exchanges,
             '</div>',
@@ -429,6 +410,8 @@ def _build_completed_exchange(configuration, query, result, is_current=True):
     answer_html = _render_answer_markdown(answer)
     citations = list(result.get("citations") or [])
     trace = list(result.get("trace") or [])
+    graph_trace = _is_graph_configuration(configuration)
+    trace_groups = _trace_groups_for_configuration(configuration, trace)
     status = str(result.get("status") or "error")
     error = result.get("error")
     citation_rows = "".join(
@@ -444,14 +427,21 @@ def _build_completed_exchange(configuration, query, result, is_current=True):
             "<span>No evidence citation returned.</span></div>"
         )
     trace_rows = "".join(
-        _build_trace_row(index, event)
-        for index, event in enumerate(trace, start=1)
-        if isinstance(event, dict)
+        _build_trace_row(
+            index,
+            group["event"],
+            raw_events=group["raw_events"],
+            graph=graph_trace,
+        )
+        for index, group in enumerate(trace_groups, start=1)
     )
     if not trace_rows:
         trace_rows = (
-            '<div class="trace-row trace-empty">'
-            "<span>00</span><b>TRACE</b><code>No trace returned.</code></div>"
+            '<div class="trace-event-row trace-empty">'
+            '<span class="trace-event-index">00</span>'
+            '<span class="trace-event-dot"></span>'
+            '<div class="trace-event-copy"><b>Trace unavailable</b>'
+            '<p>No trace returned.</p></div></div>'
         )
     error_block = ""
     if status != "complete" or error:
@@ -489,7 +479,7 @@ def _build_completed_exchange(configuration, query, result, is_current=True):
             "</details>",
             '<details class="result-disclosure trace-details">',
             "<summary><span>TECHNICAL TRACE</span>",
-            f"<small>{len(trace)} STEPS</small></summary>",
+            f"<small>{len(trace_groups)} STEPS</small></summary>",
             f'<div class="trace-table">{trace_rows}</div>',
             "</details>",
             "</section></div></div>",
@@ -504,17 +494,18 @@ def _build_live_result_body(configuration, query, result, history=None):
     scroll_label = html.escape(f"{configuration['name']} chat history")
     exchanges = "".join(
         (
-            _build_completed_exchange(configuration, query, result),
             _build_history_exchanges(configuration, history),
+            _build_completed_exchange(configuration, query, result),
         )
     )
     return "".join(
         (
-            '<div class="panel-result">',
+            '<div class="panel-result panel-result-settled">',
             '<div class="result-toolbar">',
             '<span>CHAT HISTORY</span><small>SCROLL FOR EARLIER MESSAGES</small>',
             '</div>',
-            '<div class="panel-scroll chat-history" tabindex="0" '
+            '<div class="panel-scroll chat-history" '
+            'tabindex="0" '
             f'aria-label="{scroll_label}">',
             exchanges,
             '</div>',
@@ -540,7 +531,7 @@ def _build_user_message(query):
 
 def _build_history_exchanges(configuration, history=None):
     exchanges = []
-    for item in reversed(list(history or [])):
+    for item in history or []:
         if not isinstance(item, dict):
             continue
         past_query = item.get("query")
@@ -583,28 +574,489 @@ def _trace_label(event):
     return " · ".join(parts) or "completed"
 
 
-def _build_trace_row(index, event):
-    stage = html.escape(str(event.get("stage") or "TRACE").upper())
-    label = html.escape(_trace_label(event))
+def _group_trace_events(events):
+    """Collapse adjacent status updates into one human-readable stage."""
+    groups = []
+    for raw_event in events:
+        if not isinstance(raw_event, dict):
+            continue
+        event = dict(raw_event)
+        stage = str(event.get("stage") or "trace")
+        if groups and groups[-1]["stage"] == stage:
+            merged = dict(groups[-1]["event"])
+            previous_details = merged.get("details")
+            current_details = event.get("details")
+            merged_details = (
+                dict(previous_details)
+                if isinstance(previous_details, dict)
+                else {}
+            )
+            if isinstance(current_details, dict):
+                merged_details.update(current_details)
+            merged.update(event)
+            if merged_details:
+                merged["details"] = merged_details
+            groups[-1]["event"] = merged
+            groups[-1]["raw_events"].append(raw_event)
+            continue
+        groups.append({
+            "stage": stage,
+            "event": event,
+            "raw_events": [raw_event],
+        })
+    return groups
+
+
+def _is_graph_configuration(configuration):
+    return configuration.get("key") in {"graph", "agent_graph"}
+
+
+def _is_compact_graph_retrieval(event):
+    if event.get("stage") != "retrieval":
+        return False
+    if not isinstance(event.get("parameters"), dict):
+        return False
+    return event.get("retriever") == "graph" or event.get("tool") == "graph"
+
+
+def _graph_completion_status(event):
+    raw_status = str(
+        event.get("status") or event.get("retrieval_status") or ""
+    ).lower()
+    if raw_status in {"error", "failed", "provider_error"}:
+        return "error"
+    if event.get("abort_reason"):
+        return "no_evidence"
+    return "complete"
+
+
+def _graph_chunk_ids(event):
+    chunk_ids = event.get("returned_chunk_ids") or []
+    if not chunk_ids:
+        details = event.get("details")
+        if isinstance(details, dict):
+            chunk_ids = details.get("returned_chunk_ids") or []
+    return [str(chunk_id) for chunk_id in chunk_ids]
+
+
+def _graph_trace_groups_from_compact(event):
+    """Rebuild the four Graph stages from an Agent's compact trace."""
+    parameters = dict(event.get("parameters") or {})
+    triple_filter = dict(event.get("triple_filter") or {})
+    triples = list(
+        event.get("triple_candidates")
+        or triple_filter.get("candidates_before_filter")
+        or triple_filter.get("selected_triples")
+        or []
+    )
+    seed_count = int(event.get("seed_count") or 0)
+    chunk_ids = _graph_chunk_ids(event)
+    status = _graph_completion_status(event)
+    return [
+        {
+            "stage": "seed_selection",
+            "event": {
+                "stage": "seed_selection",
+                "status": status,
+                "message": f"Selected {seed_count} graph seeds",
+                "details": {
+                    "seed_mode": parameters.get("seed_mode"),
+                    "top_k_triples": parameters.get("top_k_triples"),
+                    "triple_candidates": triples,
+                },
+            },
+            "raw_events": [event],
+        },
+        {
+            "stage": "personalized_pagerank",
+            "event": {
+                "stage": "personalized_pagerank",
+                "status": status,
+                "message": "Ranked graph evidence with Personalized PageRank",
+                "details": {
+                    "graph_mode": parameters.get("ppr_graph_mode"),
+                    "seed_weight_mode": parameters.get("ppr_seed_weight_mode"),
+                    "damping": parameters.get("damping"),
+                },
+            },
+            "raw_events": [event],
+        },
+        {
+            "stage": "retrieval_complete",
+            "event": {
+                "stage": "retrieval_complete",
+                "status": status,
+                "message": f"Retrieved {len(chunk_ids)} evidence chunks",
+                "details": {
+                    "returned_chunk_ids": chunk_ids,
+                    "chunk_count": len(chunk_ids),
+                },
+            },
+            "raw_events": [event],
+        },
+    ]
+
+
+def _trace_groups_for_configuration(configuration, events):
+    """Select the compact trace contract used by the Graph panels."""
+    groups = _group_trace_events(events or [])
+    if not _is_graph_configuration(configuration):
+        return groups
+
+    stage_groups = {
+        group["stage"]: group
+        for group in groups
+        if group["stage"] in GRAPH_TRACE_STAGES
+    }
+    compact_event = next(
+        (
+            group["event"]
+            for group in groups
+            if _is_compact_graph_retrieval(group["event"])
+        ),
+        None,
+    )
+    if compact_event:
+        for group in _graph_trace_groups_from_compact(compact_event):
+            stage_groups.setdefault(group["stage"], group)
+
+    return [
+        stage_groups[stage]
+        for stage in GRAPH_TRACE_STAGES
+        if stage in stage_groups
+    ]
+
+
+def _trace_stage_label(event, graph=False):
+    stage = str(event.get("stage") or "trace")
+    if graph:
+        return GRAPH_TRACE_STAGE_LABELS.get(
+            stage,
+            stage.replace("_", " ").title(),
+        )
+    return TRACE_STAGE_LABELS.get(stage, stage.replace("_", " ").title())
+
+
+def _trace_status(event):
+    raw_status = str(event.get("status") or "").lower()
+    if raw_status == "running":
+        return "running", "RUNNING"
+    if raw_status == "skipped":
+        return "skipped", "SKIPPED"
+    if raw_status in {"error", "failed", "provider_error"} or event.get(
+        "error_type"
+    ):
+        return "error", "ERROR"
+    if raw_status == "no_evidence":
+        return "complete", "NO EVIDENCE"
+    if raw_status in {"complete", "ok", "success", "valid"}:
+        return "complete", "COMPLETE"
+    return "complete", "RECORDED"
+
+
+def _trace_duration(event, raw_events):
+    latency = event.get("latency_sec")
     details = event.get("details")
-    if details:
-        payload = html.escape(
-            json.dumps(details, ensure_ascii=False, indent=2, default=str)
+    if latency is None and isinstance(details, dict):
+        latency = details.get("latency_sec")
+    if latency is not None:
+        try:
+            return f"{float(latency):.1f}s"
+        except (TypeError, ValueError):
+            pass
+
+    timestamps = [
+        raw_event.get("timestamp")
+        for raw_event in raw_events
+        if raw_event.get("timestamp")
+    ]
+    if len(timestamps) < 2:
+        return ""
+    try:
+        started_at = datetime.fromisoformat(
+            str(timestamps[0]).replace("Z", "+00:00")
         )
-        content = (
-            '<details class="trace-payload">'
-            f"<summary>{label}</summary>"
-            f"<pre>{payload}</pre>"
-            "</details>"
+        finished_at = datetime.fromisoformat(
+            str(timestamps[-1]).replace("Z", "+00:00")
         )
+    except ValueError:
+        return ""
+    seconds = max(0.0, (finished_at - started_at).total_seconds())
+    return "<0.1s" if seconds < 0.1 else f"{seconds:.1f}s"
+
+
+def _trace_detail_items(event):
+    ignored = {
+        "run_id",
+        "seq",
+        "timestamp",
+        "stage",
+        "status",
+        "message",
+        "details",
+    }
+    values = {
+        key: value
+        for key, value in event.items()
+        if key not in ignored and value not in (None, "", [], {})
+    }
+    details = event.get("details")
+    if isinstance(details, dict):
+        values.update({
+            key: value
+            for key, value in details.items()
+            if value not in (None, "", [], {})
+        })
+
+    ordered_keys = [key for key in TRACE_FIELD_PRIORITY if key in values]
+    ordered_keys.extend(key for key in values if key not in ordered_keys)
+    return [
+        (
+            TRACE_FIELD_LABELS.get(key, key.replace("_", " ").title()),
+            _format_trace_value(values[key]),
+        )
+        for key in ordered_keys[:8]
+    ]
+
+
+def _format_trace_value(value):
+    if isinstance(value, bool):
+        return "Yes" if value else "No"
+    if isinstance(value, float):
+        return f"{value:.3f}".rstrip("0").rstrip(".")
+    if isinstance(value, (list, tuple)):
+        if all(isinstance(item, (str, int, float, bool)) for item in value):
+            preview = ", ".join(str(item) for item in value[:3])
+            remaining = len(value) - 3
+            return f"{preview} +{remaining} more" if remaining > 0 else preview
+        return f"{len(value)} records"
+    if isinstance(value, dict):
+        return f"{len(value)} fields"
+    text = str(value)
+    return text if len(text) <= 96 else f"{text[:93]}..."
+
+
+def _graph_trace_triples(event):
+    details = event.get("details")
+    details = details if isinstance(details, dict) else {}
+    triple_filter = details.get("triple_filter") or event.get("triple_filter")
+    triple_filter = triple_filter if isinstance(triple_filter, dict) else {}
+    triples = (
+        details.get("triple_candidates")
+        or event.get("triple_candidates")
+        or triple_filter.get("candidates_before_filter")
+        or triple_filter.get("candidates_after_filter")
+        or triple_filter.get("selected_triples")
+        or []
+    )
+    return [triple for triple in triples if isinstance(triple, dict)]
+
+
+def _build_graph_triple_list(triples):
+    if not triples:
+        return '<div class="trace-triple-empty">No triple candidates returned.</div>'
+
+    rows = []
+    for index, triple in enumerate(triples, start=1):
+        head = html.escape(str(triple.get("head") or "?"))
+        relation = html.escape(str(triple.get("relation") or "?"))
+        tail = html.escape(str(triple.get("tail") or "?"))
+        similarity = triple.get("similarity")
+        similarity_label = (
+            _format_trace_value(similarity)
+            if similarity is not None
+            else "n/a"
+        )
+        rows.append(
+            '<div class="trace-triple-row">'
+            f'<span class="trace-triple-index">{index:02d}</span>'
+            '<code class="trace-triple-expression">'
+            f'<span class="trace-triple-node">({head})</span>'
+            f'<span class="trace-triple-relation">-[{relation}]-&gt;</span>'
+            f'<span class="trace-triple-node">({tail})</span>'
+            '</code>'
+            f'<span class="trace-triple-similarity">[{similarity_label}]</span>'
+            '</div>'
+        )
+    return '<div class="trace-triple-list">' + "".join(rows) + '</div>'
+
+
+def _build_graph_trace_details(event, raw_events):
+    stage = str(event.get("stage") or "")
+    if stage == "synthesis":
+        return ""
+
+    details = event.get("details")
+    details = details if isinstance(details, dict) else {}
+    parameters = event.get("parameters")
+    parameters = parameters if isinstance(parameters, dict) else {}
+
+    if stage == "seed_selection":
+        triples = _graph_trace_triples(event)
+        detail_grid = "".join(
+            (
+                '<div class="trace-detail-item">'
+                f"<dt>{label}</dt><dd>{html.escape(value)}</dd></div>"
+            )
+            for label, value in (
+                (
+                    "Seed Mode",
+                    str(
+                        details.get("seed_mode")
+                        or parameters.get("seed_mode")
+                        or "n/a"
+                    ),
+                ),
+                (
+                    "Top-K Triple",
+                    str(
+                        details.get("top_k_triples")
+                        or parameters.get("top_k_triples")
+                        or len(triples)
+                    ),
+                ),
+            )
+        )
+        detail_grid += (
+            '<div class="trace-detail-item trace-detail-item-wide">'
+            '<dt>Triples</dt>'
+            f"{_build_graph_triple_list(triples)}</div>"
+        )
+        field_count = 3
+    elif stage == "personalized_pagerank":
+        detail_grid = "".join(
+            (
+                '<div class="trace-detail-item">'
+                f"<dt>{label}</dt><dd>{html.escape(value)}</dd></div>"
+            )
+            for label, value in (
+                (
+                    "Mode",
+                    str(
+                        details.get("graph_mode")
+                        or details.get("ppr_graph_mode")
+                        or parameters.get("ppr_graph_mode")
+                        or "n/a"
+                    ),
+                ),
+                (
+                    "Seed Weight",
+                    str(
+                        details.get("seed_weight_mode")
+                        or details.get("ppr_seed_weight_mode")
+                        or parameters.get("ppr_seed_weight_mode")
+                        or "n/a"
+                    ),
+                ),
+                (
+                    "Damping",
+                    str(
+                        details.get("damping")
+                        or parameters.get("damping")
+                        or "n/a"
+                    ),
+                ),
+            )
+        )
+        field_count = 3
+    elif stage == "retrieval_complete":
+        chunk_ids = _graph_chunk_ids(event)
+        detail_grid = "".join(
+            (
+                '<div class="trace-detail-item">'
+                f"<dt>{label}</dt><dd>{html.escape(value)}</dd></div>"
+            )
+            for label, value in (
+                ("Chunk Count", str(len(chunk_ids))),
+                ("Chunks", ", ".join(chunk_ids) or "None"),
+            )
+        )
+        field_count = 2
     else:
-        content = f"<code>{label}</code>"
+        return ""
+
+    raw_payload = raw_events[0] if len(raw_events) == 1 else {
+        "stage": event.get("stage"),
+        "events": raw_events,
+    }
+    raw_json = html.escape(
+        json.dumps(raw_payload, ensure_ascii=False, indent=2, default=str)
+    )
     return (
-        '<div class="trace-row">'
-        f"<span>{index:02d}</span>"
-        f"<b>{stage}</b>"
-        f"{content}"
+        '<details class="trace-detail-panel">'
+        '<summary><span>VIEW DETAILS</span>'
+        f"<small>{field_count} KEY FIELDS</small></summary>"
+        '<div class="trace-detail-content">'
+        f'<dl class="trace-detail-grid">{detail_grid}</dl>'
+        '<details class="raw-json-disclosure">'
+        '<summary>RAW JSON</summary>'
+        f"<pre>{raw_json}</pre>"
+        '</details></div></details>'
+    )
+
+
+def _build_trace_details(event, raw_events, graph=False):
+    if graph:
+        return _build_graph_trace_details(event, raw_events)
+    detail_items = _trace_detail_items(event)
+    detail_grid = "".join(
+        '<div class="trace-detail-item">'
+        f"<dt>{html.escape(label)}</dt>"
+        f"<dd>{html.escape(value)}</dd>"
         "</div>"
+        for label, value in detail_items
+    )
+    raw_payload = raw_events[0] if len(raw_events) == 1 else {
+        "stage": event.get("stage"),
+        "events": raw_events,
+    }
+    raw_json = html.escape(
+        json.dumps(raw_payload, ensure_ascii=False, indent=2, default=str)
+    )
+    field_label = f"{len(detail_items)} KEY FIELDS" if detail_items else "RAW EVENT"
+    grid_markup = (
+        f'<dl class="trace-detail-grid">{detail_grid}</dl>'
+        if detail_items
+        else ""
+    )
+    return (
+        '<details class="trace-detail-panel">'
+        '<summary><span>VIEW DETAILS</span>'
+        f"<small>{field_label}</small></summary>"
+        '<div class="trace-detail-content">'
+        f"{grid_markup}"
+        '<details class="raw-json-disclosure">'
+        "<summary>RAW JSON</summary>"
+        f"<pre>{raw_json}</pre>"
+        "</details></div></details>"
+    )
+
+
+def _build_trace_row(
+    index,
+    event,
+    raw_events=None,
+    is_active=False,
+    graph=False,
+):
+    raw_events = list(raw_events or [event])
+    status_class, status_label = _trace_status(event)
+    active_class = " is-active" if is_active else ""
+    duration = _trace_duration(event, raw_events)
+    duration_markup = f"<time>{html.escape(duration)}</time>" if duration else ""
+    return (
+        f'<div class="trace-event-row trace-status-{status_class}{active_class}">'
+        f'<span class="trace-event-index">{index:02d}</span>'
+        '<span class="trace-event-dot"></span>'
+        '<div class="trace-event-copy">'
+        '<div class="trace-event-heading">'
+        f"<b>{html.escape(_trace_stage_label(event, graph=graph))}</b>"
+        '<span class="trace-event-meta">'
+        f'<span class="trace-status-pill">{status_label}</span>'
+        f"{duration_markup}</span></div>"
+        f"<p>{html.escape(_trace_label(event))}</p>"
+        f"{_build_trace_details(event, raw_events, graph=graph)}"
+        "</div></div>"
     )
 
 

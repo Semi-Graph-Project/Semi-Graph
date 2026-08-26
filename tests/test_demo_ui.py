@@ -1,5 +1,20 @@
+from pathlib import Path
+
 from Demo import Component
 from Demo.Style import CUSTOM_CSS
+
+
+def test_panel_keys_cover_all_four_comparison_modes():
+    assert Component.PANEL_KEYS == (
+        "vector",
+        "graph",
+        "agent_vector",
+        "agent_graph",
+    )
+    assert tuple(
+        configuration["key"]
+        for configuration in Component.CONFIGURATIONS
+    ) == Component.PANEL_KEYS
 
 
 def test_live_result_uses_scroll_viewport_and_real_markdown_html():
@@ -17,7 +32,9 @@ def test_live_result_uses_scroll_viewport_and_real_markdown_html():
         result,
     )
 
-    assert markup.startswith('<div class="panel-result">')
+    assert markup.startswith(
+        '<div class="panel-result panel-result-settled">'
+    )
     assert '<div class="panel-scroll chat-history"' in markup
     assert '<strong>Grounded answer</strong>' in markup
     assert "<li>First fact</li>" in markup
@@ -32,12 +49,80 @@ def test_live_result_uses_scroll_viewport_and_real_markdown_html():
     assert "\n        <" not in markup
 
 
-def test_comparison_card_has_fixed_height_and_internal_vertical_scroll():
-    assert "height: 560px;" in CUSTOM_CSS
+def test_first_exchange_starts_at_top_without_changing_history_order():
+    result = {
+        "status": "complete",
+        "answer": "Answer",
+        "citations": [],
+        "trace": [],
+        "latency_sec": 1.0,
+    }
+    markup = Component._build_live_result_body(
+        Component.CONFIGURATIONS[0],
+        "First question",
+        result,
+    )
+
+    assert 'class="panel-scroll chat-history" tabindex="0"' in markup
+    assert "flex-direction: column;" in CUSTOM_CSS
+    assert "flex-direction: column-reverse;" not in CUSTOM_CSS
+
+
+def test_comparison_card_uses_viewport_height_and_internal_vertical_scroll():
+    assert "height: clamp(560px, calc(100vh - 170px), 720px);" in CUSTOM_CSS
+    assert "max-width: 1680px;" in CUSTOM_CSS
+    assert "gap: 20px;" in CUSTOM_CSS
     assert "width: calc(100% - 32px);" in CUSTOM_CSS
     assert "margin-inline: auto;" in CUSTOM_CSS
     assert ".panel-scroll {" in CUSTOM_CSS
     assert "overflow-y: auto;" in CUSTOM_CSS
+
+    panel_result_css = CUSTOM_CSS.split(
+        ".panel-result {", 1
+    )[1].split("}", 1)[0]
+    panel_scroll_css = CUSTOM_CSS.split(
+        ".panel-scroll {", 1
+    )[1].split("}", 1)[0]
+    assert "height: 0;" in panel_result_css
+    assert "height: 0;" in panel_scroll_css
+    assert "max-height: 100%;" in panel_scroll_css
+
+
+def test_workspace_keeps_only_the_comparison_chats():
+    component_source = (
+        Path(__file__).resolve().parents[1] / "Demo" / "Component.py"
+    ).read_text(encoding="utf-8")
+
+    assert "CONTROLLED 2 × 2 ABLATION" not in component_source
+    assert "CONTROLLED VARIABLES" not in component_source
+    assert "Comparison matrix" not in component_source
+    assert "SUBMIT A NEW QUESTION TO START A NEW COMPARISON RUN" not in component_source
+    assert 'aria-label="Comparison chats"' in component_source
+
+
+def test_settled_result_does_not_replay_entry_animation():
+    panel_base = CUSTOM_CSS.split(".panel-result {", 1)[1].split("}", 1)[0]
+
+    assert "animation:" not in panel_base
+    assert ".panel-result-running {" in CUSTOM_CSS
+    assert "animation: panel-enter 360ms ease-out both;" in CUSTOM_CSS
+
+
+def test_runner_publishes_completion_without_final_page_rerun():
+    runner_source = (
+        Path(__file__).resolve().parents[1] / "Demo" / "Mock_Result.py"
+    ).read_text(encoding="utf-8")
+
+    assert "st.rerun()" not in runner_source
+    assert "running_results = {}" in runner_source
+    assert "published_results = set()" in runner_source
+    assert "if trace_updated or result_updated:" in runner_source
+    assert "final_results = {}" in runner_source
+
+
+def test_streamlit_rerun_does_not_fade_existing_content():
+    assert '[data-stale="true"] {' in CUSTOM_CSS
+    assert "opacity: 1 !important;" in CUSTOM_CSS
 
 
 def test_scroll_focus_highlight_uses_a_reserved_border():
@@ -93,8 +178,10 @@ def test_running_result_renders_live_trace_and_current_step():
     assert "LIVE TRACE · 2 STEPS" in markup
     assert "CURRENT STEP" in markup
     assert "Searching evidence with vector retrieval" in markup
-    assert 'class="thinking-trace-row is-active"' in markup
-    assert '<details class="thinking-step-details">' in markup
+    assert 'class="trace-event-row trace-status-running is-active"' in markup
+    assert '<details class="trace-detail-panel">' in markup
+    assert "Vector index" in markup
+    assert "RAW JSON" in markup
     assert "gold_chunk_embedding" in markup
 
 
@@ -121,8 +208,9 @@ def test_chat_history_keeps_latest_exchange_at_bottom():
         [{"query": "Earlier prompt", "result": previous_result}],
     )
 
-    assert markup.index("Latest prompt") < markup.index("Earlier prompt")
-    assert "flex-direction: column-reverse;" in CUSTOM_CSS
+    assert markup.index("Earlier prompt") < markup.index("Latest prompt")
+    assert "flex-direction: column;" in CUSTOM_CSS
+    assert "flex-direction: column-reverse;" not in CUSTOM_CSS
     assert ".user-message-row" in CUSTOM_CSS
     assert "justify-content: flex-end;" in CUSTOM_CSS
     assert ".assistant-message-row" in CUSTOM_CSS
@@ -159,7 +247,133 @@ def test_graph_panel_renders_connected_result():
     assert "Backend runner not connected" not in markup
 
 
-def test_completed_trace_exposes_json_event_details():
+def test_graph_trace_keeps_only_the_four_readable_stages():
+    result = {
+        "status": "complete",
+        "answer": "Graph-grounded answer",
+        "citations": [],
+        "trace": [
+            {"stage": "config", "corpus": "benchmark"},
+            {"stage": "query_expansion", "message": "Expand query"},
+            {
+                "stage": "seed_selection",
+                "status": "complete",
+                "message": "Selected 2 graph seeds",
+                "details": {
+                    "seed_mode": "triple",
+                    "top_k_triples": 2,
+                    "triple_candidates": [
+                        {
+                            "candidate_id": 0,
+                            "head": "Intel",
+                            "relation": "PRODUCES",
+                            "tail": "Xeon",
+                            "similarity": 0.912,
+                        },
+                        {
+                            "candidate_id": 1,
+                            "head": "Intel",
+                            "relation": "OPERATES",
+                            "tail": "Foundry",
+                            "similarity": 0.874,
+                        },
+                    ],
+                },
+            },
+            {
+                "stage": "personalized_pagerank",
+                "status": "complete",
+                "message": "Ranked graph entities",
+                "details": {
+                    "graph_mode": "entity_only",
+                    "seed_weight_mode": "similarity_specificity",
+                    "damping": 0.5,
+                },
+            },
+            {"stage": "alias_clustering", "message": "Group aliases"},
+            {
+                "stage": "retrieval_complete",
+                "status": "complete",
+                "message": "Graph retrieval completed",
+                "details": {
+                    "returned_chunk_ids": ["chunk-1", "chunk-2"],
+                },
+            },
+            {"stage": "synthesis", "status": "complete", "message": "Done"},
+        ],
+        "latency_sec": 1.0,
+    }
+
+    markup = Component._build_live_result_body(
+        Component.CONFIGURATIONS[1],
+        "Question",
+        result,
+    )
+
+    assert "Graph seed selection" in markup
+    assert "PPR" in markup
+    assert "Retrieve Complete" in markup
+    assert "Synthesize" in markup
+    assert "Query expansion" not in markup
+    assert "Alias grouping" not in markup
+    assert "Evidence mapping" not in markup
+    assert "Evidence reranking" not in markup
+    assert "Seed Mode" in markup
+    assert "Top-K Triple" in markup
+    assert "(Intel)" in markup
+    assert "-[PRODUCES]-&gt;" in markup
+    assert "[0.912]" in markup
+    assert "Seed Weight" in markup
+    assert "Chunk Count" in markup
+    assert "chunk-1, chunk-2" in markup
+
+
+def test_agent_graph_trace_rebuilds_graph_stages_from_compact_retrieval():
+    result = {
+        "status": "complete",
+        "answer": "Agent graph answer",
+        "citations": [],
+        "trace": [
+            {
+                "stage": "retrieval",
+                "tool": "graph",
+                "retrieval_status": "ok",
+                "parameters": {
+                    "seed_mode": "triple",
+                    "top_k_triples": 1,
+                    "ppr_graph_mode": "entity_only",
+                    "ppr_seed_weight_mode": "uniform",
+                    "damping": 0.5,
+                },
+                "seed_count": 1,
+                "triple_candidates": [{
+                    "head": "AMD",
+                    "relation": "USES",
+                    "tail": "HBM",
+                    "similarity": 0.91,
+                }],
+                "returned_chunk_ids": ["agent-graph-1"],
+            },
+            {"stage": "synthesis", "status": "complete"},
+        ],
+    }
+
+    markup = Component._build_live_result_body(
+        Component.CONFIGURATIONS[3],
+        "Question",
+        result,
+    )
+
+    assert markup.count('class="trace-event-row') == 4
+    assert "Graph seed selection" in markup
+    assert "PPR" in markup
+    assert "Retrieve Complete" in markup
+    assert "Synthesize" in markup
+    assert "(AMD)" in markup
+    assert "agent-graph-1" in markup
+
+
+def test_completed_trace_uses_readable_details_before_raw_json():
     result = {
         "status": "complete",
         "answer": "Grounded answer",
@@ -181,8 +395,67 @@ def test_completed_trace_exposes_json_event_details():
         result,
     )
 
-    assert '<details class="trace-payload">' in markup
+    assert "Graph seed selection" in markup
+    assert '<details class="trace-detail-panel">' in markup
+    assert '<dl class="trace-detail-grid">' in markup
+    assert "Seed Mode" in markup
+    assert "Top-K Triple" in markup
+    assert "VIEW DETAILS" in markup
+    assert "RAW JSON" in markup
     assert "Selected 2 graph seeds" in markup
     assert "seed_count" in markup
     assert "Intel" in markup
-    assert ".trace-payload pre" in CUSTOM_CSS
+    assert ".raw-json-disclosure pre" in CUSTOM_CSS
+
+
+def test_citations_and_trace_use_readable_contrast_and_type():
+    assert "background: #202020;" in CUSTOM_CSS
+    assert "font-size: 11px;" in CUSTOM_CSS
+    assert "font-size: 12px;" in CUSTOM_CSS
+    assert "background: #2a2a2a;" in CUSTOM_CSS
+    assert "border: 1px solid #484848;" in CUSTOM_CSS
+    assert "font-size: 14px;" in CUSTOM_CSS
+    assert "font-weight: 700;" in CUSTOM_CSS
+    assert "font-weight: 600;" in CUSTOM_CSS
+
+
+def test_trace_timeline_collapses_adjacent_stage_transitions():
+    events = [
+        {
+            "stage": "vector_candidates",
+            "status": "running",
+            "message": "Searching the vector index",
+            "timestamp": "2026-08-25T00:00:00+00:00",
+            "details": {
+                "vector_index": "gold_chunk_embedding",
+                "candidate_pool_k": 100,
+            },
+        },
+        {
+            "stage": "vector_candidates",
+            "status": "complete",
+            "message": "Retrieved 20 vector candidates",
+            "timestamp": "2026-08-25T00:00:01.400000+00:00",
+            "details": {"candidate_count": 20},
+        },
+    ]
+
+    groups = Component._group_trace_events(events)
+    markup = Component._build_trace_row(
+        1,
+        groups[0]["event"],
+        raw_events=groups[0]["raw_events"],
+    )
+
+    assert len(groups) == 1
+    assert groups[0]["event"]["details"] == {
+        "vector_index": "gold_chunk_embedding",
+        "candidate_pool_k": 100,
+        "candidate_count": 20,
+    }
+    assert "Vector search" in markup
+    assert "COMPLETE" in markup
+    assert "1.4s" in markup
+    assert "Candidate budget" in markup
+    assert "Candidates" in markup
+    assert "RAW JSON" in markup
