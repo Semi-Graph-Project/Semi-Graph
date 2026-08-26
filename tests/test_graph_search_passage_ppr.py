@@ -113,6 +113,48 @@ def test_llm_triple_filter_selects_candidates_before_seed_conversion(monkeypatch
     assert trace["selected_candidate_ids"] == [1]
 
 
+def test_embedding_triple_seed_trace_keeps_the_top_k_candidates(monkeypatch):
+    candidates = [
+        {
+            "candidate_id": 0,
+            "head": "Intel",
+            "relation": "PRODUCES",
+            "tail": "Xeon",
+            "similarity": 0.91,
+        },
+        {
+            "candidate_id": 1,
+            "head": "Intel",
+            "relation": "OPERATES",
+            "tail": "Foundry",
+            "similarity": 0.87,
+        },
+    ]
+
+    monkeypatch.setattr(
+        graph_search_module,
+        "query_to_triple_candidates",
+        lambda *args, **kwargs: candidates,
+    )
+    monkeypatch.setattr(
+        graph_search_module,
+        "triple_candidates_to_seeds",
+        lambda received: [{"name": received[0]["head"]}],
+    )
+
+    seeds, trace = graph_search_module._select_seeds(
+        "Intel products",
+        seed_mode="triple",
+        top_k_triples=2,
+        triple_filter_mode="none",
+    )
+
+    assert seeds == [{"name": "Intel"}]
+    assert trace["candidates_before_filter"] == candidates
+    assert trace["candidates_after_filter"] == candidates
+    assert trace["selected_candidate_ids"] == [0, 1]
+
+
 def test_chunk_only_selects_vector_chunks_without_triple_filter(monkeypatch):
     expected = [{"chunk_id": "chunk-1", "similarity": 0.9, "specificity": 1.0}]
     captured = {}

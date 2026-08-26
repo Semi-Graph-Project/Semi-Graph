@@ -781,6 +781,8 @@ def synthesize_attempts_node(
             for index in cited_indices
             if index in citation_lookup
         ]
+        if not citation_map:
+            answer = "No evidence citation was returned for this answer."
         status = "ok"
         error_type = None
     except Exception as exc:

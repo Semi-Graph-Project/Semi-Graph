@@ -802,11 +802,21 @@ def _select_seeds(
 
     if seed_mode == "triple":
         if triple_filter_mode == "none":
-            return query_to_triple_seeds(
+            candidates = query_to_triple_candidates(
                 query,
                 top_k_candidates=top_k_triples,
                 cfg=cfg,
-            ), {"mode": "none", "applied": False}
+            )
+            return triple_candidates_to_seeds(candidates), {
+                "mode": "none",
+                "applied": False,
+                "reason": "embedding_ranked",
+                "candidates_before_filter": candidates,
+                "candidates_after_filter": candidates,
+                "selected_candidate_ids": [
+                    candidate["candidate_id"] for candidate in candidates
+                ],
+            }
 
         candidates = query_to_triple_candidates(
             query,
@@ -985,6 +995,7 @@ def trace_graph_search(
         "message": f"Selected {len(seeds)} graph seeds",
         "details": {
             "seed_count": len(seeds),
+            "top_k_triples": top_k_triples,
             "seeds": [
                 {
                     key: seed[key]
@@ -993,6 +1004,11 @@ def trace_graph_search(
                 }
                 for seed in seeds[:20]
             ],
+            "triple_candidates": list(
+                triple_filter_trace.get("candidates_before_filter")
+                or triple_filter_trace.get("candidates_after_filter")
+                or []
+            ),
             "triple_filter": triple_filter_trace,
         },
     })

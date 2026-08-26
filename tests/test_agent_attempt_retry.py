@@ -992,6 +992,26 @@ def test_synthesize_attempts_node_returns_grounded_citations(monkeypatch):
     assert "assessment" not in user_message
 
 
+def test_synthesize_attempts_node_replaces_uncited_answer_with_no_evidence(
+    monkeypatch,
+):
+    llm = _FakeSynthesisLLM("The model answered without a citation.")
+    monkeypatch.setattr(
+        nodes,
+        "get_config",
+        lambda: SimpleNamespace(agent_max_synthesis_chunks=10),
+    )
+    monkeypatch.setattr(nodes, "get_llm", lambda _: llm)
+
+    result = nodes.synthesize_attempts_node(_synthesis_state())
+
+    assert result["final_answer"] == (
+        "No evidence citation was returned for this answer."
+    )
+    assert result["citation_map"] == []
+    assert result["synthesis_trace"]["status"] == "ok"
+
+
 def test_synthesize_attempts_node_uses_configured_chunk_limit(monkeypatch):
     state = _synthesis_state()
     chunks = [

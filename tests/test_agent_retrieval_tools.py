@@ -110,6 +110,13 @@ def test_agent_graph_search_uses_phase_t_profile(monkeypatch):
     assert captured["graph_triple_filter"] == "none"
     assert result["trace"]["seed_count"] == 1
     assert result["trace"]["triple_filter"]["reason"] == "llm_selection"
+    assert result["trace"]["triple_candidates"] == [{
+        "candidate_id": 0,
+        "head": "amd",
+        "relation": "DEPENDS_ON",
+        "tail": "tsmc",
+        "similarity": 0.9,
+    }]
     assert result["trace"]["returned_chunk_ids"] == ["graph-1"]
 
 

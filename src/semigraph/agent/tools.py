@@ -136,6 +136,14 @@ def _compact_graph_trace(trace: dict) -> dict:
                 ("candidate_id", "head", "relation", "tail", "similarity"),
             ),
         },
+        "triple_candidates": _compact_items(
+            list(
+                triple_filter.get("candidates_before_filter")
+                or triple_filter.get("candidates_after_filter")
+                or []
+            ),
+            ("candidate_id", "head", "relation", "tail", "similarity"),
+        ),
         "ppr_entity_count": len(ppr_entities),
         "ppr_entities": _compact_items(
             ppr_entities,
