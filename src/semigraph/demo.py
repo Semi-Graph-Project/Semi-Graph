@@ -229,7 +229,7 @@ def run_comparison(
     mode: ComparisonMode | str,
     query: str,
     corpus: str | BackendCorpus,
-    top_k: int = 5,
+    top_k: int | None = None,
     recursion_limit: int = 50,
     trace_callback: TraceCallback | None = None,
     run_id: str | None = None,
@@ -256,13 +256,18 @@ def run_comparison(
             raise ValueError(f"Unknown comparison mode: {mode!r}")
         if not isinstance(query, str) or not query.strip():
             raise ValueError("query must not be empty")
-        if top_k < 1:
+        if top_k is not None and top_k < 1:
             raise ValueError("top_k must be positive")
         if recursion_limit < 1:
             raise ValueError("recursion_limit must be positive")
 
         selected = get_backend_corpus(corpus)
         cfg = get_backend_config(selected)
+        effective_top_k = (
+            top_k
+            if top_k is not None
+            else cfg.agent_max_synthesis_chunks
+        )
         TRACE_STORE.start(
             active_run_id,
             mode=str(mode),
@@ -296,7 +301,7 @@ def run_comparison(
             )
             retrieved = retriever(
                 clean_query,
-                top_k,
+                effective_top_k,
                 cfg,
                 trace_callback=emit,
             )
@@ -360,7 +365,7 @@ def run_comparison(
         )
         agent = build_agent(
             locked_tool=locked_tool,
-            top_k=top_k,
+            top_k=effective_top_k,
             cfg=cfg,
         )
         result = agent.invoke(

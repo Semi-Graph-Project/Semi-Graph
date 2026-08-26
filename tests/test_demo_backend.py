@@ -1,3 +1,5 @@
+import pytest
+
 from semigraph.config import get_config
 from semigraph import demo
 from semigraph.agent import nodes
@@ -117,6 +119,42 @@ def test_run_comparison_direct_vector_uses_selected_config_and_shared_synthesis(
     ]
 
 
+@pytest.mark.parametrize("mode", ["vector", "graph"])
+def test_run_comparison_uses_configured_synthesis_budget_when_top_k_omitted(
+    monkeypatch,
+    mode,
+):
+    captured = {}
+    chunks = [{"chunk_id": "c1", "text": "Evidence"}]
+
+    def fake_retrieval(query, top_k, cfg, trace_callback=None):
+        captured["retrieval"] = (query, top_k, cfg.neo4j_uri)
+        return {"chunks": chunks, "trace": {"retriever": mode}}
+
+    def fake_synthesis(state, cfg=None):
+        return {
+            "final_answer": "Answer [1]",
+            "citation_map": [{"citation_index": 1, "chunk_id": "c1"}],
+            "synthesis_trace": {"status": "ok", "llm_calls": 1},
+        }
+
+    retriever_name = (
+        "agent_vector_search" if mode == "vector" else "agent_graph_search"
+    )
+    monkeypatch.setattr(demo.agent_tools, retriever_name, fake_retrieval)
+    monkeypatch.setattr(demo.nodes, "synthesize_attempts_node", fake_synthesis)
+
+    selected_config = get_backend_config("production")
+    result = run_comparison(mode, "Question", "production")
+
+    assert result.status == "complete"
+    assert captured["retrieval"] == (
+        "Question",
+        selected_config.agent_max_synthesis_chunks,
+        "bolt://localhost:7687",
+    )
+
+
 def test_run_comparison_direct_graph_uses_selected_config_and_shared_synthesis(
     monkeypatch,
 ):
@@ -209,23 +247,34 @@ def test_run_comparison_emits_live_trace_events_without_changing_result(
     assert trace_document["events"] == events
 
 
-def test_run_comparison_agent_graph_passes_selected_config(monkeypatch):
+@pytest.mark.parametrize(
+    ("mode", "locked_tool"),
+    [
+        ("agent_vector", "vector"),
+        ("agent_graph", "graph"),
+    ],
+)
+def test_run_comparison_agent_modes_pass_selected_config(
+    monkeypatch,
+    mode,
+    locked_tool,
+):
     captured = {}
 
     class FakeAgent:
         def invoke(self, state, config):
             captured["invoke"] = (state, config)
             return {
-                "final_answer": "Graph answer [1]",
+                "final_answer": "Agent answer [1]",
                 "citation_map": [{"citation_index": 1, "chunk_id": "c1"}],
                 "plan_trace": {"status": "ok"},
                 "attempts": [{
                     "attempt_id": "T1-A1",
                     "task_id": "T1",
-                    "action": {"tool": "graph", "query": "Question"},
+                    "action": {"tool": locked_tool, "query": "Question"},
                     "retrieval_status": "ok",
                     "chunks": [{"chunk_id": "c1"}],
-                    "retrieval_trace": {"retriever": "graph"},
+                    "retrieval_trace": {"retriever": locked_tool},
                 }],
                 "synthesis_trace": {"status": "ok", "llm_calls": 1},
             }
@@ -236,10 +285,10 @@ def test_run_comparison_agent_graph_passes_selected_config(monkeypatch):
 
     monkeypatch.setattr(demo, "build_agent", fake_build_agent)
 
-    result = run_comparison("agent_graph", "Question", "production", top_k=4)
+    result = run_comparison(mode, "Question", "production", top_k=4)
 
     assert result.status == "complete"
-    assert captured["build"]["locked_tool"] == "graph"
+    assert captured["build"]["locked_tool"] == locked_tool
     assert captured["build"]["top_k"] == 4
     assert captured["build"]["cfg"].neo4j_uri == "bolt://localhost:7687"
     assert captured["invoke"] == (
