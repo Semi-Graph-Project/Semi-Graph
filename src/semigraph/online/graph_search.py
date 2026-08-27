@@ -22,8 +22,6 @@ entities — the multi-hop reasoning signal we want PPR to surface.
 """
 from __future__ import annotations
 
-import re
-from dataclasses import asdict, dataclass
 from typing import Optional
 
 from neo4j import Driver
@@ -32,7 +30,7 @@ from semigraph.config import Config, get_config
 from semigraph.connections import get_neo4j_driver
 from semigraph.online.ppr import run_passage_ppr, run_ppr
 from semigraph.online.query_expand import expand_query
-from semigraph.online.rerank import rerank_chunks
+from semigraph.online.rerank import company_rerank, fiscal_year_rerank
 from semigraph.online.seed import (
     query_to_chunk_seeds,
     query_to_triple_candidates,
@@ -44,534 +42,6 @@ from semigraph.online.seed import (
 from semigraph.online.triple_filter import filter_triple_candidates
 from semigraph.online.vector_search import DEFAULT_VECTOR_INDEX
 from semigraph.trace import TraceCallback, notify_trace
-
-
-@dataclass(frozen=True)
-class MetadataRerankParams:
-    """Tunable weights for metadata reranking.
-
-    Defaults intentionally match the previous hard-coded Phase T settings.
-    Benchmarks can override these values without editing source code.
-    """
-
-    risk_section_boost: float = 1.35
-    business_section_boost: float = 1.18
-    financial_section_boost: float = 1.28
-    ticker_boost: float = 1.20
-    cluster_boost_per_extra: float = 0.04
-    cluster_boost_cap: float = 1.05
-    latest_year_boost: float = 1.08
-    latest_year_min: int = 2025
-    lexical_match_weight: float = 0.10
-    lexical_boost_cap: float = 0.55
-    broad_penalty_enabled: bool = True
-    broad_penalty_floor: float = 0.92
-    broad_penalty_step: float = 0.97
-    broad_penalty_zero_match: float = 0.98
-    broad_penalty_short_token_cutoff: int = 80
-    broad_penalty_mid_token_cutoff: int = 140
-    broad_penalty_long_token_cutoff: int = 220
-
-    def to_dict(self) -> dict:
-        return asdict(self)
-
-
-_RISK_TERMS = {
-    "affect",
-    "constraint",
-    "constraints",
-    "control",
-    "controls",
-    "depend",
-    "dependency",
-    "dependencies",
-    "dependent",
-    "exposed",
-    "exposure",
-    "geopolitical",
-    "impact",
-    "political",
-    "risk",
-    "risks",
-    "shortage",
-    "supply",
-    "taiwan",
-    "tariff",
-    "uncertainty",
-    "yield",
-}
-_BUSINESS_TERMS = {
-    "architecture",
-    "business",
-    "compete",
-    "competitor",
-    "customer",
-    "foundry",
-    "manufacture",
-    "manufactures",
-    "partner",
-    "partners",
-    "product",
-    "products",
-    "segment",
-    "segments",
-    "supplier",
-    "supplies",
-    "wafer",
-    "wafers",
-}
-_FINANCIAL_TERMS = {
-    "annual",
-    "depreciation",
-    "eps",
-    "fy",
-    "fy2023",
-    "fy2024",
-    "fy2025",
-    "gross",
-    "margin",
-    "revenue",
-    "sales",
-}
-_SUPPLY_CHAIN_TERMS = {
-    "capacity",
-    "constraint",
-    "constraints",
-    "depend",
-    "dependency",
-    "dependencies",
-    "foundry",
-    "manufacturing",
-    "shortage",
-    "supplier",
-    "suppliers",
-    "supply",
-    "tsmc",
-    "wafer",
-    "wafers",
-}
-_EXPORT_CONTROL_TERMS = {
-    "ban",
-    "china",
-    "control",
-    "controls",
-    "ear",
-    "export",
-    "geopolitical",
-    "regulation",
-    "regulations",
-    "restriction",
-    "restrictions",
-    "sanction",
-    "sanctions",
-}
-_PRODUCT_TERMS = {
-    "accelerator",
-    "accelerators",
-    "architecture",
-    "chip",
-    "chips",
-    "gpu",
-    "gpus",
-    "instinct",
-    "platform",
-    "product",
-    "products",
-    "ryzen",
-}
-_COMPETITION_TERMS = {
-    "alternative",
-    "alternatives",
-    "compete",
-    "competes",
-    "competition",
-    "competitive",
-    "competitor",
-    "competitors",
-    "versus",
-    "vs",
-}
-_LATEST_TERMS = {
-    "current",
-    "latest",
-    "new",
-    "recent",
-    "recently",
-    "today",
-}
-_CONTENT_STOPWORDS = {
-    "a",
-    "an",
-    "and",
-    "are",
-    "as",
-    "at",
-    "between",
-    "by",
-    "did",
-    "does",
-    "do",
-    "from",
-    "has",
-    "have",
-    "how",
-    "in",
-    "is",
-    "it",
-    "its",
-    "main",
-    "of",
-    "on",
-    "offer",
-    "offers",
-    "or",
-    "product",
-    "products",
-    "that",
-    "the",
-    "their",
-    "to",
-    "what",
-    "when",
-    "where",
-    "which",
-    "who",
-    "with",
-}
-
-
-def _query_terms(query: str) -> set[str]:
-    """Lowercase token set used by lightweight retrieval intent heuristics."""
-    return set(re.findall(r"[a-z0-9]+", query.lower()))
-
-
-def _query_intent(
-    query: str,
-    cfg: Optional[Config] = None,
-    params: Optional[MetadataRerankParams] = None,
-) -> dict:
-    """Classify query intent for explainable metadata reranking.
-
-    The helper is intentionally rule-based for Phase T. It must be cheap,
-    deterministic, and easy to inspect in benchmark traces. The returned
-    fields do not change ranking by themselves; downstream rerank helpers can
-    decide how strongly to use each signal.
-    """
-    params = params or MetadataRerankParams()
-    terms = _query_terms(query)
-    ticker_boost = _ticker_boosts_for_query(query, cfg=cfg)
-    finance_hits = terms & _FINANCIAL_TERMS
-    risk_hits = terms & _RISK_TERMS
-    business_hits = terms & _BUSINESS_TERMS
-    supply_hits = terms & _SUPPLY_CHAIN_TERMS
-    export_hits = terms & _EXPORT_CONTROL_TERMS
-    product_hits = terms & _PRODUCT_TERMS
-    competition_hits = terms & _COMPETITION_TERMS
-    latest_hits = terms & _LATEST_TERMS
-
-    temporal_latest = bool(latest_hits) and not bool(finance_hits)
-
-    preferred_sections: dict[str, float] = {}
-    if risk_hits or export_hits or supply_hits:
-        preferred_sections["Item_1A"] = params.risk_section_boost
-    if business_hits or product_hits or competition_hits:
-        preferred_sections["Item_1"] = params.business_section_boost
-    if finance_hits:
-        preferred_sections["Item_7"] = params.financial_section_boost
-
-    intent_scores = {
-        "financial": len(finance_hits) * 2,
-        "risk": len(risk_hits) + len(export_hits) + len(supply_hits),
-        "business": len(business_hits) + len(product_hits) + len(competition_hits),
-        "latest": len(latest_hits) if temporal_latest else 0,
-    }
-    primary_intent = max(intent_scores, key=lambda key: (intent_scores[key], key))
-    if intent_scores[primary_intent] == 0:
-        primary_intent = "general"
-
-    return {
-        "primary_intent": primary_intent,
-        "financial": bool(finance_hits),
-        "tickers": sorted(ticker_boost),
-        "risk": bool(risk_hits or export_hits),
-        "business": bool(business_hits),
-        "supply_chain": bool(supply_hits),
-        "export_control": bool(export_hits),
-        "product": bool(product_hits),
-        "competition": bool(competition_hits),
-        "temporal_latest": temporal_latest,
-        "preferred_sections": preferred_sections,
-        "matched_terms": {
-            "financial": sorted(finance_hits),
-            "risk": sorted(risk_hits),
-            "business": sorted(business_hits),
-            "supply_chain": sorted(supply_hits),
-            "export_control": sorted(export_hits),
-            "product": sorted(product_hits),
-            "competition": sorted(competition_hits),
-            "latest": sorted(latest_hits),
-        },
-    }
-
-
-def _metadata_boosts_for_query(
-    intent: dict,
-    chunk: dict,
-    params: Optional[MetadataRerankParams] = None,
-) -> float:
-    """Return an explainable metadata-only boost for one chunk.
-
-    Keep this helper small: query understanding lives in `_query_intent`,
-    lexical matching lives in `_lexical_boost_for_chunk`, and this function
-    only reads filing metadata/debug fields that already exist on a chunk.
-    """
-    params = params or MetadataRerankParams()
-    boost = 1.0
-
-    section = str(chunk.get("section") or "")
-    boost *= intent.get("preferred_sections", {}).get(section, 1.0)
-
-    ticker = str(chunk.get("ticker") or "").upper()
-    if ticker in intent.get("tickers", []):
-        boost *= params.ticker_boost
-    
-    matched_cluster_count = int(chunk.get("matched_cluster_count") or 0)
-    if matched_cluster_count > 1:
-        boost *= min(
-            params.cluster_boost_cap,
-            1.0 + (matched_cluster_count - 1) * params.cluster_boost_per_extra,
-        )
-
-    if intent.get("temporal_latest"):
-        fiscal_year = int(chunk.get("fiscal_year") or 0)
-        if fiscal_year >= params.latest_year_min:
-            boost *= params.latest_year_boost
-
-    return boost
-
-
-def _broad_chunk_penalty(
-    query: str,
-    chunk: dict,
-    params: Optional[MetadataRerankParams] = None,
-) -> float:
-    """Return a very small penalty for broad chunks with weak query overlap.
-
-    The idea is not to punish long chunks aggressively. We only shave off a
-    little score when a chunk is verbose and does not echo much of the query.
-    If the chunk already matches multiple query terms, we leave it untouched.
-    """
-    params = params or MetadataRerankParams()
-    if not params.broad_penalty_enabled:
-        return 1.0
-
-    query_terms = _content_terms_for_query(query)
-    if not query_terms:
-        return 1.0
-
-    haystack = " ".join(
-        str(chunk.get(key) or "")
-        for key in ("chunk_id", "ticker", "section", "text")
-    ).lower()
-    matches = sum(1 for term in query_terms if term in haystack)
-    if matches >= 2:
-        return 1.0
-
-    text = str(chunk.get("text") or "")
-    token_count = len(re.findall(r"[a-z0-9]+", text.lower()))
-
-    if token_count <= params.broad_penalty_short_token_cutoff:
-        return 1.0
-
-    penalty = 1.0
-    if token_count > params.broad_penalty_mid_token_cutoff:
-        penalty *= params.broad_penalty_step
-    if token_count > params.broad_penalty_long_token_cutoff:
-        penalty *= params.broad_penalty_step
-    if matches == 0:
-        penalty *= params.broad_penalty_zero_match
-
-    return max(params.broad_penalty_floor, penalty)
-    
-
-
-def _rerank_chunks_by_metadata(
-    query: str,
-    chunks: list[dict],
-    cfg: Optional[Config] = None,
-    metadata_rerank_params: Optional[MetadataRerankParams] = None,
-) -> list[dict]:
-    params = metadata_rerank_params or MetadataRerankParams()
-    intent = _query_intent(query, cfg=cfg, params=params)
-    query_terms = _content_terms_for_query(query)
-
-    reranked: list[dict] = []
-    for chunk in chunks:
-        ppr_score = float(chunk.get("score") or 0.0) # chunk.score = PPR Score
-        lexical_boost = _lexical_boost_for_chunk(query_terms, chunk, params=params)
-        metadata_boost = _metadata_boosts_for_query(intent, chunk, params=params)
-        broad_penalty = _broad_chunk_penalty(query, chunk, params=params)
-
-        # Combine all boosts
-        final_score = ppr_score * lexical_boost * metadata_boost  * broad_penalty
-        new_chunk = dict(chunk)
-        new_chunk["score"] = final_score
-        new_chunk["rerank_score"] = final_score
-        new_chunk["rerank_debug"] = {
-            "ppr_score": ppr_score,
-            "lexical_boost": lexical_boost,
-            "metadata_boost": metadata_boost,
-            "broad_penalty": broad_penalty,
-            "metadata_rerank_params": params.to_dict(),
-        }
-        reranked.append(new_chunk)
-
-    return sorted(
-        reranked,
-        key=lambda c: (-c["rerank_score"], str(c.get("chunk_id", "")))
-    )
-
-
-def _section_boosts_for_query(query: str) -> dict[str, float]:
-    """Infer section preference from the user's wording.
-
-    First-principle version: graph/PPR ranks *entities*. A chunk still needs a
-    second decision: which filing section is the right evidence container?
-    Risk wording should prefer Item_1A, business/product wording should prefer
-    Item_1, and exact financial wording should prefer Item_7 when graph is
-    called directly.
-    """
-    terms = _query_terms(query)
-    boosts: dict[str, float] = {}
-
-    if terms & _RISK_TERMS:
-        boosts["Item_1A"] = 1.35
-    if terms & _BUSINESS_TERMS:
-        boosts["Item_1"] = 1.18
-    if terms & _FINANCIAL_TERMS:
-        boosts["Item_7"] = 1.28
-
-    return boosts
-
-
-def _ticker_boosts_for_query(query: str, cfg: Optional[Config] = None) -> set[str]:
-    """Return explicit ticker mentions in the query for provenance-aware rerank."""
-    cfg = cfg or get_config()
-    known_tickers = {ticker.upper() for ticker in cfg.tickers if ticker}
-    terms = {t.upper() for t in _query_terms(query)}
-    return terms & known_tickers
-
-
-def _content_terms_for_query(query: str) -> set[str]:
-    """Query terms worth checking literally inside candidate chunk text."""
-    terms = _query_terms(query)
-    return {
-        term
-        for term in terms
-        if term not in _CONTENT_STOPWORDS and len(term) >= 3
-    }
-
-
-def _lexical_boost_for_chunk(
-    query_terms: set[str],
-    chunk: dict,
-    params: Optional[MetadataRerankParams] = None,
-) -> float:
-    """Small boost when graph candidates contain answer-bearing query terms."""
-    if not query_terms:
-        return 1.0
-
-    params = params or MetadataRerankParams()
-    haystack = " ".join(
-        str(chunk.get(key) or "")
-        for key in ("chunk_id", "ticker", "section", "text")
-    ).lower()
-    matches = sum(1 for term in query_terms if term in haystack)
-
-    return 1.0 + min(
-        params.lexical_boost_cap,
-        matches * params.lexical_match_weight,
-    )
-
-def _rerank_chunks(
-        query: str,
-        chunks: list[dict],
-        rerank_mode: str = "legacy",
-        cfg: Optional[Config] = None,
-        metadata_rerank_params: Optional[MetadataRerankParams] = None,
-) -> list[dict]:
-    """
-    Strategy Pattern for Select Reranking Method based on rerank_mode
-    """
-    if rerank_mode == "legacy":
-        return _rerank_chunks_by_query_intent(query, chunks, cfg=cfg)
-    elif rerank_mode == "metadata":
-        return _rerank_chunks_by_metadata(
-            query,
-            chunks,
-            cfg=cfg,
-            metadata_rerank_params=metadata_rerank_params,
-        )
-    elif rerank_mode == "semantic":
-        return _rerank_chunks_by_query_intent(query, chunks, cfg=cfg)
-    else:
-        raise ValueError(f"Unknown rerank_mode: {rerank_mode}")
-        
-
-    
-def _rerank_chunks_by_query_intent(
-    query: str,
-    chunks: list[dict],
-    cfg: Optional[Config] = None,
-) -> list[dict]:
-    """Apply lightweight provenance intent reranking to graph chunk candidates.
-
-    The original PPR-derived score remains the base signal. We only multiply it
-    by small, explainable boosts from query intent:
-      - section match, e.g. risk wording → Item_1A
-      - explicit ticker match, e.g. "AMD" → AMD chunks
-
-    """
-    if not chunks:
-        return []
-
-    section_boosts = _section_boosts_for_query(query)
-    ticker_boosts = _ticker_boosts_for_query(query, cfg=cfg)
-    content_terms = _content_terms_for_query(query)
-
-    reranked: list[dict] = []
-    for idx, chunk in enumerate(chunks):
-        base_score = float(chunk.get("score") or 0.0)
-        boost = 1.0
-
-        section = str(chunk.get("section") or "")
-        boost *= section_boosts.get(section, 1.0)
-
-        ticker = str(chunk.get("ticker") or "").upper()
-        if ticker in ticker_boosts:
-            boost *= 1.25
-
-        boost *= _lexical_boost_for_chunk(content_terms, chunk)
-
-        enriched = dict(chunk)
-        enriched["score"] = base_score * boost
-        enriched["_graph_base_score"] = base_score
-        enriched["_intent_boost"] = boost
-        enriched["_original_rank"] = idx
-        reranked.append(enriched)
-
-    reranked.sort(
-        key=lambda d: (
-            -float(d.get("score") or 0.0),
-            int(d.get("_original_rank") or 0),
-            str(d.get("chunk_id") or ""),
-        )
-    )
-
-    return [
-        {k: v for k, v in chunk.items() if not k.startswith("_")}
-        for chunk in reranked
-    ]
 
 
 # UNWIND iterates one row per requested name. MATCH binds `e` to that name's
@@ -849,40 +319,6 @@ def _select_seeds(
     raise ValueError(f"Unknown graph seed_mode: {seed_mode}")
 
 
-def _apply_final_rerank(
-    query: str,
-    candidate_chunks: list[dict],
-    top_k_chunks: int,
-    final_rerank: str,
-    cfg: Optional[Config] = None,
-) -> tuple[list[dict], dict]:
-    """Apply the optional external reranker after graph candidates exist."""
-    if final_rerank == "none":
-        return candidate_chunks[:top_k_chunks], {
-            "enabled": False,
-            "fallback": False,
-            "status": "disabled",
-            "candidate_count": len(candidate_chunks),
-            "returned_count": min(top_k_chunks, len(candidate_chunks)),
-        }
-
-    if final_rerank != "cohere":
-        raise ValueError(f"Unknown final_rerank: {final_rerank}")
-
-    ranked_chunks, reranker_trace = rerank_chunks(
-        query=query,
-        chunks=candidate_chunks[:20],
-        top_n=top_k_chunks,
-        cfg=cfg,
-        fail_open=True,
-    )
-    return ranked_chunks, {
-        "enabled": True,
-        "fallback": reranker_trace.get("status") == "fallback",
-        **reranker_trace,
-    }
-
-
 def trace_graph_search(
     query: str,
     top_k_chunks: int = 5,
@@ -893,10 +329,7 @@ def trace_graph_search(
     chunk_seed_vector_index: str = DEFAULT_VECTOR_INDEX,
     use_expansion: bool = True,
     seed_mode: str = "triple",
-    rerank_mode: str = "legacy",
     candidate_pool_k: int = 100,
-    metadata_rerank_params: Optional[MetadataRerankParams] = None,
-    final_rerank: str = "none",
     ppr_seed_weight_mode: str = "uniform",
     ppr_graph_mode: str = "entity_only",
     graph_triple_filter: str = "none",
@@ -906,12 +339,11 @@ def trace_graph_search(
     """Run graph retrieval and return both chunks and stage-level trace.
 
     query expansion -> seeds -> PPR entities -> alias clusters -> chunk
-    candidates -> optional external reranker -> final chunks.
+    candidates -> company/year reranking -> final chunks.
     """
     print(f"[graph_search] query={query!r} "
           f"top_k_chunks={top_k_chunks} top_k_entities={top_k_entities}")
 
-    metadata_rerank_params = metadata_rerank_params or MetadataRerankParams()
     notify_trace(trace_callback, {
         "stage": "query_expansion",
         "status": "running" if use_expansion else "skipped",
@@ -934,10 +366,8 @@ def trace_graph_search(
         "effective_query": effective_query,
         "use_expansion": use_expansion,
         "seed_mode": seed_mode,
-        "rerank_mode": rerank_mode,
-        "final_rerank": final_rerank,
         "candidate_pool_k": candidate_pool_k,
-        "metadata_rerank_params": metadata_rerank_params.to_dict(),
+        "metadata_rerank": "company+fiscal_year",
         "top_k_chunks": top_k_chunks,
         "top_k_entities": top_k_entities,
         "top_k_triples": top_k_triples,
@@ -950,11 +380,7 @@ def trace_graph_search(
         "chunk_candidates": [],
         "raw_chunk_candidates": [],
         "reranked_chunks": [],
-        "reranker_trace": {
-            "enabled": final_rerank != "none",
-            "fallback": False,
-            "status": "not_run",
-        },
+        "reranker_trace": {"mode": "company+fiscal_year", "status": "not_run"},
         "chunks": [],
         "abort_reason": None,
         "ppr_graph_mode": ppr_graph_mode,
@@ -1048,6 +474,17 @@ def trace_graph_search(
         trace["ppr_entities"] = passage_result["ppr_entities"]
         trace["chunk_candidates"] = passage_result["chunks"]
         trace["raw_chunk_candidates"] = trace["chunk_candidates"]
+        trace["reranked_chunks"] = fiscal_year_rerank(
+            query,
+            company_rerank(query, trace["chunk_candidates"], cfg=cfg),
+        )
+        trace["chunks"] = trace["reranked_chunks"][:top_k_chunks]
+        trace["reranker_trace"] = {
+            "mode": "company+fiscal_year",
+            "status": "complete",
+            "candidate_count": len(trace["reranked_chunks"]),
+            "returned_count": len(trace["chunks"]),
+        }
         trace["projection"] = passage_result["projection"]
         trace["direct_chunk_ppr"] = True
         notify_trace(trace_callback, {
@@ -1063,26 +500,16 @@ def trace_graph_search(
         notify_trace(trace_callback, {
             "stage": "reranking",
             "status": "running",
-            "message": f"Applying {final_rerank} reranking",
+            "message": "Applying company and fiscal-year reranking",
             "details": {
-                "mode": final_rerank,
+                "mode": "company+fiscal_year",
                 "candidate_count": len(trace["raw_chunk_candidates"]),
             },
         })
-        trace["reranked_chunks"], trace["reranker_trace"] = _apply_final_rerank(
-            query=query,
-            candidate_chunks=trace["raw_chunk_candidates"],
-            top_k_chunks=top_k_chunks,
-            final_rerank=final_rerank,
-            cfg=cfg,
-        )
-        trace["chunks"] = trace["reranked_chunks"]
-        _emit_graph_rerank_events(
+        _emit_graph_retrieval_events(
             trace_callback,
-            final_rerank,
             trace["raw_chunk_candidates"],
             trace["chunks"],
-            trace["reranker_trace"],
         )
         return trace
 
@@ -1152,6 +579,17 @@ def trace_graph_search(
     chunk_candidates = _map_chunks(cluster_entries, top_k=candidate_pool_k, cfg=cfg)
     trace["chunk_candidates"] = chunk_candidates
     trace["raw_chunk_candidates"] = chunk_candidates
+    trace["reranked_chunks"] = fiscal_year_rerank(
+        query,
+        company_rerank(query, chunk_candidates, cfg=cfg),
+    )
+    trace["chunks"] = trace["reranked_chunks"][:top_k_chunks]
+    trace["reranker_trace"] = {
+        "mode": "company+fiscal_year",
+        "status": "complete",
+        "candidate_count": len(trace["reranked_chunks"]),
+        "returned_count": len(trace["chunks"]),
+    }
     notify_trace(trace_callback, {
         "stage": "chunk_mapping",
         "status": "complete",
@@ -1168,37 +606,25 @@ def trace_graph_search(
     notify_trace(trace_callback, {
         "stage": "reranking",
         "status": "running",
-        "message": f"Applying {final_rerank} reranking",
+        "message": "Applying company and fiscal-year reranking",
         "details": {
-            "mode": final_rerank,
+            "mode": "company+fiscal_year",
             "candidate_count": len(trace["raw_chunk_candidates"]),
         },
     })
-    trace["reranked_chunks"], trace["reranker_trace"] = _apply_final_rerank(
-        query=query,
-        candidate_chunks=trace["raw_chunk_candidates"],
-        top_k_chunks=top_k_chunks,
-        final_rerank=final_rerank,
-        cfg=cfg,
-    )
-    trace["chunks"] = trace["reranked_chunks"]
-    _emit_graph_rerank_events(
+    _emit_graph_retrieval_events(
         trace_callback,
-        final_rerank,
         trace["raw_chunk_candidates"],
         trace["chunks"],
-        trace["reranker_trace"],
     )
     # print(f"[graph_search] returning {len(trace['chunks'])} chunks")
     return trace
 
 
-def _emit_graph_rerank_events(
+def _emit_graph_retrieval_events(
     trace_callback: TraceCallback | None,
-    mode: str,
     candidates: list[dict],
     chunks: list[dict],
-    reranker_trace: dict,
 ) -> None:
     """Publish final Graph retrieval details without changing ranking logic."""
     returned_chunk_ids = [
@@ -1211,10 +637,9 @@ def _emit_graph_rerank_events(
         "status": "complete",
         "message": f"Selected {len(chunks)} final graph chunks",
         "details": {
-            "mode": mode,
+            "mode": "company+fiscal_year",
             "candidate_count": len(candidates),
             "returned_chunk_ids": returned_chunk_ids,
-            "reranker": reranker_trace,
         },
     })
     notify_trace(trace_callback, {
@@ -1235,10 +660,7 @@ def graph_search(
     chunk_seed_vector_index: str = DEFAULT_VECTOR_INDEX,
     use_expansion: bool = True,
     seed_mode: str = "triple",
-    rerank_mode: str = "legacy",
     candidate_pool_k: int = 100,
-    metadata_rerank_params: Optional[MetadataRerankParams] = None,
-    final_rerank: str = "none",
     ppr_seed_weight_mode: str = "uniform",
     ppr_graph_mode: str = "entity_only",
     graph_triple_filter: str = "none",
@@ -1257,13 +679,10 @@ def graph_search(
         chunk_seed_vector_index=chunk_seed_vector_index,
         use_expansion=use_expansion,
         seed_mode=seed_mode,
-        rerank_mode=rerank_mode,
         candidate_pool_k=candidate_pool_k,
-        metadata_rerank_params=metadata_rerank_params,
         ppr_seed_weight_mode=ppr_seed_weight_mode,
         ppr_graph_mode=ppr_graph_mode,
         graph_triple_filter=graph_triple_filter,
-        final_rerank=final_rerank,
         cfg=cfg,
     )
     return trace["chunks"]

@@ -95,7 +95,6 @@ def test_query_to_chunk_seeds_uses_vector_results(monkeypatch):
         "query": "AMD revenue",
         "top_k_chunks": 2,
         "candidate_pool_k": 2,
-        "final_rerank": "none",
         "vector_index": "gold_chunk_embedding",
         "cfg": "cfg-sentinel",
     }

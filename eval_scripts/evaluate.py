@@ -61,6 +61,14 @@ def load_sox_queries() -> list[dict]:
     return queries
 
 
+def _reciprocal_rank(retrieved_ids: list[str], gold_ids: set[str]) -> float:
+    """Return 1/rank for the first retrieved Gold chunk, or zero if absent."""
+    for rank, chunk_id in enumerate(retrieved_ids, start=1):
+        if chunk_id in gold_ids:
+            return 1.0 / rank
+    return 0.0
+
+
 def vector_search(question: str, top_k: int = TOP_K) -> list[dict]:
     """Use the production vector_search implementation for Gold Chunks."""
     cfg = get_config()
@@ -88,9 +96,7 @@ def graph_search(question: str, top_k: int = TOP_K) -> list[dict]:
         damping=float(profile["damping"]),
         use_expansion=bool(profile["use_expansion"]),
         seed_mode=str(profile["seed_mode"]),
-        rerank_mode=str(profile["rerank_mode"]),
         candidate_pool_k=int(profile["candidate_pool_k"]),
-        final_rerank=str(profile["final_rerank"]),
         ppr_seed_weight_mode=str(profile["ppr_seed_weight_mode"]),
         ppr_graph_mode=str(profile["ppr_graph_mode"]),
         graph_triple_filter=str(profile["triple_filter"]),
@@ -121,6 +127,11 @@ def write_yaml_trace(results: list[dict], output_path: Path) -> None:
         if results
         else None,
         "recall": round(statistics.fmean(row["recall"] for row in results), 3)
+        if results
+        else None,
+        "mrr": round(
+            statistics.fmean(row["reciprocal_rank"] for row in results), 3
+        )
         if results
         else None,
         "average_latency_ms": round(
@@ -278,6 +289,7 @@ def evaluate_sox_queries(
         hits = gold_ids.intersection(retrieved_ids)
         hit = int(bool(hits))
         recall = len(hits) / len(gold_ids)
+        reciprocal_rank = _reciprocal_rank(retrieved_ids, gold_ids)
 
         answer_error = None
         final_answer = "None"
@@ -309,6 +321,7 @@ def evaluate_sox_queries(
             "final_answer": final_answer,
             "hit": hit,
             "recall": recall,
+            "reciprocal_rank": reciprocal_rank,
             "latency_ms": latency_ms,
             "answer_latency_ms": answer_latency_ms,
         }
@@ -319,12 +332,17 @@ def evaluate_sox_queries(
         write_yaml_trace(results, yaml_trace_output)
         print(
             f"{result['id']} | Hit={hit} | "
-            f"Recall={recall:.3f} | Retrieval={latency_ms:.1f} ms | "
+            f"Recall={recall:.3f} | RR={reciprocal_rank:.3f} | "
+            f"Retrieval={latency_ms:.1f} ms | "
             f"Answer={answer_latency_ms:.1f} ms"
         )
 
     print(f"\nHit: {statistics.fmean(row['hit'] for row in results):.3f}")
     print(f"Recall: {statistics.fmean(row['recall'] for row in results):.3f}")
+    print(
+        "MRR: "
+        f"{statistics.fmean(row['reciprocal_rank'] for row in results):.3f}"
+    )
     print(
         "Mean latency: "
         f"{statistics.fmean(row['latency_ms'] for row in results):.1f} ms"

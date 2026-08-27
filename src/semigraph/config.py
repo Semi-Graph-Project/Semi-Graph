@@ -149,18 +149,6 @@ class Config:
         self.embed_device: str = emb.get("device", "cpu")
         self.embed_normalize: bool = emb.get("normalize", True)
 
-        # --- Reranker ---
-        reranker = data.get("reranker", {})
-        self.reranker_provider = reranker.get("provider", "openrouter")
-        self.reranker_model = reranker.get(
-            "model", "cohere/rerank-4-fast"
-        )
-        self.reranker_base_url = reranker.get(
-            "base_url", "https://openrouter.ai/api/v1"
-        )
-        self.reranker_timeout_seconds = reranker.get("timeout_seconds", 60)
-        self.reranker_max_retries = reranker.get("max_retries", 2)
-
         # --- Agent retrieval (Phase T production profile) ---
         agent_retrieval = data.get("agent_retrieval", {})
         self.agent_retrieval: dict[str, dict] = {

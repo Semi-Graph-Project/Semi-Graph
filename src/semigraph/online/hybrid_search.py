@@ -26,7 +26,7 @@ from __future__ import annotations
 from typing import Optional
 
 from semigraph.config import Config, get_config
-from semigraph.online.graph_search import MetadataRerankParams, graph_search
+from semigraph.online.graph_search import graph_search
 from semigraph.online.vector_search import vector_search
 
 
@@ -40,12 +40,10 @@ def hybrid_search(
     graph_use_expansion: bool = True,
     graph_seed_mode: str = "triple",
     cfg: Optional[Config] = None,
-    graph_rerank_mode: str = "legacy",
     candidate_pool_k: int = 100,
     graph_top_k_entities: int = 20,
     graph_top_k_triples: int = 8,
     graph_damping: float = 0.7,
-    metadata_rerank_params: Optional[MetadataRerankParams] = None,
     ppr_graph_mode: str = "entity_only",
     graph_triple_filter: str = "none",
 ) -> list[dict]:
@@ -96,9 +94,7 @@ def hybrid_search(
         ppr_graph_mode=ppr_graph_mode,
         graph_triple_filter=graph_triple_filter,
         cfg=cfg,
-        rerank_mode=graph_rerank_mode,
         candidate_pool_k=candidate_pool_k,
-        metadata_rerank_params=metadata_rerank_params,
     )
 
     # Accumulate per-chunk weighted RRF score.

@@ -197,7 +197,6 @@ def query_to_chunk_seeds(
         query,
         top_k_chunks=top_k,
         candidate_pool_k=top_k,
-        final_rerank="none",
         vector_index=vector_index,
         cfg=cfg,
     )

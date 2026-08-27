@@ -21,10 +21,8 @@ DEFAULT_QUERY_FILE = ROOT / "benchmark" / "datasets" / "phase_t_multihop_queries
 DEFAULT_OUTPUT_DIR = ROOT / "analytics" / "Report Experiment"
 TOOL_CHOICES = ("vector", "graph", "hybrid")
 SEED_MODE_CHOICES = ("triple", "node", "hybrid")
-RERANK_MODE_CHOICES = ("legacy", "metadata")
 PPR_GRAPH_MODE_CHOICES = ("entity_only", "entity_chunk")
 TRIPLE_FILTER_CHOICES = ("none", "llm")
-FINAL_RERANK_CHOICES = ("none", "cohere")
 DEFAULT_TICKER_SCOPE = (
     "AMAT",
     "AMD",
@@ -47,30 +45,6 @@ def _get_config():
     from semigraph.config import get_config
 
     return get_config()
-
-
-def _build_metadata_rerank_params(args):
-    from semigraph.online.graph_search import MetadataRerankParams
-
-    return MetadataRerankParams(
-        risk_section_boost=args.metadata_risk_section_boost,
-        business_section_boost=args.metadata_business_section_boost,
-        financial_section_boost=args.metadata_financial_section_boost,
-        ticker_boost=args.metadata_ticker_boost,
-        cluster_boost_per_extra=args.metadata_cluster_boost_per_extra,
-        cluster_boost_cap=args.metadata_cluster_boost_cap,
-        latest_year_boost=args.metadata_latest_year_boost,
-        latest_year_min=args.metadata_latest_year_min,
-        lexical_match_weight=args.metadata_lexical_match_weight,
-        lexical_boost_cap=args.metadata_lexical_boost_cap,
-        broad_penalty_enabled=not args.disable_broad_penalty,
-        broad_penalty_floor=args.metadata_broad_penalty_floor,
-        broad_penalty_step=args.metadata_broad_penalty_step,
-        broad_penalty_zero_match=args.metadata_broad_penalty_zero_match,
-        broad_penalty_short_token_cutoff=args.metadata_broad_penalty_short_cutoff,
-        broad_penalty_mid_token_cutoff=args.metadata_broad_penalty_mid_cutoff,
-        broad_penalty_long_token_cutoff=args.metadata_broad_penalty_long_cutoff,
-    )
 
 
 def _get_corpus_chunk_count(cfg) -> int:
@@ -112,12 +86,10 @@ def _get_tool(
     tool_name: str,
     use_graph_expansion: bool = True,
     graph_seed_mode: str = "triple",
-    graph_rerank_mode: str = "legacy",
     candidate_pool_k: int = 100,
     graph_top_k_entities: int = 20,
     graph_top_k_triples: int = 8,
     graph_damping: float = 0.5,
-    metadata_rerank_params=None,
     graph_ppr_mode: str = "entity_only",
     graph_triple_filter: str = "none",
 ):
@@ -134,12 +106,10 @@ def _get_tool(
                 top_k_chunks=top_k_chunks,
                 use_expansion=use_graph_expansion,
                 seed_mode=graph_seed_mode,
-                rerank_mode=graph_rerank_mode,
                 candidate_pool_k=candidate_pool_k,
                 top_k_entities=graph_top_k_entities,
                 top_k_triples=graph_top_k_triples,
                 damping=graph_damping,
-                metadata_rerank_params=metadata_rerank_params,
                 ppr_graph_mode=graph_ppr_mode,
                 graph_triple_filter=graph_triple_filter,
                 cfg=cfg,
@@ -155,12 +125,10 @@ def _get_tool(
                 top_k_chunks=top_k_chunks,
                 graph_use_expansion=use_graph_expansion,
                 graph_seed_mode=graph_seed_mode,
-                graph_rerank_mode=graph_rerank_mode,
                 candidate_pool_k=candidate_pool_k,
                 graph_top_k_entities=graph_top_k_entities,
                 graph_top_k_triples=graph_top_k_triples,
                 graph_damping=graph_damping,
-                metadata_rerank_params=metadata_rerank_params,
                 ppr_graph_mode=graph_ppr_mode,
                 graph_triple_filter=graph_triple_filter,
                 cfg=cfg,
@@ -299,7 +267,6 @@ def _retrieval_trace_summary(trace: dict | None, top_k: int) -> dict | None:
         "candidate_pool_ids": _chunk_ids(candidates, len(candidates)),
         "raw_top_k_ids": _chunk_ids(candidates, top_k),
         "reranked_ids": _chunk_ids(trace.get("reranked_chunks", []), top_k),
-        "final_rerank": trace.get("final_rerank", "none"),
         "reranker_trace": trace.get("reranker_trace", {}),
     }
 
@@ -531,16 +498,13 @@ def _run_tool(
     cfg,
     use_graph_expansion: bool,
     graph_seed_mode: str,
-    graph_rerank_mode: str,
     candidate_pool_k: int,
     graph_top_k_entities: int,
     graph_top_k_triples: int,
     graph_damping: float,
     seed_weight_mode: str,
-    metadata_rerank_params,
     graph_ppr_mode: str,
     graph_triple_filter: str,
-    final_rerank: str,
 ) -> tuple[list[dict], str | None, float, dict | None]:
     started = time.time()
     try:
@@ -551,7 +515,6 @@ def _run_tool(
                 query,
                 top_k_chunks=top_k,
                 candidate_pool_k=candidate_pool_k,
-                final_rerank=final_rerank,
                 cfg=cfg,
             )
             return trace["chunks"], None, time.time() - started, trace
@@ -568,13 +531,10 @@ def _run_tool(
                 top_k_entities=graph_top_k_entities,
                 top_k_triples=graph_top_k_triples,
                 damping=graph_damping,
-                rerank_mode=graph_rerank_mode,
                 candidate_pool_k=candidate_pool_k,
                 ppr_seed_weight_mode=seed_weight_mode,
-                metadata_rerank_params=metadata_rerank_params,
                 ppr_graph_mode=graph_ppr_mode,
                 graph_triple_filter=graph_triple_filter,
-                final_rerank=final_rerank,
             )
             return trace["chunks"], None, time.time() - started, trace
 
@@ -582,12 +542,10 @@ def _run_tool(
             tool_name,
             use_graph_expansion=use_graph_expansion,
             graph_seed_mode=graph_seed_mode,
-            graph_rerank_mode=graph_rerank_mode,
             candidate_pool_k=candidate_pool_k,
             graph_top_k_entities=graph_top_k_entities,
             graph_top_k_triples=graph_top_k_triples,
             graph_damping=graph_damping,
-            metadata_rerank_params=metadata_rerank_params,
             graph_ppr_mode=graph_ppr_mode,
             graph_triple_filter=graph_triple_filter,
         )(query, top_k_chunks=top_k, cfg=cfg)
@@ -608,16 +566,13 @@ def _evaluate_query(
     corpus_size: int,
     subset: str,
     existing_entities: set[str],
-    graph_rerank_mode: str,
     candidate_pool_k: int,
     graph_top_k_entities: int,
     graph_top_k_triples: int,
     graph_damping: float,
     seed_weight_mode: str,
-    metadata_rerank_params,
     graph_ppr_mode: str,
     graph_triple_filter: str,
-    final_rerank: str,
 ) -> dict:
     query = str(item.get("query", "")).strip()
     gold_chunks = [str(cid) for cid in item.get("gold_chunks", []) if cid]
@@ -669,16 +624,13 @@ def _evaluate_query(
                 cfg=cfg,
                 use_graph_expansion=use_graph_expansion,
                 graph_seed_mode=graph_seed_mode,
-                graph_rerank_mode=graph_rerank_mode,
                 candidate_pool_k=candidate_pool_k,
                 graph_top_k_entities=graph_top_k_entities,
                 graph_top_k_triples=graph_top_k_triples,
                 graph_damping=graph_damping,
                 seed_weight_mode=seed_weight_mode,
-                metadata_rerank_params=metadata_rerank_params,
                 graph_ppr_mode=graph_ppr_mode,
                 graph_triple_filter=graph_triple_filter,
-                final_rerank=final_rerank,
             )
 
         returned_at_k = _chunk_ids(chunks, top_k)
@@ -1016,7 +968,6 @@ def _write_markdown(
     corpus_size: int,
     use_graph_expansion: bool,
     graph_seed_mode: str,
-    graph_rerank_mode: str,
     candidate_pool_k: int,
     graph_top_k_entities: int,
     graph_top_k_triples: int,
@@ -1024,8 +975,6 @@ def _write_markdown(
     ppr_seed_weight_mode: str,
     graph_ppr_mode: str,
     graph_triple_filter: str,
-    final_rerank: str,
-    metadata_rerank_params,
     run_config: dict | None = None,
 ) -> None:
     lines: list[str] = []
@@ -1047,7 +996,7 @@ def _write_markdown(
         "corpus_chunks": corpus_size,
         "graph_use_expansion": use_graph_expansion,
         "graph_seed_mode": graph_seed_mode,
-        "graph_rerank_mode": graph_rerank_mode,
+        "metadata_rerank": "company+fiscal_year",
         "candidate_pool_k": candidate_pool_k,
         "graph_top_k_entities": graph_top_k_entities,
         "graph_top_k_triples": graph_top_k_triples,
@@ -1055,12 +1004,6 @@ def _write_markdown(
         "ppr_seed_weight_mode": ppr_seed_weight_mode,
         "graph_ppr_mode": graph_ppr_mode,
         "graph_triple_filter": graph_triple_filter,
-        "final_rerank": final_rerank,
-        "metadata_rerank_params": (
-            metadata_rerank_params.to_dict()
-            if hasattr(metadata_rerank_params, "to_dict")
-            else metadata_rerank_params
-        ),
     }
     if run_config:
         config_rows.update(run_config)
@@ -1298,18 +1241,6 @@ def main() -> None:
     )
 
     parser.add_argument(
-        "--graph-rerank-mode",
-        choices=RERANK_MODE_CHOICES,
-        default="legacy",
-    )
-    parser.add_argument(
-        "--final-rerank",
-        choices=FINAL_RERANK_CHOICES,
-        default="none",
-        help="External reranker for vector/graph retrieval; use cohere for control runs.",
-    )
-
-    parser.add_argument(
         "--candidate-pool-k",
         type=int,
         default=100,
@@ -1317,38 +1248,17 @@ def main() -> None:
     parser.add_argument("--graph-top-k-entities", type=int, default=20)
     parser.add_argument("--graph-top-k-triples", type=int, default=10)
     parser.add_argument("--graph-damping", type=float, default=0.5)
-    parser.add_argument("--metadata-risk-section-boost", type=float, default=1.35)
-    parser.add_argument("--metadata-business-section-boost", type=float, default=1.18)
-    parser.add_argument("--metadata-financial-section-boost", type=float, default=1.28)
-    parser.add_argument("--metadata-ticker-boost", type=float, default=1.20)
-    parser.add_argument("--metadata-cluster-boost-per-extra", type=float, default=0.04)
-    parser.add_argument("--metadata-cluster-boost-cap", type=float, default=1.05)
-    parser.add_argument("--metadata-latest-year-boost", type=float, default=1.08)
-    parser.add_argument("--metadata-latest-year-min", type=int, default=2025)
-    parser.add_argument("--metadata-lexical-match-weight", type=float, default=0.10)
-    parser.add_argument("--metadata-lexical-boost-cap", type=float, default=0.55)
-    parser.add_argument("--disable-broad-penalty", action="store_true")
-    parser.add_argument("--metadata-broad-penalty-floor", type=float, default=0.92)
-    parser.add_argument("--metadata-broad-penalty-step", type=float, default=0.97)
-    parser.add_argument("--metadata-broad-penalty-zero-match", type=float, default=0.98)
-    parser.add_argument("--metadata-broad-penalty-short-cutoff", type=int, default=80)
-    parser.add_argument("--metadata-broad-penalty-mid-cutoff", type=int, default=140)
-    parser.add_argument("--metadata-broad-penalty-long-cutoff", type=int, default=220)
 
     args = parser.parse_args()
-    metadata_rerank_params = _build_metadata_rerank_params(args)
     if args.version_name is None:
         expansion_label = "expansion"
         if args.no_llm_expansion:
             expansion_label = "no_expansion"
         args.version_name = (
-            f"{expansion_label}_{args.graph_rerank_mode}"
-            f"_final{args.final_rerank}"
+            f"{expansion_label}_company_year"
             f"_{args.graph_ppr_mode}"
             f"_filter{args.graph_triple_filter}"
             f"_pool{args.candidate_pool_k}"
-            f"_lex{args.metadata_lexical_match_weight:g}"
-            f"_ticker{args.metadata_ticker_boost:g}"
         )
 
     queries = _load_queries(args.queries)
@@ -1392,16 +1302,13 @@ def main() -> None:
             corpus_size=corpus_size,
             subset=_classify_subset(item, reextract_tickers, known_tickers),
             existing_entities=existing_entities,
-            graph_rerank_mode=args.graph_rerank_mode,
             candidate_pool_k=args.candidate_pool_k,
             graph_top_k_entities=args.graph_top_k_entities,
             graph_top_k_triples=args.graph_top_k_triples,
             graph_damping=args.graph_damping,
             seed_weight_mode=args.ppr_seed_weight_mode,
-            metadata_rerank_params=metadata_rerank_params,
             graph_ppr_mode=args.graph_ppr_mode,
             graph_triple_filter=args.graph_triple_filter,
-            final_rerank=args.final_rerank,
         )
         for item in queries
     ]
@@ -1419,7 +1326,6 @@ def main() -> None:
         corpus_size=corpus_size,
         use_graph_expansion=not args.no_llm_expansion,
         graph_seed_mode=args.graph_seed_mode,
-        graph_rerank_mode=args.graph_rerank_mode,
         candidate_pool_k=args.candidate_pool_k,
         graph_top_k_entities=args.graph_top_k_entities,
         graph_top_k_triples=args.graph_top_k_triples,
@@ -1427,11 +1333,8 @@ def main() -> None:
         ppr_seed_weight_mode=args.ppr_seed_weight_mode,
         graph_ppr_mode=args.graph_ppr_mode,
         graph_triple_filter=args.graph_triple_filter,
-        final_rerank=args.final_rerank,
-        metadata_rerank_params=metadata_rerank_params,
         run_config={
             "version_name": args.version_name,
-            "final_rerank": args.final_rerank,
             "details_jsonl": str(jsonl_path),
             "reextract_tickers_arg": args.reextract_tickers,
             "resolved_ticker_scope": sorted(reextract_tickers),

@@ -168,7 +168,6 @@ def test_agent_vector_search_accepts_eval_vector_index(monkeypatch):
         chunks = [{"chunk_id": "C1", "text": "evidence"}]
         return {
             "candidate_pool_k": kwargs["candidate_pool_k"],
-            "final_rerank": kwargs["final_rerank"],
             "raw_chunk_candidates": chunks,
             "reranked_chunks": chunks,
             "reranker_trace": {},
@@ -182,7 +181,6 @@ def test_agent_vector_search_accepts_eval_vector_index(monkeypatch):
         "agent_retrieval": {
             "vector": {
                 "candidate_pool_k": 100,
-                "final_rerank": "none",
                 "vector_index": "gold_chunk_embedding",
             }
         }

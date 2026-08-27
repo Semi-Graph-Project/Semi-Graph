@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import pytest
 
 import semigraph.online.graph_search as graph_search_module
@@ -209,3 +211,48 @@ def test_chunk_only_requires_entity_chunk_projection():
             ppr_graph_mode="entity_only",
             use_expansion=False,
         )
+
+
+def test_company_and_fiscal_year_rerank_smoke_runs_through_graph_pipeline(monkeypatch):
+    seeds = [{"name": "nvidia", "type": "ORG", "similarity": 0.9}]
+
+    monkeypatch.setattr(
+        graph_search_module,
+        "_select_seeds",
+        lambda *args, **kwargs: (seeds, {"mode": "none", "applied": False}),
+    )
+    monkeypatch.setattr(
+        graph_search_module,
+        "run_passage_ppr",
+        lambda *args, **kwargs: {
+            "chunks": [
+                {
+                    "chunk_id": "INTC_2024_Item_1_0001",
+                    "fiscal_year": 2024,
+                    "score": 1.0,
+                },
+                {
+                    "chunk_id": "NVDA_2025_Item_1_0001",
+                    "fiscal_year": "2025",
+                    "score": 0.9,
+                },
+            ],
+            "ppr_entities": [],
+            "projection": {},
+            "seeds": seeds,
+        },
+    )
+
+    trace = graph_search_module.trace_graph_search(
+        "Nvidia Main Business 2025",
+        top_k_chunks=1,
+        use_expansion=False,
+        candidate_pool_k=2,
+        ppr_graph_mode="entity_chunk",
+        cfg=SimpleNamespace(
+            graph_repair_filer_aliases={"NVDA": "nvidia", "INTC": "intel"},
+        ),
+    )
+
+    assert trace["chunks"][0]["chunk_id"] == "NVDA_2025_Item_1_0001"
+    assert trace["chunks"][0]["score"] == 0.9 * 1.25 * 1.15

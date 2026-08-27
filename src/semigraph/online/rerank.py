@@ -1,117 +1,78 @@
-"""Small OpenRouter reranker client used by retrieval experiments."""
+"""Deterministic company and fiscal-year reranking."""
 
 from __future__ import annotations
 
-import json
-import time
-from typing import Any
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+import re
 
 from semigraph.config import Config, get_config
 
 
-def _post_rerank(payload: dict[str, Any], cfg: Config) -> dict[str, Any]:
-    """Send one rerank request and return the decoded JSON response."""
-    if not cfg.openrouter_api_key:
-        raise RuntimeError("OPENROUTER_API_KEY is not configured")
-
-    request = Request(
-        f"{cfg.reranker_base_url.rstrip('/')}/rerank",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Authorization": f"Bearer {cfg.openrouter_api_key}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
-
-    with urlopen(request, timeout=cfg.reranker_timeout_seconds) as response:
-        return json.loads(response.read().decode("utf-8"))
-
-
-def _request_with_retry(payload: dict[str, Any], cfg: Config) -> dict[str, Any]:
-    """Retry transient HTTP failures, then re-raise the final error."""
-    attempts = max(0, int(cfg.reranker_max_retries)) + 1
-
-    for attempt in range(attempts):
-        try:
-            return _post_rerank(payload, cfg)
-        except HTTPError as exc:
-            if exc.code not in {408, 429, 500, 502, 503, 504} or attempt == attempts - 1:
-                raise
-        except URLError:
-            if attempt == attempts - 1:
-                raise
-
-        time.sleep(min(2**attempt, 4))
-
-    raise RuntimeError("Reranker request failed without a response")
-
-
-def _original_order(chunks: list[dict], top_n: int) -> list[dict]:
-    """Return copies so fallback never mutates retrieval results."""
-    return [dict(chunk) for chunk in chunks[:top_n]]
-
-
-def rerank_chunks(
+def company_rerank(
     query: str,
     chunks: list[dict],
-    top_n: int,
     cfg: Config | None = None,
-    fail_open: bool = True,
-) -> tuple[list[dict], dict]:
-    """Rerank chunks with OpenRouter and return ranked chunks plus trace.
-
-    When ``fail_open`` is true, an API/config/network failure returns the
-    original retrieval order instead of breaking the retrieval pipeline.
-    """
-    if not query.strip() or not chunks or top_n <= 0:
-        return [], {"status": "skipped"}
-
+    boost: float = 1.25,
+) -> list[dict]:
+    """Boost chunks whose ID prefix matches a company named in the query."""
     cfg = cfg or get_config()
-    top_n = min(top_n, len(chunks))
-    
-    payload = {
-        "model": cfg.reranker_model,
-        "query": query,
-        "documents": [chunk.get("text", "") for chunk in chunks],
-        "top_n": top_n,
+    normalized_query = f" {' '.join(re.findall(r'[a-z0-9]+', query.lower()))} "
+    explicit_tickers = set(re.findall(r"\b[A-Z]{2,5}\b", query))
+    company_names = getattr(cfg, "graph_repair_filer_aliases", {})
+    known_tickers = {
+        str(ticker).upper()
+        for ticker in getattr(cfg, "tickers", company_names)
     }
+    matched_tickers = explicit_tickers & known_tickers
+    matched_tickers.update({
+        str(ticker).upper()
+        for ticker, name in company_names.items()
+        if f" {' '.join(re.findall(r'[a-z0-9]+', str(name).lower()))} "
+        in normalized_query
+    })
+    if not matched_tickers:
+        return chunks
 
-    try:
-        response = _request_with_retry(payload, cfg)
-        results = response.get("results", [])
-        ranked = []
-        for result in results:
-            index = result.get("index")
-            if not isinstance(index, int) or not 0 <= index < len(chunks):
-                continue
-            item = dict(chunks[index])
-            item["original_rank"] = index + 1
-            item["rerank_score"] = float(result.get("relevance_score", 0.0))
-            ranked.append(item)
+    reranked: list[dict] = []
+    for chunk in chunks:
+        item = dict(chunk)
+        chunk_id = str(item.get("chunk_id") or "").upper()
+        if any(chunk_id.startswith(f"{ticker}_") for ticker in matched_tickers):
+            item["score"] = float(item.get("score") or 0.0) * boost
+        reranked.append(item)
 
-        if not ranked:
-            raise RuntimeError("Reranker returned no valid results")
+    return sorted(
+        reranked,
+        key=lambda item: float(item.get("score") or 0.0),
+        reverse=True,
+    )
 
-        return ranked[:top_n], {
-            "status": "ok",
-            "provider": cfg.reranker_provider,
-            "model": response.get("model", cfg.reranker_model),
-            "candidate_count": len(chunks),
-            "returned_count": len(ranked[:top_n]),
-            "usage": response.get("usage", {}),
-        }
-    except Exception as exc:
-        if not fail_open:
-            raise
-        return _original_order(chunks, top_n), {
-            "status": "fallback",
-            "provider": cfg.reranker_provider,
-            "model": cfg.reranker_model,
-            "candidate_count": len(chunks),
-            "returned_count": top_n,
-            "error_type": type(exc).__name__,
-            "error": str(exc),
-        }
+
+def fiscal_year_rerank(
+    query: str,
+    chunks: list[dict],
+    boost: float = 1.15,
+) -> list[dict]:
+    """Boost chunks whose fiscal year is explicitly mentioned in the query."""
+    query_years = {
+        int(year)
+        for year in re.findall(r"\b20\d{2}\b", query)
+    }
+    if not query_years:
+        return chunks
+
+    reranked: list[dict] = []
+    for chunk in chunks:
+        item = dict(chunk)
+        try:
+            fiscal_year = int(item.get("fiscal_year"))
+        except (TypeError, ValueError):
+            fiscal_year = None
+        if fiscal_year in query_years:
+            item["score"] = float(item.get("score") or 0.0) * boost
+        reranked.append(item)
+
+    return sorted(
+        reranked,
+        key=lambda item: float(item.get("score") or 0.0),
+        reverse=True,
+    )

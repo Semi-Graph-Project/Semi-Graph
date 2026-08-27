@@ -13,7 +13,7 @@ from neo4j import Driver
 from semigraph.config import Config, get_config
 from semigraph.connections import get_neo4j_driver
 from semigraph.offline.embeddings import get_embedding_model
-from semigraph.online.rerank import rerank_chunks
+from semigraph.online.rerank import company_rerank, fiscal_year_rerank
 from semigraph.trace import TraceCallback, notify_trace
 
 
@@ -64,7 +64,6 @@ def trace_vector_search(
     query: str,
     top_k_chunks: int = 5,
     candidate_pool_k: int = 100,
-    final_rerank: str = "none",
     cfg: Optional[Config] = None,
     vector_index: str = DEFAULT_VECTOR_INDEX,
     trace_callback: TraceCallback | None = None,
@@ -74,11 +73,10 @@ def trace_vector_search(
         return {
             "query": query,
             "candidate_pool_k": candidate_pool_k,
-            "final_rerank": final_rerank,
             "chunk_candidates": [],
             "raw_chunk_candidates": [],
             "reranked_chunks": [],
-            "reranker_trace": {"enabled": False, "fallback": False, "status": "skipped"},
+            "reranker_trace": {"mode": "company+fiscal_year", "status": "skipped"},
             "chunks": [],
         }
 
@@ -115,53 +113,41 @@ def trace_vector_search(
             ],
         },
     })
+    raw_candidates = candidates
+    reranked = fiscal_year_rerank(
+        query,
+        company_rerank(query, candidates, cfg=cfg),
+    )
+    chunks = reranked[:top_k_chunks]
+
     notify_trace(trace_callback, {
         "stage": "reranking",
         "status": "running",
-        "message": f"Applying {final_rerank} reranking",
+        "message": "Applying company and fiscal-year reranking",
         "details": {
-            "mode": final_rerank,
-            "candidate_count": len(candidates),
+            "mode": "company+fiscal_year",
+            "candidate_count": len(reranked),
         },
     })
-    if final_rerank == "none":
-        reranked = candidates[:top_k_chunks]
-        reranker_trace = {
-            "enabled": False,
-            "fallback": False,
-            "status": "disabled",
-            "candidate_count": len(candidates),
-            "returned_count": len(reranked),
-        }
-    elif final_rerank == "cohere":
-        reranked, reranker_trace = rerank_chunks(
-            query=query,
-            chunks=candidates[:20],
-            top_n=top_k_chunks,
-            cfg=cfg,
-            fail_open=True,
-        )
-        reranker_trace = {
-            "enabled": True,
-            "fallback": reranker_trace.get("status") == "fallback",
-            **reranker_trace,
-        }
-    else:
-        raise ValueError(f"Unknown final_rerank: {final_rerank}")
+    reranker_trace = {
+        "mode": "company+fiscal_year",
+        "status": "complete",
+        "candidate_count": len(reranked),
+        "returned_count": len(chunks),
+    }
 
     returned_chunk_ids = [
         str(chunk["chunk_id"])
-        for chunk in reranked
+        for chunk in chunks
         if chunk.get("chunk_id")
     ]
     notify_trace(trace_callback, {
         "stage": "reranking",
         "status": "complete",
-        "message": f"Selected {len(reranked)} final chunks",
+        "message": f"Selected {len(chunks)} final chunks",
         "details": {
-            "mode": final_rerank,
+            "mode": "company+fiscal_year",
             "returned_chunk_ids": returned_chunk_ids,
-            "reranker": reranker_trace,
         },
     })
     notify_trace(trace_callback, {
@@ -174,12 +160,11 @@ def trace_vector_search(
     return {
         "query": query,
         "candidate_pool_k": candidate_pool_k,
-        "final_rerank": final_rerank,
-        "chunk_candidates": candidates,
-        "raw_chunk_candidates": candidates,
+        "chunk_candidates": reranked,
+        "raw_chunk_candidates": raw_candidates,
         "reranked_chunks": reranked,
         "reranker_trace": reranker_trace,
-        "chunks": reranked,
+        "chunks": chunks,
     }
 
 
@@ -188,16 +173,14 @@ def vector_search(
     top_k_chunks: int = 5,
     cfg: Optional[Config] = None,
     candidate_pool_k: Optional[int] = None,
-    final_rerank: str = "none",
     vector_index: str = DEFAULT_VECTOR_INDEX,
 ) -> list[dict]:
-    """Return top-k vector chunks, optionally after external reranking.
+    """Return vector chunks reranked by company and fiscal year.
 
     Args:
         query: Natural-language question.
         top_k_chunks: Number of chunks to return.
         candidate_pool_k: Number of vector candidates before reranking.
-        final_rerank: `none` or `cohere`.
         vector_index: Neo4j vector index name; defaults to the production index.
         cfg: Optional Config; defaults to cached singleton.
 
@@ -209,7 +192,6 @@ def vector_search(
         query,
         top_k_chunks=top_k_chunks,
         candidate_pool_k=candidate_pool_k or top_k_chunks,
-        final_rerank=final_rerank,
         cfg=cfg,
         vector_index=vector_index,
     )

@@ -10,7 +10,6 @@ def _config() -> SimpleNamespace:
         agent_retrieval={
             "vector": {
                 "candidate_pool_k": 100,
-                "final_rerank": "none",
             },
             "graph": {
                 "top_k_entities": 20,
@@ -20,9 +19,7 @@ def _config() -> SimpleNamespace:
                 "damping": 0.5,
                 "use_expansion": False,
                 "seed_mode": "triple",
-                "rerank_mode": "legacy",
                 "candidate_pool_k": 100,
-                "final_rerank": "none",
                 "ppr_seed_weight_mode": "uniform",
                 "ppr_graph_mode": "entity_chunk",
                 "triple_filter": "none",
@@ -39,7 +36,6 @@ def test_agent_vector_search_uses_phase_t_profile(monkeypatch):
         chunks = [{"chunk_id": "vector-1", "text": "evidence"}]
         return {
             "candidate_pool_k": kwargs["candidate_pool_k"],
-            "final_rerank": kwargs["final_rerank"],
             "raw_chunk_candidates": chunks,
             "reranked_chunks": chunks,
             "reranker_trace": {"status": "ok"},
@@ -52,7 +48,6 @@ def test_agent_vector_search_uses_phase_t_profile(monkeypatch):
 
     assert captured["top_k_chunks"] == 5
     assert captured["candidate_pool_k"] == 100
-    assert captured["final_rerank"] == "none"
     assert result["chunks"][0]["chunk_id"] == "vector-1"
     assert result["trace"]["profile"] == "phase_t"
     assert result["trace"]["reranker"]["status"] == "ok"
@@ -102,9 +97,7 @@ def test_agent_graph_search_uses_phase_t_profile(monkeypatch):
     assert captured["damping"] == 0.5
     assert captured["use_expansion"] is False
     assert captured["seed_mode"] == "triple"
-    assert captured["rerank_mode"] == "legacy"
     assert captured["candidate_pool_k"] == 100
-    assert captured["final_rerank"] == "none"
     assert captured["ppr_seed_weight_mode"] == "uniform"
     assert captured["ppr_graph_mode"] == "entity_chunk"
     assert captured["graph_triple_filter"] == "none"

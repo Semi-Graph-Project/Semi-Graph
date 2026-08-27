@@ -2,224 +2,59 @@ from types import SimpleNamespace
 
 import pytest
 
-import semigraph.online.graph_search as graph_search_module
-import semigraph.online.rerank as rerank_module
-import semigraph.online.vector_search as vector_search_module
+from semigraph.online import vector_search as vector_search_module
+from semigraph.online.rerank import company_rerank, fiscal_year_rerank
 
 
-def _config():
+def _cfg():
     return SimpleNamespace(
-        openrouter_api_key="test-key",
-        reranker_model="cohere/rerank-4-fast",
-        reranker_provider="openrouter",
-        reranker_base_url="https://example.test/v1",
-        reranker_timeout_seconds=1,
-        reranker_max_retries=0,
+        tickers=["INTC", "NVDA"],
+        graph_repair_filer_aliases={"INTC": "Intel", "NVDA": "NVIDIA"},
     )
 
 
-def _chunks(count=2):
-    return [
-        {"chunk_id": f"chunk-{index}", "text": f"text-{index}"}
-        for index in range(count)
+def test_company_rerank_boosts_matching_company():
+    chunks = [
+        {"chunk_id": "INTC_001", "score": 0.9},
+        {"chunk_id": "NVDA_001", "score": 0.8},
     ]
 
+    ranked = company_rerank("NVIDIA main business", chunks, cfg=_cfg())
 
-def test_rerank_maps_response_index_to_original_chunk(monkeypatch):
-    seen = {}
-
-    def fake_request(payload, cfg):
-        seen["payload"] = payload
-        return {
-            "model": "rerank-v4.0-fast",
-            "results": [
-                {"index": 1, "relevance_score": 0.95},
-                {"index": 0, "relevance_score": 0.20},
-            ],
-        }
-
-    monkeypatch.setattr(rerank_module, "_request_with_retry", fake_request)
-
-    ranked, trace = rerank_module.rerank_chunks(
-        "query",
-        _chunks(),
-        top_n=2,
-        cfg=_config(),
-        fail_open=False,
-    )
-
-    assert [chunk["chunk_id"] for chunk in ranked] == ["chunk-1", "chunk-0"]
-    assert ranked[0]["original_rank"] == 2
-    assert ranked[0]["rerank_score"] == 0.95
-    assert seen["payload"]["documents"] == ["text-0", "text-1"]
-    assert seen["payload"]["top_n"] == 2
-    assert trace["status"] == "ok"
+    assert [chunk["chunk_id"] for chunk in ranked] == ["NVDA_001", "INTC_001"]
+    assert ranked[0]["score"] == 1.0
 
 
-def test_rerank_invalid_indexes_fail_open(monkeypatch):
-    monkeypatch.setattr(
-        rerank_module,
-        "_request_with_retry",
-        lambda payload, cfg: {"results": [{"index": 99, "relevance_score": 1.0}]},
-    )
+def test_fiscal_year_rerank_boosts_matching_year():
+    chunks = [
+        {"chunk_id": "NVDA_2023", "fiscal_year": 2023, "score": 0.9},
+        {"chunk_id": "NVDA_2024", "fiscal_year": "2024", "score": 0.8},
+    ]
 
-    ranked, trace = rerank_module.rerank_chunks(
-        "query",
-        _chunks(),
-        top_n=2,
-        cfg=_config(),
-    )
+    ranked = fiscal_year_rerank("NVIDIA revenue in 2024", chunks)
 
-    assert [chunk["chunk_id"] for chunk in ranked] == ["chunk-0", "chunk-1"]
-    assert trace["status"] == "fallback"
-    assert trace["error_type"] == "RuntimeError"
+    assert [chunk["chunk_id"] for chunk in ranked] == ["NVDA_2024", "NVDA_2023"]
+    assert ranked[0]["score"] == pytest.approx(0.92)
 
 
-def test_rerank_timeout_fails_open_without_mutating_input(monkeypatch):
-    original = _chunks()
-
-    def fail_request(payload, cfg):
-        raise TimeoutError("timeout")
-
-    monkeypatch.setattr(rerank_module, "_request_with_retry", fail_request)
-
-    ranked, trace = rerank_module.rerank_chunks(
-        "query",
-        original,
-        top_n=1,
-        cfg=_config(),
-    )
-
-    assert ranked == [original[0]]
-    assert ranked[0] is not original[0]
-    assert trace["status"] == "fallback"
-    assert trace["error_type"] == "TimeoutError"
-
-
-def test_rerank_empty_input_is_skipped():
-    ranked, trace = rerank_module.rerank_chunks(
-        "query",
-        [],
-        top_n=5,
-        cfg=_config(),
-    )
-
-    assert ranked == []
-    assert trace["status"] == "skipped"
-
-
-def test_vector_sends_only_top_20_candidates_to_reranker(monkeypatch):
-    candidates = _chunks(100)
-    calls = {}
-    events = []
-
+def test_vector_applies_company_and_fiscal_year_rerank(monkeypatch):
+    candidates = [
+        {"chunk_id": "INTC_001", "fiscal_year": 2023, "score": 0.9},
+        {"chunk_id": "NVDA_001", "fiscal_year": 2024, "score": 0.7},
+    ]
     monkeypatch.setattr(
         vector_search_module,
         "_retrieve_chunks",
-        lambda query, top_k_chunks, cfg: candidates[:top_k_chunks],
+        lambda *args, **kwargs: candidates,
     )
-
-    def fake_rerank(query, chunks, top_n, cfg, fail_open):
-        calls["count"] = len(chunks)
-        return chunks[:top_n], {"status": "ok", "candidate_count": len(chunks)}
-
-    monkeypatch.setattr(vector_search_module, "rerank_chunks", fake_rerank)
 
     trace = vector_search_module.trace_vector_search(
-        "query",
-        top_k_chunks=5,
-        candidate_pool_k=100,
-        final_rerank="cohere",
-        cfg=_config(),
-        trace_callback=events.append,
+        "NVIDIA main business in 2024",
+        top_k_chunks=1,
+        candidate_pool_k=2,
+        cfg=_cfg(),
     )
 
-    assert len(trace["raw_chunk_candidates"]) == 100
-    assert calls["count"] == 20
-    assert len(trace["chunks"]) == 5
-    assert trace["reranker_trace"]["enabled"] is True
-    assert [event["stage"] for event in events] == [
-        "vector_candidates",
-        "vector_candidates",
-        "reranking",
-        "reranking",
-        "retrieval_complete",
-    ]
-    assert events[1]["details"]["candidate_count"] == 100
-    assert len(events[-1]["details"]["returned_chunk_ids"]) == 5
-
-
-@pytest.mark.parametrize("ppr_graph_mode", ["entity_only", "entity_chunk"])
-def test_graph_sends_candidates_to_reranker(monkeypatch, ppr_graph_mode):
-    candidates = _chunks(3)
-    calls = {}
-    events = []
-
-    monkeypatch.setattr(
-        graph_search_module,
-        "_select_seeds",
-        lambda *args, **kwargs: ([{"name": "seed"}], {}),
-    )
-    def fake_rerank(query, chunks, top_n, cfg, fail_open):
-        calls["count"] = len(chunks)
-        return chunks[:top_n], {
-            "status": "ok",
-            "candidate_count": len(chunks),
-        }
-
-    monkeypatch.setattr(graph_search_module, "rerank_chunks", fake_rerank)
-
-    if ppr_graph_mode == "entity_chunk":
-        monkeypatch.setattr(
-            graph_search_module,
-            "run_passage_ppr",
-                lambda seeds, **kwargs: {
-                    "chunks": candidates,
-                    "ppr_entities": [],
-                    "projection": {},
-                    "seeds": seeds,
-                },
-        )
-    else:
-        monkeypatch.setattr(
-            graph_search_module,
-            "run_ppr",
-            lambda seeds, **kwargs: [{"name": "entity", "score": 1.0}],
-        )
-        monkeypatch.setattr(
-            graph_search_module,
-            "_cluster_aliases",
-            lambda *args, **kwargs: {"entity": ["entity"]},
-        )
-        monkeypatch.setattr(
-            graph_search_module,
-            "_collapse_clusters",
-            lambda *args, **kwargs: [{"aliases": ["entity"], "score": 1.0}],
-        )
-        monkeypatch.setattr(
-            graph_search_module,
-            "_map_chunks",
-            lambda *args, **kwargs: candidates,
-        )
-
-    trace = graph_search_module.trace_graph_search(
-        "query",
-        top_k_chunks=2,
-        candidate_pool_k=3,
-        use_expansion=False,
-        final_rerank="cohere",
-        ppr_graph_mode=ppr_graph_mode,
-        trace_callback=events.append,
-    )
-
-    assert calls["count"] == 3
-    assert trace["raw_chunk_candidates"] == candidates
-    assert trace["reranker_trace"]["enabled"] is True
-    assert len(trace["chunks"]) == 2
-    assert [
-        event["status"]
-        for event in events
-        if event["stage"] == "personalized_pagerank"
-    ] == ["running", "complete"]
-    assert events[-1]["stage"] == "retrieval_complete"
-    assert len(events[-1]["details"]["returned_chunk_ids"]) == 2
+    assert trace["chunks"][0]["chunk_id"] == "NVDA_001"
+    assert trace["chunks"][0]["score"] == pytest.approx(0.7 * 1.25 * 1.15)
+    assert trace["reranker_trace"]["mode"] == "company+fiscal_year"

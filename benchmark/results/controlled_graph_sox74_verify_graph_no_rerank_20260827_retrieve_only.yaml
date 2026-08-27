@@ -1,8 +1,8 @@
 summary:
-  hit: 0.649
-  recall: 0.351
-  mrr: 0.354
-  average_latency_ms: 592.5
+  hit: 0.581
+  recall: 0.311
+  mrr: 0.343
+  average_latency_ms: 700.4
 results:
 - id: FRKG003
   mode: retrieve_only
@@ -18,7 +18,7 @@ results:
   - NVDA_10k_2024.pdf::page_41::chunk_5
   - INTC_10k_2024.pdf::page_71::chunk_1
   - INTC_10k_2024.pdf::page_70::chunk_1
-  - NVDA_10k_2024.pdf::page_43::chunk_3
+  - AVGO_10k_2022.pdf::page_74::chunk_5
   answer_points:
   - Intel's 'All Other' category, as defined in its glossary (Chunk 1), includes non-reportable segments and startup businesses.
     According to Chunk 2, Intel does not allocate stock-based compensation expenses to its operating segments, as these are
@@ -30,7 +30,7 @@ results:
   hit: 1
   recall: 0.3333333333333333
   reciprocal_rank: 0.3333333333333333
-  latency_ms: 4443.594667012803
+  latency_ms: 6449.475859059021
   answer_latency_ms: 0.0
 - id: FRKG009
   mode: retrieve_only
@@ -44,9 +44,9 @@ results:
   top_chunk_ids:
   - TXN_10k_2024.pdf::page_30::chunk_1
   - TXN_10k_2023.pdf::page_30::chunk_1
+  - INTC_10k_2024.pdf::page_71::chunk_1
   - TXN_10k_2024.pdf::page_30::chunk_2
   - TXN_10k_2024.pdf::page_31::chunk_1
-  - TXN_10k_2024.pdf::page_31::chunk_3
   answer_points:
   - In 2022, restructuring charges in the Other segment amounted to $257 million (Chunk 1), representing 1.28% of total revenue
     ($257M / $20,028M). Texas Instruments' segment reporting structure (Chunk 2) explains that restructuring charges are classified
@@ -56,9 +56,9 @@ results:
     its structural independence from corporate charges).
   final_answer: None
   hit: 1
-  recall: 0.6666666666666666
+  recall: 0.3333333333333333
   reciprocal_rank: 0.5
-  latency_ms: 711.2787110963836
+  latency_ms: 780.3080189041793
   answer_latency_ms: 0.0
 - id: FRKG010
   mode: retrieve_only
@@ -72,9 +72,9 @@ results:
   top_chunk_ids:
   - INTC_10k_2024.pdf::page_71::chunk_1
   - INTC_10k_2024.pdf::page_70::chunk_1
-  - INTC_10k_2022.pdf::page_51::chunk_1
   - INTC_10k_2024.pdf::page_28::chunk_3
   - INTC_10k_2024.pdf::page_30::chunk_1
+  - INTC_10k_2022.pdf::page_51::chunk_1
   answer_points:
   - In 2022, the Embedded Processing segment contributed $1,253M and the Other segment contributed $528M (including $257M
     in restructuring charges) for a combined total of $1,781M (Chunk 1). In 2023, Embedded Processing contributed $1,008M
@@ -87,7 +87,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 533.1991829443723
+  latency_ms: 742.7972638979554
   answer_latency_ms: 0.0
 - id: FRKG011
   mode: retrieve_only
@@ -99,9 +99,9 @@ results:
   top_chunk_ids:
   - AMD_10k_2023.pdf::page_88::chunk_2
   - NVDA_10k_2022.pdf::page_97::chunk_1
+  - TXN_10k_2024.pdf::page_39::chunk_4
   - AVGO_10k_2023.pdf::page_41::chunk_1
   - TXN_10k_2023.pdf::page_40::chunk_5
-  - NVDA_10k_2023.pdf::page_76::chunk_1
   answer_points:
   - AMD's deferred tax liability for acquired intangibles decreased by $326 million from 2022 ($3,430M) to 2023 ($3,104M).
     This decrease could be partially attributed to higher compliance costs linked to SEC regulations (e.g., conflict minerals
@@ -113,7 +113,7 @@ results:
   hit: 1
   recall: 0.5
   reciprocal_rank: 1.0
-  latency_ms: 596.2508989032358
+  latency_ms: 708.6770719615743
   answer_latency_ms: 0.0
 - id: FRKG070
   mode: retrieve_only
@@ -139,7 +139,7 @@ results:
   hit: 1
   recall: 0.5
   reciprocal_rank: 1.0
-  latency_ms: 607.8384530264884
+  latency_ms: 733.355866977945
   answer_latency_ms: 0.0
 - id: FRKG071
   mode: retrieve_only
@@ -162,7 +162,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 591.440983931534
+  latency_ms: 730.21372302901
   answer_latency_ms: 0.0
 - id: FRKG073
   mode: retrieve_only
@@ -175,8 +175,8 @@ results:
   - INTC_10k_2024.pdf::page_71::chunk_1
   - INTC_10k_2024.pdf::page_75::chunk_1
   - INTC_10k_2022.pdf::page_102::chunk_1
+  - TXN_10k_2023.pdf::page_43::chunk_4
   - INTC_10k_2022.pdf::page_72::chunk_1
-  - INTC_10k_2024.pdf::page_70::chunk_1
   answer_points:
   - The 'All other' segment's operating losses decreased by $2,003 million from 2021 ($5,384 million loss) to 2022 ($3,381
     million loss). In 2023, Intel disclosed a $393 million asset transfer into this segment, as shown in the reconciliation
@@ -185,7 +185,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 575.7764530135319
+  latency_ms: 759.1555549297482
   answer_latency_ms: 0.0
 - id: FRKG082
   mode: retrieve_only
@@ -196,8 +196,8 @@ results:
   - INTC_10k_2024.pdf::page_71::chunk_1
   - INTC_10k_2023.pdf::page_88::chunk_2
   top_chunk_ids:
-  - INTC_10k_2023.pdf::page_87::chunk_1
   - INTC_10k_2024.pdf::page_76::chunk_2
+  - INTC_10k_2023.pdf::page_87::chunk_1
   - INTC_10k_2024.pdf::page_71::chunk_1
   - INTC_10k_2024.pdf::page_70::chunk_1
   - NVDA_10k_2024.pdf::page_78::chunk_1
@@ -212,7 +212,7 @@ results:
   hit: 1
   recall: 0.5
   reciprocal_rank: 0.3333333333333333
-  latency_ms: 636.3551429240033
+  latency_ms: 703.2454150030389
   answer_latency_ms: 0.0
 - id: FRKG084
   mode: retrieve_only
@@ -222,21 +222,21 @@ results:
   - AVGO_10k_2022.pdf::page_70::chunk_2
   - AVGO_10k_2022.pdf::page_71::chunk_4
   top_chunk_ids:
-  - AVGO_10k_2024.pdf::page_45::chunk_5
   - NVDA_10k_2024.pdf::page_41::chunk_5
+  - AVGO_10k_2024.pdf::page_45::chunk_5
   - NVDA_10k_2024.pdf::page_78::chunk_1
-  - AVGO_10k_2022.pdf::page_71::chunk_4
-  - AVGO_10k_2024.pdf::page_54::chunk_2
+  - NVDA_10k_2023.pdf::page_55::chunk_1
+  - INTC_10k_2022.pdf::page_6::chunk_1
   answer_points:
   - The Infrastructure Software segment's revenue grew by 4% (from $7,067M in 2021 to $7,385M in 2022) while its operating
     income grew by 6% (from $4,936M in 2021 to $5,219M in 2022). This 2 percentage point difference indicates improved operational
     efficiency, as the segment generated higher profit growth relative to its revenue growth. The increased operating margin
     (from 69.8% in 2021 to 70.7% in 2022) demonstrates better cost management and profitability enhancement.
   final_answer: None
-  hit: 1
-  recall: 0.5
-  reciprocal_rank: 0.25
-  latency_ms: 815.0089459959418
+  hit: 0
+  recall: 0.0
+  reciprocal_rank: 0.0
+  latency_ms: 683.6483629886061
   answer_latency_ms: 0.0
 - id: FRKG093
   mode: retrieve_only
@@ -249,8 +249,8 @@ results:
   - INTC_10k_2024.pdf::page_75::chunk_1
   - INTC_10k_2023.pdf::page_8::chunk_1
   - INTC_10k_2022.pdf::page_30::chunk_1
-  - INTC_10k_2023.pdf::page_89::chunk_2
   - INTC_10k_2024.pdf::page_74::chunk_6
+  - INTC_10k_2023.pdf::page_89::chunk_2
   answer_points:
   - In 2022, Mobileye's non-controlling interest was $989 million at 6% ownership, equating to $164.83 million per percentage
     point (Chunk 2). In 2023, this increased to $1,838 million at 12% ownership, equating to $153.17 million per percentage
@@ -261,8 +261,8 @@ results:
   final_answer: None
   hit: 1
   recall: 0.5
-  reciprocal_rank: 0.25
-  latency_ms: 676.8824990140274
+  reciprocal_rank: 0.2
+  latency_ms: 755.8457609266043
   answer_latency_ms: 0.0
 - id: FRKG096
   mode: retrieve_only
@@ -272,11 +272,11 @@ results:
   - TXN_10k_2024.pdf::page_30::chunk_1
   - TXN_10k_2024.pdf::page_4::chunk_1
   top_chunk_ids:
-  - TXN_10k_2024.pdf::page_28::chunk_1
-  - TXN_10k_2022.pdf::page_31::chunk_1
   - AVGO_10k_2024.pdf::page_60::chunk_1
-  - TXN_10k_2022.pdf::page_30::chunk_1
+  - AVGO_10k_2023.pdf::page_60::chunk_1
   - NVDA_10k_2024.pdf::page_66::chunk_4
+  - NVDA_10k_2024.pdf::page_67::chunk_2
+  - AVGO_10k_2024.pdf::page_55::chunk_2
   answer_points:
   - Texas Instruments' Other segment generated $947 million in revenue during 2024 (Chunk 2). This segment specifically includes
     non-operational items such as gains and losses from asset dispositions, acquisition-related charges, litigation expenses,
@@ -286,7 +286,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 981.9100979948416
+  latency_ms: 707.3217779397964
   answer_latency_ms: 0.0
 - id: FRKG098
   mode: retrieve_only
@@ -299,8 +299,8 @@ results:
   - AMD_10k_2023.pdf::page_88::chunk_2
   - AMD_10k_2024.pdf::page_101::chunk_2
   - AMD_10k_2024.pdf::page_73::chunk_1
+  - NVDA_10k_2022.pdf::page_97::chunk_1
   - AMD_10k_2022.pdf::page_48::chunk_1
-  - AMD_10k_2024.pdf::page_69::chunk_1
   answer_points:
   - AMD discloses executive compensation agreements through its Investor Relations website (Chunk 1), where it posts SEC filings
     and corporate governance documents 'as soon as reasonably practical' after submission. This includes agreements like the
@@ -311,7 +311,7 @@ results:
   hit: 1
   recall: 0.5
   reciprocal_rank: 0.5
-  latency_ms: 647.2289899829775
+  latency_ms: 723.9470409695059
   answer_latency_ms: 0.0
 - id: FRKG100
   mode: retrieve_only
@@ -321,10 +321,10 @@ results:
   - TXN_10k_2024.pdf::page_31::chunk_3
   - TXN_10k_2024.pdf::page_32::chunk_1
   top_chunk_ids:
+  - AVGO_10k_2022.pdf::page_74::chunk_5
   - TXN_10k_2022.pdf::page_30::chunk_1
   - TXN_10k_2024.pdf::page_28::chunk_1
   - TXN_10k_2023.pdf::page_39::chunk_5
-  - AVGO_10k_2022.pdf::page_74::chunk_5
   - INTC_10k_2022.pdf::page_91::chunk_5
   answer_points:
   - The Embedded Processing segment generated an operating profit of $1,253 million in 2022 (Chunk 1). Under Texas Instruments'
@@ -336,7 +336,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 641.0796099808067
+  latency_ms: 652.8739620698616
   answer_latency_ms: 0.0
 - id: FRKG102
   mode: retrieve_only
@@ -349,17 +349,17 @@ results:
   - INTC_10k_2022.pdf::page_105::chunk_3
   - INTC_10k_2024.pdf::page_96::chunk_1
   - INTC_10k_2022.pdf::page_51::chunk_1
+  - NVDA_10k_2022.pdf::page_56::chunk_1
   - INTC_10k_2023.pdf::page_8::chunk_1
-  - INTC_10k_2022.pdf::page_86::chunk_2
   answer_points:
   - The Programmable Solutions Group reported total assets of $2,656 million (Chunk 1) and operating income of $297 million
     (Chunk 2) in 2021. Return on assets is calculated as $297M ÷ $2,656M = 11.2%. This metric demonstrates how effectively
     the segment utilized its asset base to generate profit, with higher values indicating better efficiency in deploying capital.
   final_answer: None
-  hit: 1
-  recall: 0.5
-  reciprocal_rank: 0.2
-  latency_ms: 477.1220360416919
+  hit: 0
+  recall: 0.0
+  reciprocal_rank: 0.0
+  latency_ms: 594.2109860479832
   answer_latency_ms: 0.0
 - id: FRKG103
   mode: retrieve_only
@@ -371,9 +371,9 @@ results:
   top_chunk_ids:
   - QCOM_10k_2023.pdf::page_41::chunk_3
   - QCOM_10k_2023.pdf::page_40::chunk_1
-  - QCOM_10k_2024.pdf::page_44::chunk_1
   - QCOM_10k_2023.pdf::page_12::chunk_1
   - QCOM_10k_2022.pdf::page_43::chunk_1
+  - QCOM_10k_2023.pdf::page_44::chunk_1
   answer_points:
   - QCT's accounts receivable balance of $10,065 million (Chunk 1) represented approximately 30.3% of its fiscal 2024 revenue
     of $33.2 billion (Chunk 2). This relationship reflects QCT's revenue recognition practices where customer incentive arrangements
@@ -384,7 +384,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 420.2384951058775
+  latency_ms: 603.2463840674609
   answer_latency_ms: 0.0
 - id: FRKG104
   mode: retrieve_only
@@ -397,8 +397,8 @@ results:
   - INTC_10k_2024.pdf::page_102::chunk_2
   - INTC_10k_2023.pdf::page_8::chunk_1
   - INTC_10k_2022.pdf::page_30::chunk_1
-  - INTC_10k_2023.pdf::page_89::chunk_2
   - INTC_10k_2024.pdf::page_75::chunk_1
+  - INTC_10k_2023.pdf::page_89::chunk_2
   answer_points:
   - Intel's ownership stake in Mobileye increased from 6% (2022) to 12% (2023) (Chunk 1), while Mobileye's operating income
     decreased from $690M to $664M (Chunk 2). In 2022, Intel consolidated 6% × $690M = $41.4M of Mobileye's operating income.
@@ -409,8 +409,8 @@ results:
   final_answer: None
   hit: 1
   recall: 0.5
-  reciprocal_rank: 0.25
-  latency_ms: 448.99082905612886
+  reciprocal_rank: 0.2
+  latency_ms: 593.4485330944881
   answer_latency_ms: 0.0
 - id: FRKG105
   mode: retrieve_only
@@ -424,8 +424,8 @@ results:
   - AMD_10k_2022.pdf::page_45::chunk_1
   - AMD_10k_2023.pdf::page_63::chunk_1
   - AMD_10k_2022.pdf::page_37::chunk_1
-  - QCOM_10k_2022.pdf::page_86::chunk_3
   - TXN_10k_2024.pdf::page_52::chunk_8
+  - QCOM_10k_2022.pdf::page_86::chunk_3
   answer_points:
   - 'The Embedded Processing segment''s goodwill allocation of $172 (Chunk 3) divided by its average operating profit of $1,130.5
     (calculated from Chunk 1: $1,253 in 2022 and Chunk 2: $1,008 in 2023) yields a ratio of 0.152. This segment-specific ratio
@@ -434,8 +434,8 @@ results:
   final_answer: None
   hit: 1
   recall: 0.3333333333333333
-  reciprocal_rank: 0.2
-  latency_ms: 454.10946395713836
+  reciprocal_rank: 0.25
+  latency_ms: 681.1566379619762
   answer_latency_ms: 0.0
 - id: FRKG107
   mode: retrieve_only
@@ -448,8 +448,8 @@ results:
   - INTC_10k_2024.pdf::page_102::chunk_2
   - INTC_10k_2023.pdf::page_8::chunk_1
   - INTC_10k_2022.pdf::page_30::chunk_1
-  - INTC_10k_2023.pdf::page_89::chunk_2
   - INTC_10k_2024.pdf::page_75::chunk_1
+  - INTC_10k_2023.pdf::page_89::chunk_2
   answer_points:
   - In 2022, Mobileye's total equity was calculated as $989 million (non-controlling interest) ÷ 6% ownership = $16,483 million.
     In 2023, it became $1,838 million ÷ 12% ownership = $15,317 million. This represents a (15,317 - 16,483)/16,483 = -7.08%
@@ -458,8 +458,8 @@ results:
   final_answer: None
   hit: 1
   recall: 0.5
-  reciprocal_rank: 0.25
-  latency_ms: 458.55899702291936
+  reciprocal_rank: 0.2
+  latency_ms: 528.6988539155573
   answer_latency_ms: 0.0
 - id: FRKG108
   mode: retrieve_only
@@ -473,7 +473,7 @@ results:
   - TXN_10k_2024.pdf::page_30::chunk_2
   - TXN_10k_2024.pdf::page_31::chunk_1
   - TXN_10k_2024.pdf::page_31::chunk_3
-  - TXN_10k_2022.pdf::page_33::chunk_2
+  - TXN_10k_2024.pdf::page_30::chunk_1
   answer_points:
   - The 'Other' segment generated an operating profit of $528 million in 2022 (Chunk 1). With 923,547,062 shares outstanding
     as of January 25, 2022 (Chunk 2), this equates to approximately $0.57 in operating profit per share ($528,000,000 ÷ 923,547,062
@@ -482,7 +482,7 @@ results:
   hit: 1
   recall: 0.5
   reciprocal_rank: 0.25
-  latency_ms: 537.5972340116277
+  latency_ms: 585.9344101045281
   answer_latency_ms: 0.0
 - id: FRKG111
   mode: retrieve_only
@@ -492,8 +492,8 @@ results:
   - TXN_10k_2024.pdf::page_31::chunk_3
   - TXN_10k_2022.pdf::page_30::chunk_1
   top_chunk_ids:
-  - AMD_10k_2022.pdf::page_42::chunk_3
   - AMD_10k_2023.pdf::page_52::chunk_1
+  - AMD_10k_2022.pdf::page_42::chunk_3
   - TXN_10k_2022.pdf::page_30::chunk_1
   - INTC_10k_2023.pdf::page_32::chunk_1
   - TXN_10k_2024.pdf::page_28::chunk_1
@@ -505,7 +505,7 @@ results:
   hit: 1
   recall: 0.5
   reciprocal_rank: 0.3333333333333333
-  latency_ms: 433.7575880344957
+  latency_ms: 868.7970079481602
   answer_latency_ms: 0.0
 - id: FRKG138
   mode: retrieve_only
@@ -519,8 +519,8 @@ results:
   - TXN_10k_2024.pdf::page_38::chunk_10
   - TXN_10k_2022.pdf::page_69::chunk_2
   - TXN_10k_2022.pdf::page_69::chunk_1
+  - AVGO_10k_2022.pdf::page_74::chunk_5
   - TXN_10k_2022.pdf::page_30::chunk_1
-  - TXN_10k_2024.pdf::page_28::chunk_1
   answer_points:
   - Rafael R. Lizardi, as Chief Financial Officer (Chunk 1), holds direct responsibility for overseeing tax accounting and
     financial disclosures. This includes managing settlements of uncertain tax positions like the $249 million benefit from
@@ -530,7 +530,7 @@ results:
   hit: 1
   recall: 0.5
   reciprocal_rank: 0.5
-  latency_ms: 526.4980340143666
+  latency_ms: 722.2296360414475
   answer_latency_ms: 0.0
 - id: FRKG141
   mode: retrieve_only
@@ -542,8 +542,8 @@ results:
   top_chunk_ids:
   - INTC_10k_2024.pdf::page_79::chunk_6
   - INTC_10k_2024.pdf::page_111::chunk_1
-  - INTC_10k_2024.pdf::page_75::chunk_1
   - INTC_10k_2023.pdf::page_8::chunk_1
+  - INTC_10k_2024.pdf::page_75::chunk_1
   - AVGO_10k_2023.pdf::page_83::chunk_5
   answer_points:
   - Intel's 2024 financial statements disclose an accrued balance of $302 million for the 2024 Restructuring Plan (Chunk 2).
@@ -555,7 +555,7 @@ results:
   hit: 1
   recall: 1.0
   reciprocal_rank: 1.0
-  latency_ms: 481.5972220385447
+  latency_ms: 550.9669149760157
   answer_latency_ms: 0.0
 - id: FRKG142
   mode: retrieve_only
@@ -568,8 +568,8 @@ results:
   - TXN_10k_2024.pdf::page_50::chunk_3
   - TXN_10k_2022.pdf::page_69::chunk_2
   - TXN_10k_2022.pdf::page_69::chunk_1
-  - TXN_10k_2024.pdf::page_19::chunk_1
   - TXN_10k_2023.pdf::page_51::chunk_3
+  - TXN_10k_2024.pdf::page_19::chunk_1
   answer_points:
   - Richard K. Templeton is listed as President and Chief Executive Officer of Texas Instruments in the 2022 filing (Chunk
     1). Chunk 2 discloses cash payments for interest on long-term debt as $198 million in 2022, $321 million in 2023, and
@@ -580,7 +580,7 @@ results:
   hit: 1
   recall: 1.0
   reciprocal_rank: 1.0
-  latency_ms: 445.5054400023073
+  latency_ms: 500.87478605564684
   answer_latency_ms: 0.0
 - id: FRKG161
   mode: retrieve_only
@@ -593,8 +593,8 @@ results:
   - INTC_10k_2023.pdf::page_8::chunk_1
   - INTC_10k_2022.pdf::page_30::chunk_1
   - INTC_10k_2024.pdf::page_75::chunk_1
-  - INTC_10k_2023.pdf::page_89::chunk_2
   - INTC_10k_2024.pdf::page_74::chunk_6
+  - INTC_10k_2023.pdf::page_89::chunk_2
   answer_points:
   - Mobileye's non-controlling interest value increased by $849 million (from $989 million in 2022 to $1,838 million in 2023).
     Intel's retained ownership stake decreased from 94% (6% non-controlling ownership) to 88% (12% non-controlling ownership)
@@ -605,7 +605,7 @@ results:
   hit: 1
   recall: 1.0
   reciprocal_rank: 0.5
-  latency_ms: 537.895273999311
+  latency_ms: 647.9701979551464
   answer_latency_ms: 0.0
 - id: FRKG163
   mode: retrieve_only
@@ -619,7 +619,7 @@ results:
   - AVGO_10k_2024.pdf::page_20::chunk_1
   - INTC_10k_2024.pdf::page_28::chunk_3
   - INTC_10k_2024.pdf::page_80::chunk_1
-  - QCOM_10k_2024.pdf::page_83::chunk_1
+  - INTC_10k_2022.pdf::page_89::chunk_3
   answer_points:
   - The Other segment's $947 million revenue in 2024 (Chunk 2) includes gains and losses from asset dispositions, which are
     explicitly excluded from the metrics used to evaluate segment performance (Chunk 1). This means the reported revenue figure
@@ -629,7 +629,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 548.7225110409781
+  latency_ms: 642.2579019563273
   answer_latency_ms: 0.0
 - id: FRKG173
   mode: retrieve_only
@@ -656,7 +656,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 561.387341003865
+  latency_ms: 633.071377989836
   answer_latency_ms: 0.0
 - id: FRKG177
   mode: retrieve_only
@@ -669,10 +669,10 @@ results:
   - NVDA_10k_2024.pdf::page_78::chunk_1
   top_chunk_ids:
   - NVDA_10k_2023.pdf::page_10::chunk_1
-  - NVDA_10k_2023.pdf::page_58::chunk_1
   - AVGO_10k_2022.pdf::page_15::chunk_1
-  - NVDA_10k_2022.pdf::page_16::chunk_1
+  - NVDA_10k_2023.pdf::page_58::chunk_1
   - AVGO_10k_2022.pdf::page_48::chunk_1
+  - NVDA_10k_2022.pdf::page_16::chunk_1
   answer_points:
   - CDP operates a global disclosure system for organizations to manage environmental impacts (Chunk 1), which Intel participates
     in as part of its ESG reporting obligations. Intel's 'All Other' segment explicitly includes corporate infrastructure
@@ -685,7 +685,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 568.7527760164812
+  latency_ms: 648.9239180227742
   answer_latency_ms: 0.0
 - id: FRKG179
   mode: retrieve_only
@@ -709,7 +709,7 @@ results:
   hit: 1
   recall: 0.5
   reciprocal_rank: 1.0
-  latency_ms: 578.1601639464498
+  latency_ms: 566.3567190058529
   answer_latency_ms: 0.0
 - id: FRKG182
   mode: retrieve_only
@@ -720,10 +720,10 @@ results:
   - TXN_10k_2023.pdf::page_52::chunk_6
   top_chunk_ids:
   - TXN_10k_2022.pdf::page_57::chunk_1
-  - QCOM_10k_2023.pdf::page_58::chunk_1
   - INTC_10k_2022.pdf::page_71::chunk_1
-  - TXN_10k_2023.pdf::page_52::chunk_6
+  - QCOM_10k_2023.pdf::page_58::chunk_1
   - AMD_10k_2023.pdf::page_54::chunk_3
+  - TXN_10k_2023.pdf::page_52::chunk_6
   answer_points:
   - The auditor's unqualified opinion on Texas Instruments' internal control over financial reporting as of December 31, 2021
     (Chunk 1) ensures that controls are effective in maintaining accurate financial records and preventing misstatements.
@@ -734,8 +734,8 @@ results:
   final_answer: None
   hit: 1
   recall: 0.5
-  reciprocal_rank: 0.25
-  latency_ms: 587.9125810461119
+  reciprocal_rank: 0.2
+  latency_ms: 579.5412679435685
   answer_latency_ms: 0.0
 - id: FRKG185
   mode: retrieve_only
@@ -747,9 +747,9 @@ results:
   top_chunk_ids:
   - QCOM_10k_2024.pdf::page_52::chunk_2
   - QCOM_10k_2022.pdf::page_71::chunk_1
+  - TXN_10k_2023.pdf::page_40::chunk_5
+  - TXN_10k_2022.pdf::page_41::chunk_5
   - QCOM_10k_2024.pdf::page_57::chunk_2
-  - QCOM_10k_2023.pdf::page_57::chunk_2
-  - QCOM_10k_2023.pdf::page_77::chunk_1
   answer_points:
   - Qualcomm's current year tax position additions decreased from $158 million in 2023 to $153 million in 2024, representing
     a $5 million reduction (Chunk 2). Kornelis Smit served as a director of Qualcomm in 2024 (Chunk 1), participating in the
@@ -758,8 +758,8 @@ results:
   final_answer: None
   hit: 1
   recall: 0.5
-  reciprocal_rank: 0.3333333333333333
-  latency_ms: 663.7498190393671
+  reciprocal_rank: 0.2
+  latency_ms: 642.7919400157407
   answer_latency_ms: 0.0
 - id: FRKG187
   mode: retrieve_only
@@ -774,7 +774,7 @@ results:
   - TXN_10k_2024.pdf::page_31::chunk_1
   - TXN_10k_2024.pdf::page_31::chunk_3
   - TXN_10k_2022.pdf::page_30::chunk_1
-  - TXN_10k_2024.pdf::page_28::chunk_1
+  - AVGO_10k_2023.pdf::page_56::chunk_2
   answer_points:
   - Texas Instruments' 'Other' segment revenue declined from $1,408 million in 2022 (Chunk 1) to $947 million in 2024 (Chunk
     3), a total decrease of $461 million. This decline occurred alongside the segment's explicit inclusion of 'gains and losses
@@ -786,7 +786,7 @@ results:
   hit: 1
   recall: 0.3333333333333333
   reciprocal_rank: 0.3333333333333333
-  latency_ms: 665.6597700202838
+  latency_ms: 618.1546910665929
   answer_latency_ms: 0.0
 - id: FRKG192
   mode: retrieve_only
@@ -810,7 +810,7 @@ results:
   hit: 1
   recall: 0.5
   reciprocal_rank: 1.0
-  latency_ms: 595.0029849773273
+  latency_ms: 680.0587780307978
   answer_latency_ms: 0.0
 - id: FRKG239
   mode: retrieve_only
@@ -832,7 +832,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 515.2856560889632
+  latency_ms: 549.7841500909999
   answer_latency_ms: 0.0
 - id: FRKG240
   mode: retrieve_only
@@ -843,10 +843,10 @@ results:
   - INTC_10k_2023.pdf::page_88::chunk_2
   top_chunk_ids:
   - INTC_10k_2024.pdf::page_102::chunk_2
+  - INTC_10k_2024.pdf::page_75::chunk_1
   - INTC_10k_2022.pdf::page_30::chunk_1
   - INTC_10k_2023.pdf::page_8::chunk_1
   - INTC_10k_2023.pdf::page_89::chunk_2
-  - INTC_10k_2024.pdf::page_75::chunk_1
   answer_points:
   - Mobileye's research and development expenditures and operating costs increased by $123 million in 2023 (Chunk 1), which
     directly reduced its operating income from $690 million in 2022 to $664 million in 2023 (Chunk 2), a decrease of $26 million.
@@ -857,7 +857,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 545.629663974978
+  latency_ms: 520.839681965299
   answer_latency_ms: 0.0
 - id: FRKG241
   mode: retrieve_only
@@ -869,18 +869,18 @@ results:
   top_chunk_ids:
   - TXN_10k_2024.pdf::page_19::chunk_1
   - TXN_10k_2023.pdf::page_25::chunk_2
-  - TXN_10k_2024.pdf::page_50::chunk_3
   - TXN_10k_2023.pdf::page_51::chunk_3
-  - TXN_10k_2024.pdf::page_30::chunk_2
+  - TXN_10k_2024.pdf::page_50::chunk_3
+  - TXN_10k_2023.pdf::page_45::chunk_2
   answer_points:
   - The $124 million restructuring charges/other amount in the Other segment's financial results (Chunk 1) includes environmental
     costs as disclosed in the segment description (Chunk 2). This demonstrates how specific financial line items directly
     incorporate regulatory-related expenses like environmental remediation.
   final_answer: None
-  hit: 1
-  recall: 0.5
-  reciprocal_rank: 0.2
-  latency_ms: 741.3931010523811
+  hit: 0
+  recall: 0.0
+  reciprocal_rank: 0.0
+  latency_ms: 621.5935240034014
   answer_latency_ms: 0.0
 - id: FRKG249
   mode: retrieve_only
@@ -906,7 +906,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 763.165823998861
+  latency_ms: 577.8268199646845
   answer_latency_ms: 0.0
 - id: FRKG273
   mode: retrieve_only
@@ -921,7 +921,7 @@ results:
   - TXN_10k_2022.pdf::page_38::chunk_4
   - TXN_10k_2024.pdf::page_37::chunk_9
   - TXN_10k_2022.pdf::page_37::chunk_1
-  - TXN_10k_2023.pdf::page_37::chunk_5
+  - AVGO_10k_2022.pdf::page_119::chunk_3
   answer_points:
   - The total value of stock options outstanding is calculated as 25 shares × $91.58 weighted average exercise price per share
     = $2,289.50. The individuals explicitly authorized to file regulatory disclosures containing this metric include Richard
@@ -932,7 +932,7 @@ results:
   hit: 1
   recall: 0.5
   reciprocal_rank: 1.0
-  latency_ms: 537.9732039291412
+  latency_ms: 664.5557610318065
   answer_latency_ms: 0.0
 - id: FRKG274
   mode: retrieve_only
@@ -957,7 +957,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 548.2451169518754
+  latency_ms: 598.1463380157948
   answer_latency_ms: 0.0
 - id: FRKG275
   mode: retrieve_only
@@ -969,8 +969,8 @@ results:
   - TXN_10k_2024.pdf::page_4::chunk_1
   top_chunk_ids:
   - INTC_10k_2024.pdf::page_15::chunk_1
-  - INTC_10k_2022.pdf::page_43::chunk_2
   - INTC_10k_2023.pdf::page_43::chunk_2
+  - INTC_10k_2022.pdf::page_43::chunk_2
   - INTC_10k_2023.pdf::page_92::chunk_4
   - NVDA_10k_2022.pdf::page_80::chunk_5
   answer_points:
@@ -984,7 +984,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 459.36324598733336
+  latency_ms: 514.763172948733
   answer_latency_ms: 0.0
 - id: FRKG276
   mode: retrieve_only
@@ -1010,7 +1010,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 502.74958298541605
+  latency_ms: 574.3332679849118
   answer_latency_ms: 0.0
 - id: FRKG279
   mode: retrieve_only
@@ -1025,7 +1025,7 @@ results:
   - INTC_10k_2024.pdf::page_63::chunk_2
   - INTC_10k_2022.pdf::page_105::chunk_3
   - INTC_10k_2024.pdf::page_96::chunk_1
-  - INTC_10k_2023.pdf::page_88::chunk_2
+  - INTC_10k_2024.pdf::page_71::chunk_1
   answer_points:
   - The Network and Edge segment's 2023 operating loss of $482 million (Chunk 3) directly reduced Intel's total operating
     income to $93 million, as segment losses offset profits from other divisions. Despite maintaining a stable asset balance
@@ -1034,10 +1034,10 @@ results:
     (Chunk 1) reflect resolved liabilities but did not mitigate the segment's operational challenges, highlighting how structural
     business performance, not tax adjustments, drove the final total operating income.
   final_answer: None
-  hit: 1
-  recall: 0.3333333333333333
-  reciprocal_rank: 0.2
-  latency_ms: 467.890465981327
+  hit: 0
+  recall: 0.0
+  reciprocal_rank: 0.0
+  latency_ms: 625.4305350594223
   answer_latency_ms: 0.0
 - id: FRKG284
   mode: retrieve_only
@@ -1050,9 +1050,9 @@ results:
   top_chunk_ids:
   - AMD_10k_2023.pdf::page_88::chunk_2
   - AMD_10k_2024.pdf::page_73::chunk_1
+  - QCOM_10k_2022.pdf::page_41::chunk_2
   - AMD_10k_2023.pdf::page_69::chunk_5
   - AMD_10k_2023.pdf::page_52::chunk_3
-  - QCOM_10k_2022.pdf::page_41::chunk_2
   answer_points:
   - AMD's total depreciation expense from 2021 to 2023 was $1,176 million ($296M + $439M + $441M). The SEC's regulatory requirements
     (Chunk 2) mandate compliance filings managed by attorneys-in-fact (Chunk 1), who ensure disclosure of financial metrics
@@ -1061,8 +1061,8 @@ results:
   final_answer: None
   hit: 1
   recall: 0.3333333333333333
-  reciprocal_rank: 0.3333333333333333
-  latency_ms: 469.8858360061422
+  reciprocal_rank: 0.25
+  latency_ms: 604.3041410157457
   answer_latency_ms: 0.0
 - id: FRKG288
   mode: retrieve_only
@@ -1072,11 +1072,11 @@ results:
   - TXN_10k_2022.pdf::page_60::chunk_1
   - TXN_10k_2024.pdf::page_28::chunk_1
   top_chunk_ids:
+  - TXN_10k_2024.pdf::page_28::chunk_1
   - TXN_10k_2022.pdf::page_30::chunk_1
   - TXN_10k_2022.pdf::page_57::chunk_1
-  - TXN_10k_2024.pdf::page_28::chunk_1
-  - INTC_10k_2022.pdf::page_71::chunk_1
   - QCOM_10k_2023.pdf::page_58::chunk_1
+  - INTC_10k_2022.pdf::page_71::chunk_1
   answer_points:
   - Ernst & Young LLP's 2022 audit confirmed Texas Instruments maintained effective internal control over financial reporting
     as of December 31, 2021 (Chunk 1). This assurance provides reasonable confidence in the reliability of TI's financial
@@ -1086,8 +1086,8 @@ results:
   final_answer: None
   hit: 1
   recall: 0.5
-  reciprocal_rank: 0.3333333333333333
-  latency_ms: 504.0542009519413
+  reciprocal_rank: 1.0
+  latency_ms: 488.0562369944528
   answer_latency_ms: 0.0
 - id: FRKG290
   mode: retrieve_only
@@ -1112,7 +1112,7 @@ results:
   hit: 1
   recall: 0.5
   reciprocal_rank: 1.0
-  latency_ms: 576.8133689416572
+  latency_ms: 561.8391310563311
   answer_latency_ms: 0.0
 - id: FRKG300
   mode: retrieve_only
@@ -1138,7 +1138,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 524.084327975288
+  latency_ms: 590.761948027648
   answer_latency_ms: 0.0
 - id: FRKG356
   mode: retrieve_only
@@ -1150,10 +1150,10 @@ results:
   - QCOM_10k_2024.pdf::page_59::chunk_1
   top_chunk_ids:
   - QCOM_10k_2023.pdf::page_40::chunk_1
-  - QCOM_10k_2024.pdf::page_57::chunk_2
   - QCOM_10k_2023.pdf::page_57::chunk_2
+  - QCOM_10k_2024.pdf::page_57::chunk_2
   - QCOM_10k_2022.pdf::page_83::chunk_3
-  - QCOM_10k_2024.pdf::page_73::chunk_5
+  - QCOM_10k_2022.pdf::page_13::chunk_1
   answer_points:
   - Jeffrey W. Henderson, as a director of Qualcomm (QCOM) (Chunk 1), participates in corporate governance that oversees the
     financial reporting and strategic direction of business segments like QCT (Chunk 2). The QCT segment, which generates
@@ -1164,9 +1164,9 @@ results:
     financial metrics through governance and audit validation.
   final_answer: None
   hit: 1
-  recall: 0.6666666666666666
-  reciprocal_rank: 0.5
-  latency_ms: 461.760162957944
+  recall: 0.3333333333333333
+  reciprocal_rank: 0.3333333333333333
+  latency_ms: 582.8247640747577
   answer_latency_ms: 0.0
 - id: FRKG357
   mode: retrieve_only
@@ -1192,7 +1192,7 @@ results:
   hit: 1
   recall: 0.5
   reciprocal_rank: 1.0
-  latency_ms: 471.6301260050386
+  latency_ms: 571.3670020923018
   answer_latency_ms: 0.0
 - id: FRKG358
   mode: retrieve_only
@@ -1216,7 +1216,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 565.8926940523088
+  latency_ms: 597.4108499940485
   answer_latency_ms: 0.0
 - id: FRKG359
   mode: retrieve_only
@@ -1228,9 +1228,9 @@ results:
   top_chunk_ids:
   - QCOM_10k_2023.pdf::page_40::chunk_1
   - QCOM_10k_2024.pdf::page_57::chunk_2
-  - QCOM_10k_2024.pdf::page_59::chunk_1
   - QCOM_10k_2023.pdf::page_59::chunk_1
-  - QCOM_10k_2024.pdf::page_17::chunk_1
+  - QCOM_10k_2024.pdf::page_59::chunk_1
+  - QCOM_10k_2022.pdf::page_83::chunk_3
   answer_points:
   - Sylvia Acevedo, as a director of Qualcomm (Chunk 1), signed the 2024 10-K filing which includes the QCT segment's revenue
     of $33.2 billion (Chunk 2). This revenue figure is subject to complex customer incentive arrangements requiring detailed
@@ -1240,7 +1240,7 @@ results:
   hit: 1
   recall: 1.0
   reciprocal_rank: 0.5
-  latency_ms: 493.82540700025856
+  latency_ms: 604.6176899690181
   answer_latency_ms: 0.0
 - id: FRKG360
   mode: retrieve_only
@@ -1254,8 +1254,8 @@ results:
   - QCOM_10k_2023.pdf::page_40::chunk_1
   - QCOM_10k_2023.pdf::page_59::chunk_1
   - QCOM_10k_2022.pdf::page_83::chunk_3
-  - QCOM_10k_2024.pdf::page_73::chunk_5
-  - QCOM_10k_2024.pdf::page_73::chunk_9
+  - QCOM_10k_2022.pdf::page_13::chunk_1
+  - QCOM_10k_2022.pdf::page_74::chunk_1
   answer_points:
   - Qualcomm's QCT segment revenue increased by $2.7 billion in fiscal 2024 (Chunk 2), contributing to total QCT revenue of
     $33.2 billion for the year (Chunk 3). Customer incentive arrangements, including rebates and cost reimbursements, reduced
@@ -1266,7 +1266,7 @@ results:
   hit: 1
   recall: 0.3333333333333333
   reciprocal_rank: 0.5
-  latency_ms: 586.4943530177698
+  latency_ms: 637.3112680157647
   answer_latency_ms: 0.0
 - id: FRKG393
   mode: retrieve_only
@@ -1279,9 +1279,9 @@ results:
   top_chunk_ids:
   - NVDA_10k_2024.pdf::page_78::chunk_1
   - NVDA_10k_2024.pdf::page_41::chunk_5
-  - INTC_10k_2022.pdf::page_51::chunk_1
   - INTC_10k_2024.pdf::page_28::chunk_3
   - INTC_10k_2024.pdf::page_30::chunk_1
+  - INTC_10k_2022.pdf::page_51::chunk_1
   answer_points:
   - The Other segment generated $1.25 billion in 2021 (Chunk 3), $1.408 billion in 2022 (Chunk 1), and $1.111 billion in 2023
     (Chunk 2), totaling $3.769 billion across the three years. Operating profit contributions were $528 million in 2022 (Chunk
@@ -1292,7 +1292,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 534.1415610164404
+  latency_ms: 878.8240640424192
   answer_latency_ms: 0.0
 - id: FRKG395
   mode: retrieve_only
@@ -1306,8 +1306,8 @@ results:
   - AMD_10k_2022.pdf::page_45::chunk_1
   - INTC_10k_2024.pdf::page_80::chunk_1
   - AMD_10k_2022.pdf::page_37::chunk_1
-  - QCOM_10k_2022.pdf::page_86::chunk_3
   - TXN_10k_2024.pdf::page_52::chunk_8
+  - INTC_10k_2024.pdf::page_28::chunk_3
   answer_points:
   - The Analog segment's operating profit decreased from $8,359 million in 2022 (Chunk 1) to $5,821 million in 2023 (Chunk
     2), representing a $2,538 million decline. This decrease corresponds to 61.0% of the $4,158 million Goodwill allocated
@@ -1316,8 +1316,8 @@ results:
   final_answer: None
   hit: 1
   recall: 0.3333333333333333
-  reciprocal_rank: 0.2
-  latency_ms: 484.70962897408754
+  reciprocal_rank: 0.25
+  latency_ms: 803.0623609665781
   answer_latency_ms: 0.0
 - id: FRKG396
   mode: retrieve_only
@@ -1329,8 +1329,8 @@ results:
   top_chunk_ids:
   - INTC_10k_2022.pdf::page_16::chunk_1
   - INTC_10k_2022.pdf::page_102::chunk_1
-  - INTC_10k_2022.pdf::page_72::chunk_1
   - TXN_10k_2023.pdf::page_43::chunk_4
+  - INTC_10k_2022.pdf::page_72::chunk_1
   - NVDA_10k_2024.pdf::page_78::chunk_1
   answer_points:
   - Intel settled $171 million with tax authorities from 2019 ($4 million) to 2021 ($25 million) (Chunk 1). This cumulative
@@ -1342,7 +1342,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 541.5042090462521
+  latency_ms: 586.9235580321401
   answer_latency_ms: 0.0
 - id: FRKG397
   mode: retrieve_only
@@ -1368,7 +1368,7 @@ results:
   hit: 1
   recall: 0.6666666666666666
   reciprocal_rank: 0.25
-  latency_ms: 505.3401329787448
+  latency_ms: 554.6975310426205
   answer_latency_ms: 0.0
 - id: FRKG405
   mode: retrieve_only
@@ -1397,7 +1397,7 @@ results:
   hit: 1
   recall: 0.3333333333333333
   reciprocal_rank: 0.5
-  latency_ms: 536.3610669737682
+  latency_ms: 641.3987249834463
   answer_latency_ms: 0.0
 - id: FRKG436
   mode: retrieve_only
@@ -1424,7 +1424,7 @@ results:
   hit: 1
   recall: 0.3333333333333333
   reciprocal_rank: 0.5
-  latency_ms: 535.9839861048386
+  latency_ms: 691.2225959822536
   answer_latency_ms: 0.0
 - id: FRKG437
   mode: retrieve_only
@@ -1438,7 +1438,7 @@ results:
   - QCOM_10k_2023.pdf::page_84::chunk_3
   - QCOM_10k_2024.pdf::page_61::chunk_2
   - QCOM_10k_2022.pdf::page_83::chunk_3
-  - QCOM_10k_2023.pdf::page_73::chunk_5
+  - QCOM_10k_2022.pdf::page_13::chunk_1
   answer_points:
   - Qualcomm's QCT segment reported total revenues of $33.2 billion in fiscal 2024 (Chunk 2). This represented an increase
     of $2.7 billion from fiscal 2023 (Chunk 1), indicating that the segment's revenue grew from $30.5 billion in 2023 to $33.2
@@ -1447,7 +1447,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 466.06759796850383
+  latency_ms: 591.7945440160111
   answer_latency_ms: 0.0
 - id: FRKG451
   mode: retrieve_only
@@ -1460,8 +1460,8 @@ results:
   top_chunk_ids:
   - INTC_10k_2024.pdf::page_28::chunk_3
   - INTC_10k_2024.pdf::page_30::chunk_1
-  - INTC_10k_2022.pdf::page_51::chunk_1
   - QCOM_10k_2023.pdf::page_59::chunk_1
+  - INTC_10k_2022.pdf::page_51::chunk_1
   - INTC_10k_2024.pdf::page_80::chunk_1
   answer_points:
   - The Analog segment's revenue decreased from $15,359 million in 2022 (Chunk 1) to $12,161 million in 2024 (Chunk 2), a
@@ -1476,7 +1476,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 549.8941310215741
+  latency_ms: 469.09522800706327
   answer_latency_ms: 0.0
 - id: FRKG455
   mode: retrieve_only
@@ -1490,8 +1490,8 @@ results:
   - AVGO_10k_2024.pdf::page_31::chunk_1
   - AVGO_10k_2024.pdf::page_45::chunk_5
   - AVGO_10k_2022.pdf::page_74::chunk_5
+  - TXN_10k_2024.pdf::page_28::chunk_1
   - TXN_10k_2022.pdf::page_30::chunk_1
-  - INTC_10k_2022.pdf::page_91::chunk_5
   answer_points:
   - AVGO's total operating income increased by $5,706 million (67%) from fiscal 2021 to 2022 (Chunk 3). The Infrastructure
     Software segment contributed $283 million (6%) to this growth (Chunk 2). PricewaterhouseCoopers' audit evaluation of uncertain
@@ -1504,7 +1504,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 540.5116829788312
+  latency_ms: 605.9547710465267
   answer_latency_ms: 0.0
 - id: FRKG456
   mode: retrieve_only
@@ -1517,7 +1517,7 @@ results:
   - TXN_10k_2024.pdf::page_38::chunk_10
   - TXN_10k_2022.pdf::page_69::chunk_2
   - TXN_10k_2022.pdf::page_69::chunk_1
-  - TXN_10k_2024.pdf::page_28::chunk_1
+  - AVGO_10k_2022.pdf::page_74::chunk_5
   - TXN_10k_2022.pdf::page_30::chunk_1
   answer_points:
   - In 2024, changes in uncertain tax positions contributed 0.1% to Texas Instruments' effective tax rate of 12.0% (Chunk
@@ -1528,7 +1528,7 @@ results:
   hit: 1
   recall: 1.0
   reciprocal_rank: 1.0
-  latency_ms: 534.7775189438835
+  latency_ms: 591.6296519571915
   answer_latency_ms: 0.0
 - id: FRKG458
   mode: retrieve_only
@@ -1541,8 +1541,8 @@ results:
   - INTC_10k_2024.pdf::page_111::chunk_1
   - INTC_10k_2024.pdf::page_80::chunk_1
   - INTC_10k_2023.pdf::page_43::chunk_2
-  - INTC_10k_2023.pdf::page_92::chunk_4
   - INTC_10k_2022.pdf::page_43::chunk_2
+  - INTC_10k_2023.pdf::page_92::chunk_4
   answer_points:
   - Eric Meurice, as a Director of Intel Corporation, signed the 2024 10-K filing (Chunk 1) that incorporates the 2023 financial
     statements disclosing $329 million in litigation charges (Chunk 2). By signing the filing, he certifies responsibility
@@ -1552,7 +1552,7 @@ results:
   hit: 1
   recall: 1.0
   reciprocal_rank: 1.0
-  latency_ms: 524.9150379095227
+  latency_ms: 495.76240102760494
   answer_latency_ms: 0.0
 - id: FRKG463
   mode: retrieve_only
@@ -1566,8 +1566,8 @@ results:
   - TXN_10k_2024.pdf::page_30::chunk_2
   - TXN_10k_2024.pdf::page_31::chunk_1
   - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2023.pdf::page_25::chunk_2
   - TXN_10k_2024.pdf::page_19::chunk_1
-  - TXN_10k_2022.pdf::page_54::chunk_1
   answer_points:
   - The 'Other' segment's revenue declined from $1,408 million in 2022 (Chunk 1) to $947 million in 2024 (Chunk 3), a total
     decrease of $461 million. In 2022, restructuring charges of $257 million were explicitly included in the 'Other' segment's
@@ -1578,7 +1578,7 @@ results:
   hit: 1
   recall: 0.3333333333333333
   reciprocal_rank: 0.3333333333333333
-  latency_ms: 440.4837309848517
+  latency_ms: 498.8942650379613
   answer_latency_ms: 0.0
 - id: FRKG515
   mode: retrieve_only
@@ -1602,7 +1602,7 @@ results:
   hit: 1
   recall: 0.5
   reciprocal_rank: 0.3333333333333333
-  latency_ms: 469.2580079426989
+  latency_ms: 564.5715479040518
   answer_latency_ms: 0.0
 - id: FRKG516
   mode: retrieve_only
@@ -1629,7 +1629,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 439.16124594397843
+  latency_ms: 577.7854589978233
   answer_latency_ms: 0.0
 - id: FRKG517
   mode: retrieve_only
@@ -1643,7 +1643,7 @@ results:
   - TXN_10k_2022.pdf::page_38::chunk_8
   - TXN_10k_2022.pdf::page_69::chunk_2
   - TXN_10k_2024.pdf::page_65::chunk_1
-  - TXN_10k_2022.pdf::page_30::chunk_1
+  - AVGO_10k_2022.pdf::page_74::chunk_5
   answer_points:
   - Haviv Ilan is listed as a Director and Executive Vice President of Texas Instruments in the 2022 filing (Chunk 1). The
     share repurchase data from 2022-2024 in the 2024 filing (Chunk 2) shows 22 million shares repurchased in 2022, 2 million
@@ -1653,7 +1653,7 @@ results:
   hit: 1
   recall: 1.0
   reciprocal_rank: 1.0
-  latency_ms: 469.7515290463343
+  latency_ms: 588.9482579659671
   answer_latency_ms: 0.0
 - id: FRKG520
   mode: retrieve_only
@@ -1667,17 +1667,17 @@ results:
   - INTC_10k_2024.pdf::page_71::chunk_1
   - INTC_10k_2024.pdf::page_70::chunk_1
   - NVDA_10k_2024.pdf::page_78::chunk_1
-  - TXN_10k_2022.pdf::page_6::chunk_1
+  - TXN_10k_2024.pdf::page_30::chunk_1
   answer_points:
   - The Embedded Processing segment generated $3.261 billion in 2022 revenue, while the Other segment's revenue increased
     from $1.25 billion in 2021 to $1.408 billion in 2022, representing a $0.158 billion increase. The ratio of Embedded Processing's
     revenue to this growth is calculated as $3.261 billion ÷ $0.158 billion ≈ 20.64. This shows the Embedded Processing segment's
     revenue was over 20 times greater than the absolute growth in the Other segment's revenue during this period.
   final_answer: None
-  hit: 1
-  recall: 0.5
-  reciprocal_rank: 0.2
-  latency_ms: 506.79739110637456
+  hit: 0
+  recall: 0.0
+  reciprocal_rank: 0.0
+  latency_ms: 553.2233619596809
   answer_latency_ms: 0.0
 - id: FRKG522
   mode: retrieve_only
@@ -1690,8 +1690,8 @@ results:
   - QCOM_10k_2024.pdf::page_61::chunk_2
   - QCOM_10k_2024.pdf::page_48::chunk_1
   - QCOM_10k_2024.pdf::page_47::chunk_3
-  - INTC_10k_2024.pdf::page_24::chunk_1
   - AVGO_10k_2022.pdf::page_38::chunk_1
+  - INTC_10k_2024.pdf::page_24::chunk_1
   answer_points:
   - Qualcomm disclosed $8,893 million in Research and Development expenses for 2024 (Chunk 2). Sylvia Acevedo, listed as a
     Director in the 10-K filing (Chunk 1), signed the document confirming these financial disclosures. This connects the disclosed
@@ -1700,7 +1700,7 @@ results:
   hit: 1
   recall: 0.5
   reciprocal_rank: 1.0
-  latency_ms: 474.2880209814757
+  latency_ms: 616.2043201038614
   answer_latency_ms: 0.0
 - id: FRKG523
   mode: retrieve_only
@@ -1712,9 +1712,9 @@ results:
   top_chunk_ids:
   - AMD_10k_2023.pdf::page_84::chunk_5
   - AMD_10k_2024.pdf::page_81::chunk_5
-  - AMD_10k_2022.pdf::page_91::chunk_1
-  - AMD_10k_2023.pdf::page_83::chunk_3
   - NVDA_10k_2023.pdf::page_62::chunk_3
+  - TXN_10k_2022.pdf::page_37::chunk_1
+  - AMD_10k_2022.pdf::page_91::chunk_1
   answer_points:
   - The SEC requires AMD to file its Proxy Statement within 120 days of its fiscal year-end (Chunk 1), which incorporates
     disclosures about executive compensation and stock option valuations. AMD uses historical volatility of its common stock
@@ -1726,7 +1726,7 @@ results:
   hit: 1
   recall: 0.5
   reciprocal_rank: 0.5
-  latency_ms: 407.6740479795262
+  latency_ms: 652.0234869094566
   answer_latency_ms: 0.0
 - id: FRKG525
   mode: retrieve_only
@@ -1739,8 +1739,8 @@ results:
   top_chunk_ids:
   - AMD_10k_2022.pdf::page_6::chunk_1
   - INTC_10k_2022.pdf::page_54::chunk_1
-  - AMD_10k_2023.pdf::page_75::chunk_5
   - AMD_10k_2024.pdf::page_73::chunk_1
+  - AMD_10k_2023.pdf::page_75::chunk_5
   - AMD_10k_2023.pdf::page_78::chunk_3
   answer_points:
   - AMD incurred Xilinx acquisition costs of $350 million in 2022 and $26 million in 2023, totaling $376 million (Chunk 3).
@@ -1752,8 +1752,8 @@ results:
   final_answer: None
   hit: 1
   recall: 0.3333333333333333
-  reciprocal_rank: 0.25
-  latency_ms: 425.29980395920575
+  reciprocal_rank: 0.3333333333333333
+  latency_ms: 564.9951848899946
   answer_latency_ms: 0.0
 - id: FRKG528
   mode: retrieve_only
@@ -1765,9 +1765,9 @@ results:
   top_chunk_ids:
   - TXN_10k_2022.pdf::page_47::chunk_2
   - TXN_10k_2023.pdf::page_49::chunk_5
-  - TXN_10k_2024.pdf::page_48::chunk_5
-  - TXN_10k_2023.pdf::page_46::chunk_2
   - AVGO_10k_2023.pdf::page_76::chunk_4
+  - AVGO_10k_2024.pdf::page_76::chunk_4
+  - TXN_10k_2024.pdf::page_48::chunk_5
   answer_points:
   - Texas Instruments decreased its U.S. Defined Benefit plan discount rate from 2.81% in 2020 to 2.74% in 2021, a reduction
     of 0.07 percentage points (Chunk 2). This adjustment reflects the company's financial reporting decisions under its Chief
@@ -1778,7 +1778,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 415.78493104316294
+  latency_ms: 576.0507669765502
   answer_latency_ms: 0.0
 - id: FRKG529
   mode: retrieve_only
@@ -1791,8 +1791,8 @@ results:
   top_chunk_ids:
   - QCOM_10k_2023.pdf::page_40::chunk_1
   - QCOM_10k_2023.pdf::page_41::chunk_3
-  - QCOM_10k_2022.pdf::page_43::chunk_1
   - QCOM_10k_2023.pdf::page_12::chunk_1
+  - QCOM_10k_2022.pdf::page_43::chunk_1
   - QCOM_10k_2023.pdf::page_44::chunk_1
   answer_points:
   - PricewaterhouseCoopers LLP's audit process (Chunk 1) identified revenue recognition for QCT customer incentive arrangements
@@ -1805,7 +1805,7 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 456.2190509168431
+  latency_ms: 527.5132979732007
   answer_latency_ms: 0.0
 - id: FRKG531
   mode: retrieve_only
@@ -1834,7 +1834,7 @@ results:
   hit: 1
   recall: 0.3333333333333333
   reciprocal_rank: 1.0
-  latency_ms: 460.74394800234586
+  latency_ms: 559.4505809713155
   answer_latency_ms: 0.0
 - id: FRKG533
   mode: retrieve_only
@@ -1861,7 +1861,7 @@ results:
   hit: 1
   recall: 0.5
   reciprocal_rank: 1.0
-  latency_ms: 438.2191499462351
+  latency_ms: 580.0489139510319
   answer_latency_ms: 0.0
 - id: FRKG534
   mode: retrieve_only
@@ -1873,10 +1873,10 @@ results:
   - AMD_10k_2024.pdf::page_69::chunk_1
   top_chunk_ids:
   - AMD_10k_2024.pdf::page_73::chunk_1
-  - AMD_10k_2023.pdf::page_88::chunk_2
   - INTC_10k_2022.pdf::page_71::chunk_1
-  - AMD_10k_2022.pdf::page_92::chunk_2
-  - AMD_10k_2024.pdf::page_97::chunk_2
+  - AMD_10k_2023.pdf::page_88::chunk_2
+  - INTC_10k_2024.pdf::page_58::chunk_1
+  - NVDA_10k_2022.pdf::page_62::chunk_1
   answer_points:
   - The PCAOB's standards require AMD's auditors to evaluate internal controls over financial reporting (Chunk 1), ensuring
     accurate disclosure of expenses like employee stock-based compensation. AMD's All Other category, which specifically includes
@@ -1887,5 +1887,5 @@ results:
   hit: 0
   recall: 0.0
   reciprocal_rank: 0.0
-  latency_ms: 500.9612780995667
+  latency_ms: 551.548407995142
   answer_latency_ms: 0.0
