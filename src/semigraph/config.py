@@ -204,6 +204,14 @@ class Config:
                 "agent_harness.assess_context_max_chars must be >= 2000"
             )
 
+        self.agent_max_num_ontology: int = int(
+            agent_harness.get("max_num_ontology", 8)
+        )
+        if not 1 <= self.agent_max_num_ontology <= 8:
+            raise ValueError(
+                "agent_harness.max_num_ontology must be 1..8"
+            )
+
         # --- Financial PostgreSQL (Phase F.v2) ---
         financial = data.get("financial", {})
         self.financial_backend: str = financial.get("backend", "postgresql")

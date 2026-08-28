@@ -14,6 +14,7 @@ from semigraph.agent.ledger import build_assess_context, select_synthesis_chunks
 from semigraph.agent.prompts import (
     SYNTHESIZE_ATTEMPTS_SYSTEM_PROMPT,
     build_assess_system_prompt,
+    build_ontology_planroute_prompt,
     build_plan_route_system_prompt,
 )
 from semigraph.agent.retry_policy import (
@@ -25,6 +26,7 @@ from semigraph.agent.state import AgentState, TaskWorkerState
 from semigraph.agent.tools import RETRIEVERS
 from semigraph.config import Config, get_config
 from semigraph.connections import get_llm
+from semigraph.ontology.schema import RELATIONSHIP_CATALOG
 
 
 MAX_PLAN_ROUTE_ATTEMPTS = 2
@@ -86,6 +88,8 @@ def _normalize_plan_tasks(
     return tasks
 
 
+
+PROMPT_MODE = "ontology"  # or "legacy"
 def plan_route_node(
     state: AgentState,
     locked_tool: str | None = None,
@@ -116,7 +120,10 @@ def plan_route_node(
     original_query = original_query.strip()
     cfg = cfg or get_config()
     llm = get_llm(cfg)
-    system_prompt = build_plan_route_system_prompt(cfg)
+    system_prompt = build_ontology_planroute_prompt(
+        getattr(cfg, "informative_rel_types", RELATIONSHIP_CATALOG.keys()),
+        getattr(cfg, "agent_max_num_ontology", 8),
+    ) if PROMPT_MODE == "ontology" else build_plan_route_system_prompt(cfg)
     if locked_tool:
         system_prompt += (
             "\n\nEvaluation constraint: every initial_action.tool must be "

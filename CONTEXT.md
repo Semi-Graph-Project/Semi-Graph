@@ -16,6 +16,14 @@ _Avoid_: Subquery step, workflow step
 Retrieval Task ที่ต้องรักษา connected relationship chain ไว้เป็นหน่วยเดียว เพื่อไม่ให้สัญญาณ multi-hop ถูกตัดขาด
 _Avoid_: Graph hop, split hop
 
+**Informative Relation**:
+ความสัมพันธ์ใน Ontology ที่สื่อข้อเท็จจริงทางธุรกิจและใช้ค้นเชิงความหมายได้ โดยไม่รวมความสัมพันธ์สำหรับ provenance หรือโครงสร้างเอกสาร
+_Avoid_: Structural relationship, provenance edge
+
+**Ontology-Guided Relation Query Expansion**:
+การสร้างคำถามค้น Graph หลายรูปจาก Retrieval Task เดิม โดยเปลี่ยนเฉพาะถ้อยคำความสัมพันธ์ให้ตรงกับ Informative Relations และยังเก็บคำถามเดิมเป็น safety fallback
+_Avoid_: Graph query rewrite, entity normalization, path generation
+
 **Evidence Requirement**:
 ข้อความระบุว่าหลักฐานต้องรองรับ claim หรือส่วนใดของ Retrieval Task จึงจะถือว่าครบ
 _Avoid_: Subquery, answer fragment
