@@ -118,7 +118,7 @@ def trace_vector_search(
         query,
         company_rerank(query, candidates, cfg=cfg),
     )
-    chunks = reranked[:top_k_chunks]
+    chunks = candidates[:top_k_chunks]
 
     notify_trace(trace_callback, {
         "stage": "reranking",

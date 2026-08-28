@@ -33,7 +33,7 @@ from eval_scripts.eval_agent import (
 
 NEO4J_URI = "bolt://localhost:7690"
 VECTOR_INDEX = "gold_chunk_embedding"
-TOP_K = 5
+TOP_K = 10
 EVALUATION_MODES = ("retrieve_only", "full_answer")
 AGENT_BUILDERS = {
     "agent_vector": build_vector_eval_graph,

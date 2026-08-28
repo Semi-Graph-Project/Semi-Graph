@@ -478,6 +478,7 @@ def trace_graph_search(
             query,
             company_rerank(query, trace["chunk_candidates"], cfg=cfg),
         )
+        # trace["reranked_chunks"] = trace["raw_chunk_candidates"]
         trace["chunks"] = trace["reranked_chunks"][:top_k_chunks]
         trace["reranker_trace"] = {
             "mode": "company+fiscal_year",
