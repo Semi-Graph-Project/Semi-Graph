@@ -459,3 +459,61 @@ def test_trace_timeline_collapses_adjacent_stage_transitions():
     assert "Candidate budget" in markup
     assert "Candidates" in markup
     assert "RAW JSON" in markup
+
+
+def test_agent_trace_keeps_parallel_tasks_separate_and_shows_retry_query():
+    events = [
+        {
+            "stage": "execute",
+            "status": "running",
+            "task_id": "T1",
+            "attempt_id": "T1-A1",
+            "message": "T1-A1 searching with graph",
+        },
+        {
+            "stage": "execute",
+            "status": "running",
+            "task_id": "T2",
+            "attempt_id": "T2-A1",
+            "message": "T2-A1 searching with graph",
+        },
+        {
+            "stage": "execute",
+            "status": "complete",
+            "task_id": "T1",
+            "attempt_id": "T1-A1",
+            "message": "T1-A1 retrieved 2 evidence chunk(s)",
+            "details": {"chunk_count": 2},
+        },
+        {
+            "stage": "retry",
+            "status": "complete",
+            "task_id": "T2",
+            "attempt_id": "T2-A1",
+            "message": "Rewrote T2 query: focused retry query",
+            "details": {
+                "strategy": "focus_missing",
+                "retry_query": "focused retry query",
+            },
+        },
+    ]
+
+    groups = Component._trace_groups_for_configuration(
+        {"key": "agent_graph"},
+        events,
+    )
+    markup = "".join(
+        Component._build_trace_row(
+            index,
+            group["event"],
+            raw_events=group["raw_events"],
+        )
+        for index, group in enumerate(groups, start=1)
+    )
+
+    assert len(groups) == 3
+    assert len(groups[0]["raw_events"]) == 2
+    assert groups[0]["event"]["task_id"] == "T1"
+    assert groups[1]["event"]["task_id"] == "T2"
+    assert "focused retry query" in markup
+    assert "Retry strategy" in markup

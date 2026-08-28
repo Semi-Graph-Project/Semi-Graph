@@ -355,18 +355,11 @@ def run_comparison(
             return finish(result)
 
         locked_tool = "vector" if mode == "agent_vector" else "graph"
-        emit(
-            {
-                "stage": "plan",
-                "status": "running",
-                "tool": locked_tool,
-            },
-            "Planning the retrieval tasks",
-        )
         agent = build_agent(
             locked_tool=locked_tool,
             top_k=effective_top_k,
             cfg=cfg,
+            trace_callback=emit,
         )
         result = agent.invoke(
             {"original_query": clean_query},
@@ -377,8 +370,6 @@ def run_comparison(
             trace,
             perf_counter() - started_at,
         )
-        for event in trace[1:]:
-            emit(event)
         return finish(normalized_result)
     except Exception as exc:
         if not trace_started:

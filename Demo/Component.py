@@ -22,6 +22,10 @@ BACKEND_CORPORA = get_backend_corpora()
 TRACE_STAGE_LABELS = {
     "config": "Configuration",
     "plan": "Retrieval planning",
+    "execute": "Execute",
+    "assess": "Assess",
+    "retry": "Retry",
+    "task_result": "Task result",
     "retrieval": "Evidence search",
     "query_expansion": "Query expansion",
     "seed_selection": "Graph seed selection",
@@ -60,6 +64,24 @@ TRACE_FIELD_LABELS = {
     "latency_sec": "Duration",
     "error_type": "Error type",
     "abort_reason": "Stop reason",
+    "task_count": "Tasks",
+    "tasks": "Task plan",
+    "task_id": "Task",
+    "attempt_id": "Attempt",
+    "task_query": "Task query",
+    "query": "Search query",
+    "retry_query": "Rewritten query",
+    "chunk_count": "Evidence found",
+    "chunk_ids": "Evidence chunks",
+    "accepted_chunk_ids": "Accepted evidence",
+    "missing_requirements": "Still missing",
+    "reason": "Reason",
+    "strategy": "Retry strategy",
+    "attempt_count": "Attempts",
+    "sufficient": "Sufficient",
+    "stop_reason": "Task result",
+    "selected_evidence_count": "Evidence synthesized",
+    "citation_count": "Citations",
 }
 
 
@@ -284,7 +306,7 @@ def _build_running_body(configuration, query, result=None, history=None):
         for event in (result or {}).get("trace", [])
         if isinstance(event, dict)
     ]
-    graph_trace = _is_graph_configuration(configuration)
+    graph_trace = _uses_compact_graph_trace(configuration, trace)
     trace_groups = _trace_groups_for_configuration(configuration, trace)
     current_event = trace_groups[-1]["event"] if trace_groups else {
         "stage": "runner",
@@ -410,7 +432,7 @@ def _build_completed_exchange(configuration, query, result, is_current=True):
     answer_html = _render_answer_markdown(answer)
     citations = list(result.get("citations") or [])
     trace = list(result.get("trace") or [])
-    graph_trace = _is_graph_configuration(configuration)
+    graph_trace = _uses_compact_graph_trace(configuration, trace)
     trace_groups = _trace_groups_for_configuration(configuration, trace)
     status = str(result.get("status") or "error")
     error = result.get("error")
@@ -575,15 +597,22 @@ def _trace_label(event):
 
 
 def _group_trace_events(events):
-    """Collapse adjacent status updates into one human-readable stage."""
+    """Collapse running/completed updates for the same Agent operation."""
     groups = []
+    group_indexes = {}
     for raw_event in events:
         if not isinstance(raw_event, dict):
             continue
         event = dict(raw_event)
         stage = str(event.get("stage") or "trace")
-        if groups and groups[-1]["stage"] == stage:
-            merged = dict(groups[-1]["event"])
+        group_key = (
+            stage,
+            event.get("task_id"),
+            event.get("attempt_id"),
+        )
+        if group_key in group_indexes:
+            group = groups[group_indexes[group_key]]
+            merged = dict(group["event"])
             previous_details = merged.get("details")
             current_details = event.get("details")
             merged_details = (
@@ -596,9 +625,10 @@ def _group_trace_events(events):
             merged.update(event)
             if merged_details:
                 merged["details"] = merged_details
-            groups[-1]["event"] = merged
-            groups[-1]["raw_events"].append(raw_event)
+            group["event"] = merged
+            group["raw_events"].append(raw_event)
             continue
+        group_indexes[group_key] = len(groups)
         groups.append({
             "stage": stage,
             "event": event,
@@ -607,8 +637,14 @@ def _group_trace_events(events):
     return groups
 
 
-def _is_graph_configuration(configuration):
-    return configuration.get("key") in {"graph", "agent_graph"}
+def _uses_compact_graph_trace(configuration, events=None):
+    key = configuration.get("key")
+    if key == "graph":
+        return True
+    agent_stages = {"plan", "execute", "assess", "retry", "task_result"}
+    return key == "agent_graph" and not any(
+        event.get("stage") in agent_stages for event in (events or [])
+    )
 
 
 def _is_compact_graph_retrieval(event):
@@ -700,7 +736,7 @@ def _graph_trace_groups_from_compact(event):
 def _trace_groups_for_configuration(configuration, events):
     """Select the compact trace contract used by the Graph panels."""
     groups = _group_trace_events(events or [])
-    if not _is_graph_configuration(configuration):
+    if not _uses_compact_graph_trace(configuration, events):
         return groups
 
     stage_groups = {
@@ -749,6 +785,8 @@ def _trace_status(event):
         return "error", "ERROR"
     if raw_status == "no_evidence":
         return "complete", "NO EVIDENCE"
+    if raw_status == "insufficient":
+        return "complete", "INSUFFICIENT"
     if raw_status in {"complete", "ok", "success", "valid"}:
         return "complete", "COMPLETE"
     return "complete", "RECORDED"
@@ -826,8 +864,8 @@ def _format_trace_value(value):
         return f"{value:.3f}".rstrip("0").rstrip(".")
     if isinstance(value, (list, tuple)):
         if all(isinstance(item, (str, int, float, bool)) for item in value):
-            preview = ", ".join(str(item) for item in value[:3])
-            remaining = len(value) - 3
+            preview = ", ".join(str(item) for item in value[:5])
+            remaining = len(value) - 5
             return f"{preview} +{remaining} more" if remaining > 0 else preview
         return f"{len(value)} records"
     if isinstance(value, dict):

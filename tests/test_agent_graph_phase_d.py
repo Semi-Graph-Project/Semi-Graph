@@ -290,6 +290,7 @@ def test_full_agent_can_switch_tools_and_uses_four_node_state(monkeypatch):
         ],
     )
     calls = []
+    trace_events = []
 
     def graph_retriever(query, top_k_chunks, cfg):
         calls.append(("graph", query, top_k_chunks))
@@ -304,7 +305,9 @@ def test_full_agent_can_switch_tools_and_uses_four_node_state(monkeypatch):
     monkeypatch.setitem(nodes.RETRIEVERS, "graph", graph_retriever)
     monkeypatch.setitem(nodes.RETRIEVERS, "vector", vector_retriever)
 
-    result = build_agent().invoke({"original_query": "Question?"})
+    result = build_agent(trace_callback=trace_events.append).invoke({
+        "original_query": "Question?",
+    })
 
     assert len(result["tasks"]) == 1
     assert len(result["tasks"][0]["requirements"]) == 1
@@ -328,6 +331,51 @@ def test_full_agent_can_switch_tools_and_uses_four_node_state(monkeypatch):
     assert "current_action" not in result
     assert "reflection_history" not in result
     assert "observation_history" not in result
+
+    completed_events = [
+        event for event in trace_events if event["status"] != "running"
+    ]
+    plan_event = next(
+        event for event in completed_events if event["stage"] == "plan"
+    )
+    retry_event = next(
+        event for event in completed_events if event["stage"] == "retry"
+    )
+    execute_events = [
+        event for event in completed_events if event["stage"] == "execute"
+    ]
+    first_assess = next(
+        event
+        for event in completed_events
+        if event["stage"] == "assess" and "needs more" in event["message"]
+    )
+    task_event = next(
+        event for event in completed_events if event["stage"] == "task_result"
+    )
+    synthesis_event = next(
+        event for event in completed_events if event["stage"] == "synthesis"
+    )
+
+    assert plan_event["details"]["tasks"] == [
+        "T1: Find the required evidence"
+    ]
+    assert retry_event["details"] == {
+        "strategy": "switch_tool",
+        "tool": "vector",
+        "retry_query": "focused vector query",
+    }
+    assert [event["details"]["chunk_ids"] for event in execute_events] == [
+        [],
+        ["C1"],
+    ]
+    assert first_assess["details"]["missing_requirements"] == [
+        "T1-R1: Evidence for T1-R1"
+    ]
+    assert task_event["details"]["sufficient"] is True
+    assert synthesis_event["details"] == {
+        "selected_evidence_count": 1,
+        "citation_count": 1,
+    }
 
 
 @pytest.mark.parametrize(

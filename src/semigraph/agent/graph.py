@@ -5,7 +5,9 @@ from langgraph.types import Send
 
 from semigraph.agent import nodes
 from semigraph.agent.state import AgentState, TaskWorkerState
+from semigraph.agent.trace_events import AgentTraceEmitter
 from semigraph.config import Config, get_config
+from semigraph.trace import TraceCallback
 
 
 LOCKABLE_TOOLS = {"vector", "graph"}
@@ -110,6 +112,7 @@ def build_agent(
     top_k: int | None = None,
     synthesis: Callable[[AgentState], dict] | None = None,
     cfg: Config | None = None,
+    trace_callback: TraceCallback | None = None,
 ):
     """Build the Agent harness with isolated parallel Task workers.
 
@@ -125,7 +128,10 @@ def build_agent(
 
     agent_config = cfg or get_config()
 
+    tracer = AgentTraceEmitter(trace_callback)
+
     def plan_route(state: AgentState) -> dict:
+        tracer.plan_started()
         if cfg is None:
             update = nodes.plan_route_node(state, locked_tool=locked_tool)
         else:
@@ -134,13 +140,16 @@ def build_agent(
                 locked_tool=locked_tool,
                 cfg=agent_config,
             )
-        return _apply_action_policy(
+        update = _apply_action_policy(
             update,
             locked_tool,
             top_k,
         )
+        tracer.plan_finished(update)
+        return update
 
     def assess(state: TaskWorkerState) -> dict:
+        tracer.assess_started(state)
         if cfg is None:
             update = nodes.assess_node(state, locked_tool=locked_tool)
         else:
@@ -149,16 +158,22 @@ def build_agent(
                 locked_tool=locked_tool,
                 cfg=agent_config,
             )
-        return _apply_action_policy(
+        update = _apply_action_policy(
             update,
             locked_tool,
             top_k,
         )
+        tracer.assess_finished(state["task"], update)
+        return update
 
     def execute_attempt(state: TaskWorkerState) -> dict:
+        tracer.execute_started(state)
         if cfg is None:
-            return nodes.execute_attempt_node(state)
-        return nodes.execute_attempt_node(state, cfg=agent_config)
+            update = nodes.execute_attempt_node(state)
+        else:
+            update = nodes.execute_attempt_node(state, cfg=agent_config)
+        tracer.execute_finished(update)
+        return update
 
     task_workflow = StateGraph(TaskWorkerState)
     task_workflow.add_node("execute", execute_attempt)
@@ -189,6 +204,7 @@ def build_agent(
             "sufficient": False,
             "stop_reason": result.get("stop_reason") or "unsupported",
         }
+        tracer.task_finished(task, result, completion)
         return {
             "task_results": [{
                 "task_id": task["task_id"],
@@ -202,14 +218,21 @@ def build_agent(
     workflow.add_node("task_worker", task_worker)
     workflow.add_node("collector", _collect_task_results)
     if synthesis is not None:
-        synthesis_node = synthesis
+        run_synthesis = synthesis
     elif cfg is None:
-        synthesis_node = nodes.synthesize_attempts_node
+        run_synthesis = nodes.synthesize_attempts_node
     else:
-        synthesis_node = lambda state: nodes.synthesize_attempts_node(
+        run_synthesis = lambda state: nodes.synthesize_attempts_node(
             state,
             cfg=agent_config,
         )
+
+    def synthesis_node(state: AgentState) -> dict:
+        tracer.synthesis_started()
+        update = run_synthesis(state)
+        tracer.synthesis_finished(update)
+        return update
+
     workflow.add_node("synthesize", synthesis_node)
 
     workflow.add_edge(START, "plan_route")

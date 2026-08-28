@@ -264,6 +264,23 @@ def test_run_comparison_agent_modes_pass_selected_config(
     class FakeAgent:
         def invoke(self, state, config):
             captured["invoke"] = (state, config)
+            emit = captured["build"]["trace_callback"]
+            emit({
+                "stage": "plan",
+                "status": "complete",
+                "message": "Created 1 retrieval task(s)",
+            })
+            emit({
+                "stage": "task_result",
+                "status": "complete",
+                "task_id": "T1",
+                "message": "T1 has sufficient evidence",
+            })
+            emit({
+                "stage": "synthesis",
+                "status": "ok",
+                "message": "Synthesized from 1 selected evidence chunk(s)",
+            })
             return {
                 "final_answer": "Agent answer [1]",
                 "citation_map": [{"citation_index": 1, "chunk_id": "c1"}],
@@ -291,6 +308,7 @@ def test_run_comparison_agent_modes_pass_selected_config(
     assert captured["build"]["locked_tool"] == locked_tool
     assert captured["build"]["top_k"] == 4
     assert captured["build"]["cfg"].neo4j_uri == "bolt://localhost:7687"
+    assert callable(captured["build"]["trace_callback"])
     assert captured["invoke"] == (
         {"original_query": "Question"},
         {"recursion_limit": 50},
@@ -298,8 +316,7 @@ def test_run_comparison_agent_modes_pass_selected_config(
     assert [event["stage"] for event in result.trace] == [
         "config",
         "plan",
-        "plan",
-        "retrieval",
+        "task_result",
         "synthesis",
     ]
 
