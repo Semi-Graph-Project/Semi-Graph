@@ -2,6 +2,7 @@
 """Evaluate Vector or Graph retrieval on the shared 74-query SOX set."""
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import json
 import sys
@@ -46,9 +47,6 @@ TRACE_OUTPUT_TEMPLATE = ROOT / (
 YAML_TRACE_OUTPUT_TEMPLATE = ROOT / (
     "benchmark/results/controlled_{tool}_sox74_{version_name}_{mode}.yaml"
 )
-
-
-
 
 def load_sox_queries() -> list[dict]:
     """Load the 74 SOX benchmark queries from YAML."""
@@ -227,10 +225,13 @@ def evaluate_sox_queries(
     tool: str = "vector",
     version_name: str = "v1",
     mode: str = "retrieve_only",
+    workers: int = 8,
 ) -> list[dict]:
     """Evaluate one production retriever on the 74 SOX queries."""
     if mode not in EVALUATION_MODES:
         raise ValueError(f"mode must be one of {EVALUATION_MODES}")
+    if workers < 1:
+        raise ValueError("workers must be greater than zero")
 
     queries = load_sox_queries()
     searches = {
@@ -265,11 +266,8 @@ def evaluate_sox_queries(
         else None
     )
 
-    # Start a fresh trace; each completed query is appended immediately.
-    write_trace([], trace_output)
-    write_yaml_trace([], yaml_trace_output)
-    results = []
-    for case in queries:
+    def evaluate_case(case: dict) -> dict:
+        """Evaluate one case and return its retrieval/generation metrics."""
         started = time.perf_counter()
         agent_result = None
         if tool in AGENT_BUILDERS:
@@ -301,15 +299,17 @@ def evaluate_sox_queries(
         elif mode == "full_answer":
             answer_started = time.perf_counter()
             try:
-                final_answer = generate_final_answer(llm, case["query"], retrieved)
+                final_answer = generate_final_answer(
+                    llm,
+                    case["query"],
+                    retrieved,
+                )
                 if final_answer == GENERATION_ERROR_ANSWER:
                     answer_error = "AnswerGenerationError"
             except Exception as exc:
                 final_answer = GENERATION_ERROR_ANSWER
                 answer_error = type(exc).__name__
             answer_latency_ms = (time.perf_counter() - answer_started) * 1000
-
-        latency_ms = max(0.0, total_latency_ms - answer_latency_ms)
 
         result = {
             "id": case["id"],
@@ -322,20 +322,32 @@ def evaluate_sox_queries(
             "hit": hit,
             "recall": recall,
             "reciprocal_rank": reciprocal_rank,
-            "latency_ms": latency_ms,
+            "latency_ms": max(
+                0.0,
+                total_latency_ms - answer_latency_ms,
+            ),
             "answer_latency_ms": answer_latency_ms,
         }
         if answer_error:
             result["answer_error"] = answer_error
-        results.append(result)
-        append_trace(result, trace_output)
-        write_yaml_trace(results, yaml_trace_output)
-        print(
-            f"{result['id']} | Hit={hit} | "
-            f"Recall={recall:.3f} | RR={reciprocal_rank:.3f} | "
-            f"Retrieval={latency_ms:.1f} ms | "
-            f"Answer={answer_latency_ms:.1f} ms"
-        )
+        return result
+
+    # Start a fresh trace; each completed query is appended immediately.
+    write_trace([], trace_output)
+    write_yaml_trace([], yaml_trace_output)
+    results = []
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        for result in executor.map(evaluate_case, queries):
+            results.append(result)
+            append_trace(result, trace_output)
+            write_yaml_trace(results, yaml_trace_output)
+            print(
+                f"{result['id']} | Hit={result['hit']} | "
+                f"Recall={result['recall']:.3f} | "
+                f"RR={result['reciprocal_rank']:.3f} | "
+                f"Retrieval={result['latency_ms']:.1f} ms | "
+                f"Answer={result['answer_latency_ms']:.1f} ms"
+            )
 
     print(f"\nHit: {statistics.fmean(row['hit'] for row in results):.3f}")
     print(f"Recall: {statistics.fmean(row['recall'] for row in results):.3f}")
@@ -376,13 +388,22 @@ def main() -> None:
         default="retrieve_only",
         help="retrieve only or also generate final answers",
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=8,
+        help="number of queries evaluated concurrently (default: 8)",
+    )
     args = parser.parse_args()
+    if args.workers < 1:
+        parser.error("--workers must be greater than zero")
 
     load_dotenv(ROOT / ".env")
     evaluate_sox_queries(
         tool=args.tool,
         version_name=args.version_name,
         mode=args.mode,
+        workers=args.workers,
     )
 
 
