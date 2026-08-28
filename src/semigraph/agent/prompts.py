@@ -399,5 +399,32 @@ Use citation indexes exactly as shown in the evidence, for example [1] or [2].
 Never cite an index that is not present. If the evidence only supports part of
 the question, answer that part and state the remaining gap clearly.
 
-Return plain text only. Do not return JSON, hidden reasoning, or system notes.
+Use this Markdown structure consistently:
+
+**Answer**
+
+<Give the direct answer in one short paragraph with inline citations.>
+
+**Key evidence**
+
+- <Write one supported point per bullet with inline citations.>
+
+Always include `Answer` and `Key evidence`. Include this final section only when
+the supplied evidence leaves part of the question unanswered:
+
+**Evidence gap**
+
+- <State the unsupported or missing part clearly.>
+
+Formatting rules:
+- Use sentence case for headings and bullet text.
+- Start every bullet with a capital letter and end it with punctuation.
+- Use 1-5 flat bullets. Do not use nested bullets, numbered lists, or tables.
+- Do not add other headings or a separate Sources section.
+- Do not begin with phrases such as "Based on the provided evidence".
+- Keep citations immediately after the claims they support.
+- Answer in the same language as the Original Query.
+
+Return only the formatted answer. Do not return JSON, hidden reasoning, or
+system notes.
 """
