@@ -228,18 +228,10 @@ OPTIONS {indexConfig: {`vector.dimensions`: 768, `vector.similarity_function`: '
 **Goal:** รัน Step 3 แบบครบวงจรต่อ (ticker × fiscal_year × section)
 
 **Features:**
-- **Checkpoint** — บันทึกว่า chunk ไหน extract แล้ว → resume ได้ถ้า crash (SQLite `.checkpoint.db` ใน `data/`)
+- **Single-file Pilot flow** — `scripts/pilot.py` เรียก `process_filing()` โดยตรง
 - **Error isolation** — 1 chunk fail ไม่หยุดทั้ง pipeline
-- **Rate limiting** — delay ระหว่าง LLM calls
-- **Summary report** — สรุปจำนวน nodes/rels ต่อ filing
-
-**Config:**
-```yaml
-kg:
-  max_workers: 16
-  batch_size: 5
-  checkpoint_enabled: true
-```
+- **Parallel extraction** — `ThreadPoolExecutor` ประมวลผลระดับ chunk
+- **Graph repair** — ซ่อม relationship หลัง extraction ระดับ filing
 
 ---
 
