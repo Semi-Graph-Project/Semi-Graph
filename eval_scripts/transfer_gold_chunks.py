@@ -2,17 +2,27 @@
 """Load Gold Chunk JSONL records into the controlled Neo4j database."""
 
 import json
-import os
 from pathlib import Path
-
-from dotenv import load_dotenv
-from neo4j import GraphDatabase
-
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from semigraph.config import get_config  # noqa: E402
+from semigraph.connections import get_neo4j_driver  # noqa: E402
+
+
 INPUT_FILE = ROOT / "data/neo4j/finreflectkg_gold_chunks.jsonl"
 DISTRACTOR_INPUT_FILE = ROOT / "data/neo4j/finreflectkg_distractor_820_chunks.jsonl"
-NEO4J_URI = "bolt://localhost:7690"
+
+
+def controlled_driver():
+    """Return a driver pointed at the controlled evaluation database."""
+    cfg = get_config()
+    cfg.neo4j_uri = cfg.controlled_neo4j_uri
+    return get_neo4j_driver(cfg)
 
 
 def load_jsonl(path: Path) -> list[dict]:
@@ -29,10 +39,7 @@ def write_chunks_to_neo4j(chunks: list[dict]) -> None:
     SET c += chunk
     """
 
-    with GraphDatabase.driver(
-        NEO4J_URI,
-        auth=(os.getenv("NEO4J_USER", "neo4j"), os.environ["NEO4J_PASSWORD"]),
-    ) as driver:
+    with controlled_driver() as driver:
         with driver.session() as session:
             session.run(query, chunks=chunks).consume()
 
@@ -47,22 +54,19 @@ def write_distractor() -> int:
         c.is_distractor = true
     """
 
-    with GraphDatabase.driver(
-        NEO4J_URI,
-        auth=(os.getenv("NEO4J_USER", "neo4j"), os.environ["NEO4J_PASSWORD"]),
-    ) as driver:
+    with controlled_driver() as driver:
         with driver.session() as session:
             session.run(query, chunks=chunks).consume()
     return len(chunks)
 
 
 def main() -> None:
-    load_dotenv(ROOT / ".env")
     chunks = load_jsonl(INPUT_FILE)
     write_chunks_to_neo4j(chunks)
     distractor_count = write_distractor()
-    print(f"Loaded {len(chunks)} Gold Chunks into {NEO4J_URI}")
-    print(f"Loaded {distractor_count} Distractor Chunks into {NEO4J_URI}")
+    uri = get_config().controlled_neo4j_uri
+    print(f"Loaded {len(chunks)} Gold Chunks into {uri}")
+    print(f"Loaded {distractor_count} Distractor Chunks into {uri}")
 
 
 if __name__ == "__main__":

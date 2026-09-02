@@ -21,7 +21,6 @@ from semigraph.connections import get_llm  # noqa: E402
 from semigraph.online.vector_search import vector_search as production_vector_search  # noqa: E402
 
 
-NEO4J_URI = "bolt://localhost:7690"
 VECTOR_INDEX = "gold_chunk_embedding"
 TOP_K = 9
 SOX_DATASET = ROOT / "benchmark/freezes/sox74_retrieval_ablation_v1/inputs/finreflectkg_sox_strict74.yaml"

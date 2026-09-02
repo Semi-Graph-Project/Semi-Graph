@@ -9,9 +9,6 @@ import sys
 from dotenv import load_dotenv
 import yaml
 
-from parser import ArgumentParser
-
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
@@ -21,7 +18,6 @@ from semigraph.config import get_config  # noqa: E402
 from semigraph.connections import get_neo4j_driver  # noqa: E402
 
 
-NEO4J_URI = "bolt://localhost:7688"
 SAMPLE_SIZE = 500
 RANDOM_SEED = 42
 DATASET_FILE = ROOT / "benchmark/freezes/sox74_retrieval_ablation_v1/inputs/finreflectkg_sox_strict74.yaml"
@@ -41,7 +37,7 @@ def load_gold_ids() -> set[str]:
 def fetch_non_gold_chunks(gold_ids: set[str]) -> list[dict]:
     """Fetch all Chunk properties whose IDs are not Gold IDs."""
     cfg = get_config()
-    cfg.neo4j_uri = NEO4J_URI
+    cfg.neo4j_uri = cfg.finreflectkg_neo4j_uri
     driver = get_neo4j_driver(cfg)
     try:
         with driver.session() as session:
@@ -68,8 +64,6 @@ def write_jsonl(chunks: list[dict]) -> None:
 
 
 def main() -> None:
-
-    A
     load_dotenv(ROOT / ".env")
     gold_ids = load_gold_ids()
     candidates = fetch_non_gold_chunks(gold_ids)

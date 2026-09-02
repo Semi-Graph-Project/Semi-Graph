@@ -136,6 +136,7 @@ def test_eval_synthesize_returns_exact_no_evidence_answer(monkeypatch):
 def test_vector_eval_graph_uses_production_builder(monkeypatch):
     cfg = SimpleNamespace(
         neo4j_uri="",
+        controlled_neo4j_uri="bolt://neo4j-controlled:7687",
         agent_retrieval={"vector": {}},
     )
     captured = {}
@@ -154,7 +155,7 @@ def test_vector_eval_graph_uses_production_builder(monkeypatch):
     assert captured["locked_tool"] == "vector"
     assert captured["top_k"] == 5
     assert callable(captured["synthesis"])
-    assert cfg.neo4j_uri == eval_agent.NEO4J_URI
+    assert cfg.neo4j_uri == cfg.controlled_neo4j_uri
     assert cfg.agent_retrieval["vector"]["vector_index"] == (
         eval_agent.VECTOR_INDEX
     )
@@ -199,6 +200,7 @@ def test_vector_eval_graph_runs_plan_execute_assess_and_eval_synthesis(monkeypat
         agent_max_parallel_tasks=2,
         agent_max_synthesis_chunks=10,
         neo4j_uri="",
+        controlled_neo4j_uri="bolt://neo4j-controlled:7687",
         agent_retrieval={"vector": {}},
     )
     monkeypatch.setattr(eval_agent, "get_config", lambda: cfg)

@@ -1,0 +1,140 @@
+name: semigraph-handoff
+
+x-neo4j-environment: &neo4j-environment
+  NEO4J_AUTH: neo4j/${NEO4J_PASSWORD}
+  NEO4J_PLUGINS: '["apoc","graph-data-science"]'
+  NEO4J_dbms_security_procedures_unrestricted: apoc.*,gds.*
+  NEO4J_dbms_security_procedures_allowlist: apoc.*,gds.*
+  NEO4J_dbms_security_auth__minimum__password__length: "8"
+  NEO4J_server_memory_heap_initial__size: 256M
+  NEO4J_server_memory_heap_max__size: 768M
+  NEO4J_server_memory_pagecache_size: 256M
+  NEO4J_db_tx__log_rotation_retention__policy: "false"
+  NEO4J_db_tx__log_preallocate: "false"
+
+x-neo4j-healthcheck: &neo4j-healthcheck
+  test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
+  interval: 10s
+  timeout: 5s
+  retries: 18
+  start_period: 90s
+
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  app:
+    image: ${SEMIGRAPH_APP_IMAGE}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /workspace
+    command:
+      - streamlit
+      - run
+      - app.py
+      - --server.address=0.0.0.0
+      - --server.port=8501
+      - --server.headless=true
+    env_file:
+      - .env
+    environment:
+      NEO4J_URI: bolt://neo4j-production:7687
+      PRODUCTION_NEO4J_URI: bolt://neo4j-production:7687
+      CONTROLLED_NEO4J_URI: bolt://neo4j-controlled:7687
+      FINREFLECTKG_NEO4J_URI: bolt://neo4j-finreflectkg:7687
+      POSTGRES_ADMIN_DSN: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      POSTGRES_AGENT_DSN: postgresql://${POSTGRES_AGENT_USER}:${POSTGRES_AGENT_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    volumes:
+      - .:/workspace
+    ports:
+      - "8501:8501"
+    depends_on:
+      neo4j-production:
+        condition: service_healthy
+      neo4j-controlled:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    logging: *default-logging
+
+  neo4j-production:
+    image: ${SEMIGRAPH_PRODUCTION_IMAGE}
+    environment:
+      <<: *neo4j-environment
+      NEO4J_server_memory_heap_initial__size: 512M
+      NEO4J_server_memory_heap_max__size: 1G
+      NEO4J_server_memory_pagecache_size: 512M
+    volumes:
+      - neo4j-production-data:/data
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    healthcheck: *neo4j-healthcheck
+    restart: unless-stopped
+    logging: *default-logging
+
+  neo4j-controlled:
+    image: ${SEMIGRAPH_CONTROLLED_IMAGE}
+    environment: *neo4j-environment
+    volumes:
+      - neo4j-controlled-data:/data
+    ports:
+      - "7477:7474"
+      - "7690:7687"
+    healthcheck: *neo4j-healthcheck
+    restart: unless-stopped
+    logging: *default-logging
+
+  neo4j-finreflectkg:
+    image: ${SEMIGRAPH_FINREFLECTKG_IMAGE}
+    profiles: ["extended"]
+    environment: *neo4j-environment
+    volumes:
+      - neo4j-finreflectkg-data:/data
+    ports:
+      - "7475:7474"
+      - "7688:7687"
+    healthcheck: *neo4j-healthcheck
+    restart: unless-stopped
+    logging: *default-logging
+
+  postgres:
+    image: ${SEMIGRAPH_POSTGRES_IMAGE}
+    profiles: ["extended"]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_AGENT_USER: ${POSTGRES_AGENT_USER}
+      POSTGRES_AGENT_PASSWORD: ${POSTGRES_AGENT_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    restart: unless-stopped
+    logging: *default-logging
+
+volumes:
+  neo4j-production-data:
+  neo4j-controlled-data:
+  neo4j-finreflectkg-data:
+  postgres-data:

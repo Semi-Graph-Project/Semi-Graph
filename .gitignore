@@ -18,6 +18,10 @@ data/schemas/
 data/neo4j/
 backups/
 
+# Private handoff database snapshots are published only inside GHCR images.
+docker/handoff/neo4j/snapshots/*/neo4j.dump
+docker/handoff/postgres/snapshots/*.sql.gz
+
 # Benchmark inputs are versioned; generated benchmark runs stay outside this folder.
 benchmark/runs/
 benchmark/cache/

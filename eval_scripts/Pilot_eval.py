@@ -45,7 +45,6 @@ from semigraph.ontology.nodes import GraphExtractionResult  # noqa: E402
 from semigraph.ontology.schema import FULL_ONTOLOGY  # noqa: E402
 
 
-NEO4J_URI = "bolt://localhost:7690"
 SOX_DATASET = ROOT / "benchmark/freezes/sox74_retrieval_ablation_v1/inputs/finreflectkg_sox_strict74.yaml"
 
 
@@ -117,7 +116,7 @@ def load_chunks(
 def controlled_config():
     """Return the project config pointed explicitly at the controlled database."""
     cfg = get_config()
-    cfg.neo4j_uri = NEO4J_URI
+    cfg.neo4j_uri = cfg.controlled_neo4j_uri
     return cfg
 
 
@@ -164,7 +163,7 @@ def extract_chunks(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Load controlled Chunks from Neo4j 7690 and run KG extraction"
+        description="Load controlled Chunks from Neo4j and run KG extraction"
     )
     parser.add_argument(
         "--limit",
@@ -193,7 +192,7 @@ def main() -> int:
 
     load_dotenv(ROOT / ".env")
     chunks = load_chunks(limit=args.limit, problem_gold=args.problem_gold)
-    print(f"Loaded {len(chunks)} Chunks from {NEO4J_URI}")
+    print(f"Loaded {len(chunks)} Chunks from {controlled_config().neo4j_uri}")
 
     if args.load_only:
         return 0

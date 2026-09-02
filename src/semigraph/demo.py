@@ -107,7 +107,10 @@ def get_backend_config(
     """
     selected = get_backend_corpus(corpus)
     config = deepcopy(base_config if base_config is not None else get_config())
-    config.neo4j_uri = selected.neo4j_uri
+    config.neo4j_uri = {
+        "benchmark": config.controlled_neo4j_uri,
+        "production": config.production_neo4j_uri,
+    }[selected.key]
     # The two Neo4j corpora expose the same retrieval contract with different
     # physical index names. Keep the mapping at the corpus boundary so every
     # runner (Vector and Graph seed retrieval) uses the selected backend's

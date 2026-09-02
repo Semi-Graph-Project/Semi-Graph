@@ -22,7 +22,7 @@ from semigraph.online.graph_search import graph_search as production_graph_searc
 
 def graph_search(question: str, top_k: int = 5) -> list[dict]:
     cfg = get_config()
-    cfg.neo4j_uri = "bolt://localhost:7690"
+    cfg.neo4j_uri = cfg.controlled_neo4j_uri
 
     profile = cfg.agent_retrieval["graph"]
 

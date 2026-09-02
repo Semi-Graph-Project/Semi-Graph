@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import pytest
 
 from semigraph.config import get_config
@@ -45,6 +47,19 @@ def test_get_backend_config_isolated_from_cached_config():
     ] == "gold_chunk_embedding"
     assert base_config.neo4j_uri == base_uri
     assert base_config.agent_retrieval["vector"].get("vector_index") is None
+
+
+def test_get_backend_config_uses_container_service_uris():
+    base_config = deepcopy(get_config())
+    base_config.controlled_neo4j_uri = "bolt://neo4j-controlled:7687"
+    base_config.production_neo4j_uri = "bolt://neo4j-production:7687"
+
+    assert get_backend_config(
+        "benchmark", base_config=base_config
+    ).neo4j_uri == "bolt://neo4j-controlled:7687"
+    assert get_backend_config(
+        "production", base_config=base_config
+    ).neo4j_uri == "bolt://neo4j-production:7687"
 
 
 def test_backend_corpus_accepts_descriptor_and_rejects_unknown_key():

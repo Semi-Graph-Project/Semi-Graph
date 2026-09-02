@@ -117,6 +117,15 @@ class Config:
         self.neo4j_uri: str = os.environ.get("NEO4J_URI", "")
         self.neo4j_user: str = os.environ.get("NEO4J_USER", "neo4j")
         self.neo4j_password: str = os.environ.get("NEO4J_PASSWORD", "")
+        self.production_neo4j_uri: str = os.environ.get(
+            "PRODUCTION_NEO4J_URI", "bolt://localhost:7687"
+        )
+        self.controlled_neo4j_uri: str = os.environ.get(
+            "CONTROLLED_NEO4J_URI", "bolt://localhost:7690"
+        )
+        self.finreflectkg_neo4j_uri: str = os.environ.get(
+            "FINREFLECTKG_NEO4J_URI", "bolt://localhost:7688"
+        )
 
         # --- KG Extraction ---
         kg = data.get("kg", {})

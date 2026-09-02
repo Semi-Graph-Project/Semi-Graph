@@ -31,7 +31,6 @@ from eval_scripts.eval_agent import (
     generate_final_answer,
 )
 
-NEO4J_URI = "bolt://localhost:7690"
 VECTOR_INDEX = "gold_chunk_embedding"
 TOP_K = 10
 EVALUATION_MODES = ("retrieve_only", "full_answer")
@@ -70,7 +69,7 @@ def _reciprocal_rank(retrieved_ids: list[str], gold_ids: set[str]) -> float:
 def vector_search(question: str, top_k: int = TOP_K) -> list[dict]:
     """Use the production vector_search implementation for Gold Chunks."""
     cfg = get_config()
-    cfg.neo4j_uri = NEO4J_URI
+    cfg.neo4j_uri = cfg.controlled_neo4j_uri
     return production_vector_search(
         question,
         top_k_chunks=top_k,
@@ -80,7 +79,7 @@ def vector_search(question: str, top_k: int = TOP_K) -> list[dict]:
 
 def graph_search(question: str, top_k: int = TOP_K) -> list[dict]:
     cfg = get_config()
-    cfg.neo4j_uri = NEO4J_URI
+    cfg.neo4j_uri = cfg.controlled_neo4j_uri
 
     profile = cfg.agent_retrieval["graph"]
 

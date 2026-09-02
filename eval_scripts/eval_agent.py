@@ -19,7 +19,6 @@ from semigraph.config import get_config  # noqa: E402
 from semigraph.connections import get_llm  # noqa: E402
 
 
-NEO4J_URI = "bolt://localhost:7690"
 VECTOR_INDEX = "gold_chunk_embedding"
 DEFAULT_TOP_K = 5
 EVAL_TOOLS = {"vector", "graph"}
@@ -237,7 +236,7 @@ def _build_eval_graph(
         raise ValueError("top_k must be positive")
 
     cfg = get_config()
-    cfg.neo4j_uri = NEO4J_URI
+    cfg.neo4j_uri = cfg.controlled_neo4j_uri
     if locked_tool == "vector":
         cfg.agent_retrieval["vector"]["vector_index"] = VECTOR_INDEX
     else:
