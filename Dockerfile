@@ -19,9 +19,12 @@ RUN apt-get update \
 
 COPY requirements-handoff.txt ./
 RUN python -m pip install --no-cache-dir \
-        --index-url https://download.pytorch.org/whl/cpu \
+        --index-url https://pypi.org/simple \
+        --extra-index-url https://download.pytorch.org/whl/cpu \
         torch==2.11.0+cpu \
-    && python -m pip install --no-cache-dir -r requirements-handoff.txt
+    && python -m pip install --no-cache-dir \
+        --index-url https://pypi.org/simple \
+        -r requirements-handoff.txt
 
 COPY pyproject.toml README.md ./
 COPY src ./src
