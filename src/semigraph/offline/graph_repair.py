@@ -765,32 +765,3 @@ def repair_filing_graph(
         limit=limit,
         prune_unresolved=prune_unresolved,
     )
-
-
-def repair_current_graph(
-    ticker: Optional[str] = None,
-    fiscal_year: Optional[str] = None,
-    filing_type: Optional[str] = None,
-    cfg: Optional[Config] = None,
-    driver: Optional[Driver] = None,
-    llm=None,
-    workers: int = DEFAULT_REPAIR_WORKERS,
-    chunks_per_llm_call: int = DEFAULT_CHUNKS_PER_LLM_CALL,
-    llm_error_retries: int = DEFAULT_LLM_ERROR_RETRIES,
-    limit: Optional[int] = None,
-    prune_unresolved: bool = True,
-) -> GraphRepairStats:
-    """Repair an already-extracted graph without re-running extraction."""
-    return _run_llm_repair(
-        ticker=ticker,
-        fiscal_year=fiscal_year,
-        filing_type=filing_type,
-        cfg=cfg,
-        driver=driver,
-        llm=llm,
-        workers=workers,
-        chunks_per_llm_call=chunks_per_llm_call,
-        llm_error_retries=llm_error_retries,
-        limit=limit,
-        prune_unresolved=prune_unresolved,
-    )

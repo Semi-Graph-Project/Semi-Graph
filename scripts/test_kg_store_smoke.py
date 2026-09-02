@@ -17,7 +17,7 @@ from semigraph.config import get_config
 from semigraph.connections import get_neo4j_driver
 from semigraph.offline.chunker import chunk_section
 from semigraph.offline.kg_extract import extract_chunk
-from semigraph.offline.kg_store import KGStore, init_schema, store_chunks
+from semigraph.offline.kg_store import KGStore, init_schema
 
 
 def verify_graph(driver, ticker: str, fiscal_year: str, filing_type: str = "10-K"):

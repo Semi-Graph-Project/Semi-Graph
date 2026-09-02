@@ -5,7 +5,7 @@ Pilot pipeline runner — onboard ANY ticker into the corpus end-to-end.
 One command runs the full sequence with per-chunk metrics capture:
     download (SEC EDGAR) → preprocess (HTML→MD sections) → discover →
     extract (DeepSeek + token metrics) → embed (chunks + entities + triples) →
-    verify (Neo4j counts) → report (cost + projection)
+    verify (Neo4j counts) → sync corpus config
 
 Usage:
     # Full onboarding for one ticker
@@ -55,16 +55,7 @@ FILING_TYPE = "10-K"
 LIMIT = 3            # 3 most-recent annual filings
 DELAY = 2.0          # SEC rate-limit cushion
 
-# DeepSeek pricing (USD per 1M tokens) — verify at
-# https://api-docs.deepseek.com/quick_start/pricing
-PRICE_INPUT_PER_M = 0.27
-PRICE_OUTPUT_PER_M = 1.10
-
 DIVIDER = "=" * 70
-
-
-def cost_usd(prompt_tokens: int, completion_tokens: int) -> float:
-    return (prompt_tokens * PRICE_INPUT_PER_M + completion_tokens * PRICE_OUTPUT_PER_M) / 1_000_000
 
 
 # ── Phase 1: download ─────────────────────────────────────────────────────────
@@ -310,65 +301,6 @@ def phase7_verify(ticker: str) -> None:
         d.close()
 
 
-# ── Phase 8: aggregate + projection ───────────────────────────────────────────
-
-def phase8_report(ticker: str, metrics: list[dict], remaining_docs: int = 18) -> None:
-    print(f"\n{DIVIDER}\nPHASE 8 — Aggregate + projection\n{DIVIDER}")
-    ok = [m for m in metrics if m.get("status") == "ok"]
-    fail = [m for m in metrics if m.get("status") != "ok"]
-    n = len(ok)
-    if n == 0:
-        print("  No successful chunks — abort")
-        return
-
-    sum_prompt = sum(m["prompt_tokens"] for m in ok)
-    sum_completion = sum(m["completion_tokens"] for m in ok)
-    sum_total = sum(m["total_tokens"] for m in ok)
-    sum_latency = sum(m["latency_sec"] for m in ok)
-    sum_nodes = sum(m["n_nodes"] for m in ok)
-    sum_rels = sum(m["n_relationships"] for m in ok)
-
-    avg_total = sum_total / n
-    avg_latency = sum_latency / n
-    avg_nodes = sum_nodes / n
-    avg_rels = sum_rels / n
-    total_cost = cost_usd(sum_prompt, sum_completion)
-    cost_per_chunk = total_cost / n
-
-    by_doc: dict[str, list[dict]] = {}
-    for m in ok:
-        by_doc.setdefault(f"{m['ticker']}_FY{m['fiscal_year']}", []).append(m)
-
-    print(f"\n  Per-document breakdown ({ticker}):")
-    print(f"    {'Doc':<18} {'Chunks':>7} {'PromptTok':>10} {'ComplTok':>9} "
-          f"{'TotalTok':>9} {'Cost$':>8} {'Latency_s':>10}")
-    for key in sorted(by_doc):
-        rows = by_doc[key]
-        d_prompt = sum(r["prompt_tokens"] for r in rows)
-        d_compl = sum(r["completion_tokens"] for r in rows)
-        d_lat = sum(r["latency_sec"] for r in rows)
-        print(f"    {key:<18} {len(rows):>7} {d_prompt:>10} {d_compl:>9} "
-              f"{d_prompt + d_compl:>9} {cost_usd(d_prompt, d_compl):>8.3f} {d_lat:>10.0f}")
-
-    print(f"\n  {ticker} aggregate ({n} chunks ok, {len(fail)} failed):")
-    print(f"    Avg tokens / chunk            : {avg_total:>10.1f}")
-    print(f"    Avg latency / chunk           : {avg_latency:>10.2f} s")
-    print(f"    Avg nodes / chunk             : {avg_nodes:>10.2f}")
-    print(f"    Avg relationships / chunk     : {avg_rels:>10.2f}")
-    print(f"    Total cost (DeepSeek pricing) : ${total_cost:>9.3f}")
-    print(f"    Cost per chunk                : ${cost_per_chunk:>9.5f}")
-
-    avg_chunks_per_doc = n / max(len(by_doc), 1)
-    proj_chunks = remaining_docs * avg_chunks_per_doc
-    proj_cost = proj_chunks * cost_per_chunk
-    proj_wall_8w = proj_chunks * avg_latency / 8
-
-    print(f"\n  Projection — {remaining_docs} more docs (default: 6 new companies × 3 years)")
-    print(f"    Projected chunks              : {proj_chunks:>10.0f}")
-    print(f"    Projected cost (USD)          : ${proj_cost:>9.2f}")
-    print(f"    Projected wall (8 workers)    : {proj_wall_8w/3600:>10.2f} h")
-
-
 # ── Phase 9: sync config tickers ← Neo4j (DB is source of truth) ──────────────
 
 def get_db_tickers() -> list[str]:
@@ -512,8 +444,6 @@ def main() -> int:
     ap.add_argument("--sync-reextract",action="store_true", help="Sync config.reextract_tickers <- Neo4j (Phase 9.5) and exit")
     ap.add_argument("--skip-specificity", action="store_true", help="Skip Phase 6.5 (Node Specificity compute)")
     ap.add_argument("--skip-verify", action="store_true", help="Skip Phase 7 (Neo4j count check)")
-    ap.add_argument("--projection-docs", type=int, default=18,
-                    help="Project cost/wall for N more docs (default 18 = 6 new companies × 3 years)")
     args = ap.parse_args()
 
     if args.sync_only:
@@ -525,7 +455,6 @@ def main() -> int:
     ticker = args.ticker.upper()
     cfg = get_config()
     print(f"\n{'#' * 70}\n  Pilot run — {ticker}\n{'#' * 70}")
-    print(f"  Pricing: input ${PRICE_INPUT_PER_M}/M  output ${PRICE_OUTPUT_PER_M}/M")
     print(f"  Model: {cfg.llm_model}  | Workers: {args.workers}")
     t0 = time.time()
 
@@ -546,7 +475,6 @@ def main() -> int:
     phase6_5_specificity(args.skip_specificity)
     if not args.skip_verify:
         phase7_verify(ticker)
-    phase8_report(ticker, metrics, remaining_docs=args.projection_docs)
     phase9_sync_config()   # config tickers <- Neo4j reality (includes the new ticker)
 
     if args.sync_reextract:

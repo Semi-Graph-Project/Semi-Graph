@@ -21,8 +21,6 @@ Cypher MERGE cannot parameterize the relationship type.
 """
 from __future__ import annotations
 
-from typing import Iterable
-
 from neo4j import Driver
 
 from semigraph.connections import get_neo4j_driver
@@ -392,40 +390,3 @@ class KGStore:
             "mentions": mention_count,
             "relationships": relationship_count,
         }
-
-
-# ===========================================================================
-# Convenience: store many chunks for a single filing
-# ===========================================================================
-
-
-def store_chunks(
-    pairs: Iterable[tuple[Chunk, GraphExtractionResult]],
-    driver: Driver | None = None,
-) -> dict:
-    """
-    Store a stream of (chunk, extraction_result) pairs.
-
-    Auto-creates the Document for the first chunk's (ticker, fiscal_year,
-    filing_type). Caller can pass an existing driver for connection reuse.
-
-    Returns aggregate counts: {"chunks": N, "nodes": M, "relationships": K}.
-    """
-    store = KGStore(driver=driver)
-    seen_filings: set[str] = set()
-    totals = {"chunks": 0, "nodes": 0, "relationships": 0}
-
-    try:
-        for chunk, result in pairs:
-            filing_key = _doc_key(chunk.ticker, chunk.fiscal_year, chunk.filing_type)
-            if filing_key not in seen_filings:
-                store.ensure_filing(chunk.ticker, chunk.fiscal_year, chunk.filing_type)
-                seen_filings.add(filing_key)
-            counts = store.store_extraction(chunk, result)
-            totals["chunks"] += 1
-            totals["nodes"] += counts["nodes"]
-            totals["relationships"] += counts["relationships"]
-    finally:
-        store.close()
-
-    return totals

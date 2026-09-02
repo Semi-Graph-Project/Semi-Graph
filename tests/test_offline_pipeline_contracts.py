@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+from semigraph.offline import pipeline
 from semigraph.offline.chunker import chunk_section
 from semigraph.offline.kg_store import _doc_key
 from semigraph.offline.pipeline import _filing_key
@@ -11,6 +12,7 @@ from semigraph.offline.preprocess import (
     extract_documents_streaming,
     extract_sections_10k,
 )
+from semigraph.ontology.schema import FULL_ONTOLOGY
 
 
 def test_accession_year_drives_processed_filing_year():
@@ -95,3 +97,41 @@ def test_chunk_contract_keeps_deterministic_id_and_derived_counts():
 def test_filing_and_document_keys_share_the_existing_format():
     assert _filing_key("NVDA", "2026", "10K") == "NVDA_2026_10K"
     assert _doc_key("NVDA", "2026", "10K") == "NVDA_2026_10K"
+
+
+def test_offline_extraction_uses_controlled_full_ontology_prompt(
+    monkeypatch,
+    tmp_path,
+):
+    captured = {}
+
+    def fake_extract_chunk(text, **kwargs):
+        captured["text"] = text
+        captured.update(kwargs)
+        return SimpleNamespace(nodes=[], relationships=[])
+
+    class FakeStore:
+        def store_extraction(self, chunk, result):
+            return {"nodes": 0, "relationships": 0}
+
+    monkeypatch.setattr(pipeline, "extract_chunk", fake_extract_chunk)
+    chunk = chunk_section(
+        text="The company disclosed supply-chain risks.",
+        ticker="NVDA",
+        fiscal_year="2026",
+        section="Item_1A",
+        cfg=SimpleNamespace(chunk_size=100, chunk_overlap=0),
+    )[0]
+
+    ok, counts = pipeline._process_one_chunk(
+        chunk,
+        FakeStore(),
+        llm="llm",
+        error_log_path=tmp_path / "errors.jsonl",
+    )
+
+    assert ok is True
+    assert counts == {"nodes": 0, "relationships": 0}
+    assert captured["section"] == FULL_ONTOLOGY
+    assert captured["chunk_id"] == chunk.chunk_id
+    assert captured["filer_ticker"] == "NVDA"

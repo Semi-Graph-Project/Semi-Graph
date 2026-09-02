@@ -1,41 +1,30 @@
-"""
-Offline pipeline orchestrator — chunk → extract → store across many filings.
-
-Two entry points:
-  - `process_filing(ticker, fy, filing_type)` runs one filing end-to-end with
-    chunk-level parallelism (ThreadPool). Continues on per-chunk errors and
-    appends them to log/extraction_errors.jsonl.
-  - `process_corpus(filings)` walks a list of filings, skipping those already
-    marked "done" in the checkpoint. Parallel within filing, sequential across.
-
-The checkpoint lives at data/processed/.checkpoint.json and stores per-filing
-status so re-running the pipeline resumes from where it left off.
-"""
+"""Chunk, extract, repair, and store one filing for the Pilot pipeline."""
 from __future__ import annotations
 
 import json
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
 from semigraph.config import Config, get_config
-from semigraph.connections import get_llm, get_neo4j_driver
+from semigraph.connections import get_llm
 from semigraph.offline.chunker import Chunk, chunk_filing
 from semigraph.offline.graph_repair import repair_filing_graph
 from semigraph.offline.kg_extract import extract_chunk
-from semigraph.offline.kg_store import KGStore, init_schema
+from semigraph.offline.kg_store import KGStore
+from semigraph.ontology.schema import FULL_ONTOLOGY
 
 
 # ===========================================================================
-# Result + checkpoint types
+# Result type
 # ===========================================================================
 
 
 @dataclass
 class FilingResult:
-    """Outcome of processing one filing — used both for logging and checkpoint."""
+    """Outcome of processing one filing."""
     filing_key: str
     status: str  # "done" | "partial" | "failed"
     chunks_processed: int = 0
@@ -46,37 +35,6 @@ class FilingResult:
     repair_summary: dict = field(default_factory=dict)
     elapsed_s: float = 0.0
     error: Optional[str] = None
-    completed_at: Optional[str] = None
-
-
-class Checkpoint:
-    """Per-filing checkpoint stored as JSON. Atomic save via tempfile rename."""
-
-    def __init__(self, path: Path):
-        self.path = path
-        self.data: dict = self._load()
-
-    def _load(self) -> dict:
-        if self.path.exists():
-            try:
-                return json.loads(self.path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                print(f"[checkpoint] WARN: corrupt file at {self.path}, starting fresh")
-        return {}
-
-    def save(self) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(self.data, indent=2, ensure_ascii=False), encoding="utf-8")
-        tmp.replace(self.path)
-
-    def is_done(self, filing_key: str) -> bool:
-        return self.data.get(filing_key, {}).get("status") == "done"
-
-    def mark(self, filing_key: str, result: FilingResult) -> None:
-        result.completed_at = time.strftime("%Y-%m-%dT%H:%M:%S")
-        self.data[filing_key] = asdict(result)
-        self.save()
 
 
 # ===========================================================================
@@ -124,9 +82,11 @@ def _process_one_chunk(
         chunk_metrics: list = []
         result = extract_chunk(
             chunk.text,
-            section=chunk.section,
+            section=FULL_ONTOLOGY,
             llm=llm,
             metrics_sink=chunk_metrics if metrics_sink is not None else None,
+            chunk_id=chunk.chunk_id,
+            filer_ticker=chunk.ticker,
         )
         counts = store.store_extraction(chunk, result)
         if metrics_sink is not None and chunk_metrics:
@@ -160,7 +120,7 @@ def _process_one_chunk(
 
 
 # ===========================================================================
-# Main entry points
+# Main entry point
 # ===========================================================================
 
 
@@ -296,61 +256,3 @@ def process_filing(
         )
     finally:
         store.close()
-
-
-def process_corpus(
-    filings: list[tuple[str, str, str]],
-    workers: int = 8,
-    cfg: Optional[Config] = None,
-    resume: bool = True,
-) -> list[FilingResult]:
-    """
-    Process multiple filings.
-
-    Args:
-        filings: list of (ticker, fiscal_year, filing_type) tuples
-        workers: chunk-level parallelism within each filing
-        cfg:     config; defaults to cached singleton
-        resume:  if True, skip filings that the checkpoint marks as "done"
-
-    Returns:
-        list of FilingResult — only for filings actually processed (not skipped)
-    """
-    cfg = cfg or get_config()
-    checkpoint_path = cfg.processed_dir / ".checkpoint.json"
-    checkpoint = Checkpoint(checkpoint_path)
-
-    # Init schema once before any filing
-    driver = get_neo4j_driver()
-    try:
-        init_schema(driver)
-    finally:
-        driver.close()
-
-    results: list[FilingResult] = []
-    for ticker, fiscal_year, filing_type in filings:
-        filing_key = _filing_key(ticker, fiscal_year, filing_type)
-
-        if resume and checkpoint.is_done(filing_key):
-            print(f"\n[pipeline] {filing_key}: SKIP (already done)")
-            continue
-
-        print(f"\n[pipeline] {filing_key}: START")
-        result = process_filing(
-            ticker=ticker,
-            fiscal_year=fiscal_year,
-            filing_type=filing_type,
-            workers=workers,
-            cfg=cfg,
-        )
-        checkpoint.mark(filing_key, result)
-        results.append(result)
-
-        print(f"[pipeline] {filing_key}: {result.status.upper()} "
-              f"({result.chunks_processed} ok / {result.chunks_failed} fail) "
-              f"→ {result.nodes} nodes, {result.relationships} rels "
-              f"(repair +{result.repaired_relationships}), {result.elapsed_s:.0f}s")
-        if result.error:
-            print(f"           error: {result.error}")
-
-    return results

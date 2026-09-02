@@ -10,7 +10,6 @@ requires-python = ">=3.10"
 dependencies = [
     # SEC Data
     "sec-edgar-downloader",
-    "feedparser",
     # Document Processing
     "html2text",
     "beautifulsoup4",
