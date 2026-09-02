@@ -84,6 +84,12 @@ _Avoid_: Final Answer
 การตรวจ Draft Answer เทียบกับ Original Query และหลักฐานทั้งหมดอีกครั้ง เพื่อเติม Question Point ที่มีหลักฐานรองรับแต่ตกหล่น และแก้รายละเอียดที่ผิดก่อนสร้าง Final Answer
 _Avoid_: Agent Assess, Answer reranking
 
+## Handoff Language
+
+**Advisor Handoff Package**:
+ชุดส่งมอบแบบมี version ที่ให้อาจารย์เปิด Reference Runtime เพื่อสำรวจระบบผ่าน Smoke/Demo และรัน Full Evaluation ต่อได้ โดยไม่ต้องตั้ง development environment หรือรัน Unit Test เดิม
+_Avoid_: Source ZIP, Production Deployment
+
 ## Production Research Language
 
 **Personal Workspace**:
