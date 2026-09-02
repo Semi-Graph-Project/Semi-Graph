@@ -9,7 +9,7 @@ NonEmptyText = Annotated[
     StringConstraints(strip_whitespace=True, min_length=1, strict=True),
 ]
 DEFAULT_TOP_K = 5
-MAX_PLANNED_TASKS = 5
+MAX_PLANNED_TASKS = 10
 
 
 class AssessmentDecision(str, Enum):
@@ -77,18 +77,11 @@ class PlannedTask(BaseModel):
 class PlanRouteOutput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    tasks: list[PlannedTask] = Field(
-        min_length=1,
-        max_length=MAX_PLANNED_TASKS,
-    )
+    tasks: list[PlannedTask] = Field(min_length=1)
 
     @model_validator(mode="after")
-    def validate_evidence_need_count(self) -> "PlanRouteOutput":
-        requirement_count = sum(len(task.requirements) for task in self.tasks)
-        if requirement_count > MAX_PLANNED_TASKS:
-            raise ValueError(
-                f"Plan supports at most {MAX_PLANNED_TASKS} evidence needs"
-            )
+    def limit_task_count(self) -> "PlanRouteOutput":
+        self.tasks = self.tasks[:MAX_PLANNED_TASKS]
         return self
 
 

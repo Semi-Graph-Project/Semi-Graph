@@ -10,6 +10,7 @@ from pydantic import ValidationError
 import semigraph.agent.nodes as nodes
 from semigraph.agent.contracts import (
     DEFAULT_TOP_K,
+    MAX_PLANNED_TASKS,
     EvidenceRequirement,
     PlannedTask,
     PlanRouteOutput,
@@ -84,28 +85,27 @@ def test_contract_import_does_not_load_online_modules():
     assert result.returncode == 0, result.stderr
 
 
-@pytest.mark.parametrize("task_count", [0, 6])
-def test_plan_route_output_rejects_invalid_task_count(task_count):
+def test_plan_route_output_rejects_empty_tasks():
     payload = _valid_plan_payload()
-    payload["tasks"] = [
-        deepcopy(payload["tasks"][0])
-        for _ in range(task_count)
-    ]
+    payload["tasks"] = []
 
     with pytest.raises(ValidationError):
         PlanRouteOutput.model_validate(payload)
 
 
-def test_plan_route_output_rejects_more_than_five_evidence_needs():
+def test_plan_route_output_truncates_tasks_to_limit():
     payload = _valid_plan_payload()
-    requirement = payload["tasks"][0]["requirements"][0]
-    payload["tasks"][0]["requirements"] = [
-        deepcopy(requirement)
-        for _ in range(6)
-    ]
+    task = payload["tasks"][0]
+    payload["tasks"] = [deepcopy(task) for _ in range(MAX_PLANNED_TASKS + 1)]
+    for index, planned_task in enumerate(payload["tasks"]):
+        planned_task["query"] = f"Task {index}"
 
-    with pytest.raises(ValidationError, match="at most 5 evidence needs"):
-        PlanRouteOutput.model_validate(payload)
+    plan = PlanRouteOutput.model_validate(payload)
+
+    assert len(plan.tasks) == MAX_PLANNED_TASKS
+    assert [task.query for task in plan.tasks] == [
+        f"Task {index}" for index in range(MAX_PLANNED_TASKS)
+    ]
 
 
 @pytest.mark.parametrize(
