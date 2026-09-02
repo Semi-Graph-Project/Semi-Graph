@@ -1,4 +1,6 @@
 .git
+.github
+.agents
 .env
 .env.*
 !.env.example
@@ -12,8 +14,11 @@
 analytics
 backups
 data
+docs
+handoff-assets
 log
 logs
+tests
 benchmark/cache
 benchmark/results
 benchmark/runs

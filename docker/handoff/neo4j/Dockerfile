@@ -1,6 +1,7 @@
 FROM neo4j:2025.04-community@sha256:80cc874b30cc7a5a75b76b8deb7cb652d60c7d2fa5bad639155d0bdef1a48509
 
 ARG SNAPSHOT
+LABEL org.opencontainers.image.source="https://github.com/Semi-Graph-Project/Semi-Graph"
 ENV EXTENSION_SCRIPT=/opt/semigraph/load-snapshot.sh
 
 COPY --chmod=755 load-snapshot.sh /opt/semigraph/load-snapshot.sh

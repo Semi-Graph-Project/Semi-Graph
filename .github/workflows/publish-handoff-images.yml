@@ -1,0 +1,184 @@
+name: Publish advisor handoff images
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: GHCR tag used by .env.handoff.example
+        required: true
+        default: advisor-v1
+        type: string
+      snapshot_release:
+        description: Private GitHub Release containing the four database assets
+        required: true
+        default: advisor-data-v1
+        type: string
+
+concurrency:
+  group: publish-advisor-handoff-${{ inputs.image_tag }}
+  cancel-in-progress: false
+
+jobs:
+  publish-app:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE_TAG: ${{ inputs.image_tag }}
+      REGISTRY: ghcr.io/semi-graph-project
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Validate image tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${IMAGE_TAG}" in
+            *[!A-Za-z0-9._-]*)
+              echo "image_tag contains unsupported characters" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Validate Compose profiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp .env.handoff.example .env
+          docker compose --env-file .env.handoff.example \
+            -f compose.handoff.yaml config --quiet
+          docker compose --env-file .env.handoff.example \
+            -f compose.handoff.yaml --profile comparison config --quiet
+          docker compose --env-file .env.handoff.example \
+            -f compose.handoff.yaml --profile extended config --quiet
+
+      - name: Validate Windows helper syntax
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path ./handoff.ps1),
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_ }
+            exit 1
+          }
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish application image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          build-args: PRELOAD_EMBEDDING_MODEL=1
+          tags: ${{ env.REGISTRY }}/semigraph-app:${{ env.IMAGE_TAG }}
+          cache-from: type=gha,scope=semigraph-app
+          cache-to: type=gha,mode=max,scope=semigraph-app
+
+  publish-databases:
+    name: Publish ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Production Neo4j
+            asset: production.neo4j.dump
+            destination: docker/handoff/neo4j/snapshots/production/neo4j.dump
+            context: docker/handoff/neo4j
+            file: docker/handoff/neo4j/Dockerfile
+            image: semigraph-neo4j-production
+            build_args: SNAPSHOT=production
+          - name: Controlled Neo4j
+            asset: controlled.neo4j.dump
+            destination: docker/handoff/neo4j/snapshots/controlled/neo4j.dump
+            context: docker/handoff/neo4j
+            file: docker/handoff/neo4j/Dockerfile
+            image: semigraph-neo4j-controlled
+            build_args: SNAPSHOT=controlled
+          - name: FinReflectKG Neo4j
+            asset: finreflectkg.neo4j.dump
+            destination: docker/handoff/neo4j/snapshots/finreflectkg/neo4j.dump
+            context: docker/handoff/neo4j
+            file: docker/handoff/neo4j/Dockerfile
+            image: semigraph-neo4j-finreflectkg
+            build_args: SNAPSHOT=finreflectkg
+          - name: PostgreSQL
+            asset: semigraph.postgres.sql.gz
+            destination: docker/handoff/postgres/snapshots/semigraph.sql.gz
+            context: docker/handoff/postgres
+            file: docker/handoff/postgres/Dockerfile
+            image: semigraph-postgres
+            build_args: ""
+    env:
+      GH_TOKEN: ${{ github.token }}
+      IMAGE_TAG: ${{ inputs.image_tag }}
+      SNAPSHOT_RELEASE: ${{ inputs.snapshot_release }}
+      REGISTRY: ghcr.io/semi-graph-project
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Download and verify snapshot
+        shell: bash
+        env:
+          SNAPSHOT_ASSET: ${{ matrix.asset }}
+          SNAPSHOT_DESTINATION: ${{ matrix.destination }}
+        run: |
+          set -euo pipefail
+          case "${IMAGE_TAG}" in
+            *[!A-Za-z0-9._-]*)
+              echo "image_tag contains unsupported characters" >&2
+              exit 1
+              ;;
+          esac
+          mkdir -p /tmp/semigraph-handoff
+          gh release download "${SNAPSHOT_RELEASE}" \
+            --pattern "${SNAPSHOT_ASSET}" \
+            --pattern 'SHA256SUMS' \
+            --dir /tmp/semigraph-handoff
+          (cd /tmp/semigraph-handoff && \
+            sha256sum --ignore-missing --check SHA256SUMS)
+          install -m 0644 "/tmp/semigraph-handoff/${SNAPSHOT_ASSET}" \
+            "${SNAPSHOT_DESTINATION}"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish database image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          push: true
+          build-args: ${{ matrix.build_args }}
+          tags: ${{ env.REGISTRY }}/${{ matrix.image }}:${{ env.IMAGE_TAG }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}

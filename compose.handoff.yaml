@@ -70,6 +70,49 @@ services:
     tty: true
     logging: *default-logging
 
+  comparison-demo:
+    image: ${SEMIGRAPH_APP_IMAGE}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    profiles: ["comparison"]
+    working_dir: /workspace
+    command:
+      - streamlit
+      - run
+      - Demo/Mock_Result.py
+      - --server.address=0.0.0.0
+      - --server.port=8502
+      - --server.headless=true
+    env_file:
+      - .env
+    environment:
+      NEO4J_URI: bolt://neo4j-production:7687
+      PRODUCTION_NEO4J_URI: bolt://neo4j-production:7687
+      CONTROLLED_NEO4J_URI: bolt://neo4j-controlled:7687
+      FINREFLECTKG_NEO4J_URI: bolt://neo4j-finreflectkg:7687
+      POSTGRES_ADMIN_DSN: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      POSTGRES_AGENT_DSN: postgresql://${POSTGRES_AGENT_USER}:${POSTGRES_AGENT_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    volumes:
+      - .:/workspace
+    ports:
+      - "8502:8502"
+    depends_on:
+      neo4j-production:
+        condition: service_healthy
+      neo4j-controlled:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request; urllib.request.urlopen('http://localhost:8502/_stcore/health', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+    logging: *default-logging
+
   neo4j-production:
     image: ${SEMIGRAPH_PRODUCTION_IMAGE}
     environment:

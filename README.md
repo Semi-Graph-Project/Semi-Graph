@@ -178,6 +178,23 @@ docs/                  # architecture, ADRs, specifications, and review UI
 
 ## Quick Start
 
+### Advisor handoff on Windows (Docker-first)
+
+The advisor package uses prebuilt private GHCR images, Docker named volumes,
+and a source bind mount. It does not require a local Python/Conda setup or the
+legacy unit-test workflow.
+
+```powershell
+.\handoff.ps1 setup
+.\handoff.ps1 start
+.\handoff.ps1 smoke
+```
+
+See the complete Thai guide in
+[`docs/system_manual_advisor_handoff.md`](docs/system_manual_advisor_handoff.md).
+
+The remaining instructions in this README describe the developer-native setup.
+
 ### Prerequisites
 
 - Python 3.10 or newer

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Evaluate Vector or Graph retrieval on the shared 74-query SOX set."""
+"""Evaluate Vector, Graph, Agent+Vector, or Agent+Graph on SOX74."""
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor
@@ -41,11 +41,12 @@ AGENT_BUILDERS = {
 SOX_DATASET = ROOT / "benchmark/freezes/sox74_retrieval_ablation_v1/inputs/finreflectkg_sox_strict74.yaml"
 SOX_QUERY_COUNT = 74
 TRACE_OUTPUT_TEMPLATE = ROOT / (
-    "benchmark/results/controlled_{tool}_sox74_{version_name}_{mode}.jsonl"
+    "benchmark/results/controlled_{tool}_{scope}_{version_name}_{mode}.jsonl"
 )
 YAML_TRACE_OUTPUT_TEMPLATE = ROOT / (
-    "benchmark/results/controlled_{tool}_sox74_{version_name}_{mode}.yaml"
+    "benchmark/results/controlled_{tool}_{scope}_{version_name}_{mode}.yaml"
 )
+
 
 def load_sox_queries() -> list[dict]:
     """Load the 74 SOX benchmark queries from YAML."""
@@ -56,6 +57,39 @@ def load_sox_queries() -> list[dict]:
     if len(queries) != SOX_QUERY_COUNT:
         raise ValueError(f"Expected {SOX_QUERY_COUNT} queries, got {len(queries)}")
     return queries
+
+
+def _select_queries(queries: list[dict], limit: int | None) -> list[dict]:
+    """Return the full benchmark or its first N cases for a quick smoke run."""
+    if limit is None:
+        return queries
+    if isinstance(limit, bool) or limit < 1:
+        raise ValueError("limit must be greater than zero")
+    if limit > len(queries):
+        raise ValueError(f"limit must not exceed {len(queries)}")
+    return queries[:limit]
+
+
+def _requires_llm(tool: str, mode: str, cfg) -> bool:
+    """Return whether this Eval configuration makes at least one LLM call."""
+    graph_filter = str(
+        cfg.agent_retrieval.get("graph", {}).get("triple_filter", "none")
+    )
+    return (
+        mode == "full_answer"
+        or tool in AGENT_BUILDERS
+        or (tool == "graph" and graph_filter == "llm")
+    )
+
+
+def _validate_runtime(tool: str, mode: str) -> None:
+    """Fail before an Eval starts when its configured LLM key is missing."""
+    cfg = get_config()
+    if _requires_llm(tool, mode, cfg) and not cfg.llm_api_key.strip():
+        raise RuntimeError(
+            f"{tool}/{mode} requires the API key for llm.provider="
+            f"{cfg.llm_provider!r}; set it in .env before running Eval"
+        )
 
 
 def _reciprocal_rank(retrieved_ids: list[str], gold_ids: set[str]) -> float:
@@ -76,6 +110,7 @@ def vector_search(question: str, top_k: int = TOP_K) -> list[dict]:
         cfg=cfg,
         vector_index=VECTOR_INDEX,
     )
+
 
 def graph_search(question: str, top_k: int = TOP_K) -> list[dict]:
     cfg = get_config()
@@ -225,14 +260,17 @@ def evaluate_sox_queries(
     version_name: str = "v1",
     mode: str = "retrieve_only",
     workers: int = 8,
+    limit: int | None = None,
 ) -> list[dict]:
-    """Evaluate one production retriever on the 74 SOX queries."""
+    """Evaluate one production retriever on SOX74 or a small leading subset."""
     if mode not in EVALUATION_MODES:
         raise ValueError(f"mode must be one of {EVALUATION_MODES}")
     if workers < 1:
         raise ValueError("workers must be greater than zero")
 
-    queries = load_sox_queries()
+    _validate_runtime(tool, mode)
+    queries = _select_queries(load_sox_queries(), limit)
+    scope = "sox74" if limit is None else f"sox_smoke{limit}"
     searches = {
         "vector": vector_search,
         "graph": graph_search,
@@ -243,6 +281,7 @@ def evaluate_sox_queries(
     trace_output = Path(
         str(TRACE_OUTPUT_TEMPLATE).format(
             tool=tool,
+            scope=scope,
             version_name=version_name,
             mode=mode,
         )
@@ -250,6 +289,7 @@ def evaluate_sox_queries(
     yaml_trace_output = Path(
         str(YAML_TRACE_OUTPUT_TEMPLATE).format(
             tool=tool,
+            scope=scope,
             version_name=version_name,
             mode=mode,
         )
@@ -367,7 +407,7 @@ def evaluate_sox_queries(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Evaluate Vector or Graph retrieval on the 74 SOX queries"
+        description="Evaluate four Vector/Graph/Agent modes on the 74 SOX queries"
     )
     parser.add_argument(
         "--tool",
@@ -393,9 +433,16 @@ def main() -> None:
         default=8,
         help="number of queries evaluated concurrently (default: 8)",
     )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        help="run only the first N queries for a quick smoke evaluation",
+    )
     args = parser.parse_args()
     if args.workers < 1:
         parser.error("--workers must be greater than zero")
+    if args.limit is not None and args.limit < 1:
+        parser.error("--limit must be greater than zero")
 
     load_dotenv(ROOT / ".env")
     evaluate_sox_queries(
@@ -403,6 +450,7 @@ def main() -> None:
         version_name=args.version_name,
         mode=args.mode,
         workers=args.workers,
+        limit=args.limit,
     )
 
 

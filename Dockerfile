@@ -2,6 +2,8 @@ FROM python:3.10.19-slim-bookworm
 
 ARG PRELOAD_EMBEDDING_MODEL=1
 
+LABEL org.opencontainers.image.source="https://github.com/Semi-Graph-Project/Semi-Graph"
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
