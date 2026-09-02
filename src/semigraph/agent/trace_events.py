@@ -188,7 +188,11 @@ class AgentTraceEmitter:
     def synthesis_finished(self, update: dict) -> None:
         trace = update.get("synthesis_trace") or {}
         selected_by_task = trace.get("selected_chunk_ids_by_task") or {}
-        selected_count = sum(len(ids) for ids in selected_by_task.values())
+        selected_count = len({
+            chunk_id
+            for chunk_ids in selected_by_task.values()
+            for chunk_id in chunk_ids
+        })
         self._emit(
             "synthesis",
             trace.get("status") or "complete",

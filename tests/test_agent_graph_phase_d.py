@@ -8,6 +8,7 @@ import semigraph.agent.graph as agent_graph
 import semigraph.agent.nodes as nodes
 from semigraph.agent.graph import build_agent
 from semigraph.agent.prompts import ASSESS_SYSTEM_PROMPT
+from semigraph.agent.trace_events import AgentTraceEmitter
 from semigraph.config import Config
 
 
@@ -139,6 +140,32 @@ def test_synthesis_limit_must_be_positive(tmp_path, value):
 
     with pytest.raises(ValueError, match="max_synthesis_chunks must be positive"):
         Config(config_path)
+
+
+def test_synthesis_trace_counts_unique_selected_chunks():
+    events = []
+    emitter = AgentTraceEmitter(events.append)
+
+    emitter.synthesis_finished({
+        "synthesis_trace": {
+            "status": "ok",
+            "selected_chunk_ids_by_task": {
+                "T1": ["C1", "C2"],
+                "T2": ["C2", "C3"],
+            },
+        },
+        "citation_map": [{"chunk_id": "C1"}],
+    })
+
+    assert events == [{
+        "stage": "synthesis",
+        "status": "ok",
+        "message": "Synthesized from 3 selected evidence chunk(s)",
+        "details": {
+            "selected_evidence_count": 3,
+            "citation_count": 1,
+        },
+    }]
 
 
 def test_build_agent_uses_configured_parallel_task_limit(monkeypatch):
