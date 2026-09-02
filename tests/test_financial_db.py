@@ -144,7 +144,7 @@ class TestFinancialDatabaseInitializer:
         connection_calls = []
 
         @contextmanager
-        def fake_financial_connection(*, readonly, cfg):
+        def fake_financial_connection(readonly, cfg):
             connection_calls.append((readonly, cfg))
             yield fake_conn
 

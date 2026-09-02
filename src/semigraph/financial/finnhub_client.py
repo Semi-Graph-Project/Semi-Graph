@@ -16,13 +16,13 @@ from typing import Any, Callable, Protocol
 class FinnhubAPI(Protocol):
     """The small part of the SDK used by the staging client."""
 
-    def financials_reported(self, *, symbol: str, freq: str) -> dict[str, Any]: ...
+    def financials_reported(self, symbol: str, freq: str) -> dict[str, Any]: ...
 
     def company_basic_financials(
-        self, *, symbol: str, metric: str
+        self, symbol: str, metric: str
     ) -> dict[str, Any]: ...
 
-    def quote(self, *, symbol: str) -> dict[str, Any]: ...
+    def quote(self, symbol: str) -> dict[str, Any]: ...
 
 
 def payload_sha256(payload: dict[str, Any]) -> str:
@@ -89,7 +89,6 @@ class FinnhubStagingClient:
     def __init__(
         self,
         api_key: str,
-        *,
         max_retries: int = 3,
         request_interval_seconds: float = 1.1,
         retry_backoff_seconds: float = 1.0,

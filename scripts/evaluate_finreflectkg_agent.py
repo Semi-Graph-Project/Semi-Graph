@@ -508,7 +508,7 @@ def aggregate_results(rows: list[dict[str, Any]], modes: list[str]) -> dict[str,
     return summary
 
 
-def _json_text(value: Any, *, indent: int | None = None) -> str:
+def _json_text(value: Any, indent: int | None = None) -> str:
     return json.dumps(value, ensure_ascii=False, default=str, indent=indent)
 
 

@@ -18,7 +18,7 @@ class FakeResult:
 
 
 class FakeConnection:
-    def __init__(self, *, inserted_id=42, existing_id=42):
+    def __init__(self, inserted_id=42, existing_id=42):
         self.inserted_id = inserted_id
         self.existing_id = existing_id
         self.execute_calls: list[tuple[str, tuple[object, ...] | None]] = []

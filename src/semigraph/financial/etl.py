@@ -100,7 +100,6 @@ def _normalise_tickers(values: Sequence[str]) -> set[str]:
 
 def load_graph_tickers(
     cfg: Config | None = None,
-    *,
     driver: Any | None = None,
 ) -> list[str]:
     """Load the distinct ticker universe from the configured Neo4j graph.
@@ -197,7 +196,6 @@ def validate_requested_subset(
 
 def _create_run(
     conn: Any,
-    *,
     run_id: str,
     expected_company_count: int,
     discovered_tickers: Sequence[str],
@@ -236,7 +234,6 @@ def _upsert_companies(conn: Any, tickers: Sequence[str]) -> None:
 
 def _finish_run(
     conn: Any,
-    *,
     run_id: str,
     status: RunStatus,
     successful_tickers: Sequence[str],
@@ -286,7 +283,6 @@ def _payload_reports(payload: Mapping[str, Any]) -> list[dict[str, Any]]:
 
 def _select_reports(
     payload: Mapping[str, Any],
-    *,
     limit: int,
 ) -> list[dict[str, Any]]:
     if limit <= 0:
@@ -294,7 +290,7 @@ def _select_reports(
     return select_latest_reports(_payload_reports(payload), limit=limit)
 
 
-def _upsert_fact(conn: Any, *, raw_payload_id: int, fact: CanonicalFact) -> int:
+def _upsert_fact(conn: Any, raw_payload_id: int, fact: CanonicalFact) -> int:
     params = (
         raw_payload_id,
         fact.ticker,
@@ -373,7 +369,6 @@ def _upsert_fact(conn: Any, *, raw_payload_id: int, fact: CanonicalFact) -> int:
 
 def _store_report_facts(
     conn: Any,
-    *,
     ticker: str,
     frequency: str,
     reports: Sequence[dict[str, Any]],
@@ -484,7 +479,6 @@ def _upsert_derived_metric(conn: Any, metric: DerivedMetric) -> None:
 
 def _store_annual_derived_metrics(
     conn: Any,
-    *,
     ticker: str,
     reports: Sequence[dict[str, Any]],
     records: Sequence[_FactRecord],
@@ -529,7 +523,6 @@ def _unix_timestamp(value: Any) -> datetime | None:
 
 def _store_vendor_metrics(
     conn: Any,
-    *,
     ticker: str,
     raw_payload_id: int,
     payload: Mapping[str, Any],
@@ -569,7 +562,6 @@ def _store_vendor_metrics(
 
 def _store_market_snapshot(
     conn: Any,
-    *,
     ticker: str,
     raw_payload_id: int,
     payload: Mapping[str, Any],
@@ -617,7 +609,6 @@ def _store_market_snapshot(
 
 
 def _process_ticker(
-    *,
     cfg: Config,
     run_id: str,
     ticker: str,
@@ -724,7 +715,6 @@ def _failure(exc: Exception) -> dict[str, str]:
 
 
 def run_financial_etl(
-    *,
     cfg: Config | None = None,
     only_tickers: Sequence[str] | None = None,
     client: FinnhubStagingClient | Any | None = None,

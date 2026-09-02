@@ -51,7 +51,6 @@ def _merge_ids(*inputs: _ResolvedInput | None) -> list[int]:
 
 
 def _derived(
-    *,
     ticker: str,
     fiscal_year: int,
     period_end: date,
@@ -78,7 +77,6 @@ def _derived(
 
 
 def _safe_ratio_resolved(
-    *,
     ticker: str,
     fiscal_year: int,
     period_end: date,
@@ -137,7 +135,6 @@ def _safe_ratio_resolved(
 
 
 def safe_ratio(
-    *,
     ticker: str,
     fiscal_year: int,
     period_end: date,
@@ -162,7 +159,6 @@ def safe_ratio(
 
 
 def _missing_amount_metric(
-    *,
     ticker: str,
     fiscal_year: int,
     period_end: date,
@@ -184,7 +180,6 @@ def _missing_amount_metric(
 
 
 def derive_fcf(
-    *,
     ticker: str,
     fiscal_year: int,
     period_end: date,
@@ -239,7 +234,6 @@ def _difference(
 
 
 def _growth_ratio(
-    *,
     ticker: str,
     fiscal_year: int,
     period_end: date,
@@ -298,7 +292,6 @@ def _average(
 
 
 def _average_ratio(
-    *,
     ticker: str,
     fiscal_year: int,
     period_end: date,
@@ -346,7 +339,6 @@ def _average_ratio(
 
 
 def derive_annual_metrics(
-    *,
     ticker: str,
     fiscal_year: int,
     period_end: date,

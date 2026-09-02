@@ -358,7 +358,6 @@ def _run_ppr_rows(
     session,
     graph_name: str,
     weighted_seed_ids: list[tuple[int, float]],
-    *,
     damping: float,
     max_iterations: int,
     seed_weight_mode: SeedWeightMode,

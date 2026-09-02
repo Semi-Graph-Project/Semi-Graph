@@ -46,12 +46,11 @@ def _validate_dimensions(
 
 def upsert_raw_payload(
     conn: Any,
-    *,
     run_id: str,
     ticker: str,
     endpoint: str,
-    frequency: str = "none",
     payload: dict[str, Any],
+    frequency: str = "none",
 ) -> int:
     """Insert a raw response once and link it to ``run_id``.
 

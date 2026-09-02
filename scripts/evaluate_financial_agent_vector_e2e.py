@@ -77,7 +77,6 @@ class NumpyFinancialAgentRetriever:
 
     def __init__(
         self,
-        *,
         corpus_path: Path,
         cache_path: Path,
         top_k: int,
@@ -264,7 +263,6 @@ def _mean(rows: list[dict[str, Any]], field: str) -> float | None:
 
 def build_vector_summary(
     results: list[dict[str, Any]],
-    *,
     dataset: Path,
     corpus: Path,
     top_k: int,

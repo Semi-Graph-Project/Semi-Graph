@@ -157,7 +157,6 @@ def _relationship_compatible(rel_type: str, source_type: str, target_type: str) 
 
 def _fetch_repair_chunks(
     driver: Driver,
-    *,
     ticker: Optional[str] = None,
     fiscal_year: Optional[str] = None,
     filing_type: Optional[str] = None,
@@ -270,7 +269,7 @@ def _relationship_guide_text() -> str:
     return "\n".join(lines)
 
 
-def _build_llm_batch_prompt(chunks: list[RepairChunk], *, filer_name: str) -> str:
+def _build_llm_batch_prompt(chunks: list[RepairChunk], filer_name: str) -> str:
     chunk_blocks = []
     for chunk in chunks:
         id_by_eid = {entity.eid: f"E{i + 1}" for i, entity in enumerate(chunk.entities)}
@@ -351,7 +350,6 @@ Chunks:
 def _validate_llm_relationships(
     chunk: RepairChunk,
     payload: dict,
-    *,
     method: str,
     run_id: str,
     created_at: str,
@@ -446,7 +444,6 @@ def _validate_llm_relationships(
 
 def _repair_chunk_batch(
     chunks: list[RepairChunk],
-    *,
     llm,
     filer_name: str,
     method: str,
@@ -499,7 +496,7 @@ def _repair_chunk_batch(
         return [], {"llm_error": 1}, 0, f"{type(exc).__name__}: {exc}"
 
 
-def _write_repair_rows(driver: Driver, rows: list[dict], *, run_id: str) -> dict[str, int]:
+def _write_repair_rows(driver: Driver, rows: list[dict], run_id: str) -> dict[str, int]:
     created_by_rel: dict[str, int] = {}
     rows_by_rel: dict[str, list[dict]] = {}
     for row in rows:
@@ -529,7 +526,6 @@ def _write_repair_rows(driver: Driver, rows: list[dict], *, run_id: str) -> dict
 
 def _prune_zero_informative_entities(
     driver: Driver,
-    *,
     ticker: Optional[str] = None,
     fiscal_year: Optional[str] = None,
     filing_type: Optional[str] = None,
@@ -587,7 +583,6 @@ def _prune_zero_informative_entities(
 
 
 def _run_llm_repair(
-    *,
     ticker: Optional[str] = None,
     fiscal_year: Optional[str] = None,
     filing_type: Optional[str] = None,
@@ -747,7 +742,6 @@ def repair_filing_graph(
     ticker: str,
     fiscal_year: str,
     filing_type: str = "10-K",
-    *,
     cfg: Optional[Config] = None,
     driver: Optional[Driver] = None,
     llm=None,
@@ -774,7 +768,6 @@ def repair_filing_graph(
 
 
 def repair_current_graph(
-    *,
     ticker: Optional[str] = None,
     fiscal_year: Optional[str] = None,
     filing_type: Optional[str] = None,

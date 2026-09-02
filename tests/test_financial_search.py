@@ -224,7 +224,6 @@ class FakeBackend:
     def query(
         self,
         spec: FinancialQuerySpec,
-        *,
         top_k: int = 5,
     ) -> FinancialQueryResult:
         self.calls.append(spec)
@@ -248,7 +247,7 @@ def patch_backend(monkeypatch):
         lambda cfg=None: fake,
     )
 
-    def fake_parser(query, *, tickers, cfg):
+    def fake_parser(query, tickers, cfg):
         return FinancialQuerySpec(
             query=query,
             tickers=tickers,
@@ -281,7 +280,7 @@ class TestOrchestrator:
         patch_backend,
         monkeypatch,
     ):
-        def unsupported_parser(query, *, tickers, cfg):
+        def unsupported_parser(query, tickers, cfg):
             raise UnsupportedFinancialQuery("EBITDA is not supported")
 
         monkeypatch.setattr(
@@ -373,7 +372,7 @@ class TestOrchestrator:
         )
         monkeypatch.setattr(
             "semigraph.online.financial_search._build_financial_query_spec",
-            lambda query, *, tickers, cfg: FinancialQuerySpec(
+            lambda query, tickers, cfg: FinancialQuerySpec(
                 query=query,
                 tickers=tickers,
                 metrics=["current_price"],

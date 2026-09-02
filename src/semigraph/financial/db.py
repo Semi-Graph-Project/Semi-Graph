@@ -12,7 +12,6 @@ from semigraph.config import Config, get_config
 
 @contextmanager
 def financial_connection(
-    *,
     readonly: bool,
     cfg: Config | None = None,
 ) -> Iterator[Connection]:

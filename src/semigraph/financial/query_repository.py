@@ -58,7 +58,6 @@ LIMIT %(limit)s
 
 def _clean_values(
     values: Sequence[str],
-    *,
     name: str,
     uppercase: bool = False,
 ) -> list[str]:
@@ -95,7 +94,6 @@ def _rows(result: Any) -> list[dict[str, Any]]:
 
 
 def query_periodic_metrics(
-    *,
     tickers: Sequence[str],
     metrics: Sequence[str],
     frequency: str = "annual",
@@ -133,7 +131,6 @@ def query_periodic_metrics(
 
 
 def query_market_metrics(
-    *,
     tickers: Sequence[str],
     metrics: Sequence[str],
     limit: int = 50,

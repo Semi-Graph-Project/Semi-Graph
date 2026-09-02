@@ -40,7 +40,7 @@ def _use_color() -> bool:
     ) and "NO_COLOR" not in __import__("os").environ
 
 
-def c_print(text: str, *, color: str | None = None, bold: bool = False, dim: bool = False, end: str = "\n") -> None:
+def c_print(text: str, color: str | None = None, bold: bool = False, dim: bool = False, end: str = "\n") -> None:
     if _use_color() and (color or bold or dim):
         prefix = ""
         if bold:

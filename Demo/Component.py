@@ -161,7 +161,6 @@ def render_topbar():
 def render_comparison_workspace(
     query=None,
     live_results=None,
-    *,
     histories=None,
     corpus=None,
     container=None,
@@ -324,6 +323,9 @@ def _build_running_body(configuration, query, result=None, history=None):
                 raw_events=group["raw_events"],
                 is_active=index == len(trace_groups),
                 graph=graph_trace,
+                detail_id=(
+                    f"trace-detail-{configuration['key']}-running-{index}"
+                ),
             )
             for index, group in enumerate(trace_groups, start=1)
         )
@@ -333,6 +335,7 @@ def _build_running_body(configuration, query, result=None, history=None):
             current_event,
             is_active=True,
             graph=graph_trace,
+            detail_id=f"trace-detail-{configuration['key']}-running-1",
         )
     thinking_message = "".join(
         (
@@ -427,7 +430,13 @@ def _build_unconnected_body(configuration, query, history=None):
     )
 
 
-def _build_completed_exchange(configuration, query, result, is_current=True):
+def _build_completed_exchange(
+    configuration,
+    query,
+    result,
+    is_current=True,
+    exchange_id="current",
+):
     answer = str(result.get("answer") or "No answer returned.")
     answer_html = _render_answer_markdown(answer)
     citations = list(result.get("citations") or [])
@@ -454,6 +463,9 @@ def _build_completed_exchange(configuration, query, result, is_current=True):
             group["event"],
             raw_events=group["raw_events"],
             graph=graph_trace,
+            detail_id=(
+                f"trace-detail-{configuration['key']}-{exchange_id}-{index}"
+            ),
         )
         for index, group in enumerate(trace_groups, start=1)
     )
@@ -553,7 +565,7 @@ def _build_user_message(query):
 
 def _build_history_exchanges(configuration, history=None):
     exchanges = []
-    for item in history or []:
+    for history_index, item in enumerate(history or [], start=1):
         if not isinstance(item, dict):
             continue
         past_query = item.get("query")
@@ -566,6 +578,7 @@ def _build_history_exchanges(configuration, history=None):
                 past_query,
                 past_result,
                 is_current=False,
+                exchange_id=f"history-{history_index}",
             )
         )
     return "".join(exchanges)
@@ -851,19 +864,21 @@ def _trace_detail_items(event):
     return [
         (
             TRACE_FIELD_LABELS.get(key, key.replace("_", " ").title()),
-            _format_trace_value(values[key]),
+            _format_trace_value(values[key], markdown_list=key == "tasks"),
         )
         for key in ordered_keys[:8]
     ]
 
 
-def _format_trace_value(value):
+def _format_trace_value(value, markdown_list=False):
     if isinstance(value, bool):
         return "Yes" if value else "No"
     if isinstance(value, float):
         return f"{value:.3f}".rstrip("0").rstrip(".")
     if isinstance(value, (list, tuple)):
         if all(isinstance(item, (str, int, float, bool)) for item in value):
+            if markdown_list:
+                return "\n".join(f"- {item}" for item in value)
             preview = ", ".join(str(item) for item in value[:5])
             remaining = len(value) - 5
             return f"{preview} +{remaining} more" if remaining > 0 else preview
@@ -919,11 +934,8 @@ def _build_graph_triple_list(triples):
     return '<div class="trace-triple-list">' + "".join(rows) + '</div>'
 
 
-def _build_graph_trace_details(event, raw_events):
+def _build_graph_trace_detail_grid(event):
     stage = str(event.get("stage") or "")
-    if stage == "synthesis":
-        return ""
-
     details = event.get("details")
     details = details if isinstance(details, dict) else {}
     parameters = event.get("parameters")
@@ -958,7 +970,7 @@ def _build_graph_trace_details(event, raw_events):
         detail_grid += (
             '<div class="trace-detail-item trace-detail-item-wide">'
             '<dt>Triples</dt>'
-            f"{_build_graph_triple_list(triples)}</div>"
+            f"<dd>{_build_graph_triple_list(triples)}</dd></div>"
         )
         field_count = 3
     elif stage == "personalized_pagerank":
@@ -1011,7 +1023,26 @@ def _build_graph_trace_details(event, raw_events):
         )
         field_count = 2
     else:
-        return ""
+        return None
+    return detail_grid, f"{field_count} KEY FIELDS"
+
+
+def _build_trace_details(event, raw_events, detail_id, graph=False):
+    graph_details = _build_graph_trace_detail_grid(event) if graph else None
+    if graph_details:
+        detail_grid, field_label = graph_details
+    else:
+        detail_items = _trace_detail_items(event)
+        detail_grid = "".join(
+            '<div class="trace-detail-item">'
+            f"<dt>{html.escape(label)}</dt>"
+            f"<dd>{html.escape(value)}</dd>"
+            "</div>"
+            for label, value in detail_items
+        )
+        field_label = (
+            f"{len(detail_items)} KEY FIELDS" if detail_items else "RAW EVENT"
+        )
 
     raw_payload = raw_events[0] if len(raw_events) == 1 else {
         "stage": event.get("stage"),
@@ -1020,53 +1051,49 @@ def _build_graph_trace_details(event, raw_events):
     raw_json = html.escape(
         json.dumps(raw_payload, ensure_ascii=False, indent=2, default=str)
     )
-    return (
-        '<details class="trace-detail-panel">'
-        '<summary><span>VIEW DETAILS</span>'
-        f"<small>{field_count} KEY FIELDS</small></summary>"
-        '<div class="trace-detail-content">'
-        f'<dl class="trace-detail-grid">{detail_grid}</dl>'
-        '<details class="raw-json-disclosure">'
-        '<summary>RAW JSON</summary>'
-        f"<pre>{raw_json}</pre>"
-        '</details></div></details>'
-    )
-
-
-def _build_trace_details(event, raw_events, graph=False):
-    if graph:
-        return _build_graph_trace_details(event, raw_events)
-    detail_items = _trace_detail_items(event)
-    detail_grid = "".join(
-        '<div class="trace-detail-item">'
-        f"<dt>{html.escape(label)}</dt>"
-        f"<dd>{html.escape(value)}</dd>"
-        "</div>"
-        for label, value in detail_items
-    )
-    raw_payload = raw_events[0] if len(raw_events) == 1 else {
-        "stage": event.get("stage"),
-        "events": raw_events,
-    }
-    raw_json = html.escape(
-        json.dumps(raw_payload, ensure_ascii=False, indent=2, default=str)
-    )
-    field_label = f"{len(detail_items)} KEY FIELDS" if detail_items else "RAW EVENT"
     grid_markup = (
         f'<dl class="trace-detail-grid">{detail_grid}</dl>'
-        if detail_items
+        if detail_grid
         else ""
     )
+    safe_id = html.escape(detail_id, quote=True)
+    title_id = f"{safe_id}-title"
+    status_class, status_label = _trace_status(event)
+    duration = _trace_duration(event, raw_events)
+    duration_markup = (
+        f'<time>{html.escape(duration)}</time>' if duration else ""
+    )
     return (
-        '<details class="trace-detail-panel">'
-        '<summary><span>VIEW DETAILS</span>'
-        f"<small>{field_label}</small></summary>"
-        '<div class="trace-detail-content">'
+        '<button type="button" class="trace-detail-trigger" '
+        f'popovertarget="{safe_id}" aria-haspopup="dialog">'
+        '<span>VIEW DETAILS</span>'
+        f"<small>{field_label}</small></button>"
+        f'<section id="{safe_id}" class="trace-detail-modal" popover="auto" '
+        f'role="dialog" aria-labelledby="{title_id}">'
+        '<div class="trace-modal-header">'
+        '<div class="trace-modal-title">'
+        '<span class="trace-modal-eyebrow">TRACE DETAILS</span>'
+        f'<h3 id="{title_id}">'
+        f"{html.escape(_trace_stage_label(event, graph=graph))}</h3>"
+        '</div><div class="trace-modal-meta">'
+        f'<span class="trace-modal-status trace-status-{status_class}">'
+        f"{status_label}</span>{duration_markup}"
+        '<button type="button" class="trace-modal-close" '
+        f'popovertarget="{safe_id}" popovertargetaction="hide" '
+        'aria-label="Close trace details">&times;</button>'
+        '</div></div>'
+        '<div class="trace-modal-body">'
+        '<div class="trace-modal-summary">'
+        '<span>STEP SUMMARY</span>'
+        f"<p>{html.escape(_trace_label(event))}</p></div>"
         f"{grid_markup}"
-        '<details class="raw-json-disclosure">'
-        "<summary>RAW JSON</summary>"
-        f"<pre>{raw_json}</pre>"
-        "</details></div></details>"
+        '<section class="trace-raw-json" aria-label="Raw trace event">'
+        '<div class="trace-modal-section-title">'
+        '<span>RAW EVENT</span><small>JSON</small></div>'
+        f"<pre>{raw_json}</pre></section>"
+        '</div><div class="trace-modal-footer">'
+        '<span>Press ESC or click outside to close</span>'
+        '</div></section>'
     )
 
 
@@ -1076,8 +1103,10 @@ def _build_trace_row(
     raw_events=None,
     is_active=False,
     graph=False,
+    detail_id=None,
 ):
     raw_events = list(raw_events or [event])
+    detail_id = detail_id or f"trace-detail-{event.get('stage', 'trace')}-{index}"
     status_class, status_label = _trace_status(event)
     active_class = " is-active" if is_active else ""
     duration = _trace_duration(event, raw_events)
@@ -1093,7 +1122,7 @@ def _build_trace_row(
         f'<span class="trace-status-pill">{status_label}</span>'
         f"{duration_markup}</span></div>"
         f"<p>{html.escape(_trace_label(event))}</p>"
-        f"{_build_trace_details(event, raw_events, graph=graph)}"
+        f"{_build_trace_details(event, raw_events, detail_id, graph=graph)}"
         "</div></div>"
     )
 

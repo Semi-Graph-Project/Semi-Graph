@@ -29,7 +29,6 @@ class FinancialBackend(Protocol):
     def query(
         self,
         spec: FinancialQuerySpec,
-        *,
         top_k: int = 5,
     ) -> FinancialQueryResult:
         ...
@@ -37,7 +36,6 @@ class FinancialBackend(Protocol):
 
 def row_to_financial_chunk(
     row: Mapping[str, Any],
-    *,
     rank: int,
 ) -> dict[str, Any]:
     """Convert one curated-view row into the retriever chunk contract."""
@@ -102,7 +100,6 @@ class PostgreSQLBackend:
     def query(
         self,
         spec: FinancialQuerySpec,
-        *,
         top_k: int = 5,
     ) -> FinancialQueryResult:
         if isinstance(top_k, bool) or not isinstance(top_k, int) or top_k < 1:

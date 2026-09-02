@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import asdict, dataclass, field
+from enum import Enum
 from time import perf_counter
 from typing import Any, Literal
 from uuid import uuid4
@@ -17,14 +18,16 @@ from semigraph.trace import TRACE_STORE, TraceCallback, notify_trace
 
 
 ComparisonStatus = Literal["waiting", "running", "complete", "error"]
-ComparisonMode = Literal["vector", "graph", "agent_vector", "agent_graph"]
 
-COMPARISON_MODES: tuple[ComparisonMode, ...] = (
-    "vector",
-    "graph",
-    "agent_vector",
-    "agent_graph",
-)
+
+class ComparisonMode(str, Enum):
+    VECTOR = "vector"
+    GRAPH = "graph"
+    AGENT_VECTOR = "agent_vector"
+    AGENT_GRAPH = "agent_graph"
+
+
+COMPARISON_MODES: tuple[str, ...] = tuple(mode.value for mode in ComparisonMode)
 
 
 @dataclass(frozen=True, slots=True)
@@ -238,6 +241,7 @@ def run_comparison(
     started_at = perf_counter()
     active_run_id = run_id or uuid4().hex
     trace_started = False
+    mode_value = mode.value if isinstance(mode, ComparisonMode) else str(mode)
 
     def emit(event: dict[str, Any], message: str | None = None) -> None:
         payload = dict(event)
@@ -252,8 +256,11 @@ def run_comparison(
         return result
 
     try:
-        if mode not in COMPARISON_MODES:
-            raise ValueError(f"Unknown comparison mode: {mode!r}")
+        try:
+            selected_mode = ComparisonMode(mode)
+        except (TypeError, ValueError):
+            raise ValueError(f"Unknown comparison mode: {mode!r}") from None
+        mode_value = selected_mode.value
         if not isinstance(query, str) or not query.strip():
             raise ValueError("query must not be empty")
         if top_k is not None and top_k < 1:
@@ -270,7 +277,7 @@ def run_comparison(
         )
         TRACE_STORE.start(
             active_run_id,
-            mode=str(mode),
+            mode=mode_value,
             query=query.strip(),
             corpus=selected.key,
         )
@@ -285,19 +292,19 @@ def run_comparison(
         )
         clean_query = query.strip()
 
-        if mode in {"vector", "graph"}:
+        if selected_mode in {ComparisonMode.VECTOR, ComparisonMode.GRAPH}:
             retriever = (
                 agent_tools.agent_vector_search
-                if mode == "vector"
+                if selected_mode is ComparisonMode.VECTOR
                 else agent_tools.agent_graph_search
             )
             emit(
                 {
                     "stage": "retrieval",
                     "status": "running",
-                    "retriever": mode,
+                    "retriever": mode_value,
                 },
-                f"Searching evidence with {mode} retrieval",
+                f"Searching evidence with {mode_value} retrieval",
             )
             retrieved = retriever(
                 clean_query,
@@ -329,7 +336,7 @@ def run_comparison(
             synthesis = nodes.synthesize_attempts_node(
                 _direct_synthesis_state(
                     clean_query,
-                    mode,
+                    mode_value,
                     list(retrieved.get("chunks") or []),
                     dict(retrieved.get("trace") or {}),
                 ),
@@ -354,7 +361,11 @@ def run_comparison(
             )
             return finish(result)
 
-        locked_tool = "vector" if mode == "agent_vector" else "graph"
+        locked_tool = (
+            "vector"
+            if selected_mode is ComparisonMode.AGENT_VECTOR
+            else "graph"
+        )
         agent = build_agent(
             locked_tool=locked_tool,
             top_k=effective_top_k,
@@ -375,7 +386,7 @@ def run_comparison(
         if not trace_started:
             TRACE_STORE.start(
                 active_run_id,
-                mode=str(mode),
+                mode=mode_value,
                 query=str(query),
                 corpus=(
                     corpus.key

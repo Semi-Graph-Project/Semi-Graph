@@ -140,7 +140,6 @@ def _financial_intent_schema() -> dict[str, Any]:
 
 def _intent_messages(
     query: str,
-    *,
     tickers: list[str],
     validation_feedback: str | None,
 ) -> list[dict[str, str]]:
@@ -206,7 +205,6 @@ Financial intent JSON schema:
 
 def _build_financial_query_spec(
     query: str,
-    *,
     tickers: list[str],
     cfg: Config,
 ) -> FinancialQuerySpec:
@@ -464,7 +462,6 @@ def _get_backend(
 
 def _empty_result(
     reason: str,
-    *,
     unsupported_reason: str | None = None,
 ) -> dict[str, Any]:
     result = {
@@ -482,7 +479,7 @@ def _empty_result(
     return result
 
 
-def _error_result(exc: Exception, *, stage: str) -> dict[str, Any]:
+def _error_result(exc: Exception, stage: str) -> dict[str, Any]:
     return {
         "chunks": [],
         "trace": {

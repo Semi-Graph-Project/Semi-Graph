@@ -20,7 +20,6 @@ from semigraph.financial.normalize import (
 
 
 def _report(
-    *,
     year: int = 2025,
     quarter: int = 0,
     start_date: str = "2024-01-29",
@@ -50,7 +49,7 @@ def _report(
     }
 
 
-def _row(concept: str, value, *, label: str | None = None, unit: str = "USD"):
+def _row(concept: str, value, label: str | None = None, unit: str = "USD"):
     return {
         "concept": concept,
         "label": label or concept,

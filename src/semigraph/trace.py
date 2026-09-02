@@ -39,7 +39,6 @@ class TraceStore:
     def start(
         self,
         run_id: str,
-        *,
         mode: str,
         query: str,
         corpus: str,

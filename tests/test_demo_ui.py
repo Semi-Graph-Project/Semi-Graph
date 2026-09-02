@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 from Demo import Component
@@ -179,9 +180,11 @@ def test_running_result_renders_live_trace_and_current_step():
     assert "CURRENT STEP" in markup
     assert "Searching evidence with vector retrieval" in markup
     assert 'class="trace-event-row trace-status-running is-active"' in markup
-    assert '<details class="trace-detail-panel">' in markup
+    assert 'class="trace-detail-trigger"' in markup
+    assert 'class="trace-detail-modal" popover="auto"' in markup
+    assert '<details class="trace-detail-panel">' not in markup
     assert "Vector index" in markup
-    assert "RAW JSON" in markup
+    assert "RAW EVENT" in markup
     assert "gold_chunk_embedding" in markup
 
 
@@ -396,16 +399,67 @@ def test_completed_trace_uses_readable_details_before_raw_json():
     )
 
     assert "Graph seed selection" in markup
-    assert '<details class="trace-detail-panel">' in markup
+    assert 'class="trace-detail-trigger"' in markup
+    assert 'class="trace-detail-modal" popover="auto"' in markup
+    assert '<details class="trace-detail-panel">' not in markup
     assert '<dl class="trace-detail-grid">' in markup
     assert "Seed Mode" in markup
     assert "Top-K Triple" in markup
     assert "VIEW DETAILS" in markup
-    assert "RAW JSON" in markup
+    assert "RAW EVENT" in markup
+    assert '<div class="trace-modal-footer">' in markup
     assert "Selected 2 graph seeds" in markup
     assert "seed_count" in markup
     assert "Intel" in markup
-    assert ".raw-json-disclosure pre" in CUSTOM_CSS
+    assert ".trace-raw-json pre" in CUSTOM_CSS
+
+
+def test_plan_tasks_render_as_separate_markdown_lines_in_trace_modal():
+    markup = Component._build_trace_row(
+        1,
+        {
+            "stage": "plan",
+            "status": "complete",
+            "message": "Created 2 retrieval tasks",
+            "details": {
+                "tasks": [
+                    "T1: Find Intel product evidence",
+                    "T2: Find AMD competition evidence",
+                ],
+            },
+        },
+    )
+
+    assert "Task plan" in markup
+    assert (
+        "- T1: Find Intel product evidence\n"
+        "- T2: Find AMD competition evidence"
+    ) in markup
+    assert "white-space: pre-line;" in CUSTOM_CSS
+
+
+def test_trace_modal_targets_stay_unique_across_chat_history():
+    result = {
+        "status": "complete",
+        "answer": "Answer",
+        "citations": [],
+        "trace": [{"stage": "plan", "status": "complete"}],
+    }
+
+    markup = Component._build_live_result_body(
+        Component.CONFIGURATIONS[0],
+        "Current question",
+        result,
+        [{"query": "Earlier question", "result": result}],
+    )
+
+    modal_ids = re.findall(r'<section id="(trace-detail-[^"]+)"', markup)
+    targets = re.findall(r'popovertarget="(trace-detail-[^"]+)"', markup)
+
+    assert len(modal_ids) == 2
+    assert len(modal_ids) == len(set(modal_ids))
+    assert set(targets) == set(modal_ids)
+    assert all(targets.count(modal_id) == 2 for modal_id in modal_ids)
 
 
 def test_citations_and_trace_use_readable_contrast_and_type():
@@ -458,7 +512,7 @@ def test_trace_timeline_collapses_adjacent_stage_transitions():
     assert "1.4s" in markup
     assert "Candidate budget" in markup
     assert "Candidates" in markup
-    assert "RAW JSON" in markup
+    assert "RAW EVENT" in markup
 
 
 def test_agent_trace_keeps_parallel_tasks_separate_and_shows_retry_query():

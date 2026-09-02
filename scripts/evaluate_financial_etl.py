@@ -108,7 +108,6 @@ def _with_source_query(url: str) -> str:
 
 def fetch_sec_bytes(
     url: str,
-    *,
     cache_dir: Path,
     user_agent: str,
     delay: float,
@@ -177,7 +176,6 @@ def latest_run_id(conn: Any, target_count: int) -> str:
 
 def load_internal_audit(
     conn: Any,
-    *,
     run_id: str,
     tickers: list[str],
 ) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, dict[str, Any]]]:
@@ -347,7 +345,6 @@ def filing_archive_urls(cik: int, accession: str) -> tuple[str, str]:
 
 
 def download_xbrl_package(
-    *,
     cik: int,
     accession: str,
     cache_dir: Path,
@@ -542,7 +539,6 @@ def to_decimal(value: Any) -> Decimal | None:
 
 
 def compare_filing(
-    *,
     ticker: str,
     cik: int,
     filing: dict[str, str],

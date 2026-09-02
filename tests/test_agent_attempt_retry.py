@@ -191,7 +191,6 @@ def test_context_validator_rejects_accept_with_uncovered_requirement():
 
 def _attempt(
     query: str,
-    *,
     tool: str = "graph",
     chunks: list[str] | None = None,
     accepted: list[str] | None = None,

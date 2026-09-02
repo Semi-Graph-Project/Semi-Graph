@@ -12,9 +12,6 @@ from semigraph.offline.embeddings import get_embedding_model
 from semigraph.online.vector_search import DEFAULT_VECTOR_INDEX, vector_search
 
 
-# Cypher: $types is either NULL (no filter) or a non-empty LIST<STRING> from
-# the FinReflectKG ontology (e.g. ['ORG', 'PRODUCT']). The NULL branch short-
-# circuits the IN check so we still get one query plan covering both cases.
 _CYPHER_SEED_QUERY = """
 CALL db.index.vector.queryNodes('entity_embedding', $top_k, $vec)
 YIELD node, score
@@ -348,25 +345,3 @@ def query_to_hybrid_seeds(
           f"-> {len(merged)} unique seeds")
     return sorted(merged.values(), key=lambda s: -s["similarity"])
 
-
-if __name__ == "__main__":
-    def _show(label: str, seeds: list[dict]) -> None:
-        print(f"\n{label} → {len(seeds)} seeds:")
-        for s in seeds:
-            print(f"  sim={s['similarity']:.4f}  spec={s['specificity']:.3f}  "
-                  f"{s['name']:30s} ({s['type']})")
-
-    _show("[node-mode] query='AMD' (no filter)", query_to_seeds("AMD"))
-    _show("[node-mode] query='AMD' types=['ORG']",
-          query_to_seeds("AMD", entity_types=["ORG"]))
-    _show("[node-mode] query='random xyz noise' (off-topic, expect empty)",
-          query_to_seeds("random xyz noise qwerty zzz"))
-
-    print("\n" + "=" * 50)
-    _show("[triple-mode] query='AMD'", query_to_triple_seeds("AMD"))
-    _show("[triple-mode] query='TSMC supply chain'",
-          query_to_triple_seeds("TSMC supply chain"))
-    _show("[triple-mode] query='china semiconductor ban'",
-          query_to_triple_seeds("china semiconductor ban"))
-    _show("[triple-mode] query='random xyz noise' (off-topic, expect empty)",
-          query_to_triple_seeds("random xyz noise qwerty zzz"))

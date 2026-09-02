@@ -206,7 +206,6 @@ _AGGREGATE_FUNCTIONS = {
 
 def _periodic_params(
     spec: FinancialQuerySpec,
-    *,
     include_periods: bool,
 ) -> dict[str, Any]:
     params: dict[str, Any] = {

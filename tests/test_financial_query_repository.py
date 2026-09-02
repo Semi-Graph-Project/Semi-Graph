@@ -37,7 +37,7 @@ def _install_connection(monkeypatch, rows):
     calls = []
 
     @contextmanager
-    def fake_connection(*, readonly, cfg):
+    def fake_connection(readonly, cfg):
         calls.append((readonly, cfg))
         yield connection
 

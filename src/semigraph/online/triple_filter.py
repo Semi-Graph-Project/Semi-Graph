@@ -96,21 +96,20 @@ def _build_trace(
     candidates: list[TripleCandidate],
     selected: list[TripleCandidate],
     started: float,
-    *,
     attempts: int,
     fallback: bool,
     reason: str,
     parse_error: str | None = None,
 ) -> dict:
     selected_ids = [candidate["candidate_id"] for candidate in selected]
-    candidate_ids = [candidate["candidate_id"] for candidate in candidates]
+    selected_set = set(selected_ids)
     return {
         "candidates_before_filter": candidates,
         "candidates_after_filter": selected,
         "rejected_candidate_ids": [
-            candidate_id
-            for candidate_id in candidate_ids
-            if candidate_id not in selected_ids
+            candidate["candidate_id"]
+            for candidate in candidates
+            if candidate["candidate_id"] not in selected_set
         ],
         "selected_candidate_ids": selected_ids,
         "filter_latency_sec": round(time.perf_counter() - started, 3),
@@ -178,6 +177,8 @@ def filter_triple_candidates(
                 )
 
             selected_set = set(selected_ids[:limit])
+
+            # Triple ID Map to => Real Triple
             selected = [
                 candidate
                 for candidate in candidates

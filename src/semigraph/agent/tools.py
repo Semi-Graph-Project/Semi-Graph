@@ -215,7 +215,6 @@ def agent_graph_search(
 def _compact_financial_trace(
     trace: dict,
     chunks: list[dict],
-    *,
     top_k_chunks: int,
 ) -> dict:
     """Keep financial lineage useful for evaluation without copying chunks."""

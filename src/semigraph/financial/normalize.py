@@ -21,7 +21,6 @@ def _accepted_sort_key(report: dict) -> tuple[str, str]:
 
 def select_latest_reports(
     reports: list[dict],
-    *,
     limit: int,
 ) -> list[dict]:
     latest_by_period: dict[str, dict] = {}
@@ -41,7 +40,6 @@ def select_latest_reports(
 
 
 def normalize_report(
-    *,
     ticker: str,
     frequency: str,
     report: dict,

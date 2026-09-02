@@ -42,7 +42,7 @@ COLORS = {
 }
 
 
-def _paint(text: str, color: str, enabled: bool, *, bold: bool = False) -> str:
+def _paint(text: str, color: str, enabled: bool, bold: bool = False) -> str:
     if not enabled:
         return text
     prefix = COLORS.get(color, COLORS["dim"])

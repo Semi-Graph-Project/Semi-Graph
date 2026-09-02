@@ -5,6 +5,7 @@ from semigraph import demo
 from semigraph.agent import nodes
 from semigraph.agent.graph import build_agent
 from semigraph.demo import (
+    ComparisonMode,
     ComparisonResult,
     get_backend_config,
     get_backend_corpus,
@@ -99,7 +100,13 @@ def test_run_comparison_direct_vector_uses_selected_config_and_shared_synthesis(
     monkeypatch.setattr(demo.agent_tools, "agent_vector_search", fake_vector_search)
     monkeypatch.setattr(demo.nodes, "synthesize_attempts_node", fake_synthesis)
 
-    result = run_comparison("vector", "Question", "benchmark", top_k=3)
+    result = run_comparison(
+        ComparisonMode.VECTOR,
+        "Question",
+        "benchmark",
+        top_k=3,
+        run_id="test-enum-vector-trace",
+    )
 
     assert result.status == "complete"
     assert result.answer == "Answer [1]"
@@ -110,6 +117,7 @@ def test_run_comparison_direct_vector_uses_selected_config_and_shared_synthesis(
         "bolt://localhost:7690",
     )
     assert captured["synthesis"][1] == "bolt://localhost:7690"
+    assert TRACE_STORE.read("test-enum-vector-trace")["mode"] == "vector"
     assert [event["stage"] for event in result.trace] == [
         "config",
         "retrieval",

@@ -1,9 +1,4 @@
-"""
-Phase C2 — vector_search: vanilla chunk vector retrieval (Homogeneous RAG baseline).
 
-Output shape matches `graph_search()` exactly so Phase E ablation A/B works
-without format conversion. No similarity threshold — top-k always returns k.
-"""
 from __future__ import annotations
 
 from typing import Optional
@@ -68,7 +63,7 @@ def trace_vector_search(
     vector_index: str = DEFAULT_VECTOR_INDEX,
     trace_callback: TraceCallback | None = None,
 ) -> dict:
-    """Run vector retrieval and keep raw/reranked results for evaluation."""
+    """Run vector retrieval and keep raw/reranked results for evaluation. + Append Trace Logs"""
     if not query.strip() or top_k_chunks <= 0:
         return {
             "query": query,
@@ -175,7 +170,8 @@ def vector_search(
     candidate_pool_k: Optional[int] = None,
     vector_index: str = DEFAULT_VECTOR_INDEX,
 ) -> list[dict]:
-    """Return vector chunks reranked by company and fiscal year.
+    """
+    Main Tool Function Running
 
     Args:
         query: Natural-language question.

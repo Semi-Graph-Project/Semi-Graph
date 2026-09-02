@@ -196,7 +196,6 @@ def load_or_build_embeddings(
     facts: list[dict[str, Any]],
     corpus_path: Path,
     cache_path: Path,
-    *,
     rebuild: bool,
 ) -> np.ndarray:
     """Return normalized corpus embeddings, reusing a validated cache."""
@@ -261,7 +260,6 @@ def score_case(
     case: dict[str, Any],
     facts: list[dict[str, Any]],
     scores: np.ndarray,
-    *,
     top_k: int,
     latency_ms: float,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -338,7 +336,6 @@ def _rate(rows: list[dict[str, Any]], field: str) -> float | None:
 
 def find_sql_summary(
     explicit_path: Path | None,
-    *,
     expected_query_count: int,
 ) -> tuple[Path | None, dict[str, Any] | None]:
     candidates = [explicit_path] if explicit_path else sorted(
@@ -355,7 +352,6 @@ def find_sql_summary(
 
 def build_summary(
     results: list[dict[str, Any]],
-    *,
     benchmark_path: Path,
     corpus_path: Path,
     cache_path: Path,

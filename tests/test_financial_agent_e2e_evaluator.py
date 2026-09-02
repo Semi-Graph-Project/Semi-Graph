@@ -22,7 +22,7 @@ CRITICAL_FIELDS = [
 ]
 
 
-def _trace(spec=None, *, template="periodic.lookup.filtered.v1", status="ok"):
+def _trace(spec=None, template="periodic.lookup.filtered.v1", status="ok"):
     return {
         "tool": "financial",
         "status": status,

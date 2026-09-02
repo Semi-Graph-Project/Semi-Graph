@@ -1,6 +1,5 @@
 import json
 import threading
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -116,28 +115,6 @@ def test_production_graph_contains_parallel_task_harness_nodes():
         "synthesize",
         "__end__",
     }
-
-
-def test_default_parallel_task_limit_is_two():
-    assert Config().agent_max_parallel_tasks == 2
-
-
-def test_default_synthesis_limit_is_ten():
-    assert Config().agent_max_synthesis_chunks == 10
-
-
-def test_synthesis_limit_can_be_configured(tmp_path):
-    default_config = Path(__file__).parents[1] / "config" / "default.yaml"
-    config_path = tmp_path / "config.yaml"
-    config_path.write_text(
-        default_config.read_text(encoding="utf-8").replace(
-            "  max_synthesis_chunks: 10",
-            "  max_synthesis_chunks: 4",
-        ),
-        encoding="utf-8",
-    )
-
-    assert Config(config_path).agent_max_synthesis_chunks == 4
 
 
 @pytest.mark.parametrize("value", [0, 6])

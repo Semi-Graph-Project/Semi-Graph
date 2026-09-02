@@ -107,7 +107,6 @@ def _collect_task_results(state: AgentState) -> dict:
 
 
 def build_agent(
-    *,
     locked_tool: str | None = None,
     top_k: int | None = None,
     synthesis: Callable[[AgentState], dict] | None = None,

@@ -53,7 +53,7 @@ COLORS = {
 ONTOLOGY_PROMPT_BUILDER = agent_nodes.build_ontology_planroute_prompt
 
 
-def paint(text: object, color: str, enabled: bool, *, bold: bool = False) -> str:
+def paint(text: object, color: str, enabled: bool, bold: bool = False) -> str:
     if not enabled:
         return str(text)
     prefix = (BOLD if bold else "") + COLORS[color]

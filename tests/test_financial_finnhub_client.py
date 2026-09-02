@@ -11,13 +11,13 @@ class FakeFinnhub:
     def __init__(self):
         self.calls: list[tuple[str, dict[str, str]]] = []
 
-    def financials_reported(self, *, symbol, freq):
+    def financials_reported(self, symbol, freq):
         self.calls.append(
             ("financials_reported", {"symbol": symbol, "freq": freq})
         )
         return {"symbol": symbol, "freq": freq}
 
-    def company_basic_financials(self, *, symbol, metric):
+    def company_basic_financials(self, symbol, metric):
         self.calls.append(
             (
                 "company_basic_financials",
@@ -26,7 +26,7 @@ class FakeFinnhub:
         )
         return {"symbol": symbol, "metric": metric}
 
-    def quote(self, *, symbol):
+    def quote(self, symbol):
         self.calls.append(("quote", {"symbol": symbol}))
         return {"symbol": symbol, "c": 100.0}
 

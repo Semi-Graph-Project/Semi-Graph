@@ -14,7 +14,6 @@ class AgentTraceEmitter:
         stage: str,
         status: str,
         message: str,
-        *,
         task_id: str | None = None,
         attempt_id: str | None = None,
         details: dict | None = None,
