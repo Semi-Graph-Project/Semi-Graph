@@ -257,14 +257,14 @@ The implemented ingestion path is 10-K-centric. Foreign issuers that file
 ### Manage the reusable PPR projection
 
 ```bash
-python scripts/manage_ppr_projection.py status entity_chunk
-python scripts/manage_ppr_projection.py prepare entity_chunk
+python scripts/manage_ppr_projection.py status
+python scripts/manage_ppr_projection.py prepare
 ```
 
 Refresh the projection after the stored graph changes:
 
 ```bash
-python scripts/manage_ppr_projection.py refresh entity_chunk
+python scripts/manage_ppr_projection.py refresh
 ```
 
 ### Trace one Agent query

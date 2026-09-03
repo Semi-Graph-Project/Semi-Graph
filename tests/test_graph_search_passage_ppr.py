@@ -1,11 +1,9 @@
 from types import SimpleNamespace
 
-import pytest
-
 import semigraph.online.graph_search as graph_search_module
 
 
-def test_entity_chunk_mode_returns_direct_ppr_chunks_without_mapping(monkeypatch):
+def test_returns_direct_ppr_chunks(monkeypatch):
     seeds = [{
         "name": "intel",
         "type": "COMP",
@@ -41,14 +39,6 @@ def test_entity_chunk_mode_returns_direct_ppr_chunks_without_mapping(monkeypatch
         fake_run_passage_ppr,
     )
 
-    def mapping_must_not_run(*args, **kwargs):
-        raise AssertionError("entity_chunk mode must not map entities back to chunks")
-
-    monkeypatch.setattr(graph_search_module, "run_ppr", mapping_must_not_run)
-    monkeypatch.setattr(graph_search_module, "_cluster_aliases", mapping_must_not_run)
-    monkeypatch.setattr(graph_search_module, "_collapse_clusters", mapping_must_not_run)
-    monkeypatch.setattr(graph_search_module, "_map_chunks", mapping_must_not_run)
-
     trace = graph_search_module.trace_graph_search(
         "Intel operating income",
         top_k_chunks=2,
@@ -57,7 +47,6 @@ def test_entity_chunk_mode_returns_direct_ppr_chunks_without_mapping(monkeypatch
         use_expansion=False,
         candidate_pool_k=3,
         ppr_seed_weight_mode="similarity_specificity",
-        ppr_graph_mode="entity_chunk",
     )
 
     assert calls["seeds"] == seeds
@@ -200,19 +189,6 @@ def test_chunk_only_selects_vector_chunks_without_triple_filter(monkeypatch):
     }
 
 
-def test_chunk_only_requires_entity_chunk_projection():
-    with pytest.raises(
-        ValueError,
-        match="chunk_only seed mode requires ppr_graph_mode='entity_chunk'",
-    ):
-        graph_search_module.trace_graph_search(
-            "AMD revenue",
-            seed_mode="chunk_only",
-            ppr_graph_mode="entity_only",
-            use_expansion=False,
-        )
-
-
 def test_company_and_fiscal_year_rerank_smoke_runs_through_graph_pipeline(monkeypatch):
     seeds = [{"name": "nvidia", "type": "ORG", "similarity": 0.9}]
 
@@ -248,7 +224,6 @@ def test_company_and_fiscal_year_rerank_smoke_runs_through_graph_pipeline(monkey
         top_k_chunks=1,
         use_expansion=False,
         candidate_pool_k=2,
-        ppr_graph_mode="entity_chunk",
         cfg=SimpleNamespace(
             graph_repair_filer_aliases={"NVDA": "nvidia", "INTC": "intel"},
         ),

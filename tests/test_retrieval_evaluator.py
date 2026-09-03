@@ -126,7 +126,6 @@ def test_graph_stage_metrics_detect_rerank_loss():
     trace = {
         "seeds": [{"name": "amd"}],
         "ppr_entities": [{"name": "amd"}],
-        "cluster_entries": [{"aliases": ["amd"], "score": 1.0}],
         "chunk_candidates": [{"chunk_id": "AMD_2026_Item_1_0003"}],
         "abort_reason": None,
     }
@@ -143,13 +142,12 @@ def test_graph_stage_metrics_detect_rerank_loss():
 
     assert stage["seed_hit"] == 1
     assert stage["ppr_hit"] == 1
-    assert stage["chunk_map_hit"] == 1
+    assert stage["direct_ppr_chunk_hit"] == 1
     assert stage["bottleneck_label"] == "rerank_loss"
 
 
 def test_graph_stage_metrics_direct_ppr_uses_direct_chunk_hit():
     trace = {
-        "ppr_graph_mode": "entity_chunk",
         "seeds": [{"name": "amd"}],
         "ppr_entities": [{"name": "amd"}],
         "chunk_candidates": [],
@@ -164,10 +162,8 @@ def test_graph_stage_metrics_direct_ppr_uses_direct_chunk_hit():
         score_at_k={"hit": 0},
         score_at_oracle={"hit": 0},
         error=None,
-        returned_chunk_ids=["AMD_other"],
     )
 
-    assert stage["chunk_map_hit"] is None
     assert stage["direct_ppr_chunk_hit"] == 0
     assert stage["bottleneck_label"] == "direct_ppr_chunk_loss"
 
@@ -204,7 +200,7 @@ def test_aggregate_reports_subset_and_graph_stage():
                     "stage": {
                         "seed_hit": 1,
                         "ppr_hit": 1,
-                        "chunk_map_hit": 1,
+                        "direct_ppr_chunk_hit": 1,
                         "bottleneck_label": "hit_top_k",
                     },
                 },

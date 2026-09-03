@@ -21,7 +21,6 @@ DEFAULT_QUERY_FILE = ROOT / "benchmark" / "datasets" / "phase_t_multihop_queries
 DEFAULT_OUTPUT_DIR = ROOT / "analytics" / "Report Experiment"
 TOOL_CHOICES = ("vector", "graph", "hybrid")
 SEED_MODE_CHOICES = ("triple", "node", "hybrid")
-PPR_GRAPH_MODE_CHOICES = ("entity_only", "entity_chunk")
 TRIPLE_FILTER_CHOICES = ("none", "llm")
 DEFAULT_TICKER_SCOPE = (
     "AMAT",
@@ -90,7 +89,6 @@ def _get_tool(
     graph_top_k_entities: int = 20,
     graph_top_k_triples: int = 8,
     graph_damping: float = 0.5,
-    graph_ppr_mode: str = "entity_only",
     graph_triple_filter: str = "none",
 ):
     if tool_name == "vector":
@@ -110,7 +108,6 @@ def _get_tool(
                 top_k_entities=graph_top_k_entities,
                 top_k_triples=graph_top_k_triples,
                 damping=graph_damping,
-                ppr_graph_mode=graph_ppr_mode,
                 graph_triple_filter=graph_triple_filter,
                 cfg=cfg,
             )
@@ -129,7 +126,6 @@ def _get_tool(
                 graph_top_k_entities=graph_top_k_entities,
                 graph_top_k_triples=graph_top_k_triples,
                 graph_damping=graph_damping,
-                ppr_graph_mode=graph_ppr_mode,
                 graph_triple_filter=graph_triple_filter,
                 cfg=cfg,
             )
@@ -401,13 +397,11 @@ def _graph_stage_metrics(
     score_at_k: dict,
     score_at_oracle: dict,
     error: str | None,
-    returned_chunk_ids: list[str] | None = None,
 ) -> dict:
     if trace is None:
         return {
             "seed_hit": None,
             "ppr_hit": None,
-            "chunk_map_hit": None,
             "direct_ppr_chunk_hit": None,
             "bottleneck_label": "not_applicable",
         }
@@ -422,29 +416,17 @@ def _graph_stage_metrics(
         for entity in trace.get("ppr_entities", [])
         if entity.get("name")
     }
-    for cluster in trace.get("cluster_entries", []):
-        ppr_names.update(
-            _normalize_entity(alias)
-            for alias in cluster.get("aliases", [])
-            if alias
-        )
-
-    candidate_ids = {
-        str(chunk.get("chunk_id", ""))
-        for chunk in trace.get("chunk_candidates", [])
-        if chunk.get("chunk_id")
-    }
-
     seed_hit = _hit_from_names(seed_names, gold_entities)
     ppr_hit = _hit_from_names(ppr_names, gold_entities)
-    direct_ppr = trace.get("ppr_graph_mode") == "entity_chunk"
-    chunk_map_hit = None if direct_ppr else 0
-    if gold_chunks and not direct_ppr:
-        chunk_map_hit = 1 if candidate_ids & set(gold_chunks) else 0
     direct_ppr_chunk_hit = None
-    if direct_ppr and gold_chunks:
+    if gold_chunks:
+        candidate_ids = {
+            str(chunk["chunk_id"])
+            for chunk in trace.get("chunk_candidates", [])
+            if chunk.get("chunk_id")
+        }
         direct_ppr_chunk_hit = int(
-            bool(set(returned_chunk_ids or []) & set(gold_chunks))
+            bool(candidate_ids & set(gold_chunks))
         )
 
     if not gold_chunks:
@@ -459,10 +441,8 @@ def _graph_stage_metrics(
         bottleneck = "seed_loss"
     elif ppr_hit == 0:
         bottleneck = "ppr_loss"
-    elif direct_ppr and direct_ppr_chunk_hit == 0:
+    elif direct_ppr_chunk_hit == 0:
         bottleneck = "direct_ppr_chunk_loss"
-    elif chunk_map_hit == 0:
-        bottleneck = "chunk_mapping_loss"
     elif score_at_oracle["hit"] == 1:
         bottleneck = "rerank_loss"
     else:
@@ -471,9 +451,7 @@ def _graph_stage_metrics(
     return {
         "seed_hit": seed_hit,
         "ppr_hit": ppr_hit,
-        "chunk_map_hit": chunk_map_hit,
         "direct_ppr_chunk_hit": direct_ppr_chunk_hit,
-        "ppr_graph_mode": trace.get("ppr_graph_mode", "entity_only"),
         "bottleneck_label": bottleneck,
         "abort_reason": trace.get("abort_reason"),
         "effective_query": trace.get("effective_query"),
@@ -503,7 +481,6 @@ def _run_tool(
     graph_top_k_triples: int,
     graph_damping: float,
     seed_weight_mode: str,
-    graph_ppr_mode: str,
     graph_triple_filter: str,
 ) -> tuple[list[dict], str | None, float, dict | None]:
     started = time.time()
@@ -533,7 +510,6 @@ def _run_tool(
                 damping=graph_damping,
                 candidate_pool_k=candidate_pool_k,
                 ppr_seed_weight_mode=seed_weight_mode,
-                ppr_graph_mode=graph_ppr_mode,
                 graph_triple_filter=graph_triple_filter,
             )
             return trace["chunks"], None, time.time() - started, trace
@@ -546,7 +522,6 @@ def _run_tool(
             graph_top_k_entities=graph_top_k_entities,
             graph_top_k_triples=graph_top_k_triples,
             graph_damping=graph_damping,
-            graph_ppr_mode=graph_ppr_mode,
             graph_triple_filter=graph_triple_filter,
         )(query, top_k_chunks=top_k, cfg=cfg)
         return chunks, None, time.time() - started, None
@@ -571,7 +546,6 @@ def _evaluate_query(
     graph_top_k_triples: int,
     graph_damping: float,
     seed_weight_mode: str,
-    graph_ppr_mode: str,
     graph_triple_filter: str,
 ) -> dict:
     query = str(item.get("query", "")).strip()
@@ -629,7 +603,6 @@ def _evaluate_query(
                 graph_top_k_triples=graph_top_k_triples,
                 graph_damping=graph_damping,
                 seed_weight_mode=seed_weight_mode,
-                graph_ppr_mode=graph_ppr_mode,
                 graph_triple_filter=graph_triple_filter,
             )
 
@@ -660,7 +633,6 @@ def _evaluate_query(
             score_at_k=score_at_k,
             score_at_oracle=score_at_oracle,
             error=error,
-            returned_chunk_ids=returned_at_k,
         )
         result["tools"][tool_name] = {
             "latency_sec": round(latency, 3),
@@ -813,7 +785,6 @@ def _aggregate(results: list[dict], tools: list[str]) -> dict:
         "full_mixed": {
             "seed_hit": [],
             "ppr_hit": [],
-            "chunk_map_hit": [],
             "direct_ppr_chunk_hit": [],
             "bottlenecks": Counter(),
         }
@@ -865,14 +836,12 @@ def _aggregate(results: list[dict], tools: list[str]) -> dict:
                     graph_stage.setdefault(label, {
                         "seed_hit": [],
                         "ppr_hit": [],
-                        "chunk_map_hit": [],
                         "direct_ppr_chunk_hit": [],
                         "bottlenecks": Counter(),
                     })
                     for metric_name in (
                         "seed_hit",
                         "ppr_hit",
-                        "chunk_map_hit",
                         "direct_ppr_chunk_hit",
                     ):
                         value = stage.get(metric_name)
@@ -911,11 +880,6 @@ def _aggregate(results: list[dict], tools: list[str]) -> dict:
             "subset": subset,
             "seed_hit": _mean(values["seed_hit"]),
             "ppr_hit": _mean(values["ppr_hit"]),
-            "chunk_map_hit": (
-                _mean(values["chunk_map_hit"])
-                if values["chunk_map_hit"]
-                else None
-            ),
             "direct_ppr_chunk_hit": (
                 _mean(values["direct_ppr_chunk_hit"])
                 if values["direct_ppr_chunk_hit"]
@@ -973,7 +937,6 @@ def _write_markdown(
     graph_top_k_triples: int,
     graph_damping: float,
     ppr_seed_weight_mode: str,
-    graph_ppr_mode: str,
     graph_triple_filter: str,
     run_config: dict | None = None,
 ) -> None:
@@ -1002,7 +965,6 @@ def _write_markdown(
         "graph_top_k_triples": graph_top_k_triples,
         "graph_damping": graph_damping,
         "ppr_seed_weight_mode": ppr_seed_weight_mode,
-        "graph_ppr_mode": graph_ppr_mode,
         "graph_triple_filter": graph_triple_filter,
     }
     if run_config:
@@ -1084,8 +1046,8 @@ def _write_markdown(
         lines.append("")
         lines.append("## Graph Stage Diagnostics")
         lines.append("")
-        lines.append("| Subset | SeedHit | PPRHit | ChunkMapHit | DirectPPRChunkHit | Bottlenecks |")
-        lines.append("|---|---:|---:|---:|---:|---|")
+        lines.append("| Subset | SeedHit | PPRHit | DirectPPRChunkHit | Bottlenecks |")
+        lines.append("|---|---:|---:|---:|---|")
         for row in aggregate["graph_stage"]:
             bottlenecks = ", ".join(
                 f"{name}={count}"
@@ -1096,7 +1058,6 @@ def _write_markdown(
                 f"{row['subset']} | "
                 f"{_fmt(row['seed_hit'])} | "
                 f"{_fmt(row['ppr_hit'])} | "
-                f"{_fmt(row['chunk_map_hit'])} | "
                 f"{_fmt(row['direct_ppr_chunk_hit'])} | "
                 f"{bottlenecks or 'n/a'} |"
             )
@@ -1131,8 +1092,8 @@ def _write_markdown(
         lines.append(f"- gold_chunks: `{row['gold_chunks']}`")
         lines.append(f"- gold_evidence_groups: `{row.get('gold_evidence_groups', {})}`")
         lines.append("")
-        lines.append("| Tool | Error | Latency | ChunkHit@k | Random ChunkHit@k | ChunkRecall@k | GroupRecall@k | Answerable@k | MRR@k | Oracle Hit | SeedHit | PPRHit | ChunkMapHit | DirectPPRChunkHit | Bottleneck | Chunk Hits | Group Hits | Returned |")
-        lines.append("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---|---|---|")
+        lines.append("| Tool | Error | Latency | ChunkHit@k | Random ChunkHit@k | ChunkRecall@k | GroupRecall@k | Answerable@k | MRR@k | Oracle Hit | SeedHit | PPRHit | DirectPPRChunkHit | Bottleneck | Chunk Hits | Group Hits | Returned |")
+        lines.append("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---|---|")
         for tool_name in tools:
             metrics = row["tools"][tool_name]
             stage = metrics.get("stage", {})
@@ -1150,7 +1111,6 @@ def _write_markdown(
                 f"{_fmt(metrics['oracle_hit'])} | "
                 f"{_fmt(stage.get('seed_hit'))} | "
                 f"{_fmt(stage.get('ppr_hit'))} | "
-                f"{_fmt(stage.get('chunk_map_hit'))} | "
                 f"{_fmt(stage.get('direct_ppr_chunk_hit'))} | "
                 f"{stage.get('bottleneck_label', 'n/a')} | "
                 f"`{metrics['chunk_hits_at_k']}` | "
@@ -1206,12 +1166,6 @@ def main() -> None:
         help="Seed strategy for graph retrieval diagnostics.",
     )
     parser.add_argument(
-        "--graph-ppr-mode",
-        choices=PPR_GRAPH_MODE_CHOICES,
-        default="entity_only",
-        help="PPR projection mode for graph/hybrid retrieval.",
-    )
-    parser.add_argument(
         "--graph-triple-filter",
         choices=TRIPLE_FILTER_CHOICES,
         default="none",
@@ -1256,7 +1210,7 @@ def main() -> None:
             expansion_label = "no_expansion"
         args.version_name = (
             f"{expansion_label}_company_year"
-            f"_{args.graph_ppr_mode}"
+            "_entity_chunk"
             f"_filter{args.graph_triple_filter}"
             f"_pool{args.candidate_pool_k}"
         )
@@ -1307,7 +1261,6 @@ def main() -> None:
             graph_top_k_triples=args.graph_top_k_triples,
             graph_damping=args.graph_damping,
             seed_weight_mode=args.ppr_seed_weight_mode,
-            graph_ppr_mode=args.graph_ppr_mode,
             graph_triple_filter=args.graph_triple_filter,
         )
         for item in queries
@@ -1331,7 +1284,6 @@ def main() -> None:
         graph_top_k_triples=args.graph_top_k_triples,
         graph_damping=args.graph_damping,
         ppr_seed_weight_mode=args.ppr_seed_weight_mode,
-        graph_ppr_mode=args.graph_ppr_mode,
         graph_triple_filter=args.graph_triple_filter,
         run_config={
             "version_name": args.version_name,

@@ -322,7 +322,7 @@ def query_to_hybrid_seeds(
     Returns:
         Deduplicated seed list `[{name, type, specificity, similarity}, ...]`,
         sorted by similarity descending. Same shape as the two source
-        functions — drop-in for `run_ppr`.
+        functions — ready for `run_passage_ppr`.
     """
     if not query.strip():
         return []
@@ -344,4 +344,3 @@ def query_to_hybrid_seeds(
     print(f"[hybrid_seed] {len(node_seeds)} node + {len(triple_seeds)} triple "
           f"-> {len(merged)} unique seeds")
     return sorted(merged.values(), key=lambda s: -s["similarity"])
-

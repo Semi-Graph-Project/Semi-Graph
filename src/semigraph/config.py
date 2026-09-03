@@ -164,6 +164,15 @@ class Config:
             "vector": dict(agent_retrieval.get("vector", {})),
             "graph": dict(agent_retrieval.get("graph", {})),
         }
+        self.ppr_projection_prefix: str = str(
+            self.agent_retrieval["graph"].get(
+                "ppr_projection_prefix", "semigraph_ppr"
+            )
+        ).strip()
+        if not self.ppr_projection_prefix:
+            raise ValueError(
+                "agent_retrieval.graph.ppr_projection_prefix must not be empty"
+            )
 
         # --- Agent harness budgets ---
         agent_harness = data.get("agent_harness", {})

@@ -40,11 +40,6 @@ def main() -> None:
     )
     parser.add_argument("--graph-damping", type=float, default=0.5)
     parser.add_argument(
-        "--graph-ppr-mode",
-        choices=("entity_only", "entity_chunk"),
-        default="entity_only",
-    )
-    parser.add_argument(
         "--graph-triple-filter",
         choices=("none", "llm"),
         default="none",
@@ -90,7 +85,6 @@ def main() -> None:
         "--graph-top-k-entities", str(args.graph_top_k_entities),
         "--graph-top-k-triples", str(args.graph_top_k_triples),
         "--graph-damping", str(args.graph_damping),
-        "--graph-ppr-mode", args.graph_ppr_mode,
         "--graph-triple-filter", args.graph_triple_filter,
         "--reextract-tickers", args.ticker_scope,
         "--version-name", args.version_name,

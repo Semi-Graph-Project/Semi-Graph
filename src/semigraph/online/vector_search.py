@@ -172,17 +172,6 @@ def vector_search(
 ) -> list[dict]:
     """
     Main Tool Function Running
-
-    Args:
-        query: Natural-language question.
-        top_k_chunks: Number of chunks to return.
-        candidate_pool_k: Number of vector candidates before reranking.
-        vector_index: Neo4j vector index name; defaults to the production index.
-        cfg: Optional Config; defaults to cached singleton.
-
-    Returns:
-        `[{chunk_id, text, ticker, fiscal_year, section, score}, ...]` —
-        shape identical to `graph_search()`. Empty list if query is blank.
     """
     trace = trace_vector_search(
         query,

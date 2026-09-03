@@ -250,15 +250,15 @@ const graphNodes = [
   },
   {
     id: "g_projection", x: 1410, y: 90, w: 205, h: 112, layer: "data", kicker: "NEO4J GDS", title: "Named projection", subtitle: "Entity + Chunk topology", chip: "create once / reuse",
-    description: "สร้าง GDS Cypher projection ที่มี Entity และ Chunk พร้อม weighted domain/provenance edges แล้ว reuse ข้าม query", contract: "Neo4j stored graph → semigraph_ppr_entity_chunk", points: ["prepare/reuse/refresh/drop แยกชัดเจน", "ไม่ drop projection หลังทุก query", "ต้อง refresh เมื่อ stored graph เปลี่ยน"], files: [FILE("src/semigraph/online/ppr.py", "ensure_projection / manage_projection")], note: "GDS plugin เป็น dependency หลัก; Neo4j Community core อย่างเดียวรัน gds.pageRank.stream ไม่ได้",
+    description: "สร้าง GDS Cypher projection ที่มี Entity และ Chunk พร้อม weighted domain/provenance edges แล้ว reuse ข้าม query", contract: "Neo4j stored graph → semigraph_ppr_entity_chunk", points: ["prepare/reuse/refresh/drop แยกชัดเจน", "ไม่ drop projection หลังทุก query", "ต้อง refresh เมื่อ stored graph เปลี่ยน"], files: [FILE("src/semigraph/online/ppr.py", "_get_projection / manage_projection")], note: "GDS plugin เป็น dependency หลัก; Neo4j Community core อย่างเดียวรัน gds.pageRank.stream ไม่ได้",
   },
   {
     id: "g_ppr", x: 1410, y: 300, w: 205, h: 112, layer: "retrieval", kicker: "RANKING / 06", title: "Personalized PageRank", subtitle: "walk from seed entities", chip: "damping 0.5",
-    description: "กระจาย probability mass จาก seed ผ่าน graph เพื่อยก entity และ passage ที่เชื่อมสัมพันธ์กับคำถามหลายทอด", contract: "sourceNodes + graph → PPR score per node", points: ["gds.pageRank.stream, max 20 iterations", "entity_chunk mode คืน Chunk score โดยตรง", "projection และ PPR latency อยู่ใน trace"], files: [FILE("src/semigraph/online/ppr.py", "run_passage_ppr / _run_ppr_rows")], note: "ความหมายง่าย ๆ: node ที่เดินถึงบ่อยจากสิ่งที่ query สนใจจะได้คะแนนสูง โดยยังมีโอกาส teleport กลับ seed",
+    description: "กระจาย probability mass จาก seed ผ่าน graph เพื่อยก entity และ passage ที่เชื่อมสัมพันธ์กับคำถามหลายทอด", contract: "sourceNodes + graph → PPR score per node", points: ["gds.pageRank.stream, max 20 iterations", "คืน Chunk score โดยตรง", "projection และ PPR latency อยู่ใน trace"], files: [FILE("src/semigraph/online/ppr.py", "run_passage_ppr / _run_ppr_rows")], note: "ความหมายง่าย ๆ: node ที่เดินถึงบ่อยจากสิ่งที่ query สนใจจะได้คะแนนสูง โดยยังมีโอกาส teleport กลับ seed",
   },
   {
     id: "g_chunks", x: 1660, y: 300, w: 195, h: 112, layer: "retrieval", kicker: "PASSAGES / 07", title: "Chunk candidates", subtitle: "PPR-ranked evidence", chip: "pool 100",
-    description: "แยก Chunk nodes ออกจากผล PPR, ดึง text/metadata กลับจาก Neo4j และจัดตาม PPR score", contract: "PPR node scores → SEC chunk contract[]", points: ["candidate pool ปัจจุบัน 100", "Entity ranking ถูกเก็บคู่กันใน trace", "entity_only legacy path ยังรองรับ alias cluster + MENTIONS aggregation"], files: [FILE("src/semigraph/online/ppr.py", "_top_chunk_score_rows / run_passage_ppr"), FILE("src/semigraph/online/graph_search.py", "_cluster_aliases / _map_chunks")], note: "entity_chunk topology ทำให้ passage เป็นส่วนหนึ่งของ random walk แทนการ map entity ไป passage ภายหลัง",
+    description: "แยก Chunk nodes ออกจากผล PPR, ดึง text/metadata กลับจาก Neo4j และจัดตาม PPR score", contract: "PPR node scores → SEC chunk contract[]", points: ["candidate pool ปัจจุบัน 100", "Entity ranking ถูกเก็บคู่กันใน trace", "Chunk เป็นส่วนหนึ่งของ PPR graph"], files: [FILE("src/semigraph/online/ppr.py", "_top_chunk_score_rows / run_passage_ppr")], note: "passage เป็นส่วนหนึ่งของ random walk และรับ PPR score โดยตรง",
   },
   {
     id: "g_rerank", x: 1900, y: 300, w: 185, h: 112, layer: "retrieval", kicker: "OPTIONAL / 08", title: "Final reranker", subtitle: "Cohere or none", chip: "fail-open",
@@ -649,10 +649,10 @@ const MODULE_GROUPS = [
       ["src/semigraph/online/__init__.py", 0, "Online retrieval package marker", "—"],
       ["src/semigraph/online/_ticker.py", 95, "Regex-first ticker resolution พร้อม LLM expansion fallback และ out-of-corpus guard", "extract_tickers · resolve_tickers"],
       ["src/semigraph/online/financial_search.py", 650, "Natural-language financial intent → validated spec → configured backend", "financial_search · _build_financial_query_spec · FinnhubAPIBackend"],
-      ["src/semigraph/online/graph_search.py", 1044, "Orchestrate graph seeds, PPR, legacy alias mapping, candidate rerank และ trace", "trace_graph_search · graph_search · MetadataRerankParams"],
+      ["src/semigraph/online/graph_search.py", 1044, "Orchestrate graph seeds, passage PPR, candidate rerank และ trace", "trace_graph_search · graph_search"],
       ["src/semigraph/online/hybrid_search.py", 164, "Fuse Vector และ Graph rankings ด้วย Reciprocal Rank Fusion", "hybrid_search"],
       ["src/semigraph/online/news_search.py", 365, "Finnhub company-news retriever, intent guards, recency ranking และ optional cache/full text", "news_search · FinnhubNewsBackend"],
-      ["src/semigraph/online/ppr.py", 691, "จัดการ GDS projections และ Personalized PageRank แบบ entity-only/entity-chunk", "ensure_projection · run_passage_ppr · run_ppr"],
+      ["src/semigraph/online/ppr.py", 691, "จัดการ GDS projection และ Personalized PageRank บน Entity + Chunk", "_get_projection · manage_projection · run_passage_ppr"],
       ["src/semigraph/online/query_expand.py", 105, "LLM entity-hint expansion แบบรักษา original query และ fail-open", "expand_query"],
       ["src/semigraph/online/rerank.py", 117, "OpenRouter reranker client พร้อม retry และ original-order fallback", "rerank_chunks"],
       ["src/semigraph/online/seed.py", 325, "สร้าง node/triple/hybrid semantic seeds จาก BGE และ Neo4j indexes", "query_to_seeds · query_to_triple_candidates · query_to_hybrid_seeds"],

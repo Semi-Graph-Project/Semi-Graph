@@ -1,24 +1,3 @@
-"""
-Compute Node Specificity for Phase B3 — the final piece of Phase B.
-
-Each Entity gets a `specificity` property = 1 / log(degree + 1), where `degree`
-counts only **informative** edges (domain knowledge). Provenance edges
-(`MENTIONS`, `HAS_CHUNK`, `HAS_SECTION`) and linkage edges (`SYNONYM_OF`) are
-excluded — otherwise every entity would inherit chunk-level mass and the
-specificity signal would collapse.
-
-Specificity is used in Phase C1 as the seed weight for Personalized PageRank:
-hub entities (e.g. `china`, `united states`, `revenue`) get low weight so the
-walk doesn't get stuck on overconnected topical anchors; rare entities act as
-strong seeds when the query lands on one.
-
-Formula choice:
-  1 / log(degree + 1)  for degree >= 1   (gradual decay — HippoRAG style)
-  1.0                  for degree == 0   (placeholder; won't seed PPR anyway)
-
-`log` here is natural log (Cypher's `log()` is `ln`). Computed in a single
-Cypher write so 3,620 entities update atomically with one round-trip.
-"""
 from __future__ import annotations
 
 from typing import Optional
@@ -29,8 +8,6 @@ from semigraph.config import Config, get_config
 from semigraph.connections import get_neo4j_driver
 
 
-# Shared by PPR, triple embedding, and graph repair.  The list lives in YAML
-# so experiments can change the retrieval graph without editing source code.
 INFORMATIVE_REL_TYPES: list[str] = get_config().informative_rel_types
 
 
@@ -40,14 +17,6 @@ def compute_specificity(
 ) -> dict:
     """
     Compute and write `specificity` property on every Entity node.
-
-    Args:
-        rel_types: which relationship types count toward degree.
-                   Defaults to INFORMATIVE_REL_TYPES.
-        cfg:       config; defaults to cached singleton.
-
-    Returns:
-        stats dict — {updated, min, max, avg}
     """
     cfg = cfg or get_config()
     types = rel_types if rel_types is not None else INFORMATIVE_REL_TYPES

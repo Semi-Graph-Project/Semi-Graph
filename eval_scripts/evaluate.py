@@ -130,7 +130,6 @@ def graph_search(question: str, top_k: int = TOP_K) -> list[dict]:
         seed_mode=str(profile["seed_mode"]),
         candidate_pool_k=int(profile["candidate_pool_k"]),
         ppr_seed_weight_mode=str(profile["ppr_seed_weight_mode"]),
-        ppr_graph_mode=str(profile["ppr_graph_mode"]),
         graph_triple_filter=str(profile["triple_filter"]),
         cfg=cfg,
     )

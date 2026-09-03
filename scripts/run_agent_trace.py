@@ -77,7 +77,6 @@ def _summarize_retrieval_trace(trace: dict) -> str:
         parts.append(f"latency={trace['latency_sec']}s")
     if trace.get("retriever") == "graph":
         parts.extend([
-            f"ppr={parameters.get('ppr_graph_mode')}",
             f"seeds={trace.get('seed_count', 0)}",
             f"candidates={trace.get('candidate_count', 0)}",
             f"filter={parameters.get('triple_filter')}",

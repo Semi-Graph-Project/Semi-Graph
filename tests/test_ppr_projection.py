@@ -1,7 +1,5 @@
 from unittest.mock import MagicMock
 
-import pytest
-
 import semigraph.online.ppr as ppr
 
 
@@ -18,28 +16,14 @@ def _result(row=None):
     return result
 
 
-def test_entity_only_projection_excludes_chunks():
-    query = ppr._build_node_query("entity_only")
-    assert "Entity" in query
-    assert "Chunk" not in query
+def test_projection_contains_entity_and_chunk_context():
+    node_query = ppr._build_node_query()
+    rel_query = ppr._build_rel_query()
 
-
-def test_entity_chunk_projection_contains_context_edges():
-    node_query = ppr._build_node_query("entity_chunk")
-    rel_query = ppr._build_rel_query("entity_chunk")
-
+    assert "Entity" in node_query
     assert "Chunk" in node_query
     assert "MENTIONS" in rel_query
     assert "SYNONYM_OF" in rel_query
-
-
-@pytest.mark.parametrize(
-    "function",
-    (ppr._build_node_query, ppr._build_rel_query, ppr.projection_name),
-)
-def test_projection_rejects_unknown_mode(function):
-    with pytest.raises(ValueError, match="Unknown PPR graph mode"):
-        function("unknown")
 
 
 def test_top_chunk_rows_filters_before_top_k():
@@ -52,39 +36,6 @@ def test_top_chunk_rows_filters_before_top_k():
     assert ppr._top_chunk_score_rows(rows, {3, 4}, top_k=1) == [
         {"nodeId": 3, "score": 0.70},
     ]
-
-
-def test_ranking5seed_uses_mean_similarity_and_specificity():
-    seeds = [
-        {
-            "name": "shared",
-            "type": "CONCEPT",
-            "similarity": 0.9,
-            "triple_similarities": [0.9, 0.5],
-            "specificity": 1.0,
-        },
-        {
-            "name": "specific",
-            "type": "PRODUCT",
-            "similarity": 0.8,
-            "specificity": 1.2,
-        },
-        {"name": "third", "type": "ORG", "similarity": 0.7, "specificity": 1.0},
-        {"name": "fourth", "type": "ORG", "similarity": 0.6, "specificity": 1.0},
-        {"name": "fifth", "type": "ORG", "similarity": 0.5, "specificity": 1.0},
-        {"name": "dropped", "type": "ORG", "similarity": 0.4, "specificity": 1.0},
-    ]
-
-    ranked = ppr.ranking5seed(seeds)
-
-    assert [seed["name"] for seed in ranked] == [
-        "specific",
-        "shared",
-        "third",
-        "fourth",
-        "fifth",
-    ]
-    assert ranked[1]["similarity"] == pytest.approx(0.7)
 
 
 def test_weighted_ppr_passes_weighted_nodes_as_source_ids():
@@ -134,7 +85,7 @@ def test_weighted_seed_ids_use_resolved_seed_position():
     assert weighted == [(11, 0.75), (22, 0.25)]
 
 
-def test_ensure_projection_creates_then_reuses_named_graph():
+def test_get_projection_creates_then_reuses_named_graph():
     session = MagicMock()
     session.run.side_effect = [
         _result({"exists": False}),
@@ -143,8 +94,8 @@ def test_ensure_projection_creates_then_reuses_named_graph():
         _result(PROJECTION_INFO),
     ]
 
-    created = ppr.ensure_projection(session, "entity_chunk")
-    reused = ppr.ensure_projection(session, "entity_chunk")
+    created = ppr._get_projection(session)
+    reused = ppr._get_projection(session)
 
     assert created["status"] == "created"
     assert reused["status"] == "reused"
@@ -153,7 +104,7 @@ def test_ensure_projection_creates_then_reuses_named_graph():
     assert queries.count(ppr._CYPHER_PROJECT) == 1
 
 
-def test_refresh_projection_drops_then_recreates_graph():
+def test_manage_projection_refreshes_named_graph(monkeypatch):
     session = MagicMock()
     session.run.side_effect = [
         _result({"exists": True}),
@@ -163,7 +114,11 @@ def test_refresh_projection_drops_then_recreates_graph():
         _result(PROJECTION_INFO),
     ]
 
-    refreshed = ppr.refresh_projection(session, "entity_chunk")
+    driver = MagicMock()
+    driver.session.return_value.__enter__.return_value = session
+    monkeypatch.setattr(ppr, "get_neo4j_driver", lambda cfg: driver)
+
+    refreshed = ppr.manage_projection("refresh")
 
     assert refreshed["status"] == "refreshed"
     assert refreshed["previous_status"] == "dropped"

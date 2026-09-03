@@ -15,17 +15,12 @@ def parse_args() -> argparse.Namespace:
         choices=("status", "prepare", "refresh", "drop"),
         help="Projection lifecycle action.",
     )
-    parser.add_argument(
-        "mode",
-        choices=("entity_chunk", "entity_only"),
-        help="Projection topology to manage.",
-    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    result = manage_projection(args.action, args.mode)
+    result = manage_projection(args.action)
     print(json.dumps(result, indent=2, sort_keys=True))
 
 

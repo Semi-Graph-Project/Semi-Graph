@@ -288,7 +288,7 @@ def test_graph_trace_keeps_only_the_four_readable_stages():
                 "status": "complete",
                 "message": "Ranked graph entities",
                 "details": {
-                    "graph_mode": "entity_only",
+                    "graph_mode": "entity_chunk",
                     "seed_weight_mode": "similarity_specificity",
                     "damping": 0.5,
                 },
@@ -344,7 +344,6 @@ def test_agent_graph_trace_rebuilds_graph_stages_from_compact_retrieval():
                 "parameters": {
                     "seed_mode": "triple",
                     "top_k_triples": 1,
-                    "ppr_graph_mode": "entity_only",
                     "ppr_seed_weight_mode": "uniform",
                     "damping": 0.5,
                 },

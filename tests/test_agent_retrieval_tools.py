@@ -21,7 +21,6 @@ def _config() -> SimpleNamespace:
                 "seed_mode": "triple",
                 "candidate_pool_k": 100,
                 "ppr_seed_weight_mode": "uniform",
-                "ppr_graph_mode": "entity_chunk",
                 "triple_filter": "none",
             },
         }
@@ -99,7 +98,6 @@ def test_agent_graph_search_uses_phase_t_profile(monkeypatch):
     assert captured["seed_mode"] == "triple"
     assert captured["candidate_pool_k"] == 100
     assert captured["ppr_seed_weight_mode"] == "uniform"
-    assert captured["ppr_graph_mode"] == "entity_chunk"
     assert captured["graph_triple_filter"] == "none"
     assert result["trace"]["seed_count"] == 1
     assert result["trace"]["triple_filter"]["reason"] == "llm_selection"

@@ -110,3 +110,14 @@ def _utc_now() -> str:
 
 
 TRACE_STORE = TraceStore()
+
+
+if __name__ == "__main__":
+    """ Test ===> """
+    TRACE_STORE.start(run_id="000",
+                      mode="vector",
+                      query="Nvidia?" ,
+                      corpus="production")
+
+    TRACE_STORE.emit("000", {"run_id":"duck duckt" , "status":"error"})
+    TRACE_STORE.emit("000", {"run_id":"duck duckt2" , "status":"error"})
