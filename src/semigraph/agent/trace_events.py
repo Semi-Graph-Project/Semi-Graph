@@ -97,14 +97,11 @@ class AgentTraceEmitter:
         assessment = attempt.get("assessment") or {}
         output = assessment.get("output") or {}
         controller = assessment.get("controller") or {}
-        covered = set(output.get("covered_requirement_ids") or [])
-        missing = [
-            (
-                f"{requirement.get('requirement_id')}: "
-                f"{requirement.get('description')}"
-            )
-            for requirement in task.get("requirements", [])
-            if requirement.get("requirement_id") not in covered
+        covered = bool(output.get("requirement_covered"))
+        requirement = task.get("requirement") or {}
+        missing = [] if covered else [
+            f"{requirement.get('requirement_id')}: "
+            f"{requirement.get('description')}"
         ]
         decision = controller.get("decision") or "stop"
         attempt_id = attempt["attempt_id"]
@@ -121,19 +118,18 @@ class AgentTraceEmitter:
             attempt_id=attempt_id,
             details={
                 "accepted_chunk_ids": output.get("accepted_chunk_ids") or [],
-                "covered_requirement_ids": sorted(covered),
+                "requirement_covered": covered,
                 "missing_requirements": missing,
                 "reason": controller.get("reason"),
             },
         )
         if decision == "retry":
-            self._retry(task_id, attempt_id, output, update)
+            self._retry(task_id, attempt_id, update)
 
     def _retry(
         self,
         task_id: str,
         attempt_id: str,
-        assessment_output: dict,
         update: dict,
     ) -> None:
         next_action = update.get("current_action") or {}
@@ -144,7 +140,6 @@ class AgentTraceEmitter:
             task_id=task_id,
             attempt_id=attempt_id,
             details={
-                "strategy": assessment_output.get("retry_strategy"),
                 "tool": next_action.get("tool"),
                 "retry_query": next_action.get("query"),
             },

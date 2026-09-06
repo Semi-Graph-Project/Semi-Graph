@@ -271,7 +271,7 @@ def test_run_comparison_emits_live_trace_events_without_changing_result(
 
 
 @pytest.mark.parametrize(
-    ("mode", "locked_tool"),
+    ("mode", "tool"),
     [
         ("agent_vector", "vector"),
         ("agent_graph", "graph"),
@@ -280,7 +280,7 @@ def test_run_comparison_emits_live_trace_events_without_changing_result(
 def test_run_comparison_agent_modes_pass_selected_config(
     monkeypatch,
     mode,
-    locked_tool,
+    tool,
 ):
     captured = {}
 
@@ -311,10 +311,10 @@ def test_run_comparison_agent_modes_pass_selected_config(
                 "attempts": [{
                     "attempt_id": "T1-A1",
                     "task_id": "T1",
-                    "action": {"tool": locked_tool, "query": "Question"},
+                    "action": {"tool": tool, "query": "Question"},
                     "retrieval_status": "ok",
                     "chunks": [{"chunk_id": "c1"}],
-                    "retrieval_trace": {"retriever": locked_tool},
+                    "retrieval_trace": {"retriever": tool},
                 }],
                 "synthesis_trace": {"status": "ok", "llm_calls": 1},
             }
@@ -328,8 +328,8 @@ def test_run_comparison_agent_modes_pass_selected_config(
     result = run_comparison(mode, "Question", "production", top_k=4)
 
     assert result.status == "complete"
-    assert captured["build"]["locked_tool"] == locked_tool
-    assert captured["build"]["top_k"] == 4
+    assert captured["build"]["tool"] == tool
+    assert "top_k" not in captured["build"]
     assert captured["build"]["cfg"].neo4j_uri == "bolt://localhost:7687"
     assert callable(captured["build"]["trace_callback"])
     assert captured["invoke"] == (
@@ -356,7 +356,7 @@ def test_build_agent_passes_explicit_config_to_agent_nodes(monkeypatch):
     selected_config = get_backend_config("benchmark")
     captured = {}
 
-    def fake_plan_route(state, locked_tool=None, cfg=None):
+    def fake_plan_route(state, tool, cfg=None):
         captured["plan"] = cfg
         return {"tasks": []}
 
@@ -371,7 +371,9 @@ def test_build_agent_passes_explicit_config_to_agent_nodes(monkeypatch):
     monkeypatch.setattr(nodes, "plan_route_node", fake_plan_route)
     monkeypatch.setattr(nodes, "synthesize_attempts_node", fake_synthesis)
 
-    build_agent(cfg=selected_config).invoke({"original_query": "Question"})
+    build_agent(tool="graph", cfg=selected_config).invoke({
+        "original_query": "Question"
+    })
 
     assert captured["plan"] is selected_config
     assert captured["synthesis"] is selected_config

@@ -10,54 +10,50 @@ import semigraph.agent.ledger as ledger
 import semigraph.agent.nodes as nodes
 from semigraph.agent.contracts import AssessmentOutput
 from semigraph.agent.retry_policy import (
-    TOOL_RETRY_PROFILES,
-    build_tool_retry_capability_summary,
     decide_retry,
     measure_evidence_gain,
     validate_assessment_context,
 )
 
 
+def _retry_cfg(top_k=5):
+    return SimpleNamespace(agent_top_k_chunks=top_k)
+
+
 def _accept_payload(chunk_id: str = "C1") -> dict:
     return {
         "accepted_chunk_ids": [chunk_id],
-        "covered_requirement_ids": ["R1"],
+        "requirement_covered": True,
         "decision": "accept",
-        "retry_strategy": None,
-        "next_action": None,
+        "retry_query": None,
     }
 
 
 def _retry_payload() -> dict:
     return {
         "accepted_chunk_ids": [],
-        "covered_requirement_ids": [],
+        "requirement_covered": False,
         "decision": "retry",
-        "retry_strategy": "anchor_enrichment",
-        "next_action": {
-            "tool": "graph",
-            "query": "NVDA FY2025 revenue anchor",
-            "top_k_chunks": 5,
-        },
+        "retry_query": "NVDA FY2025 revenue anchor",
     }
 
 
 def _stop_payload() -> dict:
     return {
         "accepted_chunk_ids": [],
-        "covered_requirement_ids": [],
+        "requirement_covered": False,
         "decision": "stop",
-        "retry_strategy": None,
-        "next_action": None,
+        "retry_query": None,
     }
 
 
 def _task() -> dict:
     return {
         "task_id": "T1",
-        "requirements": [
-            {"requirement_id": "R1", "description": "Revenue evidence"}
-        ],
+        "requirement": {
+            "requirement_id": "T1-R1",
+            "description": "Revenue evidence",
+        },
     }
 
 
@@ -67,10 +63,9 @@ def test_assessment_contract_accepts_three_decisions():
         assert output.model_dump(mode="json") == payload
 
 
-@pytest.mark.parametrize("field", ["retry_strategy", "next_action"])
-def test_retry_requires_strategy_and_action(field):
+def test_retry_requires_query():
     payload = _retry_payload()
-    payload[field] = None
+    payload["retry_query"] = None
 
     with pytest.raises(ValidationError):
         AssessmentOutput.model_validate(payload)
@@ -78,7 +73,7 @@ def test_retry_requires_strategy_and_action(field):
 
 def test_non_retry_forbids_retry_fields_and_requires_accepted_evidence():
     payload = _accept_payload()
-    payload["retry_strategy"] = "focus_missing"
+    payload["retry_query"] = "another query"
     with pytest.raises(ValidationError):
         AssessmentOutput.model_validate(payload)
 
@@ -91,13 +86,11 @@ def test_non_retry_forbids_retry_fields_and_requires_accepted_evidence():
 def test_assessment_contract_leaves_duplicate_ids_to_context_handling():
     payload = _accept_payload()
     payload["accepted_chunk_ids"] *= 2
-    payload["covered_requirement_ids"] *= 2
 
     output = AssessmentOutput.model_validate(payload)
 
     assert output.accepted_chunk_ids == ["C1", "C1"]
-    assert output.covered_requirement_ids == ["R1", "R1"]
-    assert validate_assessment_context(output, _task(), {"C1"}) == []
+    assert validate_assessment_context(output, {"C1"}) == []
 
 
 def test_contract_and_state_keep_only_lean_ticket03_models():
@@ -118,75 +111,43 @@ def test_contract_and_state_keep_only_lean_ticket03_models():
         assert not hasattr(contracts, model)
 
 
-def test_assess_prompt_matches_lean_contract_and_retry_registry():
-    from semigraph.agent.prompts import ASSESS_SYSTEM_PROMPT
+def test_assess_prompt_matches_lean_contract():
+    from semigraph.agent.prompts import build_assess_system_prompt
 
+    prompt = build_assess_system_prompt("graph")
     for field in contracts.AssessmentOutput.model_fields:
-        assert f'"{field}"' in ASSESS_SYSTEM_PROMPT
-    for enum in (
-        contracts.AssessmentDecision,
-        contracts.RetryStrategy,
-        contracts.ToolName,
-    ):
-        for member in enum:
-            assert member.value in ASSESS_SYSTEM_PROMPT
-
-    summary = build_tool_retry_capability_summary(TOOL_RETRY_PROFILES)
-    assert summary in ASSESS_SYSTEM_PROMPT
-    assert "failure_type" not in ASSESS_SYSTEM_PROMPT
-    assert "requirement_coverage" not in ASSESS_SYSTEM_PROMPT
-    assert "generic HyDE" in ASSESS_SYSTEM_PROMPT
-    assert "hybrid" not in ASSESS_SYSTEM_PROMPT.casefold()
-    assert "useful partial evidence" in ASSESS_SYSTEM_PROMPT
+        assert f'"{field}"' in prompt
+    for decision in contracts.AssessmentDecision:
+        assert decision.value in prompt
+    assert "fixed to `graph`" in prompt
+    assert "generic HyDE" in prompt
+    assert "another Tool" in prompt
 
 
-def test_locked_eval_assess_prompt_is_opt_in_and_vector_specific():
-    from semigraph.agent.prompts import (
-        ASSESS_SYSTEM_PROMPT,
-        build_assess_system_prompt,
-    )
-
-    assert build_assess_system_prompt() == ASSESS_SYSTEM_PROMPT
+def test_assess_prompt_is_tool_specific():
+    from semigraph.agent.prompts import build_assess_system_prompt
 
     prompt = build_assess_system_prompt("vector")
-    assert "Locked Vector Evaluation" in prompt
-    assert "focus_missing" in prompt
-    assert "next_action.tool` must always be `vector`" in prompt
+    assert "fixed to `vector`" in prompt
+    assert "missing narrative evidence" in prompt
 
-    with pytest.raises(ValueError, match="Unsupported locked tool"):
-        build_assess_system_prompt("financial")
+    with pytest.raises(ValueError, match="Unsupported Tool"):
+        build_assess_system_prompt("hybrid")
 
 
-def test_context_validator_checks_only_real_task_and_chunk_ids():
+def test_context_validator_checks_only_current_chunk_ids():
     valid = AssessmentOutput.model_validate(_accept_payload())
-    assert validate_assessment_context(valid, _task(), {"C1"}) == []
+    assert validate_assessment_context(valid, {"C1"}) == []
 
     payload = _accept_payload("UNKNOWN")
-    payload["covered_requirement_ids"] = ["UNKNOWN-R"]
     errors = validate_assessment_context(
         AssessmentOutput.model_validate(payload),
-        _task(),
         {"C1"},
     )
-    assert {error["code"] for error in errors} == {
-        "unknown_covered_requirement_id",
-        "accepted_chunk_not_in_current_attempt",
-        "accept_requires_all_requirements",
-    }
-
-
-def test_context_validator_rejects_accept_with_uncovered_requirement():
-    payload = _accept_payload()
-    payload["covered_requirement_ids"] = []
-    errors = validate_assessment_context(
-        AssessmentOutput.model_validate(payload),
-        _task(),
-        {"C1"},
-    )
-
-    assert errors == [
-        {"code": "accept_requires_all_requirements", "value": ["R1"]}
-    ]
+    assert errors == [{
+        "code": "accepted_chunk_not_in_current_attempt",
+        "value": ["UNKNOWN"],
+    }]
 
 
 def _attempt(
@@ -194,16 +155,14 @@ def _attempt(
     tool: str = "graph",
     chunks: list[str] | None = None,
     accepted: list[str] | None = None,
-    strategy: str | None = None,
 ) -> dict:
     output = None
-    if accepted is not None or strategy is not None:
+    if accepted is not None:
         output = {
             "accepted_chunk_ids": accepted or [],
-            "covered_requirement_ids": [],
+            "requirement_covered": False,
             "decision": "retry",
-            "retry_strategy": strategy,
-            "next_action": None,
+            "retry_query": "next query",
         }
     return {
         "attempt_id": "T1-A1",
@@ -249,61 +208,43 @@ def test_evidence_gain_counts_only_new_accepted_ids():
 def test_decide_retry_handles_accept_stop_budget_and_repeat():
     attempt = _attempt("NVDA revenue", chunks=["C1"])
     retry = _retry_payload()
-    retry["next_action"]["query"] = "NVDA revenue"
+    retry["retry_query"] = "NVDA revenue"
 
     assert decide_retry(
-        AssessmentOutput.model_validate(_accept_payload()), [attempt], {}, 3
+        AssessmentOutput.model_validate(_accept_payload()),
+        [attempt], {}, 3, "graph", _retry_cfg(),
     )["decision"] == "accept"
     assert decide_retry(
-        AssessmentOutput.model_validate(_stop_payload()), [attempt], {}, 3
+        AssessmentOutput.model_validate(_stop_payload()),
+        [attempt], {}, 3, "graph", _retry_cfg(),
     )["stop_reason"] == "unsupported"
     assert decide_retry(
-        AssessmentOutput.model_validate(retry), [attempt], {}, 3
-    )["reason"] == "repeated_action"
+        AssessmentOutput.model_validate(retry),
+        [attempt], {}, 3, "graph", _retry_cfg(),
+    )["reason"] == "repeated_query"
     assert decide_retry(
         AssessmentOutput.model_validate(_retry_payload()),
         [attempt, attempt, attempt],
         {},
         3,
+        "graph",
+        _retry_cfg(),
     )["stop_reason"] == "budget_exhausted"
 
 
-def test_decide_retry_rejects_top_k_only_change_after_zero_result():
-    payload = _retry_payload()
-    payload["next_action"].update(query="NVDA revenue", top_k_chunks=10)
+def test_decide_retry_builds_fixed_tool_action():
+    attempt = _attempt("NVDA revenue")
+    assessment = AssessmentOutput.model_validate(_retry_payload())
 
     result = decide_retry(
-        AssessmentOutput.model_validate(payload),
-        [_attempt("NVDA revenue")],
-        {},
-        3,
+        assessment, [attempt], {}, 3, "graph", _retry_cfg(7),
     )
 
-    assert result["reason"] == "zero_result_without_material_change"
-
-
-def test_decide_retry_validates_same_tool_strategy_and_switch():
-    attempt = _attempt("NVDA revenue")
-    same_tool = _retry_payload()
-    same_tool["next_action"]["query"] = "NVDA revenue relationship bridge"
-    assert decide_retry(
-        AssessmentOutput.model_validate(same_tool), [attempt], {}, 3
-    )["allowed"] is True
-
-    same_tool["retry_strategy"] = "constraint_repair"
-    assert decide_retry(
-        AssessmentOutput.model_validate(same_tool), [attempt], {}, 3
-    )["reason"] == "unsupported_retry_strategy"
-
-    switched = _retry_payload()
-    switched.update(retry_strategy="switch_tool")
-    switched["next_action"].update(
-        tool="vector",
-        query="NVDA revenue filing narrative",
-    )
-    assert decide_retry(
-        AssessmentOutput.model_validate(switched), [attempt], {}, 3
-    )["reason"] == "tool_switch"
+    assert result["next_action"] == {
+        "tool": "graph",
+        "query": "NVDA FY2025 revenue anchor",
+        "top_k_chunks": 7,
+    }
 
 
 def test_third_attempt_requires_new_accepted_evidence():
@@ -312,11 +253,15 @@ def test_third_attempt_requires_new_accepted_evidence():
         _attempt("NVDA revenue anchor"),
     ]
     payload = _retry_payload()
-    payload["next_action"]["query"] = "NVDA revenue bridge"
+    payload["retry_query"] = "NVDA revenue bridge"
     assessment = AssessmentOutput.model_validate(payload)
 
-    rejected = decide_retry(assessment, attempts, {"has_gain": False}, 3)
-    allowed = decide_retry(assessment, attempts, {"has_gain": True}, 3)
+    rejected = decide_retry(
+        assessment, attempts, {"has_gain": False}, 3, "graph", _retry_cfg()
+    )
+    allowed = decide_retry(
+        assessment, attempts, {"has_gain": True}, 3, "graph", _retry_cfg()
+    )
 
     assert rejected["reason"] == "third_attempt_requires_gain"
     assert allowed["allowed"] is True
@@ -327,7 +272,6 @@ def _working_context_state() -> dict:
         "NVDA TSMC dependency",
         chunks=["C0"],
         accepted=["C0"],
-        strategy="bridge_hint",
     )
     previous["chunks"][0]["text"] = "Historical accepted evidence"
     latest = _attempt("NVDA TSMC dependency FY2025", chunks=["C1"])
@@ -428,10 +372,11 @@ def _run_assess(monkeypatch, state, outputs):
         agent_max_assessment_attempts=2,
         agent_assess_context_max_chars=60_000,
         agent_max_attempts_per_task=3,
+        agent_top_k_chunks=5,
     )
     monkeypatch.setattr(nodes, "get_config", lambda: cfg)
     monkeypatch.setattr(nodes, "get_llm", lambda _: llm)
-    return nodes.assess_node(state), llm
+    return nodes.assess_node(state, tool="graph", cfg=cfg), llm
 
 
 def test_assess_accepts_task_and_stores_lean_envelope(monkeypatch):
@@ -474,11 +419,8 @@ def test_assess_stop_records_insufficient_completion(monkeypatch):
 
 def test_assess_returns_controller_approved_retry(monkeypatch):
     payload = _retry_payload()
-    payload.update(
-        accepted_chunk_ids=["C1"],
-        retry_strategy="bridge_hint",
-    )
-    payload["next_action"]["query"] = "NVDA revenue dependency bridge"
+    payload["accepted_chunk_ids"] = ["C1"]
+    payload["retry_query"] = "NVDA revenue dependency bridge"
 
     result, _ = _run_assess(
         monkeypatch,
@@ -486,7 +428,11 @@ def test_assess_returns_controller_approved_retry(monkeypatch):
         [json.dumps(payload)],
     )
 
-    assert result["current_action"] == payload["next_action"]
+    assert result["current_action"] == {
+        "tool": "graph",
+        "query": payload["retry_query"],
+        "top_k_chunks": 5,
+    }
     assert "completion" not in result
     gain = result["attempts"][-1]["assessment"]["trace"]["evidence_gain"]
     assert gain["new_accepted_chunk_ids"] == ["C1"]
@@ -546,7 +492,19 @@ def _build_task_worker_component_graph():
 
     workflow = StateGraph(TaskWorkerState)
     workflow.add_node("execute", nodes.execute_attempt_node)
-    workflow.add_node("assess", nodes.assess_node)
+    workflow.add_node(
+        "assess",
+        lambda state: nodes.assess_node(
+            state,
+            tool="graph",
+            cfg=SimpleNamespace(
+                agent_max_assessment_attempts=2,
+                agent_assess_context_max_chars=60_000,
+                agent_max_attempts_per_task=3,
+                agent_top_k_chunks=5,
+            ),
+        ),
+    )
     workflow.add_edge(START, "execute")
     workflow.add_conditional_edges(
         "execute",
@@ -580,6 +538,7 @@ def _patch_component(monkeypatch, llm, retrievers):
         agent_assess_context_max_chars=60_000,
         agent_max_attempts_per_task=3,
         agent_max_synthesis_chunks=10,
+        agent_top_k_chunks=5,
     )
     monkeypatch.setattr(nodes, "get_config", lambda: cfg)
     monkeypatch.setattr(nodes, "get_llm", lambda _: llm)
@@ -621,40 +580,10 @@ def test_task_worker_recovers_with_graph_hint(monkeypatch):
     assert result["stop_reason"] == "sufficient"
 
 
-def test_task_worker_uses_llm_selected_tool_switch(monkeypatch):
-    retry = _retry_payload()
-    retry.update(retry_strategy="switch_tool")
-    retry["next_action"].update(
-        tool="vector",
-        query="NVDA FY2025 revenue filing narrative",
-    )
-    llm = _FakeAssessLLM([
-        json.dumps(retry),
-        json.dumps(_accept_payload()),
-    ])
-    calls = []
-    retrievers = {
-        "graph": _sequenced_retriever("graph", [[]], calls),
-        "vector": _sequenced_retriever(
-            "vector",
-            [[{"chunk_id": "C1", "text": "filing evidence"}]],
-            calls,
-        ),
-    }
-    _patch_component(monkeypatch, llm, retrievers)
-
-    result = _build_task_worker_component_graph().invoke(
-        _task_worker_state(), config={"recursion_limit": 8}
-    )
-
-    assert [tool for tool, _ in calls] == ["graph", "vector"]
-    assert result["stop_reason"] == "sufficient"
-
-
 def test_task_worker_requires_second_attempt_gain_for_third(monkeypatch):
     first = _retry_payload()
     second = deepcopy(first)
-    second["next_action"]["query"] = "NVDA FY2025 revenue bridge"
+    second["retry_query"] = "NVDA FY2025 revenue bridge"
     llm = _FakeAssessLLM([json.dumps(first), json.dumps(second)])
     calls = []
     graph = _sequenced_retriever("graph", [[], []], calls)

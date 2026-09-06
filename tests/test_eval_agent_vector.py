@@ -138,6 +138,7 @@ def test_vector_eval_graph_uses_production_builder(monkeypatch):
         neo4j_uri="",
         controlled_neo4j_uri="bolt://neo4j-controlled:7687",
         agent_retrieval={"vector": {}},
+        agent_top_k_chunks=5,
     )
     captured = {}
     graph = object()
@@ -149,11 +150,11 @@ def test_vector_eval_graph_uses_production_builder(monkeypatch):
     monkeypatch.setattr(eval_agent, "get_config", lambda: cfg)
     monkeypatch.setattr(eval_agent, "build_agent", fake_build_agent)
 
-    result = eval_agent.build_vector_eval_graph(top_k=5)
+    result = eval_agent.build_vector_eval_graph()
 
     assert result is graph
-    assert captured["locked_tool"] == "vector"
-    assert captured["top_k"] == 5
+    assert captured["tool"] == "vector"
+    assert "top_k" not in captured
     assert callable(captured["synthesis"])
     assert cfg.neo4j_uri == cfg.controlled_neo4j_uri
     assert cfg.agent_retrieval["vector"]["vector_index"] == (
@@ -199,6 +200,7 @@ def test_vector_eval_graph_runs_plan_execute_assess_and_eval_synthesis(monkeypat
     cfg = SimpleNamespace(
         agent_max_parallel_tasks=2,
         agent_max_synthesis_chunks=10,
+        agent_top_k_chunks=5,
         neo4j_uri="",
         controlled_neo4j_uri="bolt://neo4j-controlled:7687",
         agent_retrieval={"vector": {}},
@@ -214,10 +216,10 @@ def test_vector_eval_graph_runs_plan_execute_assess_and_eval_synthesis(monkeypat
     task = {
         "task_id": "T1",
         "query": "Find Intel product evidence",
-        "requirements": [{
+        "requirement": {
             "requirement_id": "T1-R1",
             "description": "Intel product evidence",
-        }],
+        },
         "initial_action": {
             "tool": "graph",
             "query": "Intel products",
@@ -225,10 +227,18 @@ def test_vector_eval_graph_runs_plan_execute_assess_and_eval_synthesis(monkeypat
         },
     }
 
-    def plan_route(_state, locked_tool=None):
-        return {"tasks": [task]}
+    def plan_route(_state, tool, cfg=None):
+        selected_task = {
+            **task,
+            "initial_action": {
+                **task["initial_action"],
+                "tool": tool,
+                "top_k_chunks": cfg.agent_top_k_chunks,
+            },
+        }
+        return {"tasks": [selected_task]}
 
-    def execute(state):
+    def execute(state, cfg=None):
         attempt = {
             "attempt_id": "T1-A1",
             "task_id": "T1",
@@ -243,14 +253,14 @@ def test_vector_eval_graph_runs_plan_execute_assess_and_eval_synthesis(monkeypat
             "current_action": dict(state["current_action"]),
         }
 
-    def assess(state, locked_tool=None):
+    def assess(state, tool, cfg=None):
         attempt = {
             **state["attempts"][-1],
             "assessment": {
                 "status": "valid",
                 "output": {
                     "accepted_chunk_ids": ["C1"],
-                    "covered_requirement_ids": ["T1-R1"],
+                    "requirement_covered": True,
                 },
             },
         }

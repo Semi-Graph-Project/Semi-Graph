@@ -9,7 +9,7 @@ class TaskResult(TypedDict):
 
     task_id: str
     attempts: list[AttemptRecord]
-    completion: dict
+    completion: dict # {"Task_id": , "sufficent?":"" , "stop_resaon":}
 
 
 class TaskWorkerState(TypedDict, total=False):

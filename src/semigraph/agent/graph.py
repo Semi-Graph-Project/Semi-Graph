@@ -4,45 +4,14 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
 
 from semigraph.agent import nodes
+from semigraph.agent.contracts import ToolName
 from semigraph.agent.state import AgentState, TaskWorkerState
 from semigraph.agent.trace_events import AgentTraceEmitter
 from semigraph.config import Config, get_config
 from semigraph.trace import TraceCallback
 
 
-LOCKABLE_TOOLS = {"vector", "graph"}
-
-
-def _apply_action_policy(
-    update: dict,
-    locked_tool: str | None,
-    top_k: int | None,
-) -> dict:
-    """Apply an evaluation policy without changing planner/assessor logic."""
-    if locked_tool is None and top_k is None:
-        return update
-
-    def normalize(action: dict) -> dict:
-        normalized = dict(action)
-        if locked_tool is not None:
-            normalized["tool"] = locked_tool
-        if top_k is not None:
-            normalized["top_k_chunks"] = top_k
-        return normalized
-
-    result = dict(update)
-    if result.get("current_action"):
-        result["current_action"] = normalize(result["current_action"])
-
-    if result.get("tasks"):
-        result["tasks"] = [
-            {
-                **task,
-                "initial_action": normalize(task["initial_action"]),
-            }
-            for task in result["tasks"]
-        ]
-    return result
+SUPPORTED_TOOLS = {tool.value for tool in ToolName}
 
 
 def _send_tasks(state: AgentState) -> list[Send] | str:
@@ -107,23 +76,14 @@ def _collect_task_results(state: AgentState) -> dict:
 
 
 def build_agent(
-    locked_tool: str | None = None,
-    top_k: int | None = None,
+    tool: str,
     synthesis: Callable[[AgentState], dict] | None = None,
     cfg: Config | None = None,
     trace_callback: TraceCallback | None = None,
 ):
-    """Build the Agent harness with isolated parallel Task workers.
-
-    Production uses the default autonomous policy. Evaluations may lock every
-    initial and retry action to Graph or Vector while keeping the same harness.
-    An explicit Config keeps a selected demo corpus isolated from the default
-    process-wide configuration.
-    """
-    if locked_tool is not None and locked_tool not in LOCKABLE_TOOLS:
-        raise ValueError(f"Unsupported locked tool: {locked_tool}")
-    if top_k is not None and top_k < 1:
-        raise ValueError("top_k must be positive")
+    """Build parallel Task workers that all use one caller-selected Tool."""
+    if tool not in SUPPORTED_TOOLS:
+        raise ValueError(f"Unsupported Tool: {tool}")
 
     agent_config = cfg or get_config()
 
@@ -131,46 +91,27 @@ def build_agent(
 
     def plan_route(state: AgentState) -> dict:
         tracer.plan_started()
-        if cfg is None:
-            update = nodes.plan_route_node(state, locked_tool=locked_tool)
-        else:
-            update = nodes.plan_route_node(
-                state,
-                locked_tool=locked_tool,
-                cfg=agent_config,
-            )
-        update = _apply_action_policy(
-            update,
-            locked_tool,
-            top_k,
+        update = nodes.plan_route_node(
+            state,
+            tool=tool,
+            cfg=agent_config,
         )
         tracer.plan_finished(update)
         return update
 
     def assess(state: TaskWorkerState) -> dict:
         tracer.assess_started(state)
-        if cfg is None:
-            update = nodes.assess_node(state, locked_tool=locked_tool)
-        else:
-            update = nodes.assess_node(
-                state,
-                locked_tool=locked_tool,
-                cfg=agent_config,
-            )
-        update = _apply_action_policy(
-            update,
-            locked_tool,
-            top_k,
+        update = nodes.assess_node(
+            state,
+            tool=tool,
+            cfg=agent_config,
         )
         tracer.assess_finished(state["task"], update)
         return update
 
     def execute_attempt(state: TaskWorkerState) -> dict:
         tracer.execute_started(state)
-        if cfg is None:
-            update = nodes.execute_attempt_node(state)
-        else:
-            update = nodes.execute_attempt_node(state, cfg=agent_config)
+        update = nodes.execute_attempt_node(state, cfg=agent_config)
         tracer.execute_finished(update)
         return update
 
@@ -218,8 +159,6 @@ def build_agent(
     workflow.add_node("collector", _collect_task_results)
     if synthesis is not None:
         run_synthesis = synthesis
-    elif cfg is None:
-        run_synthesis = nodes.synthesize_attempts_node
     else:
         run_synthesis = lambda state: nodes.synthesize_attempts_node(
             state,

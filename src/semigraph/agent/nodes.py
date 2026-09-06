@@ -60,39 +60,37 @@ def _parse_plan_route_response(raw: str) -> PlanRouteOutput:
 
 def _normalize_plan_tasks(
     plan: PlanRouteOutput,
+    max_tasks: int,
+    tool: str,
+    cfg: Config,
 ) -> list[dict]:
-    """Return bounded, one-requirement Tasks ready for execution."""
-    tasks: list[dict] = []
-
-    for planned_task in plan.tasks:
-        split_task = len(planned_task.requirements) > 1
-        for requirement in planned_task.requirements:
-            task_id = f"T{len(tasks) + 1}"
-            query = (
-                requirement.description if split_task else planned_task.query
-            )
-            action = planned_task.initial_action.model_dump(mode="json")
-            if split_task:
-                action["query"] = query
-
-            tasks.append({
-                "task_id": task_id,
-                "query": query,
-                "requirements": [{
-                    "requirement_id": f"{task_id}-R1",
-                    "description": requirement.description,
-                }],
-                "initial_action": action,
-            })
-
+    """Add runtime IDs and the caller-selected retrieval action."""
+    tasks = []
+    for index, planned_task in enumerate(plan.tasks[:max_tasks], start=1):
+        task_id = f"T{index}"
+        action = RetrievalAction(
+            tool=tool,
+            query=planned_task.query,
+            top_k_chunks=cfg.agent_top_k_chunks,
+        )
+        tasks.append({
+            "task_id": task_id,
+            "query": planned_task.query,
+            "requirement": {
+                "requirement_id": f"{task_id}-R1",
+                "description": planned_task.requirement.description,
+            },
+            "initial_action": action.model_dump(mode="json"),
+        })
     return tasks
 
 
-
 PROMPT_MODE = "ontology"  # or "legacy"
+
+
 def plan_route_node(
     state: AgentState,
-    locked_tool: str | None = None,
+    tool: str,
     cfg: Config | None = None,
 ) -> dict:
     started_at = time.perf_counter()
@@ -120,15 +118,18 @@ def plan_route_node(
     original_query = original_query.strip()
     cfg = cfg or get_config()
     llm = get_llm(cfg)
-    system_prompt = build_ontology_planroute_prompt(
-        getattr(cfg, "informative_rel_types", RELATIONSHIP_CATALOG.keys()),
-        getattr(cfg, "agent_max_num_ontology", 8),
-    ) if PROMPT_MODE == "ontology" else build_plan_route_system_prompt(cfg)
-    if locked_tool:
-        system_prompt += (
-            "\n\nEvaluation constraint: every initial_action.tool must be "
-            f'"{locked_tool}". Do not select any other Tool.'
+    if PROMPT_MODE == "ontology" and tool == "graph":
+        system_prompt = build_ontology_planroute_prompt(
+            informative_relations=getattr(
+                cfg,
+                "informative_rel_types",
+                RELATIONSHIP_CATALOG.keys(),
+            ),
+            max_planned_tasks=cfg.agent_max_planned_tasks,
+            max_num_ontology=cfg.agent_max_num_ontology,
         )
+    else:
+        system_prompt = build_plan_route_system_prompt(cfg, tool)
     previous_raw = ""
     previous_error = ""
 
@@ -179,7 +180,12 @@ def plan_route_node(
             "status": "valid",
             "errors": [],
         })
-        tasks = _normalize_plan_tasks(plan_route)
+        tasks = _normalize_plan_tasks(
+            plan_route,
+            max_tasks=cfg.agent_max_planned_tasks,
+            tool=tool,
+            cfg=cfg,
+        )
 
         return {
             "tasks": tasks,
@@ -188,9 +194,6 @@ def plan_route_node(
                 "validation_mode": "structural_only_v1",
                 "normalization": {
                     "input_tasks": len(plan_route.tasks),
-                    "input_requirements": sum(
-                        len(task.requirements) for task in plan_route.tasks
-                    ),
                     "output_tasks": len(tasks),
                 },
                 "attempts": attempts,
@@ -401,7 +404,7 @@ def _complete_task(
 
 def assess_node(
     state: TaskWorkerState,
-    locked_tool: str | None = None,
+    tool: str,
     cfg: Config | None = None,
 ) -> dict:
     """Assess the latest Attempt and let the controller approve any retry."""
@@ -410,7 +413,7 @@ def assess_node(
 
     cfg = cfg or get_config()
     llm = get_llm(cfg)
-    system_prompt = build_assess_system_prompt(locked_tool)
+    system_prompt = build_assess_system_prompt(tool)
     user_message = build_assess_context(state, cfg)
     llm_calls = 0
     started_at = time.perf_counter()
@@ -441,9 +444,7 @@ def assess_node(
             assessment = _parse_assessment_response(raw)
             errors = validate_assessment_context(
                 assessment,
-                task=task,
                 current_chunk_ids=current_chunk_ids,
-                locked_tool=locked_tool,
             )
         except (json.JSONDecodeError, ValidationError, TypeError, ValueError) as exc:
             errors = _normalize_assessment_error(exc)
@@ -497,6 +498,8 @@ def assess_node(
         state["attempts"],
         evidence_gain,
         cfg.agent_max_attempts_per_task,
+        tool,
+        cfg,
     )
     assessed_attempt["assessment"] = {
         "status": "valid" if llm_calls == 1 else "repaired",

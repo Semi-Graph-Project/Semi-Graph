@@ -20,7 +20,6 @@ from semigraph.connections import get_llm  # noqa: E402
 
 
 VECTOR_INDEX = "gold_chunk_embedding"
-DEFAULT_TOP_K = 5
 EVAL_TOOLS = {"vector", "graph"}
 DO_NOT_ANSWER = "Do not Answer"
 GENERATION_ERROR_ANSWER = "Can't Generate Answer"
@@ -225,19 +224,16 @@ def eval_synthesize_node(
 
 
 def _build_eval_graph(
-    locked_tool: str,
-    top_k: int,
+    tool: str,
     generate_answer: bool,
 ):
     """Build the shared Production-shaped evaluation Agent graph."""
-    if locked_tool not in EVAL_TOOLS:
-        raise ValueError(f"Unsupported evaluation tool: {locked_tool}")
-    if top_k < 1:
-        raise ValueError("top_k must be positive")
+    if tool not in EVAL_TOOLS:
+        raise ValueError(f"Unsupported evaluation tool: {tool}")
 
     cfg = get_config()
     cfg.neo4j_uri = cfg.controlled_neo4j_uri
-    if locked_tool == "vector":
+    if tool == "vector":
         cfg.agent_retrieval["vector"]["vector_index"] = VECTOR_INDEX
     else:
         cfg.agent_retrieval["graph"]["chunk_seed_vector_index"] = VECTOR_INDEX
@@ -246,24 +242,22 @@ def _build_eval_graph(
         return eval_synthesize_node(state, generate_answer=generate_answer)
 
     return build_agent(
-        locked_tool=locked_tool,
-        top_k=top_k,
+        tool=tool,
         synthesis=eval_synthesize,
+        cfg=cfg,
     )
 
 
 def build_vector_eval_graph(
-    top_k: int = DEFAULT_TOP_K,
     generate_answer: bool = True,
 ):
-    return _build_eval_graph("vector", top_k, generate_answer)
+    return _build_eval_graph("vector", generate_answer)
 
 
 def build_graph_eval_graph(
-    top_k: int = DEFAULT_TOP_K,
     generate_answer: bool = True,
 ):
-    return _build_eval_graph("graph", top_k, generate_answer)
+    return _build_eval_graph("graph", generate_answer)
 
 
 SMOKE_QUERY = (
@@ -279,7 +273,7 @@ def _run_smoke_test() -> None:
     print("=== Vector Agent Eval Smoke Test ===")
     print(f"Query: {SMOKE_QUERY}")
 
-    graph = build_graph_eval_graph(top_k=10)
+    graph = build_graph_eval_graph()
     result = graph.invoke({"original_query": SMOKE_QUERY})
 
     print("\n=== Final Answer ===")

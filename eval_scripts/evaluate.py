@@ -183,7 +183,6 @@ def write_yaml_trace(results: list[dict], output_path: Path) -> None:
 
 def _run_agent(
     question: str,
-    top_k: int,
     tool: str,
     generate_answer: bool,
 ) -> dict:
@@ -194,11 +193,7 @@ def _run_agent(
             "final_answer": "Do not Answer" if generate_answer else "",
             "answer_latency_ms": 0.0,
         }
-    if not isinstance(top_k, int) or isinstance(top_k, bool) or top_k < 1:
-        raise ValueError("top_k must be a positive integer")
-
     graph = AGENT_BUILDERS[tool](
-        top_k=top_k,
         generate_answer=generate_answer,
     )
     result = graph.invoke({"original_query": question})
@@ -234,21 +229,19 @@ def _run_agent(
     }
 
 
-def agent_vector_search(question: str, top_k: int = TOP_K) -> list[dict]:
+def agent_vector_search(question: str) -> list[dict]:
     """Return the Chunks selected by the evaluation Vector Agent."""
     return _run_agent(
         question,
-        top_k,
         tool="agent_vector",
         generate_answer=False,
     )["chunks"]
 
 
-def agent_graph_search(question: str, top_k: int = TOP_K) -> list[dict]:
+def agent_graph_search(question: str) -> list[dict]:
     """Return the Chunks selected by the evaluation Graph Agent."""
     return _run_agent(
         question,
-        top_k,
         tool="agent_graph",
         generate_answer=False,
     )["chunks"]
@@ -311,7 +304,6 @@ def evaluate_sox_queries(
         if tool in AGENT_BUILDERS:
             agent_result = _run_agent(
                 case["query"],
-                TOP_K,
                 tool=tool,
                 generate_answer=mode == "full_answer",
             )

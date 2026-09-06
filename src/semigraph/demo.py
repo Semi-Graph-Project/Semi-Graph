@@ -147,10 +147,10 @@ def _direct_synthesis_state(
         "tasks": [{
             "task_id": task_id,
             "query": query,
-            "requirements": [{
+            "requirement": {
                 "requirement_id": f"{task_id}-R1",
                 "description": query,
-            }],
+            },
             "initial_action": action,
         }],
         "attempts": [{
@@ -162,7 +162,10 @@ def _direct_synthesis_state(
             "retrieval_trace": retrieval_trace,
             "assessment": {
                 "status": "valid",
-                "output": {"accepted_chunk_ids": chunk_ids},
+                "output": {
+                    "accepted_chunk_ids": chunk_ids,
+                    "requirement_covered": bool(chunk_ids),
+                },
             },
         }],
         "completed_tasks": [{
@@ -364,14 +367,13 @@ def run_comparison(
             )
             return finish(result)
 
-        locked_tool = (
+        tool = (
             "vector"
             if selected_mode is ComparisonMode.AGENT_VECTOR
             else "graph"
         )
         agent = build_agent(
-            locked_tool=locked_tool,
-            top_k=effective_top_k,
+            tool=tool,
             cfg=cfg,
             trace_callback=emit,
         )

@@ -12,6 +12,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from semigraph.agent.graph import build_agent
+from semigraph.agent.contracts import ToolName
 
 
 _RESET = "\033[0m"
@@ -154,6 +155,12 @@ def main() -> None:
     )
     parser.add_argument("query", help="Sample query to run through the agent")
     parser.add_argument(
+        "--tool",
+        choices=[tool.value for tool in ToolName],
+        required=True,
+        help="Retriever used for every Task and retry",
+    )
+    parser.add_argument(
         "--recursion-limit",
         type=int,
         default=50,
@@ -181,7 +188,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    graph = build_agent()
+    graph = build_agent(tool=args.tool)
     c_print("QUERY:", color="cyan", bold=True, end=" ")
     c_print(args.query, color="white")
     c_print("RECURSION_LIMIT:", color="cyan", bold=True, end=" ")

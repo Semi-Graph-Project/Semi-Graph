@@ -7,20 +7,6 @@ from semigraph.agent.state import TaskWorkerState
 from semigraph.config import Config
 
 
-def retrieved_chunks(attempts: list[dict]) -> list[dict[str, Any]]:
-    """Return unique raw chunks in retrieval order."""
-    chunks = []
-    seen_ids: set[str] = set()
-    for attempt in attempts:
-        for chunk in attempt.get("chunks", []) or []:
-            chunk_id = str(chunk.get("chunk_id") or "")
-            if not chunk_id or chunk_id in seen_ids:
-                continue
-            chunks.append(chunk)
-            seen_ids.add(chunk_id)
-    return chunks
-
-
 def tool_calls(attempts: list[dict]) -> list[dict[str, Any]]:
     """Return one compact Tool-call row per Attempt."""
     return [
@@ -67,13 +53,6 @@ def select_synthesis_chunks(
         task_id = attempt.get("task_id")
         if task_id:
             attempts_by_task.setdefault(task_id, []).append(attempt)
-    # print("=== select_synthesis_chunks: attempts_by_task ===")
-    # print("type = ", type(attempts_by_task))
-    # for task_id, task_attempts in attempts_by_task.items():
-    #     print(f"Task ID: {task_id}, Attempts: {task_attempts}\n\n")
-    # print("=== Raw attempts by task ===")
-    # print(attempts_by_task)
-
     accepted: dict[str, list[dict]] = {}
     fallback: dict[str, list[dict]] = {}
 
@@ -234,12 +213,14 @@ def build_assess_context(state: TaskWorkerState, cfg: Config) -> str:
         if isinstance(chunk, dict)
     ]
     accepted_ids: set[str] = set()
-    covered_ids: set[str] = set()
+    requirement_covered = False
     for attempt in task_attempts[:-1]:
         assessment = attempt.get("assessment") or {}
         output = assessment.get("output") or {}
         accepted_ids.update(output.get("accepted_chunk_ids", []))
-        covered_ids.update(output.get("covered_requirement_ids", []))
+        requirement_covered = (
+            requirement_covered or bool(output.get("requirement_covered"))
+        )
         if assessment.get("status") == "fail_open":
             accepted_ids.update(
                 chunk.get("chunk_id")
@@ -263,6 +244,11 @@ def build_assess_context(state: TaskWorkerState, cfg: Config) -> str:
                     "accepted_chunk_ids", []
                 )
             ),
+            "requirement_covered": bool(
+                ((attempt.get("assessment") or {}).get("output") or {}).get(
+                    "requirement_covered"
+                )
+            ),
             "returned_chunk_ids": [
                 chunk.get("chunk_id")
                 for chunk in (attempt.get("chunks") or [])
@@ -278,7 +264,7 @@ def build_assess_context(state: TaskWorkerState, cfg: Config) -> str:
         "current_action": latest_attempt.get("action")
         or state.get("current_action", {}),
         "latest_chunks": latest_chunks,
-        "covered_requirement_ids": sorted(covered_ids),
+        "requirement_covered": requirement_covered,
         "accepted_evidence": [
             _chunk_preview(chunk, text_limit=240)
             for chunk in accepted_evidence

@@ -3,4 +3,4 @@
 from semigraph.agent.graph import build_agent
 
 
-graph = build_agent()
+graph = build_agent(tool="graph")

@@ -106,7 +106,9 @@ agent_retrieval:
 
 # Agent harness budgets. Keep operational limits in config rather than Prompt.
 agent_harness:
+  max_planned_tasks: 10
   max_parallel_tasks: 4
+  top_k_chunks: 5
   max_attempts_per_task: 3
   max_assessment_attempts: 2
   max_technical_retries: 1
@@ -174,7 +176,7 @@ graph_repair:
     "RMBS": "rambus"
     "TXN": "texas instruments"
 
-# News tool (Phase E.v1 — Finnhub News API)
+
 news:
   days_back: 90              # default date window (caller can override via param)
   cache_dir: "data/news/cache"

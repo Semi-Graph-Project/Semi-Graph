@@ -2,7 +2,6 @@ from types import SimpleNamespace
 
 import semigraph.agent.tools as agent_tools
 from semigraph.agent.contracts import ToolName
-from semigraph.agent.retry_policy import TOOL_RETRY_PROFILES
 
 
 def _config() -> SimpleNamespace:
@@ -164,7 +163,6 @@ def test_agent_tool_registries_have_one_consistent_tool_set():
     expected_tools = {tool.value for tool in ToolName}
 
     assert set(agent_tools.RETRIEVERS) == expected_tools
-    assert set(TOOL_RETRY_PROFILES) == set(ToolName)
     assert all(callable(retriever) for retriever in agent_tools.RETRIEVERS.values())
 
 

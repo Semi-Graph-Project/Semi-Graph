@@ -176,6 +176,10 @@ class Config:
 
         # --- Agent harness budgets ---
         agent_harness = data.get("agent_harness", {})
+        self.agent_max_planned_tasks: int = int(
+            agent_harness.get("max_planned_tasks", 10)
+        )
+
         self.agent_max_parallel_tasks: int = int(
             agent_harness.get("max_parallel_tasks", 2)
         )
@@ -183,6 +187,12 @@ class Config:
             raise ValueError(
                 "agent_harness.max_parallel_tasks must be 1..5"
             )
+
+        self.agent_top_k_chunks: int = int(
+            agent_harness.get("top_k_chunks", 5)
+        )
+        if not 1 <= self.agent_top_k_chunks <= 100:
+            raise ValueError("agent_harness.top_k_chunks must be 1..100")
 
         self.agent_max_attempts_per_task: int = int(
             agent_harness.get("max_attempts_per_task", 3)

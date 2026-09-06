@@ -1,8 +1,8 @@
 """
 Streamlit UI for the SemiGraph Full Agent — enterprise theme, dark + light.
 
-The UI exposes the production Agent harness in three configurations:
-autonomous routing, Vector-locked, and Graph-locked. Every configuration runs
+The UI exposes the production Agent harness in two fixed-tool modes:
+Vector and Graph. Both modes run
 the same PlanRoute -> Execute -> Assess/Retry -> Synthesize workflow.
 
 Theme: a runtime Dark/Light toggle (sidebar). The two palettes live in
@@ -34,6 +34,7 @@ import streamlit as st
 from semigraph.agent.graph import build_agent
 from semigraph.agent.ledger import retrieval_traces, tool_calls
 from semigraph.connections import get_neo4j_driver
+from semigraph.config import get_config
 from demo_rag import SUGGESTED_QUERIES
 
 
@@ -276,25 +277,18 @@ st.markdown(build_css(palette), unsafe_allow_html=True)
 
 
 AGENT_MODES = {
-    "Full Agent (Routing)": {
-        "locked_tool": None,
+    "Agent Vector": {
+        "tool": "vector",
         "description": (
-            "PlanRoute chooses Graph, Vector, Financial, or News for each task, "
-            "then Assess can retry with a better query or tool."
+            "The Agent plans, assesses, and rewrites queries while every "
+            "retrieval attempt uses Vector Search."
         ),
     },
-    "Agent Locked Vector": {
-        "locked_tool": "vector",
+    "Agent Graph": {
+        "tool": "graph",
         "description": (
-            "The Agent still plans, assesses, and retries, but every retrieval "
-            "attempt is forced through Vector Search."
-        ),
-    },
-    "Agent Locked Graph": {
-        "locked_tool": "graph",
-        "description": (
-            "The Agent still plans, assesses, and retries, but every retrieval "
-            "attempt is forced through Graph Search (PPR)."
+            "The Agent plans, assesses, and rewrites queries while every "
+            "retrieval attempt uses Graph Search (PPR)."
         ),
     },
 }
@@ -302,18 +296,16 @@ AGENT_RECURSION_LIMIT = 50
 
 
 @st.cache_resource(show_spinner="Loading Agent harness...")
-def load_agent(mode: str, top_k: int):
-    """Build and cache one compiled Agent graph per UI configuration."""
-    locked_tool = AGENT_MODES[mode]["locked_tool"]
-    return build_agent(locked_tool=locked_tool, top_k=top_k)
+def load_agent(mode: str):
+    """Build and cache one compiled Agent graph per UI mode."""
+    return build_agent(tool=AGENT_MODES[mode]["tool"])
 
 
 def agent_badge(mode: str) -> str:
     """Return a compact badge for the active Agent configuration."""
     colors = {
-        "Full Agent (Routing)": ("#1B3A2A", "#3FB950"),
-        "Agent Locked Vector": ("#1C3150", "#58A6FF"),
-        "Agent Locked Graph": ("#3A3115", "#D29922"),
+        "Agent Vector": ("#1C3150", "#58A6FF"),
+        "Agent Graph": ("#3A3115", "#D29922"),
     }
     bg, fg = colors[mode]
     return (
@@ -741,12 +733,9 @@ with st.sidebar:
     )
 
     st.markdown('<div class="sg-label">Retrieval</div>', unsafe_allow_html=True)
-    top_k = st.slider(
-        "Chunks per attempt (top_k)", 3, 12, 5,
-        help=(
-            "Applied to every initial and retry action so all three Agent "
-            "configurations can be compared under the same retrieval budget."
-        ),
+    st.caption(
+        "Chunks per attempt (top_k): "
+        f"{get_config().agent_top_k_chunks} · config/default.yaml"
     )
 
     st.markdown('<div class="sg-label">Suggested queries</div>', unsafe_allow_html=True)
@@ -783,7 +772,7 @@ if run and query.strip():
     )
     try:
         thinking_status.write("กำลังโหลด Agent harness และ retrieval configuration")
-        agent = load_agent(agent_mode, top_k)
+        agent = load_agent(agent_mode)
         result, thinking_events = run_agent_with_thinking(
             agent,
             query.strip(),
