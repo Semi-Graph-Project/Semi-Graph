@@ -1,0 +1,29 @@
+# ติดตั้งครั้งแรก
+git clone --branch advisor-work --single-branch https://github.com/Semi-Graph-Project/Semi-Graph.git "$HOME\Semi-Graph"
+cd "$HOME\Semi-Graph"
+docker login ghcr.io -u YOUR_GITHUB_USERNAME
+.\handoff.ps1 setup
+notepad .env
+.\handoff.ps1 start
+.\handoff.ps1 smoke
+
+# เปิดใช้งาน
+cd $HOME\Semi-Graph
+.\handoff.ps1 start
+
+# เปิดหน้าเปรียบเทียบ 4 ระบบ
+.\handoff.ps1 comparison
+
+# ตรวจสถานะและดู Log
+.\handoff.ps1 status
+.\handoff.ps1 logs
+
+# ปิดระบบโดยไม่ลบข้อมูล
+.\handoff.ps1 stop
+
+# อัปเดต Code รุ่นล่าสุด
+git pull --ff-only origin advisor-work
+.\handoff.ps1 start
+
+# ถ้า PowerShell ไม่อนุญาตให้รัน Script ให้รันคำสั่งนี้หนึ่งครั้งต่อหน้าต่าง
+Set-ExecutionPolicy -Scope Process Bypass
