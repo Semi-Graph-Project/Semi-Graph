@@ -10,9 +10,7 @@ from semigraph.online.rerank import company_rerank, fiscal_year_rerank
 from semigraph.online.seed import (
     query_to_chunk_seeds,
     query_to_triple_candidates,
-    query_to_hybrid_seeds,
     query_to_seeds,
-    query_to_triple_seeds,
     triple_candidates_to_seeds,
 )
 from semigraph.online.triple_filter import filter_triple_candidates
@@ -84,13 +82,6 @@ def _select_seeds(
             top_k=top_k_triples,
             cfg=cfg,
         ), {"mode": triple_filter_mode, "applied": False, "reason": "node_mode"}
-    if seed_mode == "hybrid":
-        return query_to_hybrid_seeds(
-            query,
-            top_k_nodes=top_k_triples,
-            top_k_triples=top_k_triples,
-            cfg=cfg,
-        ), {"mode": triple_filter_mode, "applied": False, "reason": "hybrid_mode"}
     raise ValueError(f"Unknown graph seed_mode: {seed_mode}")
 
 

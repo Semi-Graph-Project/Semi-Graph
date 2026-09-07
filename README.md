@@ -279,11 +279,15 @@ python scripts/run_agent_trace.py \
 ### Compare retrieval backbones
 
 ```bash
-python scripts/evaluate_retrieval_quality.py \
-  --tools vector graph hybrid \
-  --top-k 5 \
-  --oracle-k 20
+python eval_scripts/evaluate.py \
+  --tool vector \
+  --version_name vector_v1 \
+  --mode retrieve_only
 ```
+
+Run the same command with `graph`, `agent_vector`, or `agent_graph` to compare
+the four controlled configurations. All active evaluation entry points live in
+`eval_scripts/`.
 
 ## Design Boundaries
 

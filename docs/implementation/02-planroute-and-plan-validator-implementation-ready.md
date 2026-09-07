@@ -23,7 +23,7 @@ code_snapshot: "92eea8facd749ecfa3c5d9473a6e518d1d08d637; prompts.py modified, c
 
 ## Route overview
 
-**Request เข้าระบบที่:** [ws.py::graph](/home/kantinan/programming/project/src/semigraph/agent/ws.py:6) สำหรับ production และ [evaluate_finreflectkg_agent.py::run_agent](/home/kantinan/programming/project/scripts/evaluate_finreflectkg_agent.py:667) สำหรับ evaluator โดยทั้งคู่เริ่มจาก `{"original_query": query}`
+**Request เข้าระบบที่:** [ws.py::graph](/home/kantinan/programming/project/src/semigraph/agent/ws.py:6) สำหรับ production และ [evaluate.py::_run_agent](/home/kantinan/programming/project/eval_scripts/evaluate.py:183) สำหรับ evaluator โดยทั้งคู่เริ่มจาก `{"original_query": query}`
 
 **Flow ปัจจุบัน:**
 
@@ -204,13 +204,13 @@ class AgentState(TypedDict, total=False):
 
 - `tests/test_agent_plan_route.py::test_plan_route_prompt_keeps_connected_graph_chain_in_one_task` — ป้องกัน Graph signal regression
 - `tests/test_agent_plan_route.py::test_plan_route_prompt_matches_contract_and_registry` — ป้องกัน Prompt/Model field drift
-- `tests/test_finreflectkg_agent_evaluator.py::test_all_evaluation_modes_compile_without_running_external_services` — state extension ต้องไม่ทำ evaluator modes พัง
+- `tests/test_eval_agent_vector.py` และ `tests/test_evaluate.py` — state extension ต้องไม่ทำ evaluator modes พัง
 
 **ตรวจทันที**
 
 ```bash
 conda run -n senior_project pytest tests/test_agent_plan_route.py -k prompt -v
-conda run -n senior_project pytest tests/test_finreflectkg_agent_evaluator.py::test_all_evaluation_modes_compile_without_running_external_services -v
+conda run -n senior_project pytest tests/test_eval_agent_vector.py tests/test_evaluate.py -v
 ```
 
 **จบ Step เมื่อ**
@@ -407,15 +407,15 @@ Ticket 02 จบที่ validated planning boundary เท่านั้น �
 **ไฟล์และ Symbol**
 
 - **Existing/inspect only** [graph.py::build_agent](/home/kantinan/programming/project/src/semigraph/agent/graph.py:17)
-- **Existing/inspect only** [evaluate_finreflectkg_agent.py::build_evaluation_agent](/home/kantinan/programming/project/scripts/evaluate_finreflectkg_agent.py:129)
+- **Existing/inspect only** [eval_agent.py::_build_eval_graph](/home/kantinan/programming/project/eval_scripts/eval_agent.py:226)
 - **Existing/inspect only** [tools.py::RETRIEVERS](/home/kantinan/programming/project/src/semigraph/agent/tools.py:247)
-- **Existing tests** `test_agent_nodes.py`, `test_agent_graph_phase_d.py`, `test_finreflectkg_agent_evaluator.py`
+- **Existing tests** `test_agent_nodes.py`, `test_agent_graph_phase_d.py`, `test_eval_agent_vector.py`, `test_evaluate.py`
 
 **ลงมือแก้**
 
 1. ไม่มี source edit ใน Step นี้ ตรวจ `git diff` ว่า `graph.py`, evaluator, `tools.py`, online retrievers และ `config/default.yaml` ไม่ถูกเปลี่ยนจากงาน Ticket 02
 2. รัน dedicated PlanRoute tests ทั้งไฟล์
-3. รัน legacy Agent node/graph/evaluator tests เพื่อยืนยัน backward compatibility
+3. รัน Agent node/graph และ evaluator tests เพื่อยืนยัน backward compatibility
 4. รัน unit suite ทั้งหมด หาก regression เกิด ให้แก้เฉพาะ contract/node/state/prompt seam ของ Ticket 02; ห้ามปรับ Retriever เพื่อกลบ test
 5. บันทึกใน handoff ว่า Ticket 03 สามารถ consume `tasks`, `current_task_index`, `current_action`, `plan_trace` ได้ แต่ production graph ยังไม่เรียก PlanRoute
 
@@ -438,15 +438,15 @@ This step verifies boundaries and hands validated state to Ticket 03.
 - `tests/test_agent_plan_route.py` — contract, happy path, warning, repair และ terminal error ครบ
 - `tests/test_agent_nodes.py` — legacy nodes ยังทำงาน
 - `tests/test_agent_graph_phase_d.py` — compiled production flow เดิมยังผ่าน
-- `tests/test_finreflectkg_agent_evaluator.py` — evaluator modes/checkpoint contracts ยังผ่าน
+- `tests/test_eval_agent_vector.py` และ `tests/test_evaluate.py` — evaluator contracts ยังผ่าน
 
 **ตรวจทันที**
 
 ```bash
 conda run -n senior_project pytest tests/test_agent_plan_route.py -v
-conda run -n senior_project pytest tests/test_agent_nodes.py tests/test_agent_graph_phase_d.py tests/test_finreflectkg_agent_evaluator.py -v
+conda run -n senior_project pytest tests/test_agent_nodes.py tests/test_agent_graph_phase_d.py tests/test_eval_agent_vector.py tests/test_evaluate.py -v
 conda run -n senior_project pytest tests/ -v
-git diff -- src/semigraph/agent/graph.py src/semigraph/agent/tools.py scripts/evaluate_finreflectkg_agent.py config/default.yaml
+git diff -- src/semigraph/agent/graph.py src/semigraph/agent/tools.py eval_scripts config/default.yaml
 ```
 
 **จบ Step เมื่อ**
@@ -471,7 +471,7 @@ git diff -- src/semigraph/agent/graph.py src/semigraph/agent/tools.py scripts/ev
 
 ```bash
 conda run -n senior_project pytest tests/test_agent_plan_route.py -v
-conda run -n senior_project pytest tests/test_agent_nodes.py tests/test_agent_graph_phase_d.py tests/test_finreflectkg_agent_evaluator.py -v
+conda run -n senior_project pytest tests/test_agent_nodes.py tests/test_agent_graph_phase_d.py tests/test_eval_agent_vector.py tests/test_evaluate.py -v
 conda run -n senior_project pytest tests/ -v
 ```
 
