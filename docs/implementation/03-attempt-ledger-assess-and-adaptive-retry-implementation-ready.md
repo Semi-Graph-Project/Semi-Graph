@@ -84,7 +84,7 @@ Ticket 03 จบที่ component boundary; Ticket 04 จึงต่อ graph
 - **Existing** [state.py::AgentState](/home/kantinan/programming/project/src/semigraph/agent/state.py:4) — owner จริงของ LangGraph state
 - **Proposed** `state.py::AttemptRecord` และ state fields `attempts`, `evidence_pool`, `accepted_evidence`, `requirement_coverage`
 - **Proposed** `tests/test_agent_attempt_retry.py::contract/state tests` — test seam ใหม่ของ Ticket 03
-- **Existing** `tests/test_finreflectkg_agent_evaluator.py::AgentState import` — เปลี่ยน test import จาก `contracts` เป็น `state` เพื่อไม่พึ่ง duplicate type; ห้ามเปลี่ยน evaluator runtime
+- **Existing** `tests/test_eval_agent_vector.py::AgentState import` — ใช้ `AgentState` จาก `state.py` เพื่อไม่พึ่ง duplicate type; ห้ามเปลี่ยน evaluator runtime
 
 **Implement (ลงมือแก้)**
 
@@ -96,7 +96,7 @@ Ticket 03 จบที่ component boundary; Ticket 04 จึงต่อ graph
 6. `src/semigraph/agent/contracts.py::AgentState` — ลบ duplicate `AgentState`; contract models อยู่ไฟล์นี้ แต่ shared runtime state มี owner เดียวใน `state.py`
 7. `src/semigraph/agent/state.py::AttemptRecord` — เพิ่ม TypedDict สำหรับ `attempt_id`, `task_id`, `attempt_number`, `action`, `retrieval_status`, `chunks`, `retrieval_trace`, `assessment`; `assessment` เริ่มเป็น `None` หลัง Execute และถูกเติมโดย Assess เฉพาะ record ล่าสุด
 8. `src/semigraph/agent/state.py::AgentState` — เพิ่ม `attempts: list[AttemptRecord]`, `evidence_pool: list[dict]`, `accepted_evidence: list[dict]`, `requirement_coverage: dict[str, dict]`; คง legacy histories จน Ticket 05
-9. `tests/test_finreflectkg_agent_evaluator.py::AgentState import` — import จาก `semigraph.agent.state`; ไม่เปลี่ยน test data หรือ evaluator output contract
+9. `tests/test_eval_agent_vector.py::AgentState import` — import จาก `semigraph.agent.state`; ไม่เปลี่ยน test data หรือ evaluator output contract
 
 **Code shape**
 
@@ -656,8 +656,8 @@ conda run -n senior_project pytest tests/test_agent_attempt_retry.py -k 'assess_
 - **Proposed** `tests/test_agent_attempt_retry.py::_build_ticket03_component_graph` — test-only harness ไม่ exportเข้า production
 - **Proposed** `tests/test_agent_attempt_retry.py::component integration tests`
 - **Existing/inspect only** [graph.py::build_agent](/home/kantinan/programming/project/src/semigraph/agent/graph.py:17)
-- **Existing/inspect only** [evaluate_finreflectkg_agent.py::build_evaluation_agent](/home/kantinan/programming/project/scripts/evaluate_finreflectkg_agent.py:128)
-- **Existing regression** `test_agent_plan_route.py`, `test_agent_nodes.py`, `test_agent_graph_phase_d.py`, `test_finreflectkg_agent_evaluator.py`
+- **Existing/inspect only** [eval_agent.py::_build_eval_graph](/home/kantinan/programming/project/eval_scripts/eval_agent.py:226)
+- **Existing regression** `test_agent_plan_route.py`, `test_agent_nodes.py`, `test_agent_graph_phase_d.py`, `test_eval_agent_vector.py`, `test_evaluate.py`
 
 **Implement (ลงมือแก้)**
 
@@ -706,8 +706,8 @@ Test helperนี้ไม่ใช่ proposed production router; Ticket 04 จ
 
 ```bash
 conda run -n senior_project pytest tests/test_agent_attempt_retry.py -v
-conda run -n senior_project pytest tests/test_agent_plan_route.py tests/test_agent_nodes.py tests/test_agent_graph_phase_d.py tests/test_finreflectkg_agent_evaluator.py -v
-git diff -- src/semigraph/agent/graph.py scripts/evaluate_finreflectkg_agent.py src/semigraph/agent/tools.py src/semigraph/online config/default.yaml
+conda run -n senior_project pytest tests/test_agent_plan_route.py tests/test_agent_nodes.py tests/test_agent_graph_phase_d.py tests/test_eval_agent_vector.py tests/test_evaluate.py -v
+git diff -- src/semigraph/agent/graph.py eval_scripts src/semigraph/agent/tools.py src/semigraph/online config/default.yaml
 ```
 
 ตรวจ diff บรรทัดสุดท้ายต้องมีได้เฉพาะ `config/default.yaml::agent_harness`; `agent_retrieval` valuesต้องเหมือนเดิม
@@ -734,10 +734,10 @@ git diff -- src/semigraph/agent/graph.py scripts/evaluate_finreflectkg_agent.py 
 
 ```bash
 conda run -n senior_project pytest tests/test_agent_attempt_retry.py -v
-conda run -n senior_project pytest tests/test_agent_plan_route.py tests/test_agent_nodes.py tests/test_agent_graph_phase_d.py tests/test_finreflectkg_agent_evaluator.py -v
+conda run -n senior_project pytest tests/test_agent_plan_route.py tests/test_agent_nodes.py tests/test_agent_graph_phase_d.py tests/test_eval_agent_vector.py tests/test_evaluate.py -v
 conda run -n senior_project pytest tests/ -v
 git diff --check
-git diff -- src/semigraph/agent/graph.py scripts/evaluate_finreflectkg_agent.py src/semigraph/agent/tools.py src/semigraph/online config/default.yaml
+git diff -- src/semigraph/agent/graph.py eval_scripts src/semigraph/agent/tools.py src/semigraph/online config/default.yaml
 ```
 
 Final Definition of Done:
@@ -762,7 +762,7 @@ Final Definition of Done:
 | Domain language | [CONTEXT.md](/home/kantinan/programming/project/CONTEXT.md) | นิยาม Attempt, Technical Retry, Evidence Retry, Retry Feedback, Evidence Gain, pools |
 | Repository tree | `src/semigraph/agent`, `tests/test_agent_*`, evaluator, config | owners, direct consumers, test seamsและ protected wiring |
 | Relevant code | [graph.py](/home/kantinan/programming/project/src/semigraph/agent/graph.py:17), [nodes.py](/home/kantinan/programming/project/src/semigraph/agent/nodes.py:184), [state.py](/home/kantinan/programming/project/src/semigraph/agent/state.py:4), [contracts.py](/home/kantinan/programming/project/src/semigraph/agent/contracts.py:15), [tools.py](/home/kantinan/programming/project/src/semigraph/agent/tools.py:245), [prompts.py](/home/kantinan/programming/project/src/semigraph/agent/prompts.py:17) | productionยัง legacy; PlanRoute boundaryมีแล้ว; historiesกระจาย; RETRIEVERS/trace adapters reuseได้ |
-| Existing tests | `test_agent_plan_route.py`, `test_agent_nodes.py`, `test_agent_graph_phase_d.py`, `test_finreflectkg_agent_evaluator.py` | monkeypatch seams, LangGraph fixtures, retriever traceและ evaluator compatibility; snapshotผ่าน 76 tests |
+| Existing tests | `test_agent_plan_route.py`, `test_agent_nodes.py`, `test_agent_graph_phase_d.py`, `test_eval_agent_vector.py`, `test_evaluate.py` | monkeypatch seams, LangGraph fixtures, retriever traceและ evaluator compatibility |
 | Frozen baseline | `benchmark/results/finreflectkg_agent/freeze_baseline_first20/summary.json` | Full Agent 20: Recall@All 0.233, Synthesis GroupRecall 0.217, 5.15 calls, 88.08s |
 | Graph target | `benchmark/results/finreflectkg_agent/freeze_baseline_first20_graph/summary.json` | Agent+Graph: Recall@All 0.408, Synthesis GroupRecall 0.367 |
 

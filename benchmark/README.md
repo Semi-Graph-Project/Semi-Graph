@@ -29,13 +29,15 @@ Benchmark YAML ที่ใช้กับ retrieval evaluator ควรเก�
 
 ## Reproducibility
 
-คำสั่ง evaluator จะใช้ `benchmark/datasets/phase_t_multihop_queries.yaml` เป็น default query file เมื่อไม่ส่ง `--queries` เพิ่มเอง:
+Evaluator หลักอ่าน SOX74 ที่ freeze ไว้ และอยู่ใน `eval_scripts/` เท่านั้น:
 
 ```bash
-conda run -n senior_project python scripts/evaluate_retrieval_quality.py \
-  --tools vector graph hybrid \
-  --top-k 5 \
-  --oracle-k 20
+conda run -n senior_project python eval_scripts/evaluate.py \
+  --tool vector \
+  --version_name vector_v1 \
+  --mode retrieve_only
 ```
+
+เปลี่ยน `--tool` เป็น `graph`, `agent_vector` หรือ `agent_graph` เพื่อวัดอีกสาม configuration
 
 ผลลัพธ์ของแต่ละรอบเก็บที่ `analytics/Report Experiment/` ส่วน secret, Neo4j dump, embedding และไฟล์ชั่วคราวต้องอยู่นอก benchmark dataset

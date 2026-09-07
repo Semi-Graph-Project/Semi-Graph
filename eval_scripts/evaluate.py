@@ -446,4 +446,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    print(f"Running {__file__} with Python {sys.version} Agent Version 1.5")
     main()
