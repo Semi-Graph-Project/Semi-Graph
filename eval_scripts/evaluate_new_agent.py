@@ -1,0 +1,456 @@
+#!/usr/bin/env python3
+"""Evaluate Vector, Graph, Agent+Vector, or Agent+Graph on SOX74."""
+
+import argparse
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+import json
+import sys
+import statistics
+import time
+
+from dotenv import load_dotenv
+import yaml
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from semigraph.config import get_config  # noqa: E402
+from semigraph.connections import get_llm  # noqa: E402
+from semigraph.agents.graph import run_agent as run_new_agent  # noqa: E402
+from semigraph.online.vector_search import vector_search as production_vector_search  # noqa: E402
+from semigraph.online.graph_search import graph_search as production_graph_search  # noqa: E402
+from eval_scripts.eval_agent import (
+    GENERATION_ERROR_ANSWER,
+    generate_final_answer,
+)
+
+VECTOR_INDEX = "gold_chunk_embedding"
+TOP_K = 10
+EVALUATION_MODES = ("retrieve_only", "full_answer")
+AGENT_TOOLS = {
+    "agent_vector": "vector",
+    "agent_graph": "graph",
+}
+SOX_DATASET = ROOT / "benchmark/freezes/sox74_retrieval_ablation_v1/inputs/finreflectkg_sox_strict74.yaml"
+SOX_QUERY_COUNT = 74
+TRACE_OUTPUT_TEMPLATE = ROOT / (
+    "benchmark/results/controlled_{tool}_{scope}_{version_name}_{mode}.jsonl"
+)
+YAML_TRACE_OUTPUT_TEMPLATE = ROOT / (
+    "benchmark/results/controlled_{tool}_{scope}_{version_name}_{mode}.yaml"
+)
+
+
+def load_sox_queries() -> list[dict]:
+    """Load the 74 SOX benchmark queries from YAML."""
+    with SOX_DATASET.open(encoding="utf-8") as file:
+        dataset = yaml.safe_load(file)
+
+    queries = dataset["queries"]
+    if len(queries) != SOX_QUERY_COUNT:
+        raise ValueError(f"Expected {SOX_QUERY_COUNT} queries, got {len(queries)}")
+    return queries
+
+
+def _select_queries(queries: list[dict], limit: int | None) -> list[dict]:
+    """Return the full benchmark or its first N cases for a quick smoke run."""
+    if limit is None:
+        return queries
+    if isinstance(limit, bool) or limit < 1:
+        raise ValueError("limit must be greater than zero")
+    if limit > len(queries):
+        raise ValueError(f"limit must not exceed {len(queries)}")
+    return queries[:limit]
+
+
+def _requires_llm(tool: str, mode: str, cfg) -> bool:
+    """Return whether this Eval configuration makes at least one LLM call."""
+    graph_filter = str(
+        cfg.agent_retrieval.get("graph", {}).get("triple_filter", "none")
+    )
+    return (
+        mode == "full_answer"
+        or tool in AGENT_TOOLS
+        or (tool == "graph" and graph_filter == "llm")
+    )
+
+
+def _validate_runtime(tool: str, mode: str) -> None:
+    """Fail before an Eval starts when its configured LLM key is missing."""
+    cfg = get_config()
+    if _requires_llm(tool, mode, cfg) and not cfg.llm_api_key.strip():
+        raise RuntimeError(
+            f"{tool}/{mode} requires the API key for llm.provider="
+            f"{cfg.llm_provider!r}; set it in .env before running Eval"
+        )
+
+
+def _reciprocal_rank(retrieved_ids: list[str], gold_ids: set[str]) -> float:
+    """Return 1/rank for the first retrieved Gold chunk, or zero if absent."""
+    for rank, chunk_id in enumerate(retrieved_ids, start=1):
+        if chunk_id in gold_ids:
+            return 1.0 / rank
+    return 0.0
+
+
+def vector_search(question: str, top_k: int = TOP_K) -> list[dict]:
+    """Use the production vector_search implementation for Gold Chunks."""
+    cfg = get_config()
+    cfg.neo4j_uri = cfg.controlled_neo4j_uri
+    return production_vector_search(
+        question,
+        top_k_chunks=top_k,
+        cfg=cfg,
+        vector_index=VECTOR_INDEX,
+    )
+
+
+def graph_search(question: str, top_k: int = TOP_K) -> list[dict]:
+    cfg = get_config()
+    cfg.neo4j_uri = cfg.controlled_neo4j_uri
+
+    profile = cfg.agent_retrieval["graph"]
+
+    return production_graph_search(
+        question,
+        top_k_chunks=top_k,
+        top_k_entities=int(profile["top_k_entities"]),
+        top_k_triples=int(profile["top_k_triples"]),
+        top_k_chunk_seeds=int(profile.get("top_k_chunk_seeds", 5)),
+        chunk_seed_vector_index=VECTOR_INDEX,
+        damping=float(profile["damping"]),
+        use_expansion=bool(profile["use_expansion"]),
+        seed_mode=str(profile["seed_mode"]),
+        candidate_pool_k=int(profile["candidate_pool_k"]),
+        ppr_seed_weight_mode=str(profile["ppr_seed_weight_mode"]),
+        graph_triple_filter=str(profile["triple_filter"]),
+        cfg=cfg,
+    )
+
+
+def write_trace(results: list[dict], output_path: Path) -> None:
+    """Write one query trace per line as JSONL."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8") as file:
+        for result in results:
+            file.write(json.dumps(result, ensure_ascii=False) + "\n")
+
+
+def append_trace(result: dict, output_path: Path) -> None:
+    """Append one completed query trace without waiting for the full run."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("a", encoding="utf-8") as file:
+        file.write(json.dumps(result, ensure_ascii=False) + "\n")
+
+
+def write_yaml_trace(results: list[dict], output_path: Path) -> None:
+    """Write summary metrics followed by all completed query traces."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    summary = {
+        "hit": round(statistics.fmean(row["hit"] for row in results), 3)
+        if results
+        else None,
+        "recall": round(statistics.fmean(row["recall"] for row in results), 3)
+        if results
+        else None,
+        "mrr": round(
+            statistics.fmean(row["reciprocal_rank"] for row in results), 3
+        )
+        if results
+        else None,
+        "average_latency_ms": round(
+            statistics.fmean(row["latency_ms"] for row in results), 1
+        )
+        if results
+        else None,
+    }
+    output_path.write_text(
+        yaml.safe_dump(
+            {"summary": summary, "results": results},
+            allow_unicode=True,
+            sort_keys=False,
+            width=120,
+        ),
+        encoding="utf-8",
+    )
+
+def _run_agent(
+    question: str,
+    tool: str,
+    generate_answer: bool,
+) -> dict:
+    """Run one evaluation Agent and return its selected Chunks and answer."""
+    if not isinstance(question, str) or not question.strip():
+        return {
+            "chunks": [],
+            "final_answer": "Do not Answer" if generate_answer else "",
+            "answer_latency_ms": 0.0,
+        }
+    if tool not in AGENT_TOOLS:
+        raise ValueError("tool must be 'agent_vector' or 'agent_graph'")
+
+    cfg = get_config()
+    cfg.neo4j_uri = cfg.controlled_neo4j_uri
+    selected_tool = AGENT_TOOLS[tool]
+    if selected_tool == "vector":
+        cfg.agent_retrieval["vector"]["vector_index"] = VECTOR_INDEX
+    else:
+        cfg.agent_retrieval["graph"]["chunk_seed_vector_index"] = VECTOR_INDEX
+
+    result = run_new_agent(
+        {"original_query": question},
+        tool=selected_tool,
+        cfg=cfg,
+        generate_answer=generate_answer,
+    )
+    synthesis_input = result.get("synthesis_input")
+    if not isinstance(synthesis_input, dict):
+        raise RuntimeError("Agent result is missing synthesis_input")
+
+    accepted_chunks = synthesis_input.get("accepted_chunks")
+    if not isinstance(accepted_chunks, list):
+        raise RuntimeError("Agent synthesis_input has invalid accepted_chunks")
+
+    chunks = []
+    seen_chunk_ids = set()
+    for chunk in accepted_chunks:
+        if not isinstance(chunk, dict) or not chunk.get("chunk_id"):
+            raise RuntimeError("Agent returned a Chunk without chunk_id")
+        chunk_id = str(chunk["chunk_id"])
+        if chunk_id not in seen_chunk_ids:
+            chunks.append(chunk)
+            seen_chunk_ids.add(chunk_id)
+
+    return {
+        "chunks": chunks,
+        "final_answer": str(result.get("final_answer") or ""),
+        "answer_latency_ms": float(result.get("synthesis_latency_ms") or 0.0),
+        "answer_error": None,
+    }
+
+
+def agent_vector_search(question: str) -> list[dict]:
+    """Return the Chunks selected by the evaluation Vector Agent."""
+    return _run_agent(
+        question,
+        tool="agent_vector",
+        generate_answer=False,
+    )["chunks"]
+
+
+def agent_graph_search(question: str) -> list[dict]:
+    """Return the Chunks selected by the evaluation Graph Agent."""
+    return _run_agent(
+        question,
+        tool="agent_graph",
+        generate_answer=False,
+    )["chunks"]
+
+
+def evaluate_sox_queries(
+    tool: str = "vector",
+    version_name: str = "v1",
+    mode: str = "retrieve_only",
+    workers: int = 8,
+    limit: int | None = None,
+) -> list[dict]:
+    """Evaluate one production retriever on SOX74 or a small leading subset."""
+    if mode not in EVALUATION_MODES:
+        raise ValueError(f"mode must be one of {EVALUATION_MODES}")
+    if workers < 1:
+        raise ValueError("workers must be greater than zero")
+
+    _validate_runtime(tool, mode)
+    queries = _select_queries(load_sox_queries(), limit)
+    scope = "sox74" if limit is None else f"sox_smoke{limit}"
+    searches = {
+        "vector": vector_search,
+        "graph": graph_search,
+        "agent_vector": agent_vector_search,
+        "agent_graph": agent_graph_search,
+    }
+    search = searches[tool]
+    trace_output = Path(
+        str(TRACE_OUTPUT_TEMPLATE).format(
+            tool=tool,
+            scope=scope,
+            version_name=version_name,
+            mode=mode,
+        )
+    )
+    yaml_trace_output = Path(
+        str(YAML_TRACE_OUTPUT_TEMPLATE).format(
+            tool=tool,
+            scope=scope,
+            version_name=version_name,
+            mode=mode,
+        )
+    )
+
+
+    # Load the embedding model before measuring per-query latency.
+    vector_search(queries[0]["query"], top_k=TOP_K)
+
+    llm = (
+        get_llm(get_config())
+        if mode == "full_answer" and tool not in AGENT_TOOLS
+        else None
+    )
+
+    def evaluate_case(case: dict) -> dict:
+        """Evaluate one case and return its retrieval/generation metrics."""
+        started = time.perf_counter()
+        agent_result = None
+        if tool in AGENT_TOOLS:
+            agent_result = _run_agent(
+                case["query"],
+                tool=tool,
+                generate_answer=mode == "full_answer",
+            )
+            retrieved = agent_result["chunks"]
+        else:
+            retrieved = search(case["query"], top_k=TOP_K)
+        total_latency_ms = (time.perf_counter() - started) * 1000
+
+        gold_ids = set(case["gold_chunks"])
+        retrieved_ids = [chunk["chunk_id"] for chunk in retrieved]
+        hits = gold_ids.intersection(retrieved_ids)
+        hit = int(bool(hits))
+        recall = len(hits) / len(gold_ids)
+        reciprocal_rank = _reciprocal_rank(retrieved_ids, gold_ids)
+
+        answer_error = None
+        final_answer = "None"
+        answer_latency_ms = 0.0
+        if mode == "full_answer" and agent_result is not None:
+            final_answer = agent_result["final_answer"]
+            answer_latency_ms = agent_result["answer_latency_ms"]
+            answer_error = agent_result.get("answer_error")
+        elif mode == "full_answer":
+            answer_started = time.perf_counter()
+            try:
+                final_answer = generate_final_answer(
+                    llm,
+                    case["query"],
+                    retrieved,
+                )
+                if final_answer == GENERATION_ERROR_ANSWER:
+                    answer_error = "AnswerGenerationError"
+            except Exception as exc:
+                final_answer = GENERATION_ERROR_ANSWER
+                answer_error = type(exc).__name__
+            answer_latency_ms = (time.perf_counter() - answer_started) * 1000
+
+        result = {
+            "id": case["id"],
+            "mode": mode,
+            "query": case["query"],
+            "gold_chunks": case["gold_chunks"],
+            "top_chunk_ids": retrieved_ids,
+            "answer_points": case.get("answer_points", []),
+            "final_answer": final_answer,
+            "hit": hit,
+            "recall": recall,
+            "reciprocal_rank": reciprocal_rank,
+            "latency_ms": max(
+                0.0,
+                total_latency_ms - answer_latency_ms,
+            ),
+            "answer_latency_ms": answer_latency_ms,
+        }
+        if answer_error:
+            result["answer_error"] = answer_error
+        return result
+
+    # Start a fresh trace; each completed query is appended immediately.
+    write_trace([], trace_output)
+    write_yaml_trace([], yaml_trace_output)
+    results = []
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        for result in executor.map(evaluate_case, queries):
+            results.append(result)
+            append_trace(result, trace_output)
+            write_yaml_trace(results, yaml_trace_output)
+            print(
+                f"{result['id']} | Hit={result['hit']} | "
+                f"Recall={result['recall']:.3f} | "
+                f"RR={result['reciprocal_rank']:.3f} | "
+                f"Retrieval={result['latency_ms']:.1f} ms | "
+                f"Answer={result['answer_latency_ms']:.1f} ms"
+            )
+
+    print(f"\nHit: {statistics.fmean(row['hit'] for row in results):.3f}")
+    print(f"Recall: {statistics.fmean(row['recall'] for row in results):.3f}")
+    print(
+        "MRR: "
+        f"{statistics.fmean(row['reciprocal_rank'] for row in results):.3f}"
+    )
+    print(
+        "Mean latency: "
+        f"{statistics.fmean(row['latency_ms'] for row in results):.1f} ms"
+    )
+    print(f"Tool: {tool}")
+    print(f"Mode: {mode}")
+    print(f"Trace: {trace_output}")
+    print(f"YAML trace: {yaml_trace_output}")
+    return results
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Evaluate four Vector/Graph/Agent modes on the 74 SOX queries"
+    )
+    parser.add_argument(
+        "--tool",
+        choices=("vector", "graph", "agent_vector", "agent_graph"),
+        default="vector",
+        help="retriever to evaluate (default: vector)",
+        required=True,
+    )
+    parser.add_argument(
+        "--version_name",
+        default="v1",
+        help="Version name for the evaluation (default: v1)",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=EVALUATION_MODES,
+        default="retrieve_only",
+        help="retrieve only or also generate final answers",
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=8,
+        help="number of queries evaluated concurrently (default: 8)",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        help="run only the first N queries for a quick smoke evaluation",
+    )
+    args = parser.parse_args()
+    if args.workers < 1:
+        parser.error("--workers must be greater than zero")
+    if args.limit is not None and args.limit < 1:
+        parser.error("--limit must be greater than zero")
+
+    load_dotenv(ROOT / ".env")
+    evaluate_sox_queries(
+        tool=args.tool,
+        version_name=args.version_name,
+        mode=args.mode,
+        workers=args.workers,
+        limit=args.limit,
+    )
+
+
+if __name__ == "__main__":
+    print(f"Running {__file__} with Python {sys.version} Agent Version 1.5")
+    main()
