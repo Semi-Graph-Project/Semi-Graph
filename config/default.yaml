@@ -99,16 +99,16 @@ agent_retrieval:
     # Stable prefix for reusable GDS PPR projections.
     ppr_projection_prefix: "semigraph_ppr"
     top_k_entities: 20
-    top_k_triples: 5
+    top_k_triples: 10
     top_k_chunk_seeds: 5
     chunk_seed_vector_index: "chunk_embedding"
     damping: 0.3
     use_expansion: false
     seed_mode: "triple"
     candidate_pool_k: 20
-    rerank_mode: "company+fiscal_year"  # "company+fiscal_year" | "cross_encoder"
+    rerank_mode: "cross_encoder"  # "company+fiscal_year" | "cross_encoder"
     ppr_seed_weight_mode: "similarity_specificity"
-    triple_filter: "none"
+    triple_filter: "llm"
 
 # Agent harness budgets. Keep operational limits in config rather than Prompt.
 agent_harness:
