@@ -16,6 +16,10 @@ from semigraph.agents.prompts import (
     build_ontology_planroute_prompt,
 )
 from semigraph.agents.state import AgentState, TaskWorkerState
+from semigraph.agents.synthesis import (
+    build_synthesis_trace,
+    parse_synthesis_response,
+)
 from semigraph.agents.tools import RETRIEVERS
 from semigraph.config import Config, get_config
 from semigraph.connections import get_llm
@@ -277,16 +281,7 @@ def synthesize_node(
     started_at = time.perf_counter()
     cfg = cfg or get_config()
     synthesis_input = state["synthesis_input"]
-    evidence = [
-        {
-            "citation": f"[{index}]",
-            "chunk": chunk,
-        }
-        for index, chunk in enumerate(
-            synthesis_input["accepted_chunks"],
-            start=1,
-        )
-    ]
+    evidence = synthesis_input["accepted_chunks"]
     llm = get_llm(cfg)
     response = llm.invoke([
         {
@@ -301,11 +296,26 @@ def synthesize_node(
             }, ensure_ascii=False),
         },
     ])
-    final_answer = str(getattr(response, "content", response)).strip()
+    chunk_ids = [str(chunk["chunk_id"]) for chunk in evidence]
+    parsed = parse_synthesis_response(
+        str(getattr(response, "content", response)),
+        chunk_ids,
+    )
+    final_answer = parsed["final_answer"]
     if not final_answer:
         raise ValueError("Synthesize returned an empty answer")
 
+    latency_ms = (time.perf_counter() - started_at) * 1000
+    trace = build_synthesis_trace(parsed, chunk_ids)
+
     return {
         "final_answer": final_answer,
-        "synthesis_latency_ms": (time.perf_counter() - started_at) * 1000,
+        "synthesis_latency_ms": latency_ms,
+        "synthesis_trace": {
+            "status": "ok",
+            "selected_chunk_ids": chunk_ids,
+            "llm_calls": 1,
+            "latency_ms": latency_ms,
+            **trace,
+        },
     }

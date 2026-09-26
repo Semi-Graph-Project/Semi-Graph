@@ -337,16 +337,19 @@
       gap: 8px;
     }
     .point-heading .point-text { flex: 1; min-width: 0; }
-    .expected-anchor {
+    .review-highlight {
       padding: 1px 3px;
       border-radius: 4px;
-      font-weight: 700;
+      font-weight: 600;
       box-decoration-break: clone;
       -webkit-box-decoration-break: clone;
     }
-    .expected-anchor.value { background: #fff0b8; color: #744b00; }
-    .expected-anchor.entity { background: #e7f0ff; color: #174ea6; }
-    .expected-anchor.metric { background: #f0e8ff; color: #6331a8; }
+    .review-highlight.request-0 { background: #dff4ee; color: #175e4c; }
+    .review-highlight.request-1 { background: #eee6fb; color: #59358b; }
+    .review-highlight.request-2 { background: #e0edfb; color: #245b96; }
+    .review-highlight.request-3 { background: #fff0cf; color: #795513; }
+    .query-text .review-highlight { text-decoration: underline; text-underline-offset: 3px; }
+    .query-legend { margin-top: 10px; }
     .point-role {
       flex: 0 0 auto;
       border-radius: 999px;
@@ -437,7 +440,7 @@
     <div class="topbar-inner">
       <div class="brand">
         <h1>Answer Review Workbench</h1>
-        <div class="subtitle">Compare Final Answer กับ Answer Points แบบตรวจทีละประเด็น</div>
+        <div class="subtitle">เทียบ Final Answer กับเฉลยต้นฉบับทีละประโยค</div>
       </div>
       <div class="header-controls">
         <label class="file-control">
@@ -469,12 +472,12 @@
       <div class="stat">
         <div class="stat-label">Answer Hit (ตรวจแล้ว)</div>
         <div class="stat-value" id="hitStat">—</div>
-        <div class="stat-sub">มีอย่างน้อย 1 Point ถูก</div>
+        <div class="stat-sub">มีอย่างน้อย 1 ประโยคถูก</div>
       </div>
       <div class="stat">
         <div class="stat-label">Answer Recall (micro)</div>
         <div class="stat-value" id="recallStat">—</div>
-        <div class="stat-sub">Point ถูก / Point ทั้งหมด</div>
+        <div class="stat-sub">ประโยคถูก / ประโยคทั้งหมด</div>
       </div>
       <div class="stat">
         <div class="stat-label">Main Point Hit</div>
@@ -487,9 +490,14 @@
         <div class="stat-sub">Main Point ถูก / Main Point ทั้งหมด</div>
       </div>
       <div class="stat">
+        <div class="stat-label">Fully Correct</div>
+        <div class="stat-value" id="fullyCorrectStat">—</div>
+        <div class="stat-sub">ทุก Answer Point ถูก</div>
+      </div>
+      <div class="stat">
         <div class="stat-label">ความคืบหน้าการตรวจ</div>
         <div class="stat-value" id="progressStat">0%</div>
-        <div class="stat-sub">Point ที่ถูกทำเครื่องหมาย</div>
+        <div class="stat-sub">ประโยคที่ถูกทำเครื่องหมาย</div>
       </div>
     </section>
 
@@ -594,8 +602,312 @@
       FRKG534: [3]
     };
 
+    // Highlight annotations only: never change the reference text or saved judgments.
+    // Query ranges are [first words, last words], inclusive.
+    // Answer keys are the existing sentence numbers; [requestIndex] marks a whole
+    // sentence, or [requestIndex, first words, last words] marks a smaller span.
+    // The same requestIndex gives the query and its answer the same color.
+    const REVIEW_HIGHLIGHTS = {
+      FRKG003: {
+        query: [['how do Intel', "'All Other' categories"], ['what does this reveal', 'corporate expense allocation practices']],
+        answer: {2: [[0, 'Intel does not allocate', 'corporate-level expenses.']], 3: [[0, "NVIDIA's 'All Other' category", 'category'], [0, 'explicitly includes', 'enterprise-level costs.']], 4: [[1, 'Intel maintains', 'between the two companies.']]}
+      },
+      FRKG009: {
+        query: [['What percentage', 'the Other segment'], ['how does', 'Embedded Processing']],
+        answer: {1: [[0]], 2: [[1, 'restructuring charges are classified', 'Embedded Processing.']], 3: [[1, 'This separation reflects', 'non-operational corporate expenses']]}
+      },
+      FRKG010: {
+        query: [['What was', '2022 compared to 2023']],
+        answer: {1: [[0]], 2: [[0]], 3: [[0, 'The $271M decrease (-15.2%)', '2023 results']]}
+      },
+      FRKG011: {
+        query: [['What was', '2022 to 2023'], ['how might', 'this financial metric']],
+        answer: {1: [[0]], 2: [[1]], 3: [[1]], 4: [[1, 'further suggests', 'compliance-driven cost pressures.']]}
+      },
+      FRKG070: {
+        query: [['Calculate', '2021 to 2023'], ['explain how', 'this increase']],
+        answer: {1: [[0]], 2: [[1]], 3: [[1]]}
+      },
+      FRKG071: {
+        query: [['Which segment', 'restructuring charges'], ['what was', '2024']],
+        answer: {1: [[0, "The 'Other' segment", 'restructuring charges']], 2: [[1, 'In 2024', '$947 million in revenue']]}
+      },
+      FRKG073: {
+        query: [['What was', '2021 and 2022'], ['what asset transfer', '2023']],
+        answer: {1: [[0]], 2: [[1, 'In 2023', 'into this segment']]}
+      },
+      FRKG082: {
+        query: [['What was', "Intel's total operating income"], ['how does', 'this financial outcome']],
+        answer: {1: [[0]], 2: [[1]], 3: [[1]]}
+      },
+      FRKG084: {
+        query: [['By how many', 'fiscal year 2022'], ['what does', "the segment's operational efficiency"]],
+        answer: {2: [[0, 'This 2 percentage point difference', 'difference'], [1, 'indicates improved operational efficiency', 'its revenue growth.']], 3: [[1]]}
+      },
+      FRKG093: {
+        query: [['What was', '2022 to 2023'], ['how does', 'the segment']],
+        answer: {3: [[0]], 4: [[1]]}
+      },
+      FRKG096: {
+        query: [['What was', '2024'], ['which specific', "this segment's financial reporting"]],
+        answer: {1: [[0]], 2: [[1]]}
+      },
+      FRKG098: {
+        query: [['How does AMD', 'regulatory bodies and the public']],
+        answer: {1: [[0]], 2: [[0, 'filed as Exhibit 10.2', 'January 8, 2023.']], 3: [[0, 'AMD complies', 'SEC regulations.']]}
+      },
+      FRKG100: {
+        query: [['What was', '2022'], ['how does', 'income taxes']],
+        answer: {1: [[0]], 2: [[1]], 3: [[1]]}
+      },
+      FRKG102: {
+        query: [['What was', '2021'], ['how does', 'operating income']],
+        answer: {2: [[0]], 3: [[1]]}
+      },
+      FRKG103: {
+        query: [['What percentage', 'September 29, 2024'], ['how does', 'customer incentives']],
+        answer: {1: [[0]], 2: [[1]], 3: [[1]]}
+      },
+      FRKG104: {
+        query: [['What was', '2022 and 2023'], ['how did', 'the same period']],
+        answer: {4: [[0]], 5: [[1]], 6: [[1]]}
+      },
+      FRKG105: {
+        query: [['What is', '2022 and 2023'], ['how does', "the company's total goodwill allocation"]],
+        answer: {1: [[0]], 2: [[1]]}
+      },
+      FRKG107: {
+        query: [['What was', '2022 to 2023']],
+        answer: {3: [[0, 'This represents', '-7.08% change']]}
+      },
+      FRKG108: {
+        query: [['What was', '2022']],
+        answer: {2: [[0, 'approximately $0.57', '923,547,062 shares).']]}
+      },
+      FRKG111: {
+        query: [['What was', '2022']],
+        answer: {2: [[0]], 3: [[0, 'amortization expenses represented', 'the subsequent year.']]}
+      },
+      FRKG138: {
+        query: [['how does Rafael', '2020']],
+        answer: {1: [[0, 'holds direct responsibility', 'financial disclosures.']], 2: [[0, 'managing settlements', '(Chunk 2).']], 3: [[0]]}
+      },
+      FRKG141: {
+        query: [['What accrued balance', '2024 financial statements'], ['how does', 'this financial disclosure']],
+        answer: {1: [[0]], 2: [[1, 'holds a principal executive officer role', 'this disclosure.']], 3: [[1]]}
+      },
+      FRKG142: {
+        query: [['What was the total cash payments', '2022 through 2024']],
+        answer: {3: [[0]]}
+      },
+      FRKG161: {
+        query: [['What was', '2022 to 2023'], ['how does', "Mobileye's IPO"]],
+        answer: {1: [[0]], 2: [[1]], 3: [[1]]}
+      },
+      FRKG163: {
+        query: [['How does', '2024']],
+        answer: {1: [[0, 'explicitly excluded', '(Chunk 1).']], 2: [[0]]}
+      },
+      FRKG173: {
+        query: [['What was', '2020 to 2021'], ['how does', 'inventory valuation practices']],
+        answer: {1: [[0]], 2: [[1, 'potentially reflecting', 'resources.']], 3: [[1]], 4: [[1]]}
+      },
+      FRKG177: {
+        query: [['How does CDP', "Intel's 'All Other' segment"], ['how does this compare', "its 'All Other' category"]],
+        answer: {2: [[0]], 3: [[1]], 4: [[0]]}
+      },
+      FRKG179: {
+        query: [['What was the total net income', '2019 through 2021']],
+        answer: {3: [[0]]}
+      },
+      FRKG182: {
+        query: [['How does', 'purchase commitment disclosures'], ['what total amount', 'beyond 2023']],
+        answer: {1: [[0, 'ensures that controls are effective', 'misstatements.']], 2: [[0]], 3: [[1]], 4: [[0]]}
+      },
+      FRKG185: {
+        query: [['What was', '2023 and 2024'], ['how does', 'the company']],
+        answer: {1: [[0]], 2: [[1, 'participating in the governance', 'tax-related accounting.']], 3: [[1]]}
+      },
+      FRKG187: {
+        query: [['What was', '2022 to 2024'], ['how does', '2023 and 2024 filings']],
+        answer: {1: [[0]], 2: [[1]], 3: [[1]]}
+      },
+      FRKG192: {
+        query: [['What financial impact', '2021 financial statements']],
+        answer: {1: [[0, 'enabled Texas Instruments', '(Chunk 2).']], 2: [[0]]}
+      },
+      FRKG239: {
+        query: [['What percentage', 'December 25, 2021']],
+        answer: {1: [[0]], 2: [[0]]}
+      },
+      FRKG240: {
+        query: [['How did', 'compared to 2022'], ['what was', "Intel's total operating income"]],
+        answer: {1: [[0]], 2: [[1]]}
+      },
+      FRKG241: {
+        query: [['What amount', 'restructuring charges/other line item']],
+        answer: {1: [[0]]}
+      },
+      FRKG249: {
+        query: [['What was the percentage decrease in revenue', '2022 to 2023'], ['how do', 'announced in 2023']],
+        answer: {1: [[0]], 2: [[0]], 3: [[1]], 4: [[1]]}
+      },
+      FRKG273: {
+        query: [['What total value', 'weighted average exercise price per share'], ['which individuals', 'this metric']],
+        answer: {1: [[0]], 2: [[1]]}
+      },
+      FRKG274: {
+        query: [['What is', '2022 revenue and restructuring charges'], ['how does', 'environmental costs included in Other']],
+        answer: {1: [[0]], 2: [[1]], 3: [[1]]}
+      },
+      FRKG275: {
+        query: [['What is the total restructuring charge impact', "Embedded Processing segment's 2024 revenue contribution"]],
+        answer: {1: [[0]], 2: [[0]], 3: [[0]], 4: [[0]]}
+      },
+      FRKG276: {
+        query: [['How did', 'restructuring of Intel Foundry'], ['what was', 'operating loss in 2023']],
+        answer: {1: [[0]], 2: [[1]], 3: [[1]]}
+      },
+      FRKG279: {
+        query: [['How did', "Intel's total operating income"]],
+        answer: {1: [[0]], 2: [[0, "the segment's declining revenue", 'negative contribution.']], 3: [[0, 'did not mitigate', 'total operating income.']]}
+      },
+      FRKG284: {
+        query: [['What was', '2021 to 2023'], ['how does', 'compliance filings']],
+        answer: {1: [[0]], 2: [[1]], 3: [[1]]}
+      },
+      FRKG288: {
+        query: [['How does', 'financing activities disclosure']],
+        answer: {2: [[0]], 3: [[0]]}
+      },
+      FRKG290: {
+        query: [['What was the dollar amount', '2020 to 2021'], ['how does', 'under his responsibility']],
+        answer: {1: [[0]], 2: [[1, "Rafael R. Lizardi's oversight", 'stakeholders.']]}
+      },
+      FRKG300: {
+        query: [['What is the total revenue', '2022, 2023, and 2024'], ['how does', 'over time']],
+        answer: {2: [[0]], 3: [[1]], 4: [[1]]}
+      },
+      FRKG356: {
+        query: [['what role does Jeffrey', 'financial performance of the QCT segment']],
+        answer: {1: [[0, 'participates in corporate governance', '(Chunk 2).']], 3: [[0]], 4: [[0]]}
+      },
+      FRKG357: {
+        query: [['How do', 'corporate expense allocation strategies']],
+        answer: {1: [[0]], 2: [[0]], 3: [[0]]}
+      },
+      FRKG358: {
+        query: [['What was', '2023 to 2024'], ['how might', "NVIDIA's"]],
+        answer: {1: [[0]], 2: [[1]]}
+      },
+      FRKG359: {
+        query: [['how does Sylvia', 'its audit considerations']],
+        answer: {1: [[0]], 2: [[0]]}
+      },
+      FRKG360: {
+        query: [['What was', 'fiscal 2024'], ['how does', 'other current liabilities']],
+        answer: {1: [[0]], 2: [[1]], 3: [[1, 'establishing accountability', 'incentive programs.']]}
+      },
+      FRKG393: {
+        query: [['What was the total revenue', '2021, 2022, and 2023'], ['how did', "the segment's disclosed components"]],
+        answer: {1: [[0]], 2: [[1]], 3: [[1, 'a corresponding 4.9%', 'operating profit.']]}
+      },
+      FRKG395: {
+        query: [['What was', '2022 to 2023'], ['what percentage', 'the Analog segment']],
+        answer: {1: [[0]], 2: [[1]]}
+      },
+      FRKG396: {
+        query: [['What was', '2019 to 2021'], ['how might', 'semiconductor manufacturing expansions']],
+        answer: {1: [[0]], 2: [[1]], 3: [[1]]}
+      },
+      FRKG397: {
+        query: [['How does', "'All Other' category"]],
+        answer: {1: [[0, 'ensures the reliability', 'segment disclosures.']], 3: [[0]]}
+      },
+      FRKG405: {
+        query: [['How does', 'corporate infrastructure cost disclosures'], ['what does', "NVIDIA's financial statements"]],
+        answer: {1: [[0, 'ensuring reliability', 'segment disclosures.']], 2: [[0]], 3: [[1]], 4: [[0, 'audit rigor (Chunk 1)', 'segment transparency (Chunk 2)'], [1, 'aligns with', '(Chunk 3).']]}
+      },
+      FRKG436: {
+        query: [['how does Mark', 'disclosed in 2023']],
+        answer: {1: [[0, 'oversees governance', 'segment performance.']], 3: [[0]]}
+      },
+      FRKG437: {
+        query: [['What was the total revenue', 'fiscal 2024'], ['by how much', 'fiscal 2023']],
+        answer: {1: [[0]], 2: [[1, 'an increase of $2.7 billion', '(Chunk 1)']]}
+      },
+      FRKG451: {
+        query: [['What is the combined monetary decrease', '2022 to 2024'], ['how does', "the Other segment's financial results"]],
+        answer: {3: [[0]], 4: [[1]], 5: [[1]], 6: [[1]]}
+      },
+      FRKG455: {
+        query: [['What was the total operating income increase', 'fiscal 2021 to 2022'], ['how does', 'this total']],
+        answer: {1: [[0]], 3: [[1, 'involved testing controls', 'financial statements.']], 4: [[1]]}
+      },
+      FRKG456: {
+        query: [['What is the effective tax rate contribution', '2024'], ['how does', 'Chief Financial Officer']],
+        answer: {1: [[0]], 2: [[1, 'Rafael R. Lizardi oversees', 'tax positions.']], 3: [[1]]}
+      },
+      FRKG458: {
+        query: [['how does Eric', '2023 financial statements']],
+        answer: {1: [[0]], 2: [[0]], 3: [[0]]}
+      },
+      FRKG463: {
+        query: [['What was', '2022 to 2024'], ['how did', 'this trend']],
+        answer: {1: [[0]], 2: [[1, 'indicating operational disruptions', 'disruptions.']], 3: [[1, 'litigation expenses', 'restructuring activities.']], 4: [[1]]}
+      },
+      FRKG515: {
+        query: [['What was the unrecognized tax benefit', '2021'], ['how did', 'the same period']],
+        answer: {1: [[0]], 3: [[1]]}
+      },
+      FRKG516: {
+        query: [['How does', 'Kirsten M. Spears']],
+        answer: {1: [[0]], 2: [[0]], 3: [[0]], 4: [[0]]}
+      },
+      FRKG517: {
+        query: [['What was the total number of shares repurchased', '2022 to 2024']],
+        answer: {3: [[0]]}
+      },
+      FRKG520: {
+        query: [['What is the ratio', '2021 to 2022']],
+        answer: {2: [[0]], 3: [[0]]}
+      },
+      FRKG522: {
+        query: [['What was', '2024'], ['which director', 'this metric']],
+        answer: {1: [[0]], 2: [[1]]}
+      },
+      FRKG523: {
+        query: [['How does', 'stock option valuations']],
+        answer: {3: [[0]], 4: [[0]]}
+      },
+      FRKG525: {
+        query: [['What total Xilinx acquisition costs', 'SEC disclosure requirements'], ['how does', 'this regulatory alignment']],
+        answer: {1: [[0]], 2: [[0]], 3: [[1]], 4: [[1]]}
+      },
+      FRKG528: {
+        query: [['What was', '2020 to 2021'], ['how does', 'Chief Financial Officer']],
+        answer: {1: [[0]], 2: [[1]], 3: [[1]]}
+      },
+      FRKG529: {
+        query: [['What role', 'customer incentive arrangements'], ['how does', 'fiscal 2022']],
+        answer: {1: [[0]], 2: [[1]], 3: [[1]]}
+      },
+      FRKG531: {
+        query: [['What is the combined total', "NVIDIA's 'All Other' category"], ['how does', 'these financial adjustments']],
+        answer: {2: [[0]], 3: [[1]], 4: [[0]]}
+      },
+      FRKG533: {
+        query: [['What is the relationship', '$1.7 billion'], ['how does', 'these financial disclosures']],
+        answer: {1: [[0]], 2: [[0]], 3: [[1]], 4: [[1]]}
+      },
+      FRKG534: {
+        query: [['How does', "AMD's All Other category"]],
+        answer: {1: [[0]], 2: [[0, 'subject to this audit rigor', 'rigor.']], 3: [[0]]}
+      }
+    };
+
     const STORAGE_PREFIX = 'semigraph-answer-review-v5:';
-    const LAST_RESULT_KEY = STORAGE_PREFIX + 'last-result';
+    const LAST_RESULT_KEY = STORAGE_PREFIX + 'last-result-v2';
     const VECTOR_V2_REVIEW_FILE = 'controlled_vector_sox74_baseline_v2_full_answer.yaml';
     const VECTOR_V2_CORRECT_POINTS = {
       FRKG003: [2, 3, 4],
@@ -634,6 +946,83 @@
       FRKG525: [1],
       FRKG529: [1, 2, 3],
       FRKG534: [1]
+    };
+    const VECTOR_SYNTHESIS_PATCH_V2_REVIEW_FILE = 'controlled_vector_sox74_synthesis_patch_v2_vector_full_answer.yaml';
+    const VECTOR_SYNTHESIS_PATCH_V2_CORRECT_POINTS = {
+      FRKG003: [2, 3, 4],
+      FRKG009: [2],
+      FRKG010: [],
+      FRKG011: [],
+      FRKG070: [],
+      FRKG071: [2],
+      FRKG073: [],
+      FRKG082: [1, 2, 3],
+      FRKG084: [],
+      FRKG093: [1, 2, 3],
+      FRKG096: [1, 2],
+      FRKG098: [2],
+      FRKG100: [],
+      FRKG102: [],
+      FRKG103: [2],
+      FRKG104: [],
+      FRKG105: [],
+      FRKG107: [],
+      FRKG108: [1],
+      FRKG111: [],
+      FRKG138: [],
+      FRKG141: [],
+      FRKG142: [],
+      FRKG161: [1, 2],
+      FRKG163: [],
+      FRKG173: [],
+      FRKG177: [],
+      FRKG179: [2],
+      FRKG182: [1, 2],
+      FRKG185: [],
+      FRKG187: [],
+      FRKG192: [],
+      FRKG239: [],
+      FRKG240: [1, 2],
+      FRKG241: [],
+      FRKG249: [1, 2],
+      FRKG273: [1],
+      FRKG274: [],
+      FRKG275: [2],
+      FRKG276: [],
+      FRKG279: [1],
+      FRKG284: [],
+      FRKG288: [1, 3],
+      FRKG290: [1, 2],
+      FRKG300: [],
+      FRKG356: [],
+      FRKG357: [2],
+      FRKG358: [1],
+      FRKG359: [],
+      FRKG360: [1, 2],
+      FRKG393: [],
+      FRKG395: [2],
+      FRKG396: [],
+      FRKG397: [1],
+      FRKG405: [],
+      FRKG436: [],
+      FRKG437: [],
+      FRKG451: [1, 2, 3, 4],
+      FRKG455: [1],
+      FRKG456: [],
+      FRKG458: [],
+      FRKG463: [1],
+      FRKG515: [],
+      FRKG516: [],
+      FRKG517: [],
+      FRKG520: [3],
+      FRKG522: [],
+      FRKG523: [],
+      FRKG525: [2],
+      FRKG528: [],
+      FRKG529: [1, 3],
+      FRKG531: [4],
+      FRKG533: [],
+      FRKG534: []
     };
     const GRAPH_LLM_FILTER_REVIEW_FILE = 'controlled_graph_sox74_v2_llm_filter_full_answer.yaml';
     const GRAPH_LLM_FILTER_CORRECT_POINTS = {
@@ -877,41 +1266,247 @@
       FRKG533: [1, 2, 3],
       FRKG534: [1]
     };
+    const VECTOR_FIRST50_REVIEW_FILE = 'controlled_vector_sox_smoke50_vector_first50_full_answer.yaml';
+    const VECTOR_FIRST50_CORRECT_POINTS = {
+      FRKG003: [2, 3, 4],
+      FRKG009: [2],
+      FRKG010: [1, 2],
+      FRKG071: [2],
+      FRKG082: [1, 2],
+      FRKG093: [3],
+      FRKG096: [1, 2],
+      FRKG098: [2],
+      FRKG103: [2],
+      FRKG104: [5],
+      FRKG108: [1],
+      FRKG161: [1, 2],
+      FRKG179: [2, 3],
+      FRKG182: [1, 2],
+      FRKG239: [1, 2],
+      FRKG240: [1, 2],
+      FRKG249: [1, 2],
+      FRKG273: [1],
+      FRKG275: [2],
+      FRKG279: [1],
+      FRKG288: [1],
+      FRKG290: [2],
+      FRKG357: [2],
+      FRKG358: [1]
+    };
+    const GRAPH_FIRST50_REVIEW_FILE = 'controlled_graph_sox_smoke50_cross_enc_llm_full_answer.yaml';
+    const GRAPH_FIRST50_CORRECT_POINTS = {
+      FRKG003: [2, 3, 4],
+      FRKG009: [1, 2],
+      FRKG011: [1],
+      FRKG082: [1, 2, 3],
+      FRKG093: [1, 2, 3],
+      FRKG096: [1, 2],
+      FRKG098: [1, 2, 3],
+      FRKG100: [1],
+      FRKG102: [1, 2, 3],
+      FRKG103: [2],
+      FRKG104: [5],
+      FRKG107: [1, 2],
+      FRKG108: [1],
+      FRKG111: [1],
+      FRKG141: [1, 3],
+      FRKG142: [2, 3],
+      FRKG173: [1],
+      FRKG179: [2, 3],
+      FRKG182: [1, 2],
+      FRKG187: [1, 2],
+      FRKG239: [3],
+      FRKG273: [1],
+      FRKG275: [1, 2],
+      FRKG279: [1],
+      FRKG284: [1],
+      FRKG288: [1],
+      FRKG358: [1],
+      FRKG359: [1, 2]
+    };
+    const GRAPH_FAST_FIRST50_REVIEW_FILE = 'controlled_graph_sox_smoke50_fast_full_answer.yaml';
+    // Initial answer-point review; the reviewer can change every mark in the page.
+    const GRAPH_FAST_FIRST50_CORRECT_POINTS = {
+      FRKG003: [2, 3, 4],
+      FRKG009: [1, 2],
+      FRKG010: [],
+      FRKG011: [1],
+      FRKG070: [],
+      FRKG071: [],
+      FRKG073: [],
+      FRKG082: [1],
+      FRKG084: [],
+      FRKG093: [1, 2, 3],
+      FRKG096: [],
+      FRKG098: [2],
+      FRKG100: [],
+      FRKG102: [],
+      FRKG103: [2],
+      FRKG104: [],
+      FRKG105: [],
+      FRKG107: [1, 2],
+      FRKG108: [1],
+      FRKG111: [],
+      FRKG138: [],
+      FRKG141: [1, 2, 3],
+      FRKG142: [1, 2, 3],
+      FRKG161: [1, 2],
+      FRKG163: [],
+      FRKG173: [],
+      FRKG177: [],
+      FRKG179: [1],
+      FRKG182: [1, 2, 3],
+      FRKG185: [],
+      FRKG187: [1],
+      FRKG192: [],
+      FRKG239: [],
+      FRKG240: [],
+      FRKG241: [],
+      FRKG249: [],
+      FRKG273: [],
+      FRKG274: [],
+      FRKG275: [1, 2, 3],
+      FRKG276: [],
+      FRKG279: [1],
+      FRKG284: [1],
+      FRKG288: [1, 2],
+      FRKG290: [],
+      FRKG300: [],
+      FRKG356: [],
+      FRKG357: [],
+      FRKG358: [1],
+      FRKG359: [1, 2],
+      FRKG360: [2]
+    };
+    const AGENT_VECTOR_FIRST50_REVIEW_FILE = 'controlled_agent_vector_sox_smoke50_v1_full_answer.yaml';
+    const AGENT_VECTOR_FIRST50_CORRECT_POINTS = {
+      FRKG003: [2, 3, 4],
+      FRKG009: [1, 2],
+      FRKG010: [1, 2, 3],
+      FRKG011: [],
+      FRKG070: [1, 3],
+      FRKG071: [],
+      FRKG073: [2],
+      FRKG082: [1],
+      FRKG084: [2],
+      FRKG093: [3],
+      FRKG096: [1, 2],
+      FRKG098: [],
+      FRKG100: [1],
+      FRKG102: [],
+      FRKG103: [2],
+      FRKG104: [5],
+      FRKG105: [1, 2],
+      FRKG107: [1, 2],
+      FRKG108: [1, 2],
+      FRKG111: [1, 2, 3],
+      FRKG138: [],
+      FRKG141: [],
+      FRKG142: [],
+      FRKG161: [1],
+      FRKG163: [],
+      FRKG173: [1],
+      FRKG177: [],
+      FRKG179: [1, 2, 3],
+      FRKG182: [],
+      FRKG185: [1],
+      FRKG187: [1, 2],
+      FRKG192: [],
+      FRKG239: [],
+      FRKG240: [1],
+      FRKG241: [],
+      FRKG249: [1, 2],
+      FRKG273: [1],
+      FRKG274: [1, 2],
+      FRKG275: [1],
+      FRKG276: [],
+      FRKG279: [1],
+      FRKG284: [1],
+      FRKG288: [1, 2],
+      FRKG290: [1],
+      FRKG300: [3],
+      FRKG356: [],
+      FRKG357: [2],
+      FRKG358: [1, 2],
+      FRKG359: [1],
+      FRKG360: [1]
+    };
+    const AGENT_GRAPH_FIRST50_REVIEW_FILE = 'controlled_agent_graph_sox_smoke50_v1_full_answer.jsonl';
+    const AGENT_GRAPH_FIRST50_CORRECT_POINTS = {
+      FRKG003: [2, 3, 4],
+      FRKG009: [1, 2],
+      FRKG010: [],
+      FRKG011: [1],
+      FRKG070: [1],
+      FRKG071: [1, 2],
+      FRKG073: [],
+      FRKG082: [1],
+      FRKG084: [2],
+      FRKG093: [3],
+      FRKG096: [1, 2],
+      FRKG098: [2],
+      FRKG100: [1],
+      FRKG102: [],
+      FRKG103: [2],
+      FRKG104: [5],
+      FRKG105: [1, 2],
+      FRKG107: [],
+      FRKG108: [1, 2],
+      FRKG111: [1, 2, 3],
+      FRKG138: [],
+      FRKG141: [1, 3],
+      FRKG142: [2, 3],
+      FRKG161: [1],
+      FRKG163: [],
+      FRKG173: [1],
+      FRKG177: [],
+      FRKG179: [1],
+      FRKG182: [],
+      FRKG185: [1],
+      FRKG187: [1, 2],
+      FRKG192: [],
+      FRKG239: [],
+      FRKG240: [1],
+      FRKG241: [],
+      FRKG249: [1, 2],
+      FRKG273: [1],
+      FRKG274: [2],
+      FRKG275: [1],
+      FRKG276: [],
+      FRKG279: [1],
+      FRKG284: [1],
+      FRKG288: [1, 2],
+      FRKG290: [1],
+      FRKG300: [],
+      FRKG356: [],
+      FRKG357: [2],
+      FRKG358: [1, 2],
+      FRKG359: [1],
+      FRKG360: []
+    };
+    const BINARY_REVIEW_FILES = new Set([
+      GRAPH_FAST_FIRST50_REVIEW_FILE,
+      AGENT_VECTOR_FIRST50_REVIEW_FILE,
+      AGENT_GRAPH_FIRST50_REVIEW_FILE
+    ]);
     const REVIEWED_POINTS_BY_FILE = {
       [VECTOR_V2_REVIEW_FILE]: VECTOR_V2_CORRECT_POINTS,
+      [VECTOR_SYNTHESIS_PATCH_V2_REVIEW_FILE]: VECTOR_SYNTHESIS_PATCH_V2_CORRECT_POINTS,
       [GRAPH_LLM_FILTER_REVIEW_FILE]: GRAPH_LLM_FILTER_CORRECT_POINTS,
       [GRAPH_1S_TTIME_REVIEW_FILE]: GRAPH_1S_TTIME_CORRECT_POINTS,
       [AGENT_VECTOR_REVIEW_FILE]: AGENT_VECTOR_CORRECT_POINTS,
-      [AGENT_GRAPH_FILTER_REVIEW_FILE]: AGENT_GRAPH_FILTER_CORRECT_POINTS
+      [AGENT_GRAPH_FILTER_REVIEW_FILE]: AGENT_GRAPH_FILTER_CORRECT_POINTS,
+      [VECTOR_FIRST50_REVIEW_FILE]: VECTOR_FIRST50_CORRECT_POINTS,
+      [GRAPH_FIRST50_REVIEW_FILE]: GRAPH_FIRST50_CORRECT_POINTS,
+      [GRAPH_FAST_FIRST50_REVIEW_FILE]: GRAPH_FAST_FIRST50_CORRECT_POINTS,
+      [AGENT_VECTOR_FIRST50_REVIEW_FILE]: AGENT_VECTOR_FIRST50_CORRECT_POINTS,
+      [AGENT_GRAPH_FIRST50_REVIEW_FILE]: AGENT_GRAPH_FIRST50_CORRECT_POINTS
     };
     const STATUS_LABELS = {
       correct: 'ถูก',
       incorrect: 'ผิด',
       unsure: 'ไม่แน่ใจ'
     };
-    const EXPECTED_ENTITIES = [
-      'Non-Volatile Memory Solutions Group', 'Programmable Solutions Group',
-      'Michelle Johnston Holthaus', 'PricewaterhouseCoopers LLP',
-      'Richard K. Templeton', 'Texas Instruments', 'Ernst & Young LLP',
-      'Infrastructure Software', 'Client Computing Group', 'Embedded Processing',
-      'Network and Edge', 'Intel Foundry Services', 'Analog segment',
-      'Other segment', 'All Other', 'Rafael R. Lizardi', 'Kirsten M. Spears',
-      'Sylvia Acevedo', 'Cristiano R. Amon', 'Mark D. McLaughlin',
-      'Jeffrey W. Henderson', 'Kornelis Smit', 'Haviv Ilan', 'Eric Meurice',
-      'Mobileye', 'Broadcom', 'Qualcomm', 'NVIDIA', 'Intel', 'AMD',
-      'QCT', 'QCOM', 'AVGO', 'TXN', 'PCAOB', 'SEC', 'CDP'
-    ];
-    const EXPECTED_METRICS = [
-      'internal control over financial reporting', 'net cash provided by operating activities',
-      'cash flows from financing activities', 'customer incentive arrangements',
-      'stock-based compensation', 'non-controlling interest', 'unrecognized tax benefit',
-      'cash payments for interest', 'deferred tax liabilities', 'deferred tax liability',
-      'restructuring charges', 'Research and Development', 'accounts receivable',
-      'operating income', 'operating profit', 'operating loss', 'effective tax rate',
-      'shares repurchased', 'acquisition costs', 'litigation charges',
-      'capitalized software', 'return on assets', 'interest expense', 'discount rate',
-      'net revenue', 'total revenue', 'net income', 'goodwill', 'revenue', 'R&D'
-    ];
 
     const app = {
       fileName: '',
@@ -930,30 +1525,23 @@
       return node;
     }
 
-    function appendHighlightedExpectedText(container, value) {
-      const escapePattern = function (term) {
-        return term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      };
-      const terms = [...EXPECTED_ENTITIES, ...EXPECTED_METRICS]
-        .sort(function (left, right) { return right.length - left.length; })
-        .map(escapePattern)
-        .join('|');
-      const pattern = new RegExp(
-        "'[^']+'|\"[^\"]+\"|[-+]?\\$\\(?[\\d,]+(?:\\.\\d+)?\\)?\\s*(?:million|billion|M|B)?|" +
-        '-?\\d+(?:\\.\\d+)?%|\\b(?:19|20)\\d{2}\\b|\\b\\d+(?:\\.\\d+)?\\s*(?:million|billion|percentage points?|shares)\\b|' +
-        '\\b-?\\d+\\.\\d+\\b|\\b(?:' + terms + ')\\b',
-        'gi'
-      );
-      const entitySet = new Set(EXPECTED_ENTITIES.map(function (term) { return term.toLowerCase(); }));
+    function appendReviewText(container, value, annotations) {
+      const ranges = annotations.map(function ([request, firstWords, lastWords]) {
+        const start = firstWords === undefined ? 0 : value.indexOf(firstWords);
+        const last = lastWords === undefined ? value.length : value.indexOf(lastWords, start);
+        const end = lastWords === undefined ? last : last + lastWords.length;
+        return { request: request, start: start, end: end, valid: start >= 0 && last >= 0 };
+      }).filter(function (range) { return range.valid; })
+        .sort(function (left, right) { return left.start - right.start; });
       let offset = 0;
-      for (const match of value.matchAll(pattern)) {
-        container.appendChild(document.createTextNode(value.slice(offset, match.index)));
-        const matched = match[0];
-        let kind = 'metric';
-        if (entitySet.has(matched.toLowerCase()) || /^['\"]/.test(matched)) kind = 'entity';
-        if (/[-+]?\$|\d/.test(matched[0])) kind = 'value';
-        container.appendChild(makeElement('mark', 'expected-anchor ' + kind, matched));
-        offset = match.index + matched.length;
+      for (const range of ranges) {
+        if (range.start < offset) continue;
+        container.appendChild(document.createTextNode(value.slice(offset, range.start)));
+        const mark = makeElement('mark', 'review-highlight request-' + range.request,
+          value.slice(range.start, range.end));
+        mark.title = 'ตอบส่วนที่ถาม ' + (range.request + 1);
+        container.appendChild(mark);
+        offset = range.end;
       }
       container.appendChild(document.createTextNode(value.slice(offset)));
     }
@@ -999,6 +1587,8 @@
           value = block.slice(1).join('\n').trim();
         } else if (first === '>' || first === '>-') {
           value = block.slice(1).join(' ').replace(/\s+/g, ' ').trim();
+        } else if (activeKey === 'final_answer') {
+          value = parseScalar(block.join(' ').replace(/\s+/g, ' ').trim());
         } else {
           value = parseScalar(block.join('\n').trim());
         }
@@ -1022,12 +1612,10 @@
           flushBlock();
           const key = keyMatch[1];
           const rest = keyMatch[2] || '';
-          const startsQuoted = rest[0] === "'" || rest[0] === '"';
-          const quotedIsOpen = startsQuoted && rest[rest.length - 1] !== rest[0];
-          if (!rest || rest === '|' || rest === '|-' || rest === '>' || rest === '>-') {
+          if (key === 'final_answer') {
             activeKey = key;
             block = [rest];
-          } else if (key === 'final_answer' && quotedIsOpen) {
+          } else if (!rest || rest === '|' || rest === '|-' || rest === '>' || rest === '>-') {
             activeKey = key;
             block = [rest];
           } else {
@@ -1106,7 +1694,9 @@
       const signature = Array.from(results.values()).map(function (row) {
         return row.id + ':' + row.finalAnswer.length;
       }).join('|');
-      return STORAGE_PREFIX + fileName + ':' + signature;
+      const reviewVersion = fileName === GRAPH_FIRST50_REVIEW_FILE ? ':binary-v2'
+        : BINARY_REVIEW_FILES.has(fileName) ? ':binary-v1' : '';
+      return STORAGE_PREFIX + fileName + ':' + signature + reviewVersion;
     }
 
     function blankStatuses(query) {
@@ -1118,6 +1708,7 @@
     }
 
     function initialStatuses(query) {
+      if (!app.results.has(query.id)) return blankStatuses(query);
       const reviewedPoints = REVIEWED_POINTS_BY_FILE[app.fileName];
       if (!reviewedPoints) return blankStatuses(query);
 
@@ -1163,24 +1754,26 @@
 
     function metrics(query) {
       const statuses = app.statuses[query.id] || blankStatuses(query);
-      const reviewed = statuses.filter(function (status) { return status !== 'unreviewed'; }).length;
+      const scoredStatuses = statuses.filter(function (status) { return status !== 'unsure'; });
+      const reviewed = scoredStatuses.filter(function (status) { return status !== 'unreviewed'; }).length;
       const correct = statuses.filter(function (status) { return status === 'correct'; }).length;
       const mainStatuses = statuses.filter(function (_, index) {
         return isMainPoint(query, index);
-      });
+      }).filter(function (status) { return status !== 'unsure'; });
       const mainReviewed = mainStatuses.filter(function (status) { return status !== 'unreviewed'; }).length;
       const mainCorrect = mainStatuses.filter(function (status) { return status === 'correct'; }).length;
       return {
         reviewed: reviewed,
         correct: correct,
-        total: statuses.length,
+        total: scoredStatuses.length,
         hit: reviewed === 0 ? null : (correct > 0 ? 1 : 0),
-        recall: reviewed === 0 ? null : correct / statuses.length,
+        recall: reviewed === 0 ? null : correct / scoredStatuses.length,
         mainReviewed: mainReviewed,
         mainCorrect: mainCorrect,
         mainTotal: mainStatuses.length,
         mainHit: mainReviewed === 0 ? null : (mainCorrect > 0 ? 1 : 0),
-        mainRecall: mainReviewed === 0 ? null : mainCorrect / mainStatuses.length
+        mainRecall: mainReviewed === 0 ? null : mainCorrect / mainStatuses.length,
+        fullyCorrect: reviewed === scoredStatuses.length && scoredStatuses.length > 0 && correct === scoredStatuses.length
       };
     }
 
@@ -1199,8 +1792,10 @@
       let mainHitCount = 0;
       let mainCorrect = 0;
       let mainTotal = 0;
+      let fullyCorrectCount = 0;
       for (const query of REFERENCE) {
-        if (app.results.has(query.id)) loaded += 1;
+        if (!app.results.has(query.id)) continue;
+        loaded += 1;
         const metric = metrics(query);
         if (metric.reviewed > 0) {
           reviewedQueries += 1;
@@ -1208,6 +1803,7 @@
           correct += metric.correct;
           total += metric.total;
           reviewedPoints += metric.reviewed;
+          if (metric.fullyCorrect) fullyCorrectCount += 1;
         }
         if (metric.mainReviewed > 0) {
           mainReviewedQueries += 1;
@@ -1226,13 +1822,14 @@
         mainReviewedQueries: mainReviewedQueries,
         mainHitCount: mainHitCount,
         mainCorrect: mainCorrect,
-        mainTotal: mainTotal
+        mainTotal: mainTotal,
+        fullyCorrectCount: fullyCorrectCount
       };
     }
 
     function renderStats() {
       const summary = overallMetrics();
-      $('loadedStat').textContent = summary.loaded + ' / ' + REFERENCE.length;
+      $('loadedStat').textContent = summary.loaded + ' / ' + (app.results.size || REFERENCE.length);
       $('hitStat').textContent = summary.reviewedQueries
         ? summary.hitCount + ' / ' + summary.reviewedQueries + ' (' +
           formatPercent(summary.hitCount / summary.reviewedQueries) + ')'
@@ -1247,8 +1844,12 @@
       $('mainRecallStat').textContent = summary.mainReviewedQueries
         ? formatPercent(summary.mainCorrect / summary.mainTotal)
         : '—';
+      $('fullyCorrectStat').textContent = summary.reviewedQueries
+        ? summary.fullyCorrectCount + ' / ' + summary.reviewedQueries + ' (' +
+          formatPercent(summary.fullyCorrectCount / summary.reviewedQueries) + ')'
+        : '—';
       const denominator = REFERENCE.reduce(function (sum, query) {
-        return sum + query.answer_points.length;
+        return sum + (app.results.has(query.id) ? metrics(query).total : 0);
       }, 0);
       $('progressStat').textContent = denominator
         ? Math.round(summary.reviewedPoints / denominator * 100) + '%'
@@ -1262,6 +1863,7 @@
       select.replaceChildren();
 
       REFERENCE.forEach(function (query, index) {
+        if (app.fileName && !app.results.has(query.id)) return;
         const metric = metrics(query);
         const item = makeElement('button', 'query-item' + (index === app.currentIndex ? ' active' : ''));
         item.type = 'button';
@@ -1313,7 +1915,19 @@
       score.appendChild(makeElement('span', 'pill', 'ตรวจแล้ว ' + metric.reviewed + '/' + metric.total));
       head.appendChild(score);
       headPanel.appendChild(head);
-      headPanel.appendChild(makeElement('div', 'query-text', query.query));
+      const highlights = REVIEW_HIGHLIGHTS[query.id];
+      const queryText = makeElement('div', 'query-text');
+      appendReviewText(queryText, query.query, highlights.query.map(function (range, index) {
+        return [index, ...range];
+      }));
+      headPanel.appendChild(queryText);
+      const queryLegend = makeElement('div', 'legend query-legend');
+      highlights.query.forEach(function (_, index) {
+        queryLegend.appendChild(makeElement('mark', 'review-highlight request-' + index,
+          'ส่วนที่ถาม ' + (index + 1)));
+      });
+      queryLegend.appendChild(makeElement('span', '', 'สีเดียวกันในเฉลย = ข้อความที่ตอบส่วนนี้'));
+      headPanel.appendChild(queryLegend);
       panel.appendChild(headPanel);
 
       const answerPanel = makeElement('section', 'panel answer-panel');
@@ -1330,7 +1944,7 @@
 
       const pointsPanel = makeElement('section', 'panel points-panel');
       const pointsTitle = makeElement('div', 'panel-title');
-      pointsTitle.appendChild(makeElement('h2', '', 'Answer Points — ตรวจทีละประเด็น'));
+      pointsTitle.appendChild(makeElement('h2', '', 'เฉลยต้นฉบับ — ตรวจทีละประโยค'));
       pointsTitle.appendChild(makeElement('span', 'pill', 'ถูกเท่านั้นจึงนับ Recall'));
       pointsPanel.appendChild(pointsTitle);
       const points = makeElement('div', 'points');
@@ -1341,15 +1955,19 @@
         const heading = makeElement('div', 'point-heading');
         heading.appendChild(makeElement('span', 'point-role ' + (mainPoint ? 'main' : 'supporting'), mainPoint ? 'MAIN' : 'SUPPORTING'));
         const pointText = makeElement('div', 'point-text');
-        appendHighlightedExpectedText(pointText, point);
+        const sentence = point.replace(/^POINT \d+:\s*/, '');
+        appendReviewText(pointText, sentence, highlights.answer[pointIndex + 1] || []);
         heading.appendChild(pointText);
         card.appendChild(heading);
         const actions = makeElement('div', 'point-actions');
-        ['correct', 'incorrect', 'unsure'].forEach(function (nextStatus) {
+        const choices = BINARY_REVIEW_FILES.has(app.fileName)
+          ? ['correct', 'incorrect'] : ['correct', 'incorrect', 'unsure'];
+        choices.forEach(function (nextStatus) {
           const button = makeElement('button', 'status-btn' + (status === nextStatus ? ' selected ' + nextStatus : ''), STATUS_LABELS[nextStatus]);
           button.type = 'button';
           button.addEventListener('click', function () {
-            app.statuses[query.id][pointIndex] = status === nextStatus ? 'unreviewed' : nextStatus;
+            app.statuses[query.id][pointIndex] = BINARY_REVIEW_FILES.has(app.fileName)
+              ? nextStatus : status === nextStatus ? 'unreviewed' : nextStatus;
             saveStatuses();
             render();
           });
@@ -1362,13 +1980,12 @@
       const legend = makeElement('div', 'legend');
       legend.appendChild(makeElement('span', 'legend-item correct', 'ถูก = นับ Answer Hit/Recall'));
       legend.appendChild(makeElement('span', 'legend-item incorrect', 'ผิด = ไม่นับ'));
-      legend.appendChild(makeElement('span', 'legend-item unsure', 'ไม่แน่ใจ = ยังไม่ผ่าน'));
+      if (!BINARY_REVIEW_FILES.has(app.fileName)) {
+        legend.appendChild(makeElement('span', 'legend-item unsure', 'ไม่แน่ใจ = ตัดออกจากคะแนนทั้งหมด'));
+      }
       legend.appendChild(makeElement('span', '', 'MAIN = สิ่งที่คำถามขอโดยตรง'));
       legend.appendChild(makeElement('span', '', 'SUPPORTING = ข้อมูลตั้งต้นหรือบริบท'));
-      legend.appendChild(makeElement('mark', 'expected-anchor value', 'ตัวเลข / ปี'));
-      legend.appendChild(makeElement('mark', 'expected-anchor entity', 'บริษัท / ชื่อเฉพาะ'));
-      legend.appendChild(makeElement('mark', 'expected-anchor metric', 'ตัวชี้วัดทางการเงิน'));
-      legend.appendChild(makeElement('span', '', 'สีช่วยกวาดตาเท่านั้น ความสัมพันธ์ยังต้องตรวจครบทั้ง POINT'));
+      legend.appendChild(makeElement('span', '', 'Highlight ช่วยอ่าน ไม่เปลี่ยนเฉลยหรือเกณฑ์คะแนนเดิม; ต้องตรวจข้อความครบทั้งประโยค'));
       pointsPanel.appendChild(legend);
       panel.appendChild(pointsPanel);
 
@@ -1394,14 +2011,18 @@
       app.fileName = fileName;
       app.results = results;
       app.sourceKey = makeSourceKey(fileName, results);
-      app.currentIndex = 0;
+      app.currentIndex = Math.max(0, REFERENCE.findIndex(function (query) {
+        return results.has(query.id);
+      }));
       restoreStatuses();
       $('resultFileName').textContent = fileName;
       const sourceName = $('sourceName');
       sourceName.replaceChildren();
       sourceName.appendChild(makeElement('strong', '', 'ไฟล์ผลรัน: '));
       sourceName.appendChild(document.createTextNode(
-        fileName + ' • จับคู่ได้ ' + results.size + ' / ' + REFERENCE.length + ' Query'
+        fileName + ' • จับคู่ได้ ' + REFERENCE.filter(function (query) {
+          return results.has(query.id);
+        }).length + ' / ' + results.size + ' Query ในไฟล์'
       ));
       showError('');
       render();
@@ -1457,7 +2078,9 @@
     $('clearBtn').addEventListener('click', function () {
       if (!app.fileName || !window.confirm('ล้าง Checklist ของไฟล์นี้ทั้งหมดหรือไม่?')) return;
       app.statuses = {};
-      for (const query of REFERENCE) app.statuses[query.id] = blankStatuses(query);
+      for (const query of REFERENCE) {
+        if (app.results.has(query.id)) app.statuses[query.id] = blankStatuses(query);
+      }
       saveStatuses();
       render();
     });
@@ -1472,7 +2095,9 @@
 
     $('exportBtn').addEventListener('click', function () {
       if (!app.fileName) return;
-      const rows = REFERENCE.map(function (query) {
+      const rows = REFERENCE.filter(function (query) {
+        return app.results.has(query.id);
+      }).map(function (query) {
         const metric = metrics(query);
         return {
           id: query.id,
@@ -1491,7 +2116,8 @@
           main_correct_points: metric.mainCorrect,
           main_total_points: metric.mainTotal,
           main_answer_hit: metric.mainHit,
-          main_answer_recall: metric.mainRecall
+          main_answer_recall: metric.mainRecall,
+          fully_correct: metric.fullyCorrect
         };
       });
       const exportData = {

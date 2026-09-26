@@ -70,13 +70,25 @@ def test_collector_rejects_limit_smaller_than_tasks_with_evidence():
         nodes.collector_node(state, cfg=cfg)
 
 
-def test_synthesize_generates_answer_with_indexed_evidence(monkeypatch):
+def test_synthesize_generates_structured_answer_with_chunk_ids(monkeypatch):
     calls = []
-    answer = "**Answer**\n\nNVIDIA relied on TSMC [1].\n\n**Key evidence**\n\n- NVIDIA relied on TSMC [1]."
+    answer = "NVIDIA relied on TSMC [c1]."
+    response = json.dumps({
+        "parts": [{
+            "requested_part": "Who manufactured NVIDIA chips?",
+            "supported_facts": [{
+                "claim": "NVIDIA relied on TSMC.",
+                "evidence_ids": ["c1"],
+            }],
+            "missing_information": None,
+            "answer": answer,
+        }],
+        "final_answer": answer,
+    })
 
     def invoke(messages):
         calls.append(messages)
-        return SimpleNamespace(content=answer)
+        return SimpleNamespace(content=response)
 
     monkeypatch.setattr(
         nodes,
@@ -97,12 +109,18 @@ def test_synthesize_generates_answer_with_indexed_evidence(monkeypatch):
 
     assert result["final_answer"] == answer
     assert result["synthesis_latency_ms"] >= 0.0
+    assert result["synthesis_trace"]["output_format"] == "structured_json"
+    assert result["synthesis_trace"]["citation_status"] == "valid"
+    assert result["synthesis_trace"]["cited_chunk_ids"] == ["c1"]
+    assert result["synthesis_trace"]["parts"][0]["supported_facts"][0][
+        "evidence_ids"
+    ] == ["c1"]
     assert calls[0][0]["content"] == SYNTHESIZE_ATTEMPTS_SYSTEM_PROMPT
     payload = json.loads(calls[0][1]["content"])
     assert payload["original_query"] == "Who manufactured NVIDIA chips?"
-    assert [item["citation"] for item in payload["selected_evidence"]] == [
-        "[1]",
-        "[2]",
+    assert [item["chunk_id"] for item in payload["selected_evidence"]] == [
+        "c1",
+        "c2",
     ]
 
 

@@ -59,15 +59,36 @@ def load_sox_queries() -> list[dict]:
     return queries
 
 
-def _select_queries(queries: list[dict], limit: int | None) -> list[dict]:
-    """Return the full benchmark or its first N cases for a quick smoke run."""
-    if limit is None:
+def _select_queries(
+    queries: list[dict],
+    limit: int | None = None,
+    start: int | None = None,
+    end: int | None = None,
+) -> list[dict]:
+    """Select the full set, first N cases, or an inclusive 1-based range."""
+    if limit is not None and (start is not None or end is not None):
+        raise ValueError("limit cannot be combined with start or end")
+
+    if limit is not None:
+        if isinstance(limit, bool) or limit < 1:
+            raise ValueError("limit must be greater than zero")
+        if limit > len(queries):
+            raise ValueError(f"limit must not exceed {len(queries)}")
+        return queries[:limit]
+
+    if start is None and end is None:
         return queries
-    if isinstance(limit, bool) or limit < 1:
-        raise ValueError("limit must be greater than zero")
-    if limit > len(queries):
-        raise ValueError(f"limit must not exceed {len(queries)}")
-    return queries[:limit]
+
+    first = 1 if start is None else start
+    last = len(queries) if end is None else end
+    for name, value in (("start", first), ("end", last)):
+        if isinstance(value, bool) or value < 1:
+            raise ValueError(f"{name} must be greater than zero")
+    if first > last:
+        raise ValueError("start must not exceed end")
+    if last > len(queries):
+        raise ValueError(f"end must not exceed {len(queries)}")
+    return queries[first - 1:last]
 
 
 def _requires_llm(tool: str, mode: str, cfg) -> bool:
@@ -154,6 +175,7 @@ def write_yaml_trace(results: list[dict], output_path: Path) -> None:
     """Write summary metrics followed by all completed query traces."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
     summary = {
+        "query_count": len(results),
         "hit": round(statistics.fmean(row["hit"] for row in results), 3)
         if results
         else None,
@@ -226,6 +248,7 @@ def _run_agent(
             else 0.0
         ),
         "answer_error": synthesis_trace.get("error_type"),
+        "synthesis_trace": synthesis_trace,
     }
 
 
@@ -253,16 +276,22 @@ def evaluate_sox_queries(
     mode: str = "retrieve_only",
     workers: int = 8,
     limit: int | None = None,
+    start: int | None = None,
+    end: int | None = None,
 ) -> list[dict]:
-    """Evaluate one production retriever on SOX74 or a small leading subset."""
+    """Evaluate SOX74, its first N cases, or an inclusive query range."""
     if mode not in EVALUATION_MODES:
         raise ValueError(f"mode must be one of {EVALUATION_MODES}")
     if workers < 1:
         raise ValueError("workers must be greater than zero")
 
     _validate_runtime(tool, mode)
-    queries = _select_queries(load_sox_queries(), limit)
-    scope = "sox74" if limit is None else f"sox_smoke{limit}"
+    all_queries = load_sox_queries()
+    queries = _select_queries(all_queries, limit, start, end)
+    if start is not None or end is not None:
+        scope = f"sox_range{start or 1}_{end or len(all_queries)}"
+    else:
+        scope = "sox74" if limit is None else f"sox_smoke{limit}"
     searches = {
         "vector": vector_search,
         "graph": graph_search,
@@ -322,17 +351,21 @@ def evaluate_sox_queries(
         answer_error = None
         final_answer = "None"
         answer_latency_ms = 0.0
+        synthesis_trace = None
         if mode == "full_answer" and agent_result is not None:
             final_answer = agent_result["final_answer"]
             answer_latency_ms = agent_result["answer_latency_ms"]
             answer_error = agent_result.get("answer_error")
+            synthesis_trace = agent_result.get("synthesis_trace")
         elif mode == "full_answer":
             answer_started = time.perf_counter()
+            synthesis_trace = {}
             try:
                 final_answer = generate_final_answer(
                     llm,
                     case["query"],
                     retrieved,
+                    synthesis_trace=synthesis_trace,
                 )
                 if final_answer == GENERATION_ERROR_ANSWER:
                     answer_error = "AnswerGenerationError"
@@ -360,6 +393,8 @@ def evaluate_sox_queries(
         }
         if answer_error:
             result["answer_error"] = answer_error
+        if synthesis_trace is not None:
+            result["synthesis_trace"] = synthesis_trace
         return result
 
     # Start a fresh trace; each completed query is appended immediately.
@@ -429,11 +464,27 @@ def main() -> None:
         type=int,
         help="run only the first N queries for a quick smoke evaluation",
     )
+    parser.add_argument(
+        "--start",
+        type=int,
+        help="first query position to run, 1-based and inclusive",
+    )
+    parser.add_argument(
+        "--end",
+        type=int,
+        help="last query position to run, 1-based and inclusive",
+    )
     args = parser.parse_args()
     if args.workers < 1:
         parser.error("--workers must be greater than zero")
     if args.limit is not None and args.limit < 1:
         parser.error("--limit must be greater than zero")
+    if args.start is not None and args.start < 1:
+        parser.error("--start must be greater than zero")
+    if args.end is not None and args.end < 1:
+        parser.error("--end must be greater than zero")
+    if args.limit is not None and (args.start is not None or args.end is not None):
+        parser.error("--limit cannot be combined with --start or --end")
 
     load_dotenv(ROOT / ".env")
     evaluate_sox_queries(
@@ -442,6 +493,8 @@ def main() -> None:
         mode=args.mode,
         workers=args.workers,
         limit=args.limit,
+        start=args.start,
+        end=args.end,
     )
 
 

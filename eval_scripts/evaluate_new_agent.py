@@ -29,6 +29,7 @@ from eval_scripts.eval_agent import (
     GENERATION_ERROR_ANSWER,
     generate_final_answer,
 )
+from eval_scripts.token_usage import collect_token_usage, summarize_token_usage
 
 VECTOR_INDEX = "gold_chunk_embedding"
 TOP_K = 10
@@ -40,10 +41,10 @@ AGENT_TOOLS = {
 SOX_DATASET = ROOT / "benchmark/freezes/sox74_retrieval_ablation_v1/inputs/finreflectkg_sox_strict74.yaml"
 SOX_QUERY_COUNT = 74
 TRACE_OUTPUT_TEMPLATE = ROOT / (
-    "benchmark/results/controlled_{tool}_{scope}_{version_name}_{mode}.jsonl"
+    "benchmark/results2/controlled_{tool}_{scope}_{version_name}_{mode}.jsonl"
 )
 YAML_TRACE_OUTPUT_TEMPLATE = ROOT / (
-    "benchmark/results/controlled_{tool}_{scope}_{version_name}_{mode}.yaml"
+    "benchmark/results2/controlled_{tool}_{scope}_{version_name}_{mode}.yaml"
 )
 
 
@@ -58,15 +59,36 @@ def load_sox_queries() -> list[dict]:
     return queries
 
 
-def _select_queries(queries: list[dict], limit: int | None) -> list[dict]:
-    """Return the full benchmark or its first N cases for a quick smoke run."""
-    if limit is None:
+def _select_queries(
+    queries: list[dict],
+    limit: int | None = None,
+    start: int | None = None,
+    end: int | None = None,
+) -> list[dict]:
+    """Select the full set, first N cases, or an inclusive 1-based range."""
+    if limit is not None and (start is not None or end is not None):
+        raise ValueError("limit cannot be combined with start or end")
+
+    if limit is not None:
+        if isinstance(limit, bool) or limit < 1:
+            raise ValueError("limit must be greater than zero")
+        if limit > len(queries):
+            raise ValueError(f"limit must not exceed {len(queries)}")
+        return queries[:limit]
+
+    if start is None and end is None:
         return queries
-    if isinstance(limit, bool) or limit < 1:
-        raise ValueError("limit must be greater than zero")
-    if limit > len(queries):
-        raise ValueError(f"limit must not exceed {len(queries)}")
-    return queries[:limit]
+
+    first = 1 if start is None else start
+    last = len(queries) if end is None else end
+    for name, value in (("start", first), ("end", last)):
+        if isinstance(value, bool) or value < 1:
+            raise ValueError(f"{name} must be greater than zero")
+    if first > last:
+        raise ValueError("start must not exceed end")
+    if last > len(queries):
+        raise ValueError(f"end must not exceed {len(queries)}")
+    return queries[first - 1:last]
 
 
 def _requires_llm(tool: str, mode: str, cfg) -> bool:
@@ -149,10 +171,15 @@ def append_trace(result: dict, output_path: Path) -> None:
         file.write(json.dumps(result, ensure_ascii=False) + "\n")
 
 
-def write_yaml_trace(results: list[dict], output_path: Path) -> None:
+def write_yaml_trace(
+    results: list[dict],
+    output_path: Path,
+    measurement: dict | None = None,
+) -> None:
     """Write summary metrics followed by all completed query traces."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
     summary = {
+        "query_count": len(results),
         "hit": round(statistics.fmean(row["hit"] for row in results), 3)
         if results
         else None,
@@ -169,16 +196,33 @@ def write_yaml_trace(results: list[dict], output_path: Path) -> None:
         )
         if results
         else None,
+        "average_answer_latency_ms": round(
+            statistics.fmean(row["answer_latency_ms"] for row in results), 1
+        ) if results else None,
+        "average_total_latency_ms": round(
+            statistics.fmean(row["total_latency_ms"] for row in results), 1
+        ) if results else None,
+        "token_usage": summarize_token_usage(
+            [row["token_usage"] for row in results]
+        ),
     }
+    trace = {"summary": summary, "results": results}
+    if measurement is not None:
+        trace["measurement"] = measurement
+        summary["token_usage_including_warmup"] = summarize_token_usage([
+            summary["token_usage"],
+            measurement["warmup"]["token_usage"],
+        ])
     output_path.write_text(
         yaml.safe_dump(
-            {"summary": summary, "results": results},
+            trace,
             allow_unicode=True,
             sort_keys=False,
             width=120,
         ),
         encoding="utf-8",
     )
+
 
 def _run_agent(
     question: str,
@@ -232,6 +276,7 @@ def _run_agent(
         "final_answer": str(result.get("final_answer") or ""),
         "answer_latency_ms": float(result.get("synthesis_latency_ms") or 0.0),
         "answer_error": None,
+        "synthesis_trace": result.get("synthesis_trace"),
     }
 
 
@@ -259,16 +304,32 @@ def evaluate_sox_queries(
     mode: str = "retrieve_only",
     workers: int = 8,
     limit: int | None = None,
+    start: int | None = None,
+    end: int | None = None,
 ) -> list[dict]:
-    """Evaluate one production retriever on SOX74 or a small leading subset."""
+    """Evaluate SOX74, its first N cases, or an inclusive query range."""
     if mode not in EVALUATION_MODES:
         raise ValueError(f"mode must be one of {EVALUATION_MODES}")
     if workers < 1:
         raise ValueError("workers must be greater than zero")
 
     _validate_runtime(tool, mode)
-    queries = _select_queries(load_sox_queries(), limit)
-    scope = "sox74" if limit is None else f"sox_smoke{limit}"
+    cfg = get_config()
+    answer_audit_enabled = (
+        mode == "full_answer"
+        and tool not in AGENT_TOOLS
+        and cfg.eval_answer_audit_enabled
+    )
+    all_queries = load_sox_queries()
+    queries = _select_queries(all_queries, limit, start, end)
+    if start is not None or end is not None:
+        scope = f"sox_range{start or 1}_{end or len(all_queries)}"
+        selection_start = start or 1
+        selection_end = end or len(all_queries)
+    else:
+        scope = "sox74" if limit is None else f"sox_smoke{limit}"
+        selection_start = 1
+        selection_end = len(queries)
     searches = {
         "vector": vector_search,
         "graph": graph_search,
@@ -292,10 +353,40 @@ def evaluate_sox_queries(
             mode=mode,
         )
     )
-
-
-    # Load the embedding model before measuring per-query latency.
-    vector_search(queries[0]["query"], top_k=TOP_K)
+    # Warm the selected retriever, including its reranker and Triple cache.
+    # Keep warm-up LLM tokens separate from the measured benchmark queries.
+    warmup_tool = AGENT_TOOLS.get(tool, tool)
+    print(f"Warm-up: {warmup_tool} (excluded from per-query latency)")
+    with collect_token_usage() as warmup_usage:
+        warmup_started = time.perf_counter()
+        searches[warmup_tool](queries[0]["query"], top_k=TOP_K)
+        warmup_latency_ms = (time.perf_counter() - warmup_started) * 1000
+    measurement = {
+        "tool": tool,
+        "mode": mode,
+        "workers": workers,
+        "selection": {
+            "start": selection_start,
+            "end": selection_end,
+            "query_count": len(queries),
+        },
+        "answer_audit_enabled": answer_audit_enabled,
+        "latency_scope": (
+            "Per-query wall time after warm-up; excludes executor queue, "
+            "metric calculation and trace writes; includes internal lock waits. "
+            "Agent retrieval includes planning, assessment and retries."
+        ),
+        "token_usage_scope": (
+            "Provider-reported LLM tokens across all calls and retries; "
+            "excludes local embeddings and reranking. Partial totals cover "
+            "only calls that returned usage. Warm-up is reported separately."
+        ),
+        "warmup": {
+            "tool": warmup_tool,
+            "latency_ms": warmup_latency_ms,
+            "token_usage": warmup_usage.snapshot(),
+        },
+    }
 
     llm = (
         get_llm(get_config())
@@ -305,18 +396,48 @@ def evaluate_sox_queries(
 
     def evaluate_case(case: dict) -> dict:
         """Evaluate one case and return its retrieval/generation metrics."""
-        started = time.perf_counter()
         agent_result = None
-        if tool in AGENT_TOOLS:
-            agent_result = _run_agent(
-                case["query"],
-                tool=tool,
-                generate_answer=mode == "full_answer",
-            )
-            retrieved = agent_result["chunks"]
-        else:
-            retrieved = search(case["query"], top_k=TOP_K)
-        total_latency_ms = (time.perf_counter() - started) * 1000
+        answer_error = None
+        final_answer = "None"
+        answer_latency_ms = 0.0
+        synthesis_trace = None
+        with collect_token_usage() as usage:
+            started = time.perf_counter()
+            if tool in AGENT_TOOLS:
+                agent_result = _run_agent(
+                    case["query"],
+                    tool=tool,
+                    generate_answer=mode == "full_answer",
+                )
+                retrieved = agent_result["chunks"]
+                if mode == "full_answer":
+                    final_answer = agent_result["final_answer"]
+                    answer_latency_ms = agent_result["answer_latency_ms"]
+                    answer_error = agent_result.get("answer_error")
+                    synthesis_trace = agent_result.get("synthesis_trace")
+            else:
+                retrieved = search(case["query"], top_k=TOP_K)
+                if mode == "full_answer":
+                    answer_started = time.perf_counter()
+                    synthesis_trace = {}
+                    try:
+                        final_answer = generate_final_answer(
+                            llm,
+                            case["query"],
+                            retrieved,
+                            audit_enabled=answer_audit_enabled,
+                            synthesis_trace=synthesis_trace,
+                        )
+                        if final_answer == GENERATION_ERROR_ANSWER:
+                            answer_error = "AnswerGenerationError"
+                    except Exception as exc:
+                        final_answer = GENERATION_ERROR_ANSWER
+                        answer_error = type(exc).__name__
+                    answer_latency_ms = (time.perf_counter() - answer_started) * 1000
+            total_latency_ms = (time.perf_counter() - started) * 1000
+        if not 0.0 <= answer_latency_ms <= total_latency_ms:
+            raise RuntimeError("Answer latency must fall within total query latency")
+        retrieval_latency_ms = total_latency_ms - answer_latency_ms
 
         gold_ids = set(case["gold_chunks"])
         retrieved_ids = [chunk["chunk_id"] for chunk in retrieved]
@@ -325,31 +446,10 @@ def evaluate_sox_queries(
         recall = len(hits) / len(gold_ids)
         reciprocal_rank = _reciprocal_rank(retrieved_ids, gold_ids)
 
-        answer_error = None
-        final_answer = "None"
-        answer_latency_ms = 0.0
-        if mode == "full_answer" and agent_result is not None:
-            final_answer = agent_result["final_answer"]
-            answer_latency_ms = agent_result["answer_latency_ms"]
-            answer_error = agent_result.get("answer_error")
-        elif mode == "full_answer":
-            answer_started = time.perf_counter()
-            try:
-                final_answer = generate_final_answer(
-                    llm,
-                    case["query"],
-                    retrieved,
-                )
-                if final_answer == GENERATION_ERROR_ANSWER:
-                    answer_error = "AnswerGenerationError"
-            except Exception as exc:
-                final_answer = GENERATION_ERROR_ANSWER
-                answer_error = type(exc).__name__
-            answer_latency_ms = (time.perf_counter() - answer_started) * 1000
-
         result = {
             "id": case["id"],
             "mode": mode,
+            "answer_audit_enabled": answer_audit_enabled,
             "query": case["query"],
             "gold_chunks": case["gold_chunks"],
             "top_chunk_ids": retrieved_ids,
@@ -358,31 +458,35 @@ def evaluate_sox_queries(
             "hit": hit,
             "recall": recall,
             "reciprocal_rank": reciprocal_rank,
-            "latency_ms": max(
-                0.0,
-                total_latency_ms - answer_latency_ms,
-            ),
+            "latency_ms": retrieval_latency_ms,
             "answer_latency_ms": answer_latency_ms,
+            "total_latency_ms": total_latency_ms,
+            "token_usage": usage.snapshot(),
         }
         if answer_error:
             result["answer_error"] = answer_error
+        if synthesis_trace is not None:
+            result["synthesis_trace"] = synthesis_trace
         return result
 
     # Start a fresh trace; each completed query is appended immediately.
     write_trace([], trace_output)
-    write_yaml_trace([], yaml_trace_output)
+    write_yaml_trace([], yaml_trace_output, measurement)
     results = []
     with ThreadPoolExecutor(max_workers=workers) as executor:
         for result in executor.map(evaluate_case, queries):
             results.append(result)
             append_trace(result, trace_output)
-            write_yaml_trace(results, yaml_trace_output)
+            write_yaml_trace(results, yaml_trace_output, measurement)
             print(
                 f"{result['id']} | Hit={result['hit']} | "
                 f"Recall={result['recall']:.3f} | "
                 f"RR={result['reciprocal_rank']:.3f} | "
                 f"Retrieval={result['latency_ms']:.1f} ms | "
-                f"Answer={result['answer_latency_ms']:.1f} ms"
+                f"Answer={result['answer_latency_ms']:.1f} ms | "
+                f"Total={result['total_latency_ms']:.1f} ms | "
+                f"Tokens={result['token_usage']['total_tokens']} "
+                f"({result['token_usage']['status']})"
             )
 
     print(f"\nHit: {statistics.fmean(row['hit'] for row in results):.3f}")
@@ -392,11 +496,17 @@ def evaluate_sox_queries(
         f"{statistics.fmean(row['reciprocal_rank'] for row in results):.3f}"
     )
     print(
-        "Mean latency: "
+        "Mean retrieval latency: "
         f"{statistics.fmean(row['latency_ms'] for row in results):.1f} ms"
     )
+    print(
+        "Mean total latency: "
+        f"{statistics.fmean(row['total_latency_ms'] for row in results):.1f} ms"
+    )
+    print(f"LLM token usage: {summarize_token_usage([row['token_usage'] for row in results])}")
     print(f"Tool: {tool}")
     print(f"Mode: {mode}")
+    print(f"Answer audit: {'enabled' if answer_audit_enabled else 'disabled'}")
     print(f"Trace: {trace_output}")
     print(f"YAML trace: {yaml_trace_output}")
     return results
@@ -435,11 +545,27 @@ def main() -> None:
         type=int,
         help="run only the first N queries for a quick smoke evaluation",
     )
+    parser.add_argument(
+        "--start",
+        type=int,
+        help="first query position to run, 1-based and inclusive",
+    )
+    parser.add_argument(
+        "--end",
+        type=int,
+        help="last query position to run, 1-based and inclusive",
+    )
     args = parser.parse_args()
     if args.workers < 1:
         parser.error("--workers must be greater than zero")
     if args.limit is not None and args.limit < 1:
         parser.error("--limit must be greater than zero")
+    if args.start is not None and args.start < 1:
+        parser.error("--start must be greater than zero")
+    if args.end is not None and args.end < 1:
+        parser.error("--end must be greater than zero")
+    if args.limit is not None and (args.start is not None or args.end is not None):
+        parser.error("--limit cannot be combined with --start or --end")
 
     load_dotenv(ROOT / ".env")
     evaluate_sox_queries(
@@ -448,6 +574,8 @@ def main() -> None:
         mode=args.mode,
         workers=args.workers,
         limit=args.limit,
+        start=args.start,
+        end=args.end,
     )
 
 

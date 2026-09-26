@@ -14,6 +14,7 @@ class AgentState(TypedDict, total=False):
     synthesis_input: dict
     final_answer: str
     synthesis_latency_ms: float
+    synthesis_trace: dict
 
 
 class TaskWorkerState(TypedDict, total=False):

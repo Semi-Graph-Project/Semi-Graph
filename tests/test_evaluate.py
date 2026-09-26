@@ -39,10 +39,17 @@ def test_select_queries_supports_smoke_limit_without_changing_full_set():
 
     assert _select_queries(queries, None) is queries
     assert _select_queries(queries, 2) == queries[:2]
+    assert _select_queries(queries, start=2, end=3) == queries[1:3]
+    assert _select_queries(queries, start=2) == queries[1:]
+    assert _select_queries(queries, end=2) == queries[:2]
     with pytest.raises(ValueError, match="greater than zero"):
         _select_queries(queries, 0)
     with pytest.raises(ValueError, match="must not exceed"):
         _select_queries(queries, 4)
+    with pytest.raises(ValueError, match="start must not exceed end"):
+        _select_queries(queries, start=3, end=2)
+    with pytest.raises(ValueError, match="cannot be combined"):
+        _select_queries(queries, 2, start=1)
 
 
 def test_requires_llm_matches_eval_tool_and_mode_contract():

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 import time
 from pathlib import Path
 import sys
@@ -15,6 +14,11 @@ if str(SRC) not in sys.path:
 from semigraph.agent.graph import build_agent  # noqa: E402
 from semigraph.agent.ledger import select_synthesis_chunks  # noqa: E402
 from semigraph.agent.state import AgentState  # noqa: E402
+from semigraph.agents.prompts import SYNTHESIZE_ATTEMPTS_SYSTEM_PROMPT  # noqa: E402
+from semigraph.agents.synthesis import (  # noqa: E402
+    build_synthesis_trace,
+    parse_synthesis_response,
+)
 from semigraph.config import get_config  # noqa: E402
 from semigraph.connections import get_llm  # noqa: E402
 
@@ -24,44 +28,7 @@ EVAL_TOOLS = {"vector", "graph"}
 DO_NOT_ANSWER = "Do not Answer"
 GENERATION_ERROR_ANSWER = "Can't Generate Answer"
 
-HUMAN_REVIEW_SYNTHESIS_PROMPT = """
-Answer the question using only the supplied evidence chunks.
-
-Return one line for each independently requested part, in the same order as the
-question, using exactly this format:
-POINT 1 [COMPLETE | PARTIAL | INSUFFICIENT]: <answer>
-POINT 2 [COMPLETE | PARTIAL | INSUFFICIENT]: <answer>
-Choose exactly one status inside each pair of brackets and continue numbering
-POINT 3, POINT 4, and so on only when the question has more requested parts.
-
-Point rules:
-- Put only one independently checkable answer in each POINT.
-- When comparing named entities, give each entity's facts in a separate POINT,
-  then put the requested comparison or implication in the next POINT.
-- Keep a financial metric separate from a governance, audit, or regulatory role.
-- Keep calculation inputs, formula, and result together in one POINT.
-- Use COMPLETE only when every detail requested by that POINT is supported.
-- Use PARTIAL when only part is supported; answer that part and state the missing detail.
-- Use INSUFFICIENT when no supplied evidence answers that POINT; write only
-  "Insufficient evidence."
-
-Evidence rules:
-- Cite every supported claim with its exact chunk_id in square brackets, for
-  example [INTC_10k_2024.pdf::page_71::chunk_1].
-- Never cite a chunk_id that was not supplied.
-- Preserve exact company names, periods, values, signs, and units.
-- For comparisons, state both sides explicitly.
-- For calculations, use only numeric inputs explicitly present in the evidence,
-  show the formula and result, and do not round intermediate values.
-- For percentages, state the denominator and formula.
-- Do not infer causation unless the evidence explicitly states it.
-- Do not use outside knowledge or mention these instructions.
-
-If no supplied chunk is relevant to any requested part, return exactly
-"Do not Answer" and nothing else.
-Otherwise return only the POINT lines, without a heading, Markdown, blank lines,
-or an overall status. Use no more than 1,500 characters.
-""".strip()
+HUMAN_REVIEW_SYNTHESIS_PROMPT = SYNTHESIZE_ATTEMPTS_SYSTEM_PROMPT.strip()
 
 HUMAN_REVIEW_AUDIT_PROMPT = f"""
 Act as the final evidence auditor. Rewrite the complete final answer after
@@ -71,9 +38,12 @@ Audit rules:
 - Derive all requested parts again from the original question; do not assume
   the draft found every part.
 - Check every evidence chunk against every requested part.
-- Add any omitted supported part and split combined parts when needed.
+- Add any omitted supported part and organize the answer in question order.
 - Keep correct supported content, but correct wrong companies, periods, values,
-  signs, units, calculations, statuses, and citations.
+  signs, units, calculations, and citations.
+- Check that each inference follows from the cited evidence without missing
+  premises or outside knowledge. Keep justified inferences, qualify uncertain
+  conclusions, and remove unsupported explanations or causal claims.
 - Recalculate numeric answers from the explicit inputs in the chunks and show
   the formula briefly. Never invent a missing input.
 - When multiple chunks support the same answer, cite all of them.
@@ -101,23 +71,63 @@ def _invoke_answer(llm, system_prompt: str, user_prompt: str) -> str:
     return str(content).strip()
 
 
-def _has_answer_format(answer: str) -> bool:
-    return bool(answer) and (
-        answer == DO_NOT_ANSWER
-        or bool(
-            re.search(
-                r"^POINT \d+ \[(?:COMPLETE|PARTIAL|INSUFFICIENT)\]:",
-                answer,
-                re.MULTILINE,
-            )
-        )
-    )
+def _parse_synthesis_response(
+    response: str,
+    chunks: list[dict] | None = None,
+) -> dict:
+    """Parse the response using the shared Agent synthesis contract."""
+    chunk_ids = [
+        str(chunk["chunk_id"])
+        for chunk in (chunks or [])
+        if chunk.get("chunk_id")
+    ]
+    return parse_synthesis_response(response, chunk_ids)
 
 
-def generate_final_answer(llm, question: str, chunks: list[dict]) -> str:
-    """Draft an answer, then audit it against every retrieved Chunk."""
+def _final_answer_from_response(response: str) -> str:
+    """Extract the user-facing answer from the structured LLM response."""
+    return _parse_synthesis_response(response)["final_answer"]
+
+
+def _update_synthesis_trace(
+    trace: dict | None,
+    parsed: dict,
+    chunks: list[dict],
+) -> None:
+    """Store compact part and citation diagnostics for later inspection."""
+    if trace is None:
+        return
+
+    chunk_ids = [
+        str(chunk["chunk_id"])
+        for chunk in chunks
+        if chunk.get("chunk_id")
+    ]
+    trace.update(build_synthesis_trace(parsed, chunk_ids))
+
+
+def generate_final_answer(
+    llm,
+    question: str,
+    chunks: list[dict],
+    *,
+    audit_enabled: bool | None = None,
+    synthesis_trace: dict | None = None,
+) -> str:
+    """Draft an answer; optionally audit it using the evaluation config."""
     if not chunks:
+        _update_synthesis_trace(
+            synthesis_trace,
+            {
+                "final_answer": DO_NOT_ANSWER,
+                "parts": [],
+                "output_format": "no_evidence",
+            },
+            chunks,
+        )
         return DO_NOT_ANSWER
+    if audit_enabled is None:
+        audit_enabled = get_config().eval_answer_audit_enabled
 
     evidence_input = (
         f"Question:\n{question}\n\n"
@@ -125,31 +135,44 @@ def generate_final_answer(llm, question: str, chunks: list[dict]) -> str:
     )
 
     try:
-        draft = _invoke_answer(
+        draft_response = _invoke_answer(
             llm,
             HUMAN_REVIEW_SYNTHESIS_PROMPT,
             evidence_input,
         )
     except Exception:
-        draft = ""
+        draft_response = ""
+
+    draft_payload = _parse_synthesis_response(draft_response, chunks)
+    draft = draft_payload["final_answer"]
+
+    if not audit_enabled:
+        _update_synthesis_trace(synthesis_trace, draft_payload, chunks)
+        return draft or GENERATION_ERROR_ANSWER
 
     audit_input = (
         f"{evidence_input}\n\n"
-        f"Draft Answer:\n{draft or 'Draft unavailable. Build the answer directly.'}"
+        f"Draft Answer:\n{draft_response or 'Draft unavailable. Build the answer directly.'}"
     )
     try:
-        final_answer = _invoke_answer(
+        audit_response = _invoke_answer(
             llm,
             HUMAN_REVIEW_AUDIT_PROMPT,
             audit_input,
         )
     except Exception:
-        final_answer = ""
+        audit_response = ""
 
-    if _has_answer_format(final_answer):
+    audit_payload = _parse_synthesis_response(audit_response, chunks)
+    final_answer = audit_payload["final_answer"]
+
+    if final_answer:
+        _update_synthesis_trace(synthesis_trace, audit_payload, chunks)
         return final_answer
-    if _has_answer_format(draft):
+    if draft:
+        _update_synthesis_trace(synthesis_trace, draft_payload, chunks)
         return draft
+    _update_synthesis_trace(synthesis_trace, audit_payload, chunks)
     return GENERATION_ERROR_ANSWER
 
 
@@ -174,6 +197,7 @@ def eval_synthesize_node(
                 "selected_chunk_ids": [],
                 "max_chunks": max_chunks,
                 "llm_calls": 0,
+                "answer_audit_enabled": False,
                 "latency_sec": round(time.perf_counter() - started_at, 3),
                 "error_type": None,
             },
@@ -188,19 +212,24 @@ def eval_synthesize_node(
                 "selected_chunk_ids": chunk_ids,
                 "max_chunks": max_chunks,
                 "llm_calls": 0,
+                "answer_audit_enabled": False,
                 "latency_sec": round(time.perf_counter() - started_at, 3),
                 "error_type": None,
             },
         }
 
     llm_calls = 0
+    audit_enabled = cfg.eval_answer_audit_enabled
+    answer_trace = {}
     try:
         answer = generate_final_answer(
             get_llm(cfg),
             str(state.get("original_query") or ""),
             chunks,
+            audit_enabled=audit_enabled,
+            synthesis_trace=answer_trace,
         )
-        llm_calls = 2
+        llm_calls = 2 if audit_enabled else 1
         failed = answer == GENERATION_ERROR_ANSWER
         status = "generation_error" if failed else "ok"
         error_type = "AnswerGenerationError" if failed else None
@@ -217,8 +246,10 @@ def eval_synthesize_node(
             "selected_chunk_ids": chunk_ids,
             "max_chunks": max_chunks,
             "llm_calls": llm_calls,
+            "answer_audit_enabled": audit_enabled,
             "latency_sec": round(time.perf_counter() - started_at, 3),
             "error_type": error_type,
+            **answer_trace,
         },
     }
 

@@ -1,5 +1,7 @@
 from types import SimpleNamespace
 
+import pytest
+
 from eval_scripts import eval_agent
 from eval_scripts import evaluate
 import semigraph.agent.graph as agent_graph
@@ -12,7 +14,14 @@ class _FakeResponse:
 
 
 class _FakeLLM:
-    DEFAULT_ANSWER = "POINT 1 [COMPLETE]: Grounded evaluation answer [C1]"
+    DEFAULT_FINAL_ANSWER = "Grounded evaluation answer [C1]"
+    DEFAULT_ANSWER = (
+        '{"parts":[{"requested_part":"Question?",'
+        '"supported_facts":[{"claim":"Grounded fact",'
+        '"evidence_ids":["C1"]}],"missing_information":null,'
+        f'"answer":"{DEFAULT_FINAL_ANSWER}"}}],'
+        f'"final_answer":"{DEFAULT_FINAL_ANSWER}"}}'
+    )
 
     def __init__(self, responses=None):
         self.messages = []
@@ -31,7 +40,9 @@ def test_eval_synthesize_uses_assess_selected_chunks(monkeypatch):
     monkeypatch.setattr(
         eval_agent,
         "get_config",
-        lambda: SimpleNamespace(agent_max_synthesis_chunks=10),
+        lambda: SimpleNamespace(
+            agent_max_synthesis_chunks=10, eval_answer_audit_enabled=True,
+        ),
     )
     monkeypatch.setattr(eval_agent, "get_llm", lambda _cfg: llm)
 
@@ -47,23 +58,30 @@ def test_eval_synthesize_uses_assess_selected_chunks(monkeypatch):
         }],
     })
 
-    assert result["final_answer"] == _FakeLLM.DEFAULT_ANSWER
+    assert result["final_answer"] == _FakeLLM.DEFAULT_FINAL_ANSWER
     assert result["synthesis_trace"]["selected_chunk_ids"] == ["C1"]
     assert result["synthesis_trace"]["status"] == "ok"
     assert result["synthesis_trace"]["max_chunks"] == 10
     assert result["synthesis_trace"]["llm_calls"] == 2
+    assert result["synthesis_trace"]["citation_status"] == "valid"
+    assert result["synthesis_trace"]["cited_chunk_ids"] == ["C1"]
+    assert result["synthesis_trace"]["parts"][0]["requested_part"] == "Question?"
     assert len(llm.messages) == 2
     assert "chunk_id=C1" in llm.messages[0][1]["content"]
     system_prompt = llm.messages[0][0]["content"]
-    assert "POINT 1 [COMPLETE | PARTIAL | INSUFFICIENT]" in system_prompt
-    assert "one independently checkable answer" in system_prompt
-    assert "same order as the" in system_prompt
-    assert "financial metric separate" in system_prompt
+    assert "preserve question" in system_prompt
+    assert "Return exactly one JSON object" in system_prompt
+    assert "Include every requested part exactly once" in system_prompt
+    assert "scan all supplied chunks" in system_prompt
+    assert "sufficient" in system_prompt and "premises" in system_prompt
+    assert "Do not invent a missing premise" in system_prompt
     assert "exact chunk_id in square brackets" in system_prompt
-    assert '"Do not Answer" and nothing else' in system_prompt
+    assert 'exactly "Do not Answer"' in system_prompt
     assert "do not round intermediate values" in system_prompt
-    assert "state the denominator and formula" in system_prompt
-    assert "1,500 characters" in system_prompt
+    assert "denominator" in system_prompt and "formula" in system_prompt
+    assert "Keep every supported subfact" in system_prompt
+    assert "Never choose" in system_prompt and "silently" in system_prompt
+    assert "1,500" in system_prompt
     assert "final evidence auditor" in llm.messages[1][0]["content"]
     assert "Draft Answer" in llm.messages[1][1]["content"]
     assert _FakeLLM.DEFAULT_ANSWER in llm.messages[1][1]["content"]
@@ -72,40 +90,43 @@ def test_eval_synthesize_uses_assess_selected_chunks(monkeypatch):
 def test_answer_audit_runs_when_draft_call_fails():
     llm = _FakeLLM([
         TimeoutError("draft failed"),
-        "POINT 1 [COMPLETE]: Audited answer [C1]",
+        "Audited answer [C1]",
     ])
 
     answer = eval_agent.generate_final_answer(
         llm,
         "Question?",
         [{"chunk_id": "C1", "text": "Evidence"}],
+        audit_enabled=True,
     )
 
-    assert answer == "POINT 1 [COMPLETE]: Audited answer [C1]"
+    assert answer == "Audited answer [C1]"
     assert len(llm.messages) == 2
     assert "Draft unavailable" in llm.messages[1][1]["content"]
 
 
 def test_valid_draft_is_fallback_when_audit_call_fails():
-    draft = "POINT 1 [PARTIAL]: Supported part [C1]"
+    draft = "Supported part [C1]. The evidence does not contain the remaining detail."
     llm = _FakeLLM([draft, TimeoutError("audit failed")])
 
     answer = eval_agent.generate_final_answer(
         llm,
         "Question?",
         [{"chunk_id": "C1", "text": "Evidence"}],
+        audit_enabled=True,
     )
 
     assert answer == draft
 
 
 def test_answer_generation_never_returns_blank():
-    llm = _FakeLLM(["invalid draft", "invalid audit"])
+    llm = _FakeLLM(["", "   "])
 
     answer = eval_agent.generate_final_answer(
         llm,
         "Question?",
         [{"chunk_id": "C1", "text": "Evidence"}],
+        audit_enabled=True,
     )
 
     assert answer == eval_agent.GENERATION_ERROR_ANSWER
@@ -113,6 +134,120 @@ def test_answer_generation_never_returns_blank():
 
 def test_all_full_answer_modes_share_the_same_generator():
     assert evaluate.generate_final_answer is eval_agent.generate_final_answer
+
+
+def test_structured_synthesis_returns_only_final_answer():
+    llm = _FakeLLM()
+
+    answer = eval_agent.generate_final_answer(
+        llm,
+        "Question?",
+        [{"chunk_id": "C1", "text": "Evidence"}],
+        audit_enabled=False,
+    )
+
+    assert answer == _FakeLLM.DEFAULT_FINAL_ANSWER
+    assert len(llm.messages) == 1
+
+
+def test_structured_synthesis_records_parts_and_citation_diagnostics():
+    llm = _FakeLLM()
+    trace = {}
+
+    answer = eval_agent.generate_final_answer(
+        llm,
+        "Question?",
+        [{"chunk_id": "C1", "text": "Evidence"}],
+        audit_enabled=False,
+        synthesis_trace=trace,
+    )
+
+    assert answer == _FakeLLM.DEFAULT_FINAL_ANSWER
+    assert trace["output_format"] == "structured_json"
+    assert trace["parts"][0]["supported_facts"][0]["evidence_ids"] == ["C1"]
+    assert trace["cited_chunk_ids"] == ["C1"]
+    assert trace["invalid_citation_ids"] == []
+    assert trace["citation_status"] == "valid"
+
+
+def test_synthesis_trace_flags_unknown_and_missing_citations():
+    unknown_trace = {}
+    unknown_llm = _FakeLLM([
+        '{"parts":[],"final_answer":"Claim [C9]"}',
+    ])
+    eval_agent.generate_final_answer(
+        unknown_llm,
+        "Question?",
+        [{"chunk_id": "C1", "text": "Evidence"}],
+        audit_enabled=False,
+        synthesis_trace=unknown_trace,
+    )
+
+    missing_trace = {}
+    missing_llm = _FakeLLM([
+        '{"parts":[],"final_answer":"Claim without citation"}',
+    ])
+    eval_agent.generate_final_answer(
+        missing_llm,
+        "Question?",
+        [{"chunk_id": "C1", "text": "Evidence"}],
+        audit_enabled=False,
+        synthesis_trace=missing_trace,
+    )
+
+    assert unknown_trace["invalid_citation_ids"] == ["C9"]
+    assert unknown_trace["citation_status"] == "invalid"
+    assert missing_trace["citation_status"] == "missing"
+
+
+@pytest.mark.parametrize("audit_enabled,expected_calls", [(True, 2), (False, 1)])
+def test_answer_audit_switch_is_read_from_config(monkeypatch, audit_enabled, expected_calls):
+    monkeypatch.setattr(eval_agent, "get_config", lambda: SimpleNamespace(
+        eval_answer_audit_enabled=audit_enabled,
+    ))
+    llm = _FakeLLM(["Draft answer [C1]", "Audited answer [C1]"])
+    answer = eval_agent.generate_final_answer(
+        llm, "Question?", [{"chunk_id": "C1", "text": "Evidence"}],
+    )
+    assert len(llm.messages) == expected_calls
+    assert answer == ("Audited answer [C1]" if audit_enabled else "Draft answer [C1]")
+
+
+@pytest.mark.parametrize("draft", ["", TimeoutError("draft failed")])
+def test_disabled_audit_does_not_make_second_call_when_draft_fails(draft):
+    llm = _FakeLLM([draft, "Audit must not run"])
+    answer = eval_agent.generate_final_answer(
+        llm, "Question?", [{"chunk_id": "C1", "text": "Evidence"}],
+        audit_enabled=False,
+    )
+    assert answer == eval_agent.GENERATION_ERROR_ANSWER
+    assert len(llm.messages) == 1
+
+
+def test_answer_without_evidence_skips_both_calls():
+    llm = _FakeLLM()
+    assert eval_agent.generate_final_answer(llm, "Question?", []) == eval_agent.DO_NOT_ANSWER
+    assert llm.messages == []
+
+
+def test_eval_synthesize_trace_reports_one_call_without_audit(monkeypatch):
+    monkeypatch.setattr(eval_agent, "get_config", lambda: SimpleNamespace(
+        agent_max_synthesis_chunks=10, eval_answer_audit_enabled=False,
+    ))
+    llm = _FakeLLM()
+    monkeypatch.setattr(eval_agent, "get_llm", lambda cfg: llm)
+    result = eval_agent.eval_synthesize_node({
+        "original_query": "Question?",
+        "attempts": [{
+            "task_id": "T1",
+            "chunks": [{"chunk_id": "C1", "text": "Evidence"}],
+            "assessment": {"status": "valid", "output": {"accepted_chunk_ids": ["C1"]}},
+        }],
+    })
+    assert result["synthesis_trace"]["llm_calls"] == 1
+    assert result["synthesis_trace"]["answer_audit_enabled"] is False
+    assert result["final_answer"] == _FakeLLM.DEFAULT_FINAL_ANSWER
+    assert len(llm.messages) == 1
 
 
 def test_eval_synthesize_returns_exact_no_evidence_answer(monkeypatch):
@@ -200,6 +335,7 @@ def test_vector_eval_graph_runs_plan_execute_assess_and_eval_synthesis(monkeypat
     cfg = SimpleNamespace(
         agent_max_parallel_tasks=2,
         agent_max_synthesis_chunks=10,
+        eval_answer_audit_enabled=True,
         agent_top_k_chunks=5,
         neo4j_uri="",
         controlled_neo4j_uri="bolt://neo4j-controlled:7687",
@@ -284,5 +420,5 @@ def test_vector_eval_graph_runs_plan_execute_assess_and_eval_synthesis(monkeypat
     })
 
     assert result["attempts"][0]["action"]["tool"] == "vector"
-    assert result["final_answer"] == _FakeLLM.DEFAULT_ANSWER
+    assert result["final_answer"] == _FakeLLM.DEFAULT_FINAL_ANSWER
     assert result["synthesis_trace"]["selected_chunk_ids"] == ["C1"]

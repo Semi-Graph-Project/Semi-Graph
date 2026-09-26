@@ -18,10 +18,10 @@ from semigraph.config import get_config  # noqa: E402
 from semigraph.connections import get_neo4j_driver  # noqa: E402
 
 
-SAMPLE_SIZE = 500
+SAMPLE_SIZE = 820
 RANDOM_SEED = 42
 DATASET_FILE = ROOT / "benchmark/freezes/sox74_retrieval_ablation_v1/inputs/finreflectkg_sox_strict74.yaml"
-OUTPUT_FILE = ROOT / "data/neo4j/finreflectkg_distractor_500_chunks.jsonl"
+OUTPUT_FILE = ROOT / "data/neo4j/finreflectkg_distractor_820_chunks.jsonl"
 
 
 def load_gold_ids() -> set[str]:
