@@ -153,8 +153,19 @@ The repository contains FinReflectKG/SOX controlled datasets, retrieval-only
 results, Agent results, and human-review artifacts. A controlled corpus result
 is not presented as a full production end-to-end result.
 
+### Current benchmark snapshot (2026-09-26)
+
+On the frozen SOX74 retrieval-only set, Vector v1 reports Hit/Recall/MRR of
+`0.635 / 0.358 / 0.326` with 10.16 s average retrieval latency; Graph v1 reports
+`0.757 / 0.439 / 0.368` with 3.57 s. A separate first-50 full-answer snapshot
+compares the four Vector/Graph and Agent/no-Agent configurations, with answer
+point review scores and runtime details recorded in
+[`benchmark/README.md`](benchmark/README.md). These are saved experiment
+snapshots, not a final thesis result; the first-50 answer runs and SOX74
+retrieval-only runs are different evaluations.
+
 See [`benchmark/README.md`](benchmark/README.md) for dataset contracts and the
-reproducible retrieval command.
+reproducible commands, output locations, and metric caveats.
 
 ## Project Layout
 

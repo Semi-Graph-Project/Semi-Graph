@@ -1,0 +1,39 @@
+summary:
+  hit: 1.0
+  recall: 0.667
+  mrr: 1.0
+  average_latency_ms: 5305.6
+results:
+- id: FRKG003
+  mode: retrieve_only
+  query: Based on the segment disclosures and term definitions in their 2024 10-K filings, how do Intel and NVIDIA differ
+    in the treatment of stock-based compensation expenses within their 'All Other' categories, and what does this reveal about
+    their corporate expense allocation practices?
+  gold_chunks:
+  - INTC_10k_2024.pdf::page_102::chunk_2
+  - INTC_10k_2024.pdf::page_71::chunk_1
+  - NVDA_10k_2024.pdf::page_78::chunk_1
+  top_chunk_ids:
+  - NVDA_10k_2024.pdf::page_78::chunk_1
+  - INTC_10k_2024.pdf::page_71::chunk_1
+  - INTC_10k_2024.pdf::page_25::chunk_3
+  - NVDA_10k_2022.pdf::page_93::chunk_1
+  - NVDA_10k_2023.pdf::page_55::chunk_1
+  - AMD_10k_2022.pdf::page_77::chunk_1
+  - NVDA_10k_2024.pdf::page_36::chunk_1
+  - AMD_10k_2024.pdf::page_69::chunk_1
+  - NVDA_10k_2023.pdf::page_58::chunk_1
+  - NVDA_10k_2024.pdf::page_60::chunk_1
+  answer_points:
+  - Intel's 'All Other' category, as defined in its glossary (Chunk 1), includes non-reportable segments and startup businesses.
+    According to Chunk 2, Intel does not allocate stock-based compensation expenses to its operating segments, as these are
+    considered corporate-level expenses. In contrast, NVIDIA's 'All Other' category, as detailed in Chunk 3, explicitly includes
+    stock-based compensation expense as part of its enterprise-level costs. This reveals that Intel maintains stock-based
+    compensation as a centralized corporate expense, while NVIDIA incorporates it directly into its 'All Other' segment's
+    financial reporting, highlighting different approaches to expense allocation between the two companies.
+  final_answer: None
+  hit: 1
+  recall: 0.6666666666666666
+  reciprocal_rank: 1.0
+  latency_ms: 5305.627103996812
+  answer_latency_ms: 0.0
