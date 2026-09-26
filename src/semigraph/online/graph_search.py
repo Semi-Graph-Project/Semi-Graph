@@ -6,7 +6,12 @@ from typing import Optional
 from semigraph.config import Config, get_config
 from semigraph.online.ppr import run_passage_ppr
 from semigraph.online.query_expand import expand_query
-from semigraph.online.rerank import company_rerank, fiscal_year_rerank
+from semigraph.online.rerank import (
+    RerankMode,
+    company_rerank,
+    cross_encoder_rerank,
+    fiscal_year_rerank,
+)
 from semigraph.online.seed import (
     query_to_chunk_seeds,
     query_to_triple_candidates,
@@ -103,8 +108,13 @@ def trace_graph_search(
 ) -> dict:
     """Run graph retrieval and return both chunks and stage-level trace.
 
-    query expansion -> seeds -> passage PPR -> metadata reranking -> chunks.
+    query expansion -> seeds -> passage PPR -> configured reranking -> chunks.
     """
+    cfg = cfg or get_config()
+    graph_profile = getattr(cfg, "agent_retrieval", {}).get("graph", {})
+    rerank_mode = RerankMode(
+        graph_profile.get("rerank_mode", RerankMode.METADATA.value)
+    )
     print(f"[graph_search] query={query!r} "
           f"top_k_chunks={top_k_chunks} top_k_entities={top_k_entities}")
 
@@ -131,7 +141,12 @@ def trace_graph_search(
         "use_expansion": use_expansion,
         "seed_mode": seed_mode,
         "candidate_pool_k": candidate_pool_k,
-        "metadata_rerank": "company+fiscal_year",
+        "rerank_mode": rerank_mode.value,
+        "metadata_rerank": (
+            RerankMode.METADATA.value
+            if rerank_mode is RerankMode.METADATA
+            else "none"
+        ),
         "top_k_chunks": top_k_chunks,
         "top_k_entities": top_k_entities,
         "top_k_triples": top_k_triples,
@@ -143,7 +158,7 @@ def trace_graph_search(
         "chunk_candidates": [],
         "raw_chunk_candidates": [],
         "reranked_chunks": [],
-        "reranker_trace": {"mode": "company+fiscal_year", "status": "not_run"},
+        "reranker_trace": {"mode": rerank_mode.value, "status": "not_run"},
         "chunks": [],
         "abort_reason": None,
         "ppr_seed_weight_mode": ppr_seed_weight_mode,
@@ -230,17 +245,6 @@ def trace_graph_search(
     trace["ppr_entities"] = passage_result["ppr_entities"]
     trace["chunk_candidates"] = passage_result["chunks"]
     trace["raw_chunk_candidates"] = trace["chunk_candidates"]
-    trace["reranked_chunks"] = fiscal_year_rerank(
-        query,
-        company_rerank(query, trace["chunk_candidates"], cfg=cfg),
-    )
-    trace["chunks"] = trace["reranked_chunks"][:top_k_chunks]
-    trace["reranker_trace"] = {
-        "mode": "company+fiscal_year",
-        "status": "complete",
-        "candidate_count": len(trace["reranked_chunks"]),
-        "returned_count": len(trace["chunks"]),
-    }
     trace["projection"] = passage_result["projection"]
     trace["direct_chunk_ppr"] = True
     notify_trace(trace_callback, {
@@ -256,16 +260,38 @@ def trace_graph_search(
     notify_trace(trace_callback, {
         "stage": "reranking",
         "status": "running",
-        "message": "Applying company and fiscal-year reranking",
+        "message": (
+            "Applying cross-encoder reranking"
+            if rerank_mode is RerankMode.CROSS_ENCODER
+            else "Applying company and fiscal-year reranking"
+        ),
         "details": {
-            "mode": "company+fiscal_year",
+            "mode": rerank_mode.value,
             "candidate_count": len(trace["raw_chunk_candidates"]),
         },
     })
+    if rerank_mode is RerankMode.CROSS_ENCODER:
+        trace["reranked_chunks"] = cross_encoder_rerank(
+            query,
+            trace["chunk_candidates"],
+        )
+    else:
+        trace["reranked_chunks"] = fiscal_year_rerank(
+            query,
+            company_rerank(query, trace["chunk_candidates"], cfg=cfg),
+        )
+    trace["chunks"] = trace["reranked_chunks"][:top_k_chunks]
+    trace["reranker_trace"] = {
+        "mode": rerank_mode.value,
+        "status": "complete",
+        "candidate_count": len(trace["reranked_chunks"]),
+        "returned_count": len(trace["chunks"]),
+    }
     _emit_graph_retrieval_events(
         trace_callback,
         trace["raw_chunk_candidates"],
         trace["chunks"],
+        rerank_mode,
     )
     return trace
 
@@ -274,6 +300,7 @@ def _emit_graph_retrieval_events(
     trace_callback: TraceCallback | None,
     candidates: list[dict],
     chunks: list[dict],
+    rerank_mode: RerankMode,
 ) -> None:
     """Publish final Graph retrieval details without changing ranking logic."""
     returned_chunk_ids = [
@@ -286,7 +313,7 @@ def _emit_graph_retrieval_events(
         "status": "complete",
         "message": f"Selected {len(chunks)} final graph chunks",
         "details": {
-            "mode": "company+fiscal_year",
+            "mode": rerank_mode.value,
             "candidate_count": len(candidates),
             "returned_chunk_ids": returned_chunk_ids,
         },

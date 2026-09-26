@@ -9,6 +9,7 @@ from neo4j import Driver
 from semigraph.config import Config, get_config
 from semigraph.connections import get_neo4j_driver
 from semigraph.offline.embeddings import get_embedding_model
+from semigraph.online.triple_index_cache import load_triple_index as _load_triple_index
 from semigraph.online.vector_search import DEFAULT_VECTOR_INDEX, vector_search
 
 
@@ -187,73 +188,6 @@ def query_to_chunk_seeds(
         }
         for chunk in chunks
     ]
-
-
-_CYPHER_LOAD_TRIPLES = """
-MATCH (s:Entity)-[r]->(t:Entity)
-WHERE r.triple_embedding IS NOT NULL
-RETURN s.name AS head,
-       s.type AS head_type,
-       s.specificity AS head_spec,
-       type(r) AS rel_type,
-       t.name AS tail,
-       t.type AS tail_type,
-       t.specificity AS tail_spec,
-       r.triple_embedding AS embedding
-"""
-
-
-_TRIPLE_INDEX_CACHE: dict[
-    tuple[str, str, int], tuple[np.ndarray, list[dict]]
-] = {}
-
-
-def _load_triple_index(cfg: Optional[Config] = None) -> tuple[np.ndarray, list[dict]]:
-    """Load relationship triples once per Neo4j backend in this process.
-
-    Returns:
-        (vectors, metadata) where:
-          vectors  — (N, 768) float32, L2-normalized (BGE output)
-          metadata — list[dict] aligned with vectors, no `embedding` key
-    """
-    cfg = cfg or get_config()
-    cache_key = (cfg.neo4j_uri, cfg.neo4j_user, cfg.embed_dim)
-    cached = _TRIPLE_INDEX_CACHE.get(cache_key)
-    if cached is not None:
-        return cached
-
-    driver = get_neo4j_driver(cfg)
-    try:
-        with driver.session() as session:
-            rows = list(session.run(_CYPHER_LOAD_TRIPLES))
-        if not rows:
-            print("[triple_index] EMPTY — run `python scripts/embed_triples.py` first")
-            result = (np.empty((0, cfg.embed_dim), dtype=np.float32), [])
-            _TRIPLE_INDEX_CACHE[cache_key] = result
-            return result
-
-        vectors = np.asarray(
-            [row["embedding"] for row in rows], dtype=np.float32
-        )
-        metadata = [
-            {
-                "head": row["head"],
-                "head_type": row["head_type"],
-                "head_spec": row["head_spec"] if row["head_spec"] is not None else 1.0,
-                "rel_type": row["rel_type"],
-                "tail": row["tail"],
-                "tail_type": row["tail_type"],
-                "tail_spec": row["tail_spec"] if row["tail_spec"] is not None else 1.0,
-            }
-            for row in rows
-        ]
-        mb = vectors.nbytes / (1024 * 1024)
-        print(f"[triple_index] loaded {len(rows)} triples ({mb:.1f} MB)")
-        result = (vectors, metadata)
-        _TRIPLE_INDEX_CACHE[cache_key] = result
-        return result
-    finally:
-        driver.close()
 
 
 def query_to_triple_seeds(

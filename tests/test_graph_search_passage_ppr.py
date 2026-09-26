@@ -47,6 +47,9 @@ def test_returns_direct_ppr_chunks(monkeypatch):
         use_expansion=False,
         candidate_pool_k=3,
         ppr_seed_weight_mode="similarity_specificity",
+        cfg=SimpleNamespace(
+            agent_retrieval={"graph": {"rerank_mode": "company+fiscal_year"}},
+        ),
     )
 
     assert calls["seeds"] == seeds
@@ -231,3 +234,103 @@ def test_company_and_fiscal_year_rerank_smoke_runs_through_graph_pipeline(monkey
 
     assert trace["chunks"][0]["chunk_id"] == "NVDA_2025_Item_1_0001"
     assert trace["chunks"][0]["score"] == 0.9 * 1.25 * 1.15
+    assert trace["reranker_trace"]["mode"] == "company+fiscal_year"
+
+
+def test_cross_encoder_reranks_ppr_candidates_from_graph_config(monkeypatch):
+    seeds = [{"name": "nvidia", "type": "ORG", "similarity": 0.9}]
+    candidates = [
+        {"chunk_id": "chunk_a", "text": "first passage", "score": 0.9},
+        {"chunk_id": "chunk_b", "text": "second passage", "score": 0.7},
+    ]
+    calls = {}
+    events = []
+    cfg = SimpleNamespace(
+        agent_retrieval={
+            "graph": {"rerank_mode": "cross_encoder"},
+            "vector": {"rerank_mode": "company+fiscal_year"},
+        },
+    )
+    monkeypatch.setattr(
+        graph_search_module,
+        "expand_query",
+        lambda *args, **kwargs: "expanded query for seeds",
+    )
+    monkeypatch.setattr(
+        graph_search_module,
+        "_select_seeds",
+        lambda *args, **kwargs: (seeds, {"mode": "none", "applied": False}),
+    )
+    monkeypatch.setattr(
+        graph_search_module,
+        "run_passage_ppr",
+        lambda *args, **kwargs: {
+            "chunks": candidates,
+            "ppr_entities": [],
+            "projection": {},
+            "seeds": seeds,
+        },
+    )
+
+    def fake_cross_encoder(query, chunks):
+        calls["query"] = query
+        calls["chunks"] = chunks
+        return [chunks[1], chunks[0]]
+
+    monkeypatch.setattr(graph_search_module, "cross_encoder_rerank", fake_cross_encoder)
+    trace = graph_search_module.trace_graph_search(
+        "original query",
+        top_k_chunks=1,
+        candidate_pool_k=2,
+        cfg=cfg,
+        trace_callback=events.append,
+    )
+
+    assert calls == {"query": "original query", "chunks": candidates}
+    assert trace["effective_query"] == "expanded query for seeds"
+    assert trace["raw_chunk_candidates"] == candidates
+    assert trace["reranked_chunks"] == [candidates[1], candidates[0]]
+    assert trace["chunks"] == [candidates[1]]
+    assert trace["rerank_mode"] == "cross_encoder"
+    assert trace["metadata_rerank"] == "none"
+    assert trace["reranker_trace"] == {
+        "mode": "cross_encoder",
+        "status": "complete",
+        "candidate_count": 2,
+        "returned_count": 1,
+    }
+    rerank_events = [event for event in events if event["stage"] == "reranking"]
+    assert [event["status"] for event in rerank_events] == ["running", "complete"]
+    assert all(event["details"]["mode"] == "cross_encoder" for event in rerank_events)
+
+    chunks = graph_search_module.graph_search(
+        "original query",
+        top_k_chunks=1,
+        candidate_pool_k=2,
+        cfg=cfg,
+    )
+    assert chunks == [candidates[1]]
+
+
+def test_cross_encoder_graph_with_no_seeds_does_not_rerank(monkeypatch):
+    monkeypatch.setattr(
+        graph_search_module,
+        "_select_seeds",
+        lambda *args, **kwargs: ([], {"mode": "none", "applied": False}),
+    )
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("Reranker must not run when no seeds are found")
+
+    monkeypatch.setattr(graph_search_module, "cross_encoder_rerank", fail_if_called)
+    trace = graph_search_module.trace_graph_search(
+        "original query",
+        use_expansion=False,
+        cfg=SimpleNamespace(
+            agent_retrieval={"graph": {"rerank_mode": "cross_encoder"}},
+        ),
+    )
+
+    assert trace["chunks"] == []
+    assert trace["abort_reason"] == "no_seeds"
+    assert trace["reranker_trace"] == {"mode": "cross_encoder", "status": "not_run"}

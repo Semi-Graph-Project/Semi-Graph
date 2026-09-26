@@ -8,11 +8,17 @@ from neo4j import Driver
 from semigraph.config import Config, get_config
 from semigraph.connections import get_neo4j_driver
 from semigraph.offline.embeddings import get_embedding_model
-from semigraph.online.rerank import company_rerank, fiscal_year_rerank
+from semigraph.online.rerank import (
+    RerankMode,
+    company_rerank,
+    cross_encoder_rerank,
+    fiscal_year_rerank,
+)
 from semigraph.trace import TraceCallback, notify_trace
 
 
 DEFAULT_VECTOR_INDEX = "chunk_embedding"
+
 
 _CYPHER_VECTOR_SEARCH = """
 CALL db.index.vector.queryNodes($index_name, $top_k, $vec)
@@ -64,6 +70,11 @@ def trace_vector_search(
     trace_callback: TraceCallback | None = None,
 ) -> dict:
     """Run vector retrieval and keep raw/reranked results for evaluation. + Append Trace Logs"""
+    cfg = cfg or get_config()
+    vector_profile = getattr(cfg, "agent_retrieval", {}).get("vector", {})
+    rerank_mode = RerankMode(
+        vector_profile.get("rerank_mode", RerankMode.METADATA.value)
+    )
     if not query.strip() or top_k_chunks <= 0:
         return {
             "query": query,
@@ -71,11 +82,10 @@ def trace_vector_search(
             "chunk_candidates": [],
             "raw_chunk_candidates": [],
             "reranked_chunks": [],
-            "reranker_trace": {"mode": "company+fiscal_year", "status": "skipped"},
+            "reranker_trace": {"mode": rerank_mode.value, "status": "skipped"},
             "chunks": [],
         }
 
-    cfg = cfg or get_config()
     notify_trace(trace_callback, {
         "stage": "vector_candidates",
         "status": "running",
@@ -108,24 +118,30 @@ def trace_vector_search(
             ],
         },
     })
+
     raw_candidates = candidates
-    reranked = fiscal_year_rerank(
-        query,
-        company_rerank(query, candidates, cfg=cfg),
-    )
-    chunks = candidates[:top_k_chunks]
+    if rerank_mode is RerankMode.CROSS_ENCODER:
+        reranked = cross_encoder_rerank(query, candidates)
+        rerank_message = "Applying cross-encoder reranking"
+    else:
+        reranked = fiscal_year_rerank(
+            query,
+            company_rerank(query, candidates, cfg=cfg),
+        )
+        rerank_message = "Applying company and fiscal-year reranking"
+    chunks = reranked[:top_k_chunks]
 
     notify_trace(trace_callback, {
         "stage": "reranking",
         "status": "running",
-        "message": "Applying company and fiscal-year reranking",
+        "message": rerank_message,
         "details": {
-            "mode": "company+fiscal_year",
+            "mode": rerank_mode.value,
             "candidate_count": len(reranked),
         },
     })
     reranker_trace = {
-        "mode": "company+fiscal_year",
+        "mode": rerank_mode.value,
         "status": "complete",
         "candidate_count": len(reranked),
         "returned_count": len(chunks),
@@ -141,7 +157,7 @@ def trace_vector_search(
         "status": "complete",
         "message": f"Selected {len(chunks)} final chunks",
         "details": {
-            "mode": "company+fiscal_year",
+            "mode": rerank_mode.value,
             "returned_chunk_ids": returned_chunk_ids,
         },
     })

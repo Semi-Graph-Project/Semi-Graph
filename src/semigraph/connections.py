@@ -39,7 +39,7 @@ def get_llm(config: Config | None = None) -> ChatOpenAI:
         api_key=cfg.llm_api_key,
         base_url=cfg.llm_base_url,
         temperature=cfg.llm_temperature,
-        reasoning=cfg.llm_reasoning or None,
+        reasoning_effort=cfg.llm_reasoning.get("effort") or None,
         timeout=120.0,
         max_retries=2,
     )

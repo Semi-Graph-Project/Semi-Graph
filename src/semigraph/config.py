@@ -99,6 +99,14 @@ class Config:
             "base_url", "https://openrouter.ai/api/v1"
         )
 
+        # --- Evaluation answer generation ---
+        evaluation = data.get("evaluation", {})
+        self.eval_answer_audit_enabled: bool = evaluation.get(
+            "answer_audit_enabled", True
+        )
+        if not isinstance(self.eval_answer_audit_enabled, bool):
+            raise ValueError("evaluation.answer_audit_enabled must be a boolean")
+
         # --- API Keys (from env only) ---
         self.deepseek_api_key: str = os.environ.get("DEEPSEEK_API_KEY", "")
         self.openrouter_api_key: str = os.environ.get("OPENROUTER_API_KEY", "")
@@ -164,6 +172,20 @@ class Config:
             "vector": dict(agent_retrieval.get("vector", {})),
             "graph": dict(agent_retrieval.get("graph", {})),
         }
+        valid_rerank_modes = {
+            "company+fiscal_year",
+            "cross_encoder",
+        }
+        for retriever, profile in self.agent_retrieval.items():
+            rerank_mode = str(
+                profile.get("rerank_mode", "company+fiscal_year")
+            ).strip()
+            if rerank_mode not in valid_rerank_modes:
+                raise ValueError(
+                    f"agent_retrieval.{retriever}.rerank_mode must be one of: "
+                    "company+fiscal_year, cross_encoder"
+                )
+            profile["rerank_mode"] = rerank_mode
         self.ppr_projection_prefix: str = str(
             self.agent_retrieval["graph"].get(
                 "ppr_projection_prefix", "semigraph_ppr"

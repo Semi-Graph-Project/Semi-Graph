@@ -1,10 +1,19 @@
-"""Deterministic company and fiscal-year reranking."""
+"""Ranking strategies for retrieved chunks."""
 
 from __future__ import annotations
 
 import re
+from enum import Enum
+
+import numpy as np
 
 from semigraph.config import Config, get_config
+from semigraph.online.cross_encoder_runtime import predict_cross_encoder_scores
+
+
+class RerankMode(str, Enum):
+    METADATA = "company+fiscal_year"
+    CROSS_ENCODER = "cross_encoder"
 
 
 def company_rerank(
@@ -76,3 +85,34 @@ def fiscal_year_rerank(
         key=lambda item: float(item.get("score") or 0.0),
         reverse=True,
     )
+
+
+def cross_encoder_rerank(
+    query: str,
+    chunks: list[dict],
+) -> list[dict]:
+    """Rerank chunks using a cross-encoder model."""
+
+    if not chunks:
+        return []
+
+    pairs: list[tuple[str, str]] = []
+    for index, chunk in enumerate(chunks):
+        text = chunk.get("text")
+        if not isinstance(text, str):
+            raise ValueError(f"chunks[{index}]['text'] must be a string")
+        pairs.append((query, text))
+
+    scores = predict_cross_encoder_scores(pairs)
+    scores = np.asarray(scores, dtype=float).reshape(-1)
+    if len(scores) != len(chunks):
+        raise ValueError(
+            "Cross-encoder returned "
+            f"{len(scores)} scores for {len(chunks)} chunks"
+        )
+    if not np.isfinite(scores).all():
+        raise ValueError("Cross-encoder returned a non-finite score")
+
+    ranking = np.argsort(-scores)
+
+    return [chunks[i] for i in ranking]
