@@ -1,0 +1,343 @@
+summary:
+  query_count: 3
+  hit: 0.667
+  recall: 0.556
+  mrr: 0.667
+  average_latency_ms: 17020.4
+  average_answer_latency_ms: 13938.2
+  average_total_latency_ms: 30958.6
+  token_usage:
+    prompt_tokens: 13713
+    completion_tokens: 12022
+    total_tokens: 25735
+    llm_calls: 6
+    calls_with_usage: 6
+    status: complete
+  token_usage_including_warmup:
+    prompt_tokens: 14654
+    completion_tokens: 13761
+    total_tokens: 28415
+    llm_calls: 7
+    calls_with_usage: 7
+    status: complete
+results:
+- id: FRKG003
+  mode: full_answer
+  answer_audit_enabled: false
+  query: Based on the segment disclosures and term definitions in their 2024 10-K filings, how do Intel and NVIDIA differ
+    in the treatment of stock-based compensation expenses within their 'All Other' categories, and what does this reveal about
+    their corporate expense allocation practices?
+  gold_chunks:
+  - INTC_10k_2024.pdf::page_102::chunk_2
+  - INTC_10k_2024.pdf::page_71::chunk_1
+  - NVDA_10k_2024.pdf::page_78::chunk_1
+  top_chunk_ids:
+  - INTC_10k_2024.pdf::page_71::chunk_1
+  - NVDA_10k_2024.pdf::page_78::chunk_1
+  - NVDA_10k_2024.pdf::page_41::chunk_5
+  answer_points:
+  - Intel's 'All Other' category, as defined in its glossary (Chunk 1), includes non-reportable segments and startup businesses.
+    According to Chunk 2, Intel does not allocate stock-based compensation expenses to its operating segments, as these are
+    considered corporate-level expenses. In contrast, NVIDIA's 'All Other' category, as detailed in Chunk 3, explicitly includes
+    stock-based compensation expense as part of its enterprise-level costs. This reveals that Intel maintains stock-based
+    compensation as a centralized corporate expense, while NVIDIA incorporates it directly into its 'All Other' segment's
+    financial reporting, highlighting different approaches to expense allocation between the two companies.
+  final_answer: Intel explicitly excludes share-based compensation from operating-segment allocations, although the excerpt
+    does not expressly place that expense within the reported 'all other' category. [INTC_10k_2024.pdf::page_71::chunk_1]
+    NVIDIA explicitly records stock-based compensation in 'All Other,' outside its two reportable segments. [NVDA_10k_2024.pdf::page_78::chunk_1]
+    [NVDA_10k_2024.pdf::page_41::chunk_5] Both companies avoid assigning share-based compensation to their operating segments,
+    indicating centralized treatment of this corporate expense. NVIDIA makes the presentation explicit by placing it in 'All
+    Other'; Intel discloses the non-allocation policy but does not explicitly identify the corresponding line placement in
+    the supplied excerpt. [INTC_10k_2024.pdf::page_71::chunk_1] [NVDA_10k_2024.pdf::page_78::chunk_1]
+  hit: 1
+  recall: 0.6666666666666666
+  reciprocal_rank: 1.0
+  latency_ms: 5754.180489049759
+  answer_latency_ms: 13644.45912395604
+  total_latency_ms: 19398.6396130058
+  token_usage:
+    prompt_tokens: 3372
+    completion_tokens: 2713
+    total_tokens: 6085
+    llm_calls: 2
+    calls_with_usage: 2
+    status: complete
+  synthesis_trace:
+    output_format: structured_json
+    parts:
+    - requested_part: How Intel treats stock-based compensation expenses within its segment structure and 'All Other' category
+      supported_facts:
+      - claim: Intel's 'all other' category contains results from non-reportable segments, including Altera, Mobileye, start-up
+          businesses, and historical results of divested businesses.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_71::chunk_1
+      - claim: Intel does not allocate corporate operating expenses, including share-based compensation, to its operating
+          segments.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_71::chunk_1
+      - claim: Intel does allocate sales and marketing expenses to Intel Products and finance and administration expenses
+          to all operating segments except Mobileye.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_71::chunk_1
+      missing_information: The supplied excerpt does not explicitly state whether Intel's unallocated share-based compensation
+        is included in the reported 'all other' line or in another corporate/consolidated reconciliation.
+      answer: Intel explicitly excludes share-based compensation from operating-segment allocations, although the excerpt
+        does not expressly place that expense within the reported 'all other' category. [INTC_10k_2024.pdf::page_71::chunk_1]
+    - requested_part: How NVIDIA treats stock-based compensation expenses within its 'All Other' category
+      supported_facts:
+      - claim: NVIDIA defines 'All Other' as expenses not allocated to Compute & Networking or Graphics and explicitly includes
+          stock-based compensation expense.
+        evidence_ids:
+        - NVDA_10k_2024.pdf::page_78::chunk_1
+      - claim: NVIDIA reported that the year-over-year increase in All Other operating loss was due to higher stock-based
+          compensation expense reflecting employee growth and compensation increases.
+        evidence_ids:
+        - NVDA_10k_2024.pdf::page_41::chunk_5
+      missing_information: null
+      answer: NVIDIA explicitly records stock-based compensation in 'All Other,' outside its two reportable segments. [NVDA_10k_2024.pdf::page_78::chunk_1]
+    - requested_part: What the difference reveals about corporate expense allocation practices
+      supported_facts:
+      - claim: NVIDIA uses 'All Other' as an explicit enterprise-level bucket for expenses, including stock-based compensation,
+          corporate infrastructure and support costs, and other enterprise-related items.
+        evidence_ids:
+        - NVDA_10k_2024.pdf::page_78::chunk_1
+      - claim: Intel allocates some shared functional expenses to operating segments but keeps share-based compensation among
+          corporate expenses not allocated to those segments.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_71::chunk_1
+      missing_information: The evidence does not establish that Intel's unallocated share-based compensation is presented
+        in exactly the same 'all other' line used by NVIDIA.
+      answer: Both companies avoid assigning share-based compensation to their operating segments, indicating centralized
+        treatment of this corporate expense. NVIDIA makes the presentation explicit by placing it in 'All Other'; Intel discloses
+        the non-allocation policy but does not explicitly identify the corresponding line placement in the supplied excerpt.
+        [INTC_10k_2024.pdf::page_71::chunk_1] [NVDA_10k_2024.pdf::page_78::chunk_1]
+    cited_chunk_ids:
+    - INTC_10k_2024.pdf::page_71::chunk_1
+    - NVDA_10k_2024.pdf::page_78::chunk_1
+    - NVDA_10k_2024.pdf::page_41::chunk_5
+    invalid_citation_ids: []
+    citation_status: valid
+  generated_cypher: "MATCH (c:Chunk)\nWHERE c.fiscal_year = 2024\n  AND c.filing_type = '10-K'\n  AND c.ticker IN ['INTC',\
+    \ 'NVDA']\n  AND toLower(c.text) CONTAINS 'all other'\n  AND (\n    toLower(c.text) CONTAINS 'stock-based compensation'\n\
+    \    OR toLower(c.text) CONTAINS 'stock based compensation'\n    OR toLower(c.text) CONTAINS 'share-based compensation'\n\
+    \    OR toLower(c.text) CONTAINS 'share based compensation'\n  )\nRETURN DISTINCT c.chunk_id AS chunk_id,\n          \
+    \      c.text AS text,\n                c.source_file AS source_file,\n                c.page_id AS page_id,\n       \
+    \         c.fiscal_year AS fiscal_year\nLIMIT 10"
+- id: FRKG009
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What percentage of Texas Instruments' 2022 total revenue was represented by restructuring charges disclosed in the
+    Other segment, and how does the company's segment reporting structure explain the separation of these charges from operating
+    segments like Embedded Processing?
+  gold_chunks:
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2023.pdf::page_30::chunk_1
+  - TXN_10k_2024.pdf::page_4::chunk_1
+  top_chunk_ids:
+  - TXN_10k_2022.pdf::page_6::chunk_1
+  - TXN_10k_2022.pdf::page_54::chunk_1
+  - TXN_10k_2022.pdf::page_54::chunk_5
+  - TXN_10k_2022.pdf::page_33::chunk_2
+  - TXN_10k_2022.pdf::page_22::chunk_7
+  - TXN_10k_2022.pdf::page_54::chunk_4
+  - TXN_10k_2022.pdf::page_66::chunk_1
+  - TXN_10k_2022.pdf::page_9::chunk_1
+  answer_points:
+  - In 2022, restructuring charges in the Other segment amounted to $257 million (Chunk 1), representing 1.28% of total revenue
+    ($257M / $20,028M). Texas Instruments' segment reporting structure (Chunk 2) explains that restructuring charges are classified
+    as corporate-level items in the Other segment, which are not allocated to operating segments like Embedded Processing.
+    This separation reflects how management evaluates segment performance by excluding non-operational corporate expenses
+    (Chunk 3 confirms Embedded Processing is a distinct operating segment with 16% revenue contribution in 2024, emphasizing
+    its structural independence from corporate charges).
+  final_answer: Cannot be determined from the supplied evidence. By the company's stated segment-reporting policy, restructuring
+    charges are placed in Other because they are not used to evaluate operating-segment results or allocate resources; Embedded
+    Processing is reported separately as a product operating segment. [TXN_10k_2022.pdf::page_6::chunk_1] [TXN_10k_2022.pdf::page_54::chunk_1]
+  hit: 0
+  recall: 0.0
+  reciprocal_rank: 0.0
+  latency_ms: 22038.44137507258
+  answer_latency_ms: 11619.484223949257
+  total_latency_ms: 33657.92559902184
+  token_usage:
+    prompt_tokens: 4139
+    completion_tokens: 4422
+    total_tokens: 8561
+    llm_calls: 2
+    calls_with_usage: 2
+    status: complete
+  synthesis_trace:
+    output_format: structured_json
+    parts:
+    - requested_part: The percentage of Texas Instruments' 2022 total revenue represented by restructuring charges disclosed
+        in Other
+      supported_facts: []
+      missing_information: The supplied evidence does not provide Texas Instruments' 2022 total revenue or 2022 restructuring-charge
+        amount, so the percentage cannot be calculated.
+      answer: Cannot be determined from the supplied evidence.
+    - requested_part: How the segment reporting structure explains separating these charges from operating segments such as
+        Embedded Processing
+      supported_facts:
+      - claim: Other includes operating segments that do not meet the quantitative thresholds for individual reporting and
+          cannot be aggregated with other operating segments.
+        evidence_ids:
+        - TXN_10k_2022.pdf::page_6::chunk_1
+      - claim: Other also includes items not used to evaluate segment results or allocate resources, including acquisition,
+          integration, and restructuring charges.
+        evidence_ids:
+        - TXN_10k_2022.pdf::page_6::chunk_1
+      - claim: The filing specifically states that restructuring charges/other are included in Other for segment-reporting
+          purposes.
+        evidence_ids:
+        - TXN_10k_2022.pdf::page_54::chunk_1
+      - claim: Embedded Processing is a separate segment that includes microcontrollers, digital signal processors, and applications
+          processors.
+        evidence_ids:
+        - TXN_10k_2022.pdf::page_6::chunk_1
+      missing_information: null
+      answer: By the company's stated segment-reporting policy, restructuring charges are placed in Other because they are
+        not used to evaluate operating-segment results or allocate resources; Embedded Processing is reported separately as
+        a product operating segment. [TXN_10k_2022.pdf::page_6::chunk_1] [TXN_10k_2022.pdf::page_54::chunk_1]
+    cited_chunk_ids:
+    - TXN_10k_2022.pdf::page_6::chunk_1
+    - TXN_10k_2022.pdf::page_54::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+  generated_cypher: "MATCH (c:Chunk)\nWHERE c.fiscal_year = 2022\n  AND (\n    c.ticker = 'TXN'\n    OR toLower(coalesce(c.text,\
+    \ '')) CONTAINS 'texas instruments'\n  )\nWITH c, toLower(coalesce(c.text, '')) AS txt\nWHERE txt CONTAINS 'restructur'\n\
+    \   OR txt CONTAINS 'total revenue'\n   OR txt CONTAINS 'embedded processing'\n   OR txt CONTAINS 'reportable segment'\n\
+    \   OR txt CONTAINS 'operating segment'\nWITH c,\n     CASE WHEN txt CONTAINS 'restructur' THEN 5 ELSE 0 END +\n     CASE\
+    \ WHEN txt CONTAINS 'other segment'\n              OR (txt CONTAINS 'other' AND txt CONTAINS 'segment') THEN 4 ELSE 0\
+    \ END +\n     CASE WHEN txt CONTAINS 'total revenue' THEN 4 ELSE 0 END +\n     CASE WHEN txt CONTAINS 'embedded processing'\
+    \ THEN 4 ELSE 0 END +\n     CASE WHEN txt CONTAINS 'reportable segment'\n              OR txt CONTAINS 'operating segment'\
+    \ THEN 2 ELSE 0 END AS relevance\nORDER BY relevance DESC\nRETURN DISTINCT c.chunk_id AS chunk_id,\n                c.text\
+    \ AS text,\n                c.source_file AS source_file,\n                c.page_id AS page_id,\n                c.fiscal_year\
+    \ AS fiscal_year\nLIMIT 10"
+- id: FRKG010
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was the total operating profit contribution from the Embedded Processing and Other segments in 2022 compared
+    to 2023, considering that the Other segment includes restructuring charges and gains/losses from other activities as disclosed
+    in the prior year's filing?
+  gold_chunks:
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2024.pdf::page_31::chunk_1
+  - TXN_10k_2022.pdf::page_6::chunk_1
+  top_chunk_ids:
+  - TXN_10k_2022.pdf::page_6::chunk_1
+  - TXN_10k_2023.pdf::page_30::chunk_1
+  - TXN_10k_2023.pdf::page_4::chunk_1
+  - TXN_10k_2024.pdf::page_30::chunk_1
+  - TXN_10k_2024.pdf::page_31::chunk_1
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2024.pdf::page_4::chunk_1
+  - TXN_10k_2024.pdf::page_19::chunk_1
+  - AMD_10k_2024.pdf::page_69::chunk_1
+  - INTC_10k_2023.pdf::page_87::chunk_1
+  answer_points:
+  - In 2022, the Embedded Processing segment contributed $1,253M and the Other segment contributed $528M (including $257M
+    in restructuring charges) for a combined total of $1,781M (Chunk 1). In 2023, Embedded Processing contributed $1,008M
+    and Other contributed $502M (no restructuring charges) for a combined total of $1,510M (Chunk 2). The $271M decrease (-15.2%)
+    occurred despite removing restructuring charges from Other's 2023 results, highlighting how both segments' performance
+    and corporate-level adjustments (Chunk 3) directly impacted profitability. The Other segment's inclusion of restructuring
+    charges and gains/losses from activities (Chunk 3) explains why its 2022 operating profit was artificially reduced by
+    257M before comparing year-over-year changes.
+  final_answer: The segment contributions were $1,253 million and $528 million in 2022, versus $1,008 million and $502 million
+    in 2023, for Embedded Processing and Other, respectively. [TXN_10k_2024.pdf::page_31::chunk_3] [TXN_10k_2024.pdf::page_31::chunk_1]
+    Together, Embedded Processing and Other contributed $1,781 million in 2022 versus $1,510 million in 2023—a decrease of
+    $271 million. [TXN_10k_2024.pdf::page_31::chunk_3] [TXN_10k_2024.pdf::page_31::chunk_1] The totals use the reported Other
+    operating-profit figures without separately adding those items, because Other includes restructuring charges and gains/losses
+    from other activities. The table shows $257 million of restructuring charges/other for Other in 2022 and $0 in 2023. [TXN_10k_2023.pdf::page_30::chunk_1]
+    [TXN_10k_2024.pdf::page_31::chunk_3] [TXN_10k_2024.pdf::page_31::chunk_1]
+  hit: 1
+  recall: 1.0
+  reciprocal_rank: 1.0
+  latency_ms: 23268.515798961744
+  answer_latency_ms: 16550.653695012443
+  total_latency_ms: 39819.16949397419
+  token_usage:
+    prompt_tokens: 6202
+    completion_tokens: 4887
+    total_tokens: 11089
+    llm_calls: 2
+    calls_with_usage: 2
+    status: complete
+  synthesis_trace:
+    output_format: structured_json
+    parts:
+    - requested_part: Operating profit contributions from Embedded Processing and Other in 2022 and 2023
+      supported_facts:
+      - claim: In 2022, operating profit was $1,253 million for Embedded Processing and $528 million for Other.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_31::chunk_3
+      - claim: In 2023, operating profit was $1,008 million for Embedded Processing and $502 million for Other.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_31::chunk_1
+      missing_information: null
+      answer: The segment contributions were $1,253 million and $528 million in 2022, versus $1,008 million and $502 million
+        in 2023, for Embedded Processing and Other, respectively. [TXN_10k_2024.pdf::page_31::chunk_3] [TXN_10k_2024.pdf::page_31::chunk_1]
+    - requested_part: Combined total operating profit contribution and comparison between 2022 and 2023
+      supported_facts:
+      - claim: The combined 2022 contribution was $1,781 million, calculated as $1,253 million + $528 million.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_31::chunk_3
+      - claim: The combined 2023 contribution was $1,510 million, calculated as $1,008 million + $502 million.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_31::chunk_1
+      - claim: The combined contribution decreased by $271 million from 2022 to 2023, calculated as $1,510 million − $1,781
+          million = −$271 million.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_31::chunk_3
+        - TXN_10k_2024.pdf::page_31::chunk_1
+      missing_information: null
+      answer: Together, Embedded Processing and Other contributed $1,781 million in 2022 versus $1,510 million in 2023—a decrease
+        of $271 million. [TXN_10k_2024.pdf::page_31::chunk_3] [TXN_10k_2024.pdf::page_31::chunk_1]
+    - requested_part: Treatment of restructuring charges and gains/losses in the Other segment
+      supported_facts:
+      - claim: Other includes acquisition, integration and restructuring charges and corporate-level gains and losses from
+          other activities, including asset dispositions.
+        evidence_ids:
+        - TXN_10k_2023.pdf::page_30::chunk_1
+      - claim: The segment table reports restructuring charges/other of $257 million for Other in 2022 and $0 in 2023.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_31::chunk_3
+        - TXN_10k_2024.pdf::page_31::chunk_1
+      missing_information: null
+      answer: The totals use the reported Other operating-profit figures without separately adding those items, because Other
+        includes restructuring charges and gains/losses from other activities. The table shows $257 million of restructuring
+        charges/other for Other in 2022 and $0 in 2023. [TXN_10k_2023.pdf::page_30::chunk_1] [TXN_10k_2024.pdf::page_31::chunk_3]
+        [TXN_10k_2024.pdf::page_31::chunk_1]
+    cited_chunk_ids:
+    - TXN_10k_2024.pdf::page_31::chunk_3
+    - TXN_10k_2024.pdf::page_31::chunk_1
+    - TXN_10k_2023.pdf::page_30::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+  generated_cypher: "MATCH (c:Chunk)\nWHERE\n(\n  toLower(c.text) CONTAINS 'embedded processing'\n  AND toLower(c.text) CONTAINS\
+    \ 'other'\n  AND (toLower(c.text) CONTAINS 'operating profit' OR toLower(c.text) CONTAINS 'operating income')\n  AND (c.text\
+    \ CONTAINS '2022' OR c.text CONTAINS '2023')\n)\nOR\n(\n  toLower(c.text) CONTAINS 'restructuring'\n  AND toLower(c.text)\
+    \ CONTAINS 'other'\n  AND (toLower(c.text) CONTAINS 'gain' OR toLower(c.text) CONTAINS 'loss')\n)\nRETURN DISTINCT c.chunk_id\
+    \ AS chunk_id,\n                c.text AS text,\n                c.source_file AS source_file,\n                c.page_id\
+    \ AS page_id,\n                c.fiscal_year AS fiscal_year\nLIMIT 10"
+measurement:
+  tool: text_to_cypher
+  mode: full_answer
+  workers: 1
+  selection:
+    start: 1
+    end: 3
+    query_count: 3
+  answer_audit_enabled: false
+  latency_scope: Per-query wall time after warm-up; excludes executor queue, metric calculation and trace writes; includes
+    internal lock waits. Agent retrieval includes planning, assessment and retries.
+  token_usage_scope: Provider-reported LLM tokens across all calls and retries; excludes local embeddings and reranking. Partial
+    totals cover only calls that returned usage. Warm-up is reported separately.
+  warmup:
+    tool: text_to_cypher
+    latency_ms: 13235.660599020775
+    token_usage:
+      prompt_tokens: 941
+      completion_tokens: 1739
+      total_tokens: 2680
+      llm_calls: 1
+      calls_with_usage: 1
+      status: complete
