@@ -25,6 +25,9 @@ from semigraph.connections import get_llm  # noqa: E402
 from semigraph.agents.graph import run_agent as run_new_agent  # noqa: E402
 from semigraph.online.vector_search import vector_search as production_vector_search  # noqa: E402
 from semigraph.online.graph_search import graph_search as production_graph_search  # noqa: E402
+from semigraph.online.text_to_cypher import (  # noqa: E402
+    text_to_cypher_search as production_text_to_cypher_search,
+)
 from eval_scripts.eval_agent import (
     GENERATION_ERROR_ANSWER,
     generate_final_answer,
@@ -99,6 +102,7 @@ def _requires_llm(tool: str, mode: str, cfg) -> bool:
     return (
         mode == "full_answer"
         or tool in AGENT_TOOLS
+        or tool == "text_to_cypher"
         or (tool == "graph" and graph_filter == "llm")
     )
 
@@ -152,6 +156,17 @@ def graph_search(question: str, top_k: int = TOP_K) -> list[dict]:
         candidate_pool_k=int(profile["candidate_pool_k"]),
         ppr_seed_weight_mode=str(profile["ppr_seed_weight_mode"]),
         graph_triple_filter=str(profile["triple_filter"]),
+        cfg=cfg,
+    )
+
+
+def text_to_cypher_search(question: str, top_k: int = TOP_K) -> dict:
+    """Return Text-to-Cypher Chunks and the generated query for tracing."""
+    cfg = get_config()
+    cfg.neo4j_uri = cfg.controlled_neo4j_uri
+    return production_text_to_cypher_search(
+        question,
+        top_k_chunks=top_k,
         cfg=cfg,
     )
 
@@ -333,6 +348,7 @@ def evaluate_sox_queries(
     searches = {
         "vector": vector_search,
         "graph": graph_search,
+        "text_to_cypher": text_to_cypher_search,
         "agent_vector": agent_vector_search,
         "agent_graph": agent_graph_search,
     }
@@ -401,6 +417,7 @@ def evaluate_sox_queries(
         final_answer = "None"
         answer_latency_ms = 0.0
         synthesis_trace = None
+        generated_cypher = None
         with collect_token_usage() as usage:
             started = time.perf_counter()
             if tool in AGENT_TOOLS:
@@ -416,7 +433,12 @@ def evaluate_sox_queries(
                     answer_error = agent_result.get("answer_error")
                     synthesis_trace = agent_result.get("synthesis_trace")
             else:
-                retrieved = search(case["query"], top_k=TOP_K)
+                retrieval_result = search(case["query"], top_k=TOP_K)
+                if tool == "text_to_cypher":
+                    retrieved = retrieval_result["chunks"]
+                    generated_cypher = retrieval_result["generated_cypher"]
+                else:
+                    retrieved = retrieval_result
                 if mode == "full_answer":
                     answer_started = time.perf_counter()
                     synthesis_trace = {}
@@ -467,6 +489,8 @@ def evaluate_sox_queries(
             result["answer_error"] = answer_error
         if synthesis_trace is not None:
             result["synthesis_trace"] = synthesis_trace
+        if generated_cypher is not None:
+            result["generated_cypher"] = generated_cypher
         return result
 
     # Start a fresh trace; each completed query is appended immediately.
@@ -514,11 +538,17 @@ def evaluate_sox_queries(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Evaluate four Vector/Graph/Agent modes on the 74 SOX queries"
+        description="Evaluate Vector/Graph/Text-to-Cypher/Agent on SOX74"
     )
     parser.add_argument(
         "--tool",
-        choices=("vector", "graph", "agent_vector", "agent_graph"),
+        choices=(
+            "vector",
+            "graph",
+            "text_to_cypher",
+            "agent_vector",
+            "agent_graph",
+        ),
         default="vector",
         help="retriever to evaluate (default: vector)",
         required=True,

@@ -46,6 +46,15 @@ def benchmark(monkeypatch, tmp_path):
         })
         return "Grounded answer"
 
+    def text_to_cypher(question, top_k):
+        calls.append("text_to_cypher")
+        clock[0] += 0.4
+        llm.invoke("Generate Cypher")
+        return {
+            "chunks": [{"chunk_id": "C1", "text": "Evidence"}],
+            "generated_cypher": "MATCH (c:Chunk) RETURN c LIMIT 10",
+        }
+
     def agent(question, tool, generate_answer):
         clock[0] += 0.4
         llm.invoke("plan")
@@ -65,12 +74,16 @@ def benchmark(monkeypatch, tmp_path):
 
     monkeypatch.setattr(evaluation, "vector_search", search("vector"))
     monkeypatch.setattr(evaluation, "graph_search", search("graph"))
+    monkeypatch.setattr(evaluation, "text_to_cypher_search", text_to_cypher)
     monkeypatch.setattr(evaluation, "generate_final_answer", answer)
     monkeypatch.setattr(evaluation, "_run_agent", agent)
     return SimpleNamespace(clock=clock, calls=calls, path=tmp_path, llm=llm, cfg=cfg)
 
 
-@pytest.mark.parametrize("tool", ["vector", "graph", "agent_vector", "agent_graph"])
+@pytest.mark.parametrize(
+    "tool",
+    ["vector", "graph", "text_to_cypher", "agent_vector", "agent_graph"],
+)
 @pytest.mark.parametrize("mode", ["retrieve_only", "full_answer"])
 def test_latency_boundaries_and_selected_warmup(benchmark, tool, mode):
     result, = evaluation.evaluate_sox_queries(tool=tool, mode=mode, workers=1, limit=1)
@@ -86,18 +99,20 @@ def test_latency_boundaries_and_selected_warmup(benchmark, tool, mode):
     assert trace["summary"]["average_total_latency_ms"] == (1600.0 if answering else 400.0)
     assert trace["measurement"]["workers"] == 1
     assert trace["measurement"]["warmup"]["tool"] == warmup_tool
-    # Graph warm-up calls are reported separately, never attributed to Q1.
+    # Retrieval warm-up calls are reported separately, never attributed to Q1.
     assert trace["measurement"]["warmup"]["token_usage"]["llm_calls"] == (
-        1 if warmup_tool == "graph" else 0
+        1 if warmup_tool in {"graph", "text_to_cypher"} else 0
     )
     expected_calls = (
         2 + int(answering) if tool in evaluation.AGENT_TOOLS
-        else int(tool == "graph") + 2 * int(answering)
+        else int(tool in {"graph", "text_to_cypher"}) + 2 * int(answering)
     )
     assert result["token_usage"]["llm_calls"] == expected_calls
     assert result["token_usage"]["status"] == ("unavailable" if expected_calls else "no_calls")
     if answering:
         assert "synthesis_trace" in result
+    if tool == "text_to_cypher":
+        assert result["generated_cypher"].startswith("MATCH")
 
 
 def test_range_uses_only_selected_queries_for_metrics(benchmark, monkeypatch):
