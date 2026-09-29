@@ -151,6 +151,49 @@ def test_plan_route_node_retries_with_validation_error(monkeypatch):
     assert "requirement" in retry_prompt
 
 
+def test_plan_route_node_retries_with_malformed_json(monkeypatch):
+    valid_payload = _valid_plan_payload()
+    llm = _SequenceFakeLLM([
+        '{"tasks": [}',
+        json.dumps(valid_payload),
+    ])
+    monkeypatch.setattr(nodes, "get_llm", lambda cfg: llm)
+
+    result = nodes.plan_route_node(
+        {"original_query": "What risks did NVIDIA disclose?"},
+        tool="graph",
+        cfg=_config(),
+    )
+
+    assert result == valid_payload
+    assert len(llm.calls) == 2
+    assert "Validation error:" in llm.calls[1][1]["content"]
+
+
+def test_plan_route_node_uses_json_mode_when_enabled(monkeypatch):
+    payload = _valid_plan_payload()
+    bound_options = []
+
+    class BindableLLM(_FakeLLM):
+        def bind(self, **kwargs):
+            bound_options.append(kwargs)
+            return self
+
+    llm = BindableLLM(json.dumps(payload))
+    monkeypatch.setattr(nodes, "get_llm", lambda cfg: llm)
+    cfg = _config()
+    cfg.llm_json_mode = True
+
+    result = nodes.plan_route_node(
+        {"original_query": "What risks did NVIDIA disclose?"},
+        tool="graph",
+        cfg=cfg,
+    )
+
+    assert result == payload
+    assert bound_options == [{"response_format": {"type": "json_object"}}]
+
+
 def test_plan_route_node_raises_when_retry_is_invalid(monkeypatch):
     invalid_payload = _valid_plan_payload()
     invalid_payload["tasks"][0]["requirement"] = {

@@ -442,13 +442,18 @@ def evaluate_sox_queries(
                 if mode == "full_answer":
                     answer_started = time.perf_counter()
                     synthesis_trace = {}
+                    answer_kwargs = {
+                        "audit_enabled": answer_audit_enabled,
+                        "synthesis_trace": synthesis_trace,
+                    }
+                    if getattr(cfg, "llm_json_mode", False):
+                        answer_kwargs["json_mode"] = True
                     try:
                         final_answer = generate_final_answer(
                             llm,
                             case["query"],
                             retrieved,
-                            audit_enabled=answer_audit_enabled,
-                            synthesis_trace=synthesis_trace,
+                            **answer_kwargs,
                         )
                         if final_answer == GENERATION_ERROR_ANSWER:
                             answer_error = "AnswerGenerationError"

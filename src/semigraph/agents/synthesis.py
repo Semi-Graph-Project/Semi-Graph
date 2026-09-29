@@ -7,7 +7,12 @@ import re
 DO_NOT_ANSWER = "Do not Answer"
 
 
-def parse_synthesis_response(response: str, chunk_ids: list[str]) -> dict:
+def parse_synthesis_response(
+    response: str,
+    chunk_ids: list[str],
+    *,
+    strict_json: bool = False,
+) -> dict:
     """Parse structured output and compose every LLM-written part in order."""
     content = response.strip()
     if content.startswith("```") and content.endswith("```"):
@@ -17,6 +22,8 @@ def parse_synthesis_response(response: str, chunk_ids: list[str]) -> dict:
     try:
         payload = json.loads(content)
     except (json.JSONDecodeError, TypeError):
+        if strict_json:
+            return {"final_answer": "", "parts": [], "output_format": "invalid_json"}
         return {
             "final_answer": content,
             "parts": [],
@@ -25,6 +32,11 @@ def parse_synthesis_response(response: str, chunk_ids: list[str]) -> dict:
 
     if not isinstance(payload, dict):
         return {"final_answer": "", "parts": [], "output_format": "invalid"}
+    if strict_json and (
+        not isinstance(payload.get("parts"), list)
+        or not isinstance(payload.get("final_answer"), str)
+    ):
+        return {"final_answer": "", "parts": [], "output_format": "invalid_json"}
 
     parts = payload.get("parts")
     parts = (

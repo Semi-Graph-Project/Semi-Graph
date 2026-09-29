@@ -1,3 +1,4 @@
+import json
 from types import SimpleNamespace
 
 import pytest
@@ -168,6 +169,51 @@ def test_structured_synthesis_records_parts_and_citation_diagnostics():
     assert trace["cited_chunk_ids"] == ["C1"]
     assert trace["invalid_citation_ids"] == []
     assert trace["citation_status"] == "valid"
+
+
+def test_json_mode_requests_json_and_preserves_exact_evidence_ids():
+    class JsonModeLLM(_FakeLLM):
+        def bind(self, **kwargs):
+            self.bound_options = kwargs
+            return self
+
+    llm = JsonModeLLM()
+    trace = {}
+    answer = eval_agent.generate_final_answer(
+        llm,
+        "Question?",
+        [{"chunk_id": "C1", "text": "Evidence"}],
+        audit_enabled=False,
+        synthesis_trace=trace,
+        json_mode=True,
+    )
+
+    assert answer == _FakeLLM.DEFAULT_FINAL_ANSWER
+    assert llm.bound_options == {"response_format": {"type": "json_object"}}
+    evidence = llm.messages[0][1]["content"].split("Evidence Chunks:\n", 1)[1]
+    assert json.loads(evidence) == [{"chunk_id": "C1", "text": "Evidence"}]
+    assert trace["output_format"] == "structured_json"
+    assert trace["citation_status"] == "valid"
+
+
+def test_json_mode_rejects_malformed_model_json():
+    class JsonModeLLM(_FakeLLM):
+        def bind(self, **kwargs):
+            return self
+
+    llm = JsonModeLLM(['{"parts":[{ {"answer":"bad"}],"final_answer":"bad"}'])
+    trace = {}
+    answer = eval_agent.generate_final_answer(
+        llm,
+        "Question?",
+        [{"chunk_id": "C1", "text": "Evidence"}],
+        audit_enabled=False,
+        synthesis_trace=trace,
+        json_mode=True,
+    )
+
+    assert answer == eval_agent.GENERATION_ERROR_ANSWER
+    assert trace["output_format"] == "invalid_json"
 
 
 def test_synthesis_trace_flags_unknown_and_missing_citations():

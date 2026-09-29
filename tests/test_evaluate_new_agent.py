@@ -163,6 +163,22 @@ def test_generation_failure_keeps_elapsed_time_and_observed_calls(benchmark, mon
     assert result["token_usage"]["llm_calls"] == 1
 
 
+def test_json_mode_is_passed_only_when_enabled(benchmark, monkeypatch):
+    received = []
+
+    def answer(llm, question, chunks, *, audit_enabled, synthesis_trace, **kwargs):
+        benchmark.clock[0] += 1.2
+        received.append(kwargs)
+        return "Grounded answer"
+
+    monkeypatch.setattr(evaluation, "generate_final_answer", answer)
+    evaluation.evaluate_sox_queries(tool="vector", mode="full_answer", workers=1)
+    benchmark.cfg.llm_json_mode = True
+    evaluation.evaluate_sox_queries(tool="vector", mode="full_answer", workers=1)
+
+    assert received == [{}, {"json_mode": True}]
+
+
 def test_invalid_agent_synthesis_duration_is_not_silently_clipped(benchmark, monkeypatch):
     monkeypatch.setattr(evaluation, "_run_agent", lambda *args, **kwargs: {
         "chunks": [], "final_answer": "answer", "answer_latency_ms": 1000.0,

@@ -31,6 +31,34 @@ def test_evaluation_answer_audit_rejects_string_false(tmp_path):
         Config(config_path)
 
 
+@pytest.mark.parametrize(
+    ("setting", "expected"),
+    [(None, False), (False, False), (True, True)],
+)
+def test_llm_json_mode_is_opt_in(tmp_path, setting, expected):
+    config_path = tmp_path / "config.yaml"
+    llm = {} if setting is None else {"json_mode": setting}
+    data = {
+        "llm": llm,
+        "financial": {"metric_registry": {
+            "reported": ["revenue"],
+            "derived": ["margin"],
+            "snapshot": ["stock_price"],
+        }},
+    }
+    config_path.write_text(yaml.safe_dump(data), encoding="utf-8")
+
+    assert Config(config_path).llm_json_mode is expected
+
+
+def test_llm_json_mode_rejects_string_false(tmp_path):
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text('llm:\n  json_mode: "false"\n', encoding="utf-8")
+
+    with pytest.raises(ValueError, match="llm.json_mode must be a boolean"):
+        Config(config_path)
+
+
 def test_get_neo4j_driver_disables_deprecation_notifications(monkeypatch):
     captured = {}
 

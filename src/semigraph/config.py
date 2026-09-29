@@ -94,10 +94,14 @@ class Config:
             "model", "deepseek/deepseek-v4-flash"
         )
         self.llm_temperature: float = llm.get("temperature", 0.0)
+        self.llm_timeout: float = float(llm.get("timeout", 120.0))
         self.llm_reasoning: dict[str, str] = llm.get("reasoning", {})
         self.llm_base_url: str = llm.get(
             "base_url", "https://openrouter.ai/api/v1"
         )
+        self.llm_json_mode: bool = llm.get("json_mode", False)
+        if not isinstance(self.llm_json_mode, bool):
+            raise ValueError("llm.json_mode must be a boolean")
 
         # --- Evaluation answer generation ---
         evaluation = data.get("evaluation", {})

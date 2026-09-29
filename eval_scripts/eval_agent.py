@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import time
 from pathlib import Path
 import sys
@@ -54,8 +55,16 @@ Final answer rules:
 """.strip()
 
 
-def format_evidence(chunks: list[dict]) -> str:
+def format_evidence(chunks: list[dict], *, json_mode: bool = False) -> str:
     """Format Chunk IDs and text for the evaluation answer prompt."""
+    if json_mode:
+        return json.dumps(
+            [
+                {"chunk_id": chunk["chunk_id"], "text": chunk.get("text", "")}
+                for chunk in chunks
+            ],
+            ensure_ascii=False,
+        )
     return "\n\n".join(
         f"chunk_id={chunk['chunk_id']}\n{chunk.get('text', '')}"
         for chunk in chunks
@@ -74,6 +83,8 @@ def _invoke_answer(llm, system_prompt: str, user_prompt: str) -> str:
 def _parse_synthesis_response(
     response: str,
     chunks: list[dict] | None = None,
+    *,
+    strict_json: bool = False,
 ) -> dict:
     """Parse the response using the shared Agent synthesis contract."""
     chunk_ids = [
@@ -81,7 +92,7 @@ def _parse_synthesis_response(
         for chunk in (chunks or [])
         if chunk.get("chunk_id")
     ]
-    return parse_synthesis_response(response, chunk_ids)
+    return parse_synthesis_response(response, chunk_ids, strict_json=strict_json)
 
 
 def _final_answer_from_response(response: str) -> str:
@@ -113,6 +124,7 @@ def generate_final_answer(
     *,
     audit_enabled: bool | None = None,
     synthesis_trace: dict | None = None,
+    json_mode: bool = False,
 ) -> str:
     """Draft an answer; optionally audit it using the evaluation config."""
     if not chunks:
@@ -128,10 +140,12 @@ def generate_final_answer(
         return DO_NOT_ANSWER
     if audit_enabled is None:
         audit_enabled = get_config().eval_answer_audit_enabled
+    if json_mode:
+        llm = llm.bind(response_format={"type": "json_object"})
 
     evidence_input = (
         f"Question:\n{question}\n\n"
-        f"Evidence Chunks:\n{format_evidence(chunks)}"
+        f"Evidence Chunks:\n{format_evidence(chunks, json_mode=json_mode)}"
     )
 
     try:
@@ -143,7 +157,9 @@ def generate_final_answer(
     except Exception:
         draft_response = ""
 
-    draft_payload = _parse_synthesis_response(draft_response, chunks)
+    draft_payload = _parse_synthesis_response(
+        draft_response, chunks, strict_json=json_mode
+    )
     draft = draft_payload["final_answer"]
 
     if not audit_enabled:
@@ -163,7 +179,9 @@ def generate_final_answer(
     except Exception:
         audit_response = ""
 
-    audit_payload = _parse_synthesis_response(audit_response, chunks)
+    audit_payload = _parse_synthesis_response(
+        audit_response, chunks, strict_json=json_mode
+    )
     final_answer = audit_payload["final_answer"]
 
     if final_answer:
@@ -228,6 +246,7 @@ def eval_synthesize_node(
             chunks,
             audit_enabled=audit_enabled,
             synthesis_trace=answer_trace,
+            json_mode=getattr(cfg, "llm_json_mode", False),
         )
         llm_calls = 2 if audit_enabled else 1
         failed = answer == GENERATION_ERROR_ANSWER

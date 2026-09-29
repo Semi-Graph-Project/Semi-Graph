@@ -75,15 +75,27 @@ chunker:
   chunk_size: 4500
   chunk_overlap: 600
 
-# LLM
+# Oneline OpenRouter
+# llm:
+#   provider: "openrouter"
+#   # model: "deepseek/deepseek-v4-flash-0731"
+#   model: "openai/gpt-5.6-luna"
+#   temperature: 0.0
+#   reasoning:
+#     effort: "high"
+#   base_url: "https://openrouter.ai/api/v1"
+
+# Offline LLM
 llm:
-  provider: "openrouter"
-  # model: "deepseek/deepseek-v4-flash-0731"
-  model: "openai/gpt-5.6-luna"
+  provider: "openai"
+  model: "Qwen/Qwen2.5-7B-Instruct"
   temperature: 0.0
-  reasoning:
-    effort: "high"
-  base_url: "https://openrouter.ai/api/v1"
+  reasoning: {}
+  base_url: "https://nbyaocnexus8yy-8000.proxy.runpod.net/v1"
+  json_mode: true
+  timeout: 300.0  # seconds
+
+
 
 # Evaluation answer generation: false returns the synthesis draft directly.
 evaluation:

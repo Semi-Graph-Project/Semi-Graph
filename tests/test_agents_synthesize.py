@@ -124,6 +124,42 @@ def test_synthesize_generates_structured_answer_with_chunk_ids(monkeypatch):
     ]
 
 
+def test_synthesize_uses_json_mode_only_when_enabled(monkeypatch):
+    bound_options = []
+    response = json.dumps({
+        "parts": [{
+            "requested_part": "Question?",
+            "supported_facts": [{"claim": "Fact", "evidence_ids": ["c1"]}],
+            "missing_information": None,
+            "answer": "Fact [c1]",
+        }],
+        "final_answer": "Fact [c1]",
+    })
+
+    class FakeLLM:
+        def bind(self, **kwargs):
+            bound_options.append(kwargs)
+            return self
+
+        def invoke(self, messages):
+            return SimpleNamespace(content=response)
+
+    monkeypatch.setattr(nodes, "get_llm", lambda cfg: FakeLLM())
+    state = {
+        "synthesis_input": {
+            "original_query": "Question?",
+            "accepted_chunks": [{"chunk_id": "c1", "text": "Fact"}],
+        }
+    }
+
+    result = nodes.synthesize_node(
+        state, cfg=SimpleNamespace(llm_json_mode=True)
+    )
+
+    assert result["final_answer"] == "Fact [c1]"
+    assert bound_options == [{"response_format": {"type": "json_object"}}]
+
+
 def test_synthesize_rejects_empty_answer(monkeypatch):
     monkeypatch.setattr(
         nodes,

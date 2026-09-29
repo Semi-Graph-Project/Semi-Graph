@@ -39,6 +39,8 @@ def plan_route_node(
     cfg = cfg or get_config()
 
     llm = get_llm(cfg)
+    if getattr(cfg, "llm_json_mode", False):
+        llm = llm.bind(response_format={"type": "json_object"})
     system_prompt = build_ontology_planroute_prompt(
         informative_relations=getattr(
             cfg,
@@ -74,13 +76,8 @@ def plan_route_node(
             payload = json.loads(content)
             if not isinstance(payload, dict):
                 raise ValueError("Parsed JSON is not a dictionary.")
-
-
-        except (json.JSONDecodeError, ValidationError, ValueError) as e:
-            raise ValueError(f"Failed to parse and validate plan route response: {e}")
-        try:
             plan_route = PlanRouteOutput.model_validate(payload)
-        except ValidationError as e:
+        except (json.JSONDecodeError, ValidationError, ValueError) as e:
             if attempt == 0:
                 last_validation_error = str(e)
                 continue
@@ -283,6 +280,9 @@ def synthesize_node(
     synthesis_input = state["synthesis_input"]
     evidence = synthesis_input["accepted_chunks"]
     llm = get_llm(cfg)
+    json_mode = getattr(cfg, "llm_json_mode", False)
+    if json_mode:
+        llm = llm.bind(response_format={"type": "json_object"})
     response = llm.invoke([
         {
             "role": "system",
@@ -300,6 +300,7 @@ def synthesize_node(
     parsed = parse_synthesis_response(
         str(getattr(response, "content", response)),
         chunk_ids,
+        strict_json=json_mode,
     )
     final_answer = parsed["final_answer"]
     if not final_answer:
