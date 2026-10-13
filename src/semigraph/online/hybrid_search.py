@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from semigraph.config import Config, get_config
+from semigraph.config import Config
 from semigraph.online.graph_search import graph_search
 from semigraph.online.vector_search import vector_search
 

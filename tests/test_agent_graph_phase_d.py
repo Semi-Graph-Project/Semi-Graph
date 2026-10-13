@@ -20,11 +20,6 @@ def _config(top_k=5):
     return SimpleNamespace(
         tickers=[],
         informative_rel_types=["discloses"],
-        financial_metric_registry={
-            "reported": (),
-            "derived": (),
-            "snapshot": (),
-        },
         agent_max_attempts_per_task=3,
         agent_max_planned_tasks=10,
         agent_max_num_ontology=8,

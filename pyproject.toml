@@ -33,13 +33,6 @@ dependencies = [
     "rapidfuzz>=3.0",
     # Evaluation
     "ragas>=0.4.3,<0.5",
-    # News
-    "GoogleNews",
-    "yfinance",
-    "newspaper3k",
-    # Financial data
-    "finnhub-python",
-    "psycopg[binary]>=3.2",
     # Agent (Phase D)
     "langgraph>=0.2.0",
     "pyvis>=0.3.2",
@@ -48,13 +41,11 @@ dependencies = [
     # Config
     "PyYAML",
     "python-dotenv",
-    # CLI
-    "typer",
     
 ]
 
-[project.scripts]
-semigraph = "semigraph.cli:app"
+[project.optional-dependencies]
+e2e = ["pytest-playwright>=0.7,<1"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

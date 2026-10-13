@@ -65,7 +65,6 @@ class Config:
         self.raw_dir = _PROJECT_ROOT / paths.get("raw", "data/raw")
         self.processed_dir = _PROJECT_ROOT / paths.get("processed", "data/processed")
         self.log_dir = _PROJECT_ROOT / paths.get("logs", "log")
-        self.news_dir = _PROJECT_ROOT / paths.get("news", "data/news")
         self.schemas_dir = _PROJECT_ROOT / paths.get("schemas", "data/schemas")
         self.evaluate_dir = _PROJECT_ROOT / paths.get("evaluate", "benchmark/datasets")
 
@@ -80,12 +79,6 @@ class Config:
         chunker = data.get("chunker", {})
         self.chunk_size: int = chunker.get("chunk_size", 4500)
         self.chunk_overlap: int = chunker.get("chunk_overlap", 600)
-
-        # --- News tool (Phase E) ---
-        news_cfg = data.get("news", {})
-        self.news_days_back: int = news_cfg.get("days_back", 90)
-        self.news_cache_dir: Path = _PROJECT_ROOT / news_cfg.get("cache_dir", "data/news/cache")
-        self.news_default_depth: str = news_cfg.get("default_depth", "headline")
 
         # --- LLM ---
         llm = data.get("llm", {})
@@ -116,7 +109,6 @@ class Config:
         self.openrouter_api_key: str = os.environ.get("OPENROUTER_API_KEY", "")
         self.openai_api_key: str = os.environ.get("OPENAI_API_KEY", "")
         self.google_api_key: str = os.environ.get("GOOGLE_API_KEY", "")
-        self.finnhub_api_key: str = os.environ.get("FINNHUB_API_KEY", "")
 
         llm_api_keys = {
             "deepseek": self.deepseek_api_key,
@@ -265,57 +257,6 @@ class Config:
             raise ValueError(
                 "agent_harness.max_num_ontology must be 1..8"
             )
-
-        # --- Financial PostgreSQL (Phase F.v2) ---
-        financial = data.get("financial", {})
-        self.financial_backend: str = financial.get("backend", "postgresql")
-        self.financial_expected_company_count: int = int(
-            financial.get("expected_company_count", 14)
-        )
-        self.financial_annual_reports: int = int(
-            financial.get("annual_reports", 3)
-        )
-        self.financial_quarterly_reports: int = int(
-            financial.get("quarterly_reports", 8)
-        )
-        self.financial_request_interval_seconds: float = float(
-            financial.get("request_interval_seconds", 1.1)
-        )
-        self.financial_max_retries: int = int(financial.get("max_retries", 3))
-        self.financial_query_timeout_ms: int = int(
-            financial.get("query_timeout_ms", 5000)
-        )
-        self.financial_max_query_rows: int = int(
-            financial.get("max_query_rows", 50)
-        )
-        metric_registry = financial.get("metric_registry", {})
-        self.financial_metric_registry: dict[str, frozenset[str]] = {
-            group: frozenset(
-                str(metric).strip().lower()
-                for metric in metric_registry.get(group, [])
-                if str(metric).strip()
-            )
-            for group in ("reported", "derived", "snapshot")
-        }
-        missing_metric_groups = [
-            group
-            for group, metrics in self.financial_metric_registry.items()
-            if not metrics
-        ]
-        if missing_metric_groups:
-            raise ValueError(
-                "financial.metric_registry must define non-empty groups: "
-                + ", ".join(missing_metric_groups)
-            )
-
-        self.postgres_admin_dsn: str = os.environ.get("POSTGRES_ADMIN_DSN", "")
-        self.postgres_agent_dsn: str = os.environ.get("POSTGRES_AGENT_DSN", "")
-        self.postgres_agent_user: str = os.environ.get(
-            "POSTGRES_AGENT_USER", "semigraph_agent"
-        )
-        self.postgres_agent_password: str = os.environ.get(
-            "POSTGRES_AGENT_PASSWORD", ""
-        )
 
     @property
     def project_root(self) -> Path:

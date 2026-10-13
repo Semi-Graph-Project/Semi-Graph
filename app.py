@@ -316,7 +316,7 @@ def agent_badge(mode: str) -> str:
 
 
 def evidence_title(citation: dict) -> str:
-    """Build a readable title for narrative, financial, or news evidence."""
+    """Build a readable title for filing evidence."""
     index = citation.get("citation_index", "?")
     parts = [f"[{index}]", str(citation.get("ticker") or "Unknown source")]
     fiscal_year = citation.get("fiscal_year")
@@ -334,8 +334,6 @@ def evidence_title(citation: dict) -> str:
 TOOL_META = {
     "vector": {"label": "Vector Search", "icon": "▦", "tone": "running"},
     "graph": {"label": "Graph Search (PPR)", "icon": "◇", "tone": "ok"},
-    "financial": {"label": "Financial Search", "icon": "$", "tone": "ok"},
-    "news": {"label": "News Search", "icon": "◌", "tone": "ok"},
 }
 
 

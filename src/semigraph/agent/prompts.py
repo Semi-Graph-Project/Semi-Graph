@@ -13,31 +13,7 @@ _TOOL_GUIDANCE = {
         "Write narrative search queries for filing descriptions, risks, "
         "strategies, products, segments, and management discussion."
     ),
-    "financial": (
-        "Write queries for exact supported metrics, comparisons, trends, "
-        "ranks, or aggregates."
-    ),
-    "news": (
-        "Write queries for time-sensitive events, announcements, releases, "
-        "and news records."
-    ),
 }
-
-
-def build_financial_capability_summary(cfg: Config) -> str:
-    """Build the Planner-facing contract from the configured metric registry."""
-    registry = cfg.financial_metric_registry
-
-    def metric_line(label: str, group: str) -> str:
-        return f"- {label}: {', '.join(sorted(registry[group]))}"
-
-    return "\n".join((
-        metric_line("Reported metrics", "reported"),
-        metric_line("Derived metrics", "derived"),
-        metric_line("Snapshot metrics", "snapshot"),
-        "- Operations: lookup, compare, trend, rank, aggregate",
-        "- Frequencies: annual, quarterly, snapshot",
-    ))
 
 
 def build_plan_route_system_prompt(cfg: Config, tool: str) -> str:
@@ -47,12 +23,6 @@ def build_plan_route_system_prompt(cfg: Config, tool: str) -> str:
     except KeyError as exc:
         raise ValueError(f"Unsupported Tool: {tool}") from exc
 
-    financial_capabilities = (
-        f"\n\nSupported Financial capabilities:\n"
-        f"{build_financial_capability_summary(cfg)}"
-        if tool == "financial"
-        else ""
-    )
     return f"""You are PlanRoute for SemiGraph.
 
 Split the original question into a small retrieval plan for the fixed `{tool}`
@@ -80,7 +50,7 @@ Rules:
     use pre-trained knowledge to fill in an answer.
 11. {guidance}
 12. Return JSON only. Do not return Tool names, top-k values, IDs, or extra fields.
-{financial_capabilities}
+
 
 Output schema:
 {{
@@ -194,14 +164,6 @@ _RETRY_GUIDANCE = {
     "vector": (
         "Rewrite the query to focus on the missing narrative evidence while "
         "preserving the original company, period, and constraints."
-    ),
-    "financial": (
-        "Correct only ticker, metric, period, frequency, or operation already "
-        "present in the original intent."
-    ),
-    "news": (
-        "Refine the event, company, date range, and announcement terms already "
-        "present in the original intent."
     ),
 }
 

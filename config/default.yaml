@@ -53,7 +53,6 @@ paths:
   raw: "data/raw"
   processed: "data/processed"
   logs: "log"
-  news: "data/news"
   schemas: "data/schemas"
   evaluate: "benchmark/datasets"
 
@@ -63,8 +62,7 @@ preprocess:
   extract_sections: true
   use_fallback_extraction: true
   # KG extraction targets — narrative-rich sections only.
-  # Item 5 (stock perf) and Item 8 (financial tables) are skipped — their
-  # numeric data lives in PostgreSQL via the financial_query tool instead.
+  # Extract the narrative sections selected below.
   target_sections:
     - "Item 1"
     - "Item 1A"
@@ -76,24 +74,24 @@ chunker:
   chunk_overlap: 600
 
 # Oneline OpenRouter
-# llm:
-#   provider: "openrouter"
-#   # model: "deepseek/deepseek-v4-flash-0731"
-#   model: "openai/gpt-5.6-luna"
-#   temperature: 0.0
-#   reasoning:
-#     effort: "high"
-#   base_url: "https://openrouter.ai/api/v1"
+llm:
+  provider: "openrouter"
+  # model: "deepseek/deepseek-v4-flash-0731"
+  model: "openai/gpt-5.6-luna"
+  temperature: 0.0
+  reasoning:
+    effort: "high"
+  base_url: "https://openrouter.ai/api/v1"
 
 # Offline LLM
-llm:
-  provider: "openai"
-  model: "Qwen/Qwen2.5-7B-Instruct"
-  temperature: 0.0
-  reasoning: {}
-  base_url: "https://nbyaocnexus8yy-8000.proxy.runpod.net/v1"
-  json_mode: true
-  timeout: 300.0  # seconds
+#llm:
+#  provider: "openai"
+#  model: "Qwen/Qwen2.5-7B-Instruct"
+#  temperature: 0.0
+#  reasoning: {}
+#  base_url: "https://nbyaocnexus8yy-8000.proxy.runpod.net/v1"
+#  json_mode: true
+#  timeout: 300.0  # seconds
 
 
 
@@ -111,23 +109,23 @@ agent_retrieval:
     # Stable prefix for reusable GDS PPR projections.
     ppr_projection_prefix: "semigraph_ppr"
     top_k_entities: 20
-    top_k_triples: 10
+    top_k_triples: 5
     top_k_chunk_seeds: 5
     chunk_seed_vector_index: "chunk_embedding"
     damping: 0.3
     use_expansion: false
     seed_mode: "triple"
     candidate_pool_k: 20
-    rerank_mode: "cross_encoder"  # "company+fiscal_year" | "cross_encoder"
+    rerank_mode: "company+fiscal_year"  # "company+fiscal_year" | "cross_encoder"
     ppr_seed_weight_mode: "similarity_specificity"
-    triple_filter: "llm"
+    triple_filter: "none"
 
 # Agent harness budgets. Keep operational limits in config rather than Prompt.
 agent_harness:
   max_planned_tasks: 10
   max_parallel_tasks: 4
   top_k_chunks: 10
-  max_attempts_per_task: 2
+  max_attempts_per_task: 3
   max_assessment_attempts: 2
   max_technical_retries: 1
   max_synthesis_chunks: 10
@@ -195,11 +193,6 @@ graph_repair:
     "TXN": "texas instruments"
 
 
-news:
-  days_back: 90              # default date window (caller can override via param)
-  cache_dir: "data/news/cache"
-  default_depth: "headline"  # "headline" or "full" (newspaper3k scrape)
-
 # Embeddings (Phase B — local HuggingFace model, no API)
 embeddings:
   model: "BAAI/bge-base-en-v1.5"   # 768 dim, ~1.5 GB RAM, MTEB 63.5
@@ -207,52 +200,3 @@ embeddings:
   batch_size: 32                    # CPU-friendly; raise on GPU
   device: "cpu"                     # "cpu" | "cuda" | "mps"
   normalize: true                   # L2-normalize → cosine sim works as dot product
-
-
-financial:
-  backend: "postgresql"
-  expected_company_count: 14
-  annual_reports: 3
-  quarterly_reports: 8
-  request_interval_seconds: 1.1
-  max_retries: 3
-  query_timeout_ms: 5000
-  max_query_rows: 50
-  # Metrics that FinancialQuerySpec may send to the deterministic SQL compiler.
-  # Keep unsupported metrics out of this registry; the LLM must never replace
-  # them with a merely similar metric.
-  metric_registry:
-    reported:
-      - revenue
-      - cost_of_revenue
-      - gross_profit
-      - research_and_development
-      - operating_income
-      - net_income
-      - diluted_eps
-      - cash_and_equivalents
-      - current_assets
-      - total_assets
-      - current_liabilities
-      - total_liabilities
-      - stockholders_equity
-      - operating_cash_flow
-      - capital_expenditure
-    derived:
-      - gross_margin
-      - operating_margin
-      - net_margin
-      - rd_intensity
-      - free_cash_flow
-      - free_cash_flow_margin
-      - revenue_growth_yoy
-      - net_income_growth_yoy
-      - current_ratio
-      - roa
-      - roe
-    snapshot:
-      - current_price
-      - previous_close
-      - day_change_percent
-      - market_cap
-      - pe_ttm

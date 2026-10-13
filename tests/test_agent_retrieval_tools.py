@@ -110,71 +110,9 @@ def test_agent_graph_search_uses_phase_t_profile(monkeypatch):
     assert result["trace"]["returned_chunk_ids"] == ["graph-1"]
 
 
-def test_agent_financial_search_passes_query_only_and_compacts_trace(monkeypatch):
-    captured = {}
-    chunks = [{"chunk_id": "fin-1", "metric": "revenue", "value": "100"}]
-
-    def fake_financial_search(**kwargs):
-        captured.update(kwargs)
-        return {
-            "chunks": chunks,
-            "trace": {
-                "retriever": "financial",
-                "profile": "postgresql_typed_v1",
-                "query_spec": {
-                    "tickers": ["NVDA"],
-                    "metrics": ["revenue"],
-                    "operation": "lookup",
-                },
-                "template_id": "periodic.lookup.latest.v1",
-                "bound_params": {
-                    "tickers": ["NVDA"],
-                    "metrics": ["revenue"],
-                },
-                "returned_count": 1,
-                "latency_sec": 0.12,
-                "missing_count": 0,
-            },
-        }
-
-    monkeypatch.setattr(agent_tools, "financial_search", fake_financial_search)
-
-    result = agent_tools.agent_financial_search("NVDA revenue", 5, "cfg")
-
-    assert captured == {
-        "query": "NVDA revenue",
-        "top_k_chunks": 5,
-        "cfg": "cfg",
-    }
-    assert result["chunks"] == chunks
-    assert result["trace"]["parameters"] == {
-        "top_k_chunks": 5,
-        "template_id": "periodic.lookup.latest.v1",
-        "bound_params": {
-            "tickers": ["NVDA"],
-            "metrics": ["revenue"],
-        },
-    }
-    assert result["trace"]["backend_latency_sec"] == 0.12
-    assert result["trace"]["returned_chunk_ids"] == ["fin-1"]
-
-
 def test_agent_tool_registries_have_one_consistent_tool_set():
     expected_tools = {tool.value for tool in ToolName}
 
+    assert expected_tools == {"vector", "graph"}
     assert set(agent_tools.RETRIEVERS) == expected_tools
     assert all(callable(retriever) for retriever in agent_tools.RETRIEVERS.values())
-
-
-def test_agent_news_search_returns_chunks_and_trace(monkeypatch):
-    chunks = [{"chunk_id": "news-1", "text": "headline"}]
-    monkeypatch.setattr(agent_tools, "news_search", lambda **_: chunks)
-
-    result = agent_tools.agent_news_search("NVDA latest news", 5, "cfg")
-
-    assert result["chunks"] == chunks
-    assert result["trace"] == {
-        "retriever": "news",
-        "profile": "finnhub_news_v1",
-        "returned_chunk_ids": ["news-1"],
-    }

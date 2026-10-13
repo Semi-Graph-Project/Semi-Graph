@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from typing import Callable, TypedDict
 
-from semigraph.online.financial_search import financial_search
 from semigraph.online.graph_search import trace_graph_search
-from semigraph.online.news_search import news_search
 from semigraph.online.vector_search import trace_vector_search
 from semigraph.trace import TraceCallback
 
@@ -210,96 +208,8 @@ def agent_graph_search(
     return {"chunks": trace["chunks"], "trace": _compact_graph_trace(trace)}
 
 
-def _compact_financial_trace(
-    trace: dict,
-    chunks: list[dict],
-    top_k_chunks: int,
-) -> dict:
-    """Keep financial lineage useful for evaluation without copying chunks."""
-
-    compact = {
-        "retriever": "financial",
-        "profile": trace.get("profile", "postgresql_typed_v1"),
-        "parameters": {
-            "top_k_chunks": top_k_chunks,
-            "template_id": trace.get("template_id"),
-            "bound_params": dict(trace.get("bound_params") or {}),
-        },
-        "query_spec": dict(trace.get("query_spec") or {}),
-        "backend_latency_sec": trace.get("latency_sec"),
-        "missing_count": trace.get("missing_count", 0),
-        "returned_chunk_ids": _chunk_ids(chunks),
-    }
-    for key in (
-        "status",
-        "reason",
-        "unsupported_reason",
-        "stage",
-        "error_type",
-        "error",
-    ):
-        if trace.get(key) is not None:
-            compact[key] = trace[key]
-    return compact
-
-
-def agent_financial_search(
-    query: str,
-    top_k_chunks: int,
-    cfg,
-) -> RetrieverResult:
-    """Let the Financial Tool own ticker/spec parsing; compact only its trace."""
-
-    result = financial_search(
-        query=query,
-        top_k_chunks=top_k_chunks,
-        cfg=cfg,
-    )
-    chunks = list(result.get("chunks") or [])
-    trace = dict(result.get("trace") or {})
-    return {
-        "chunks": chunks,
-        "trace": _compact_financial_trace(
-            trace,
-            chunks,
-            top_k_chunks=top_k_chunks,
-        ),
-    }
-
-
-def agent_news_search(
-    query: str,
-    top_k_chunks: int,
-    cfg,
-) -> RetrieverResult:
-    """Adapt News retrieval to the Agent's shared chunks-plus-trace contract."""
-    result = news_search(
-        query=query,
-        top_k_chunks=top_k_chunks,
-        cfg=cfg,
-    )
-    if isinstance(result, dict):
-        chunks = list(result.get("chunks") or [])
-        trace = dict(result.get("trace") or {})
-    else:
-        chunks = list(result or [])
-        trace = {}
-
-    return {
-        "chunks": chunks,
-        "trace": {
-            "retriever": "news",
-            "profile": "finnhub_news_v1",
-            **trace,
-            "returned_chunk_ids": _chunk_ids(chunks),
-        },
-    }
-
-
 # Every Agent Retriever returns the same chunks-plus-trace envelope.
 RETRIEVERS: dict[str, Callable[..., RetrieverResult]] = {
     "vector": agent_vector_search,
     "graph": agent_graph_search,
-    "financial": agent_financial_search,
-    "news": agent_news_search,
 }

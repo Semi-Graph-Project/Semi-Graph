@@ -8,7 +8,6 @@ from pydantic import (
     StringConstraints,
     model_validator,
 )
-from semigraph.config import get_config
 
 
 NonEmptyText = Annotated[
@@ -17,40 +16,9 @@ NonEmptyText = Annotated[
 ]
 
 
-def _default_top_k_chunks() -> int:
-    return get_config().agent_top_k_chunks
-
-
-class AssessmentDecision(str, Enum):
-    accept = "accept"
-    retry = "retry"
-    stop = "stop"
-
-
 class ToolName(str, Enum):
     vector = "vector"
     graph = "graph"
-    financial = "financial"
-    news = "news"
-
-
-
-class RetrievalAction(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    tool: ToolName
-    query: Annotated[
-        str,
-        StringConstraints(
-            strip_whitespace=True,
-            min_length=1,
-            max_length=1000,
-            strict=True,
-        ),
-    ]
-    top_k_chunks: Annotated[int, Field(ge=1, le=100, strict=True)] = Field(
-        default_factory=_default_top_k_chunks
-    )
 
 
 class PlannedTask(BaseModel):

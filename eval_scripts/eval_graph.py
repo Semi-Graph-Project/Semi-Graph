@@ -1,12 +1,6 @@
 
 from pathlib import Path
-import json
 import sys
-import statistics
-import time
-
-from dotenv import load_dotenv
-import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,7 +9,6 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from semigraph.config import get_config  # noqa: E402
-from semigraph.connections import get_llm  # noqa: E402
 from semigraph.online.graph_search import graph_search as production_graph_search  # noqa: E402
 
 

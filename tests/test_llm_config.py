@@ -12,11 +12,7 @@ from semigraph.config import Config
 @pytest.mark.parametrize("setting", [None, True, False])
 def test_evaluation_answer_audit_config(tmp_path, setting):
     config_path = tmp_path / "config.yaml"
-    data = {"financial": {"metric_registry": {
-        "reported": ["revenue"],
-        "derived": ["margin"],
-        "snapshot": ["stock_price"],
-    }}}
+    data = {}
     if setting is not None:
         data["evaluation"] = {"answer_audit_enabled": setting}
     config_path.write_text(yaml.safe_dump(data), encoding="utf-8")
@@ -40,11 +36,6 @@ def test_llm_json_mode_is_opt_in(tmp_path, setting, expected):
     llm = {} if setting is None else {"json_mode": setting}
     data = {
         "llm": llm,
-        "financial": {"metric_registry": {
-            "reported": ["revenue"],
-            "derived": ["margin"],
-            "snapshot": ["stock_price"],
-        }},
     }
     config_path.write_text(yaml.safe_dump(data), encoding="utf-8")
 

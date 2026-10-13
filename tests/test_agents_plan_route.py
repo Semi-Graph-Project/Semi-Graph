@@ -6,7 +6,6 @@ import pytest
 from pydantic import ValidationError
 
 import semigraph.agents.graph as agent_graph
-import semigraph.agents.contracts as contracts
 import semigraph.agents.nodes as nodes
 import semigraph.agents.prompts as prompts
 from semigraph.agents.contracts import PlanRouteOutput
@@ -69,21 +68,6 @@ def test_plan_route_contract_uses_flat_requirement():
     }
     with pytest.raises(ValidationError):
         PlanRouteOutput.model_validate(payload)
-
-
-def test_retrieval_action_uses_config_top_k_by_default(monkeypatch):
-    monkeypatch.setattr(
-        contracts,
-        "get_config",
-        lambda: SimpleNamespace(agent_top_k_chunks=17),
-    )
-
-    action = contracts.RetrievalAction(
-        tool=contracts.ToolName.graph,
-        query="What risks did NVIDIA disclose?",
-    )
-
-    assert action.top_k_chunks == 17
 
 
 def test_prompt_contains_flat_requirement_schema(monkeypatch):

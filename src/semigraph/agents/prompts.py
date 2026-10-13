@@ -1,6 +1,5 @@
 from collections.abc import Iterable
 
-from semigraph.config import Config
 from semigraph.ontology.schema import RELATIONSHIP_CATALOG
 
 

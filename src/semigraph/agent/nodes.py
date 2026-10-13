@@ -1,7 +1,6 @@
 import json
 import re
 import time
-from decimal import Decimal, InvalidOperation
 
 from pydantic import ValidationError
 
@@ -527,124 +526,6 @@ def assess_node(
 # Synthesize
 
 
-_PERCENTAGE_METRICS = frozenset({
-    "gross_margin",
-    "operating_margin",
-    "net_margin",
-    "rd_intensity",
-    "free_cash_flow_margin",
-    "revenue_growth_yoy",
-    "net_income_growth_yoy",
-    "roa",
-    "roe",
-})
-
-_FINANCIAL_PROVENANCE_KEYS = (
-    "fact_id",
-    "derived_id",
-    "input_fact_ids",
-    "formula_version",
-    "accession",
-    "raw_payload_id",
-    "source_concept",
-    "missing_inputs",
-    "aggregation",
-    "row_count",
-    "tickers",
-)
-
-
-def _is_structured_financial_chunk(chunk: dict) -> bool:
-    return bool(chunk.get("metric")) and "value" in chunk
-
-
-def _decimal_text(value: Decimal, places: int = 2) -> str:
-    return f"{value:,.{places}f}".rstrip("0").rstrip(".")
-
-
-def _scaled_currency(value: Decimal) -> str:
-    for threshold, suffix in (
-        (Decimal("1000000000000"), "T"),
-        (Decimal("1000000000"), "B"),
-        (Decimal("1000000"), "M"),
-        (Decimal("1000"), "K"),
-    ):
-        if abs(value) >= threshold:
-            return f"${_decimal_text(value / threshold)}{suffix}"
-    return f"${_decimal_text(value)}"
-
-
-def _format_financial_value(chunk: dict) -> str:
-    raw_value = chunk.get("value")
-    unit = str(chunk.get("unit") or "").strip()
-    if raw_value is None:
-        return "unavailable"
-
-    exact = f"{raw_value} {unit}".strip()
-    try:
-        value = Decimal(str(raw_value))
-    except (InvalidOperation, ValueError):
-        return exact
-
-    normalized_unit = unit.lower()
-    metric = str(chunk.get("metric") or "").lower()
-    if normalized_unit == "ratio":
-        display = (
-            f"{_decimal_text(value * 100)}%"
-            if metric in _PERCENTAGE_METRICS
-            else f"{_decimal_text(value)}x"
-        )
-    elif normalized_unit == "percent":
-        display = f"{_decimal_text(value)}%"
-    elif normalized_unit == "usd_million":
-        display = _scaled_currency(value * Decimal("1000000"))
-    elif normalized_unit in {"usd", "u_usd"}:
-        display = _scaled_currency(value)
-    elif "share" in normalized_unit:
-        display = f"${_decimal_text(value)}/share"
-    else:
-        display = f"{_decimal_text(value)} {unit}".strip()
-    return f"{display} (exact={exact})"
-
-
-def _financial_period_label(chunk: dict) -> str:
-    fiscal_year = chunk.get("fiscal_year")
-    fiscal_quarter = chunk.get("fiscal_quarter")
-    if fiscal_year and fiscal_quarter:
-        label = f"FY{fiscal_year} Q{fiscal_quarter}"
-    elif fiscal_year:
-        label = f"FY{fiscal_year}"
-    else:
-        label = "latest snapshot"
-
-    timestamp = chunk.get("period_end") or chunk.get("observed_at")
-    return f"{label} (as of {timestamp})" if timestamp else label
-
-
-def _compact_financial_provenance(chunk: dict) -> dict:
-    provenance = chunk.get("provenance") or {}
-    if not isinstance(provenance, dict):
-        return {}
-    return {
-        key: provenance[key]
-        for key in _FINANCIAL_PROVENANCE_KEYS
-        if provenance.get(key) not in (None, [], {})
-    }
-
-
-def _financial_chunk_lines(chunk: dict) -> list[str]:
-    provenance = _compact_financial_provenance(chunk)
-    return [
-        f"ticker={chunk.get('ticker', 'UNKNOWN')}",
-        f"metric={chunk.get('metric', 'unknown')}",
-        f"period={_financial_period_label(chunk)}",
-        f"value={_format_financial_value(chunk)}",
-        f"status={chunk.get('status', 'unknown')}",
-        f"source_kind={chunk.get('source_kind', 'unknown')}",
-        "provenance=" + json.dumps(provenance, ensure_ascii=False),
-    ]
-
-
 def _format_chunks_for_synthesis(
     chunks: list[dict],
     max_chunks: int | None = None,
@@ -657,16 +538,12 @@ def _format_chunks_for_synthesis(
         text = str(chunk.get("text") or "").strip()
 
         lines = [f"[{i}] chunk_id={chunk.get('chunk_id', 'UNKNOWN')}"]
-        if _is_structured_financial_chunk(chunk):
-            lines.append("evidence_type=financial")
-            lines.extend(_financial_chunk_lines(chunk))
-        else:
-            lines.extend([
-                f"ticker={chunk.get('ticker', '')}",
-                f"fiscal_year={chunk.get('fiscal_year', '')}",
-                f"section={chunk.get('section', '')}",
-                f"text={text}",
-            ])
+        lines.extend([
+            f"ticker={chunk.get('ticker', '')}",
+            f"fiscal_year={chunk.get('fiscal_year', '')}",
+            f"section={chunk.get('section', '')}",
+            f"text={text}",
+        ])
 
         formatted.append("\n".join(lines))
         citation_lookup[i] = {

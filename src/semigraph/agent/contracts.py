@@ -26,8 +26,6 @@ class AssessmentDecision(str, Enum):
 class ToolName(str, Enum):
     vector = "vector"
     graph = "graph"
-    financial = "financial"
-    news = "news"
 
 
 class RetrievalAction(BaseModel):
