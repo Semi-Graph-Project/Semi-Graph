@@ -98,3 +98,18 @@ CLAUDE.md
 {r\[b\]}:{r\[bt\]}
 .DS_Store
 Thumbs.db
+
+# Local notes, runtime checkpoints, and superseded design drafts
+.agents/
+.scratch/
+.langgraph_api/
+CONTEXT.md
+docs/adr/
+docs/adr_agent_evaluator_checkpoint_resume.md
+docs/implementation/
+docs/spec_agent_harness_evidence_adaptive.md
+docs/production_app_interface.md
+docs/defense-progress-report.md
+docs/defense-progress-slides.html
+docs/architecture-viz/*
+!docs/architecture-viz/semigraph-agentic-graphrag-readme.png

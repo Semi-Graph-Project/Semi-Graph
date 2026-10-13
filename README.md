@@ -1,17 +1,71 @@
-# SemiGraph
+<div align="center">
 
-**Agentic GraphRAG for evidence-grounded semiconductor fundamental analysis.**
+<h1>SemiGraph</h1>
 
-SemiGraph is a KMUTNB computer science senior thesis project. It studies whether
-an evidence-adaptive Agent can answer multi-hop questions over semiconductor
-company disclosures more effectively than a conventional vector-only RAG
-pipeline.
+<p><strong>Agentic GraphRAG for evidence-grounded semiconductor analysis</strong></p>
 
-The contribution is GraphRAG and Agent engineering—not a new investment
-strategy. SemiGraph combines ontology-grounded graph retrieval, filing-chunk
-evidence, evidence-adaptive Agent control, and provenance-aware synthesis in
-one auditable workflow. The active tools are Vector Search and Graph Search.
-SemiGraph is a research prototype and does not provide investment advice.
+<p>A KMUTNB senior thesis comparing Vector RAG, GraphRAG, and evidence-adaptive Agents on the same semiconductor filing questions.</p>
+
+<p>
+  <a href="#research-positioning"><img src="https://img.shields.io/badge/Status-Research%20Prototype-5965E8?style=flat-square" alt="Research prototype"></a>
+  <a href="#evaluation"><img src="https://img.shields.io/badge/Evaluation-2%20%C3%97%202%20Ablation-0F766E?style=flat-square" alt="2 by 2 ablation"></a>
+  <a href="#quick-start"><img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&amp;logo=python&amp;logoColor=white" alt="Python 3.10 or newer"></a>
+  <a href="#architecture"><img src="https://img.shields.io/badge/Neo4j-5.26-008CC1?style=flat-square&amp;logo=neo4j&amp;logoColor=white" alt="Neo4j 5.26"></a>
+  <a href="#architecture"><img src="https://img.shields.io/badge/Agent-LangGraph-4B5563?style=flat-square" alt="LangGraph Agent"></a>
+  <a href="#quick-start"><img src="https://img.shields.io/badge/Demo-Streamlit-FF4B4B?style=flat-square&amp;logo=streamlit&amp;logoColor=white" alt="Streamlit demo"></a>
+</p>
+
+<p>
+  <a href="#quick-start">Quick Start</a> ·
+  <a href="#evaluation">Results</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="benchmark/README.md">Benchmark data</a>
+</p>
+
+</div>
+
+---
+
+## Overview
+
+SemiGraph tests whether graph retrieval and an evidence-adaptive Agent help
+answer multi-hop questions over semiconductor company disclosures. It combines
+source-linked filing chunks, an ontology-based knowledge graph, Vector and
+Graph Search, and a traceable Agent workflow. The active retrieval tools are
+**Vector Search** and **Graph Search**.
+
+### Highlights
+
+- **Evidence you can trace:** answers cite filing chunks; retrieval and Agent
+  steps can be inspected instead of being hidden behind one answer.
+- **Two retrieval backbones:** vector similarity finds relevant text, while
+  graph retrieval uses entity relationships and Personalized PageRank.
+- **Evidence-adaptive Agent:** plans independent evidence needs, assesses
+  retrieved chunks, and retries within a bounded budget.
+- **Controlled comparison:** four configurations separate the effect of Graph
+  retrieval from the effect of Agent control.
+
+![SemiGraph Agentic GraphRAG architecture](docs/architecture-viz/semigraph-agentic-graphrag-readme.png)
+
+> **Research prototype.** This project evaluates retrieval and answer quality;
+> it is not an investment recommendation system. Saved benchmark results do not
+> guarantee that one configuration wins on every question.
+
+## Quick Start
+
+To inspect saved results without running a new evaluation, install the project
+and open the four-way comparison UI:
+
+```bash
+conda create -n senior_project python=3.10
+conda activate senior_project
+pip install -e .
+streamlit run Demo/comparison_app.py
+```
+
+Choose **Benchmark (7690) → Frozen replay** to inspect previously saved runs
+without a Neo4j or LLM call. For a Live run, configure the selected database
+and an LLM API key using [Developer Setup](#developer-setup).
 
 ## Research Positioning
 
@@ -37,9 +91,7 @@ gain as a generic “GraphRAG improvement.”
 
 ## Architecture
 
-![SemiGraph Agentic GraphRAG architecture](docs/architecture-viz/semigraph-agentic-graphrag-readme.png)
-
-The figure shows the core SEC-to-GraphRAG path. The evaluation compares
+The diagram above shows the SEC-to-GraphRAG path. The evaluation compares
 Vector/Graph retrieval with and without an Agent controller.
 
 ### 1. Offline indexing
@@ -125,6 +177,7 @@ chain-of-thought.
 |---|---|---|
 | **Graph Search** | Neo4j entities, relationships, chunks, and GDS PPR | Primary multi-hop relational retrieval |
 | **Vector Search** | Neo4j chunk vector index | Semantic baseline and controlled Agent comparison |
+
 Financial Search, News Search, and their ETL code have been retired. Historical
 datasets, evaluation results, and PostgreSQL snapshots/infrastructure remain
 for reference; the current application does not query PostgreSQL.
@@ -176,7 +229,7 @@ reproducible commands, output locations, and metric caveats.
 src/semigraph/
 ├── ontology/      # FinReflectKG-based schema and validated graph models
 ├── offline/       # SEC ingest, preprocessing, chunking, extraction, storage
-├── online/        # graph, vector, hybrid, rerank, and PPR retrieval
+├── online/        # graph, vector, rerank, and PPR retrieval
 ├── agents/        # current Agent v1.5 and LangGraph dev entrypoint
 ├── agent/         # retained Agent implementation for the older evaluator/Demo
 ├── benchmark/     # benchmark adapters and normalization
@@ -188,11 +241,11 @@ Demo/                  # four-way Streamlit comparison UI
 scripts/               # ingestion, indexing, traces, and smoke tests
 eval_scripts/          # controlled Vector/Graph/Agent evaluation harnesses
 benchmark/             # versioned datasets and result artifacts
-docs/                  # architecture, ADRs, specifications, and review UI
+docs/                  # public guides, review UI, and architecture image
 tests/e2e/             # browser checks with fake backend; opt-in live smoke
 ```
 
-## Quick Start
+## Developer Setup
 
 ### Advisor handoff on Windows (Docker-first)
 
@@ -218,13 +271,8 @@ The remaining instructions in this README describe the developer-native setup.
 - Neo4j 5.26 Community with APOC and Graph Data Science plugins
 - An API key for the LLM provider selected in `config/default.yaml`
 
-Create the environment and install the package:
-
-```bash
-conda create -n senior_project python=3.10
-conda activate senior_project
-pip install -e .
-```
+Create the environment and install the package using the commands in
+[Quick Start](#quick-start).
 
 Create a project-root `.env` for the core SEC + GraphRAG path:
 
@@ -257,9 +305,7 @@ pytest tests/ --ignore=tests/e2e -v
 
 ### Open the four-way comparison UI
 
-```bash
-streamlit run Demo/comparison_app.py
-```
+Run the `streamlit` command from [Quick Start](#quick-start).
 
 Select **Benchmark (7690)** for the controlled corpus or **Production (7687)**
 for free-form questions. A Live run sends one question to all four
@@ -351,11 +397,10 @@ the four controlled configurations. All active evaluation entry points live in
 
 ## Documentation
 
-- [Interactive source-grounded architecture](docs/architecture-viz/README.md)
-- [Evidence-adaptive Agent specification](docs/spec_agent_harness_evidence_adaptive.md)
-- [ADR 0001 — LLM-owned tool selection](docs/adr/0001-llm-owned-tool-selection.md)
-- [ADR 0002 — tool-aware evidence retry](docs/adr/0002-evidence-adaptive-tool-aware-retry.md)
 - [Benchmark datasets and reproducibility](benchmark/README.md)
+- [Advisor handoff guide](docs/system_manual_advisor_handoff.md)
+- [Browser test guide](tests/e2e/README.md)
+- [RunPod benchmark environment](docs/benchmark_runpod_environment.md)
 
 ## License
 
