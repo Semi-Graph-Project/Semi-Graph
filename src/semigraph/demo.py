@@ -5,19 +5,30 @@ from __future__ import annotations
 from copy import deepcopy
 from dataclasses import asdict, dataclass, field
 from enum import Enum
+from functools import lru_cache
+from pathlib import Path
 from time import perf_counter
 from typing import Any, Literal
 from uuid import uuid4
 
+import yaml
+
 from semigraph.agent import nodes
 from semigraph.agent import tools as agent_tools
 from semigraph.agent.graph import build_agent
-from semigraph.agent.ledger import retrieval_traces
+from semigraph.agent.ledger import retrieval_traces, select_synthesis_chunks
 from semigraph.config import Config, get_config
 from semigraph.trace import TRACE_STORE, TraceCallback, notify_trace
 
 
-ComparisonStatus = Literal["waiting", "running", "complete", "error"]
+ComparisonStatus = Literal[
+    "waiting",
+    "running",
+    "complete",
+    "error",
+    "timeout",
+]
+ComparisonSource = Literal["live", "replay"]
 
 
 class ComparisonMode(str, Enum):
@@ -28,6 +39,20 @@ class ComparisonMode(str, Enum):
 
 
 COMPARISON_MODES: tuple[str, ...] = tuple(mode.value for mode in ComparisonMode)
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+HUMAN_VERIFY_ROOT = PROJECT_ROOT / "benchmark" / "human_verify_2"
+FROZEN_REPLAY_FILES = {
+    ComparisonMode.VECTOR.value: HUMAN_VERIFY_ROOT
+    / "controlled_vector_sox_smoke50_vector_first50_full_answer.yaml",
+    ComparisonMode.GRAPH.value: HUMAN_VERIFY_ROOT
+    / "controlled_graph_sox_smoke50_cross_enc_llm_full_answer.yaml",
+    ComparisonMode.AGENT_VECTOR.value: HUMAN_VERIFY_ROOT
+    / "controlled_agent_vector_sox_smoke50_v1_full_answer.yaml",
+    ComparisonMode.AGENT_GRAPH.value: HUMAN_VERIFY_ROOT
+    / "controlled_agent_graph_sox_smoke50_v1_full_answer.yaml",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,9 +94,11 @@ class ComparisonResult:
     status: ComparisonStatus = "waiting"
     answer: str = ""
     citations: list[dict[str, Any]] = field(default_factory=list)
+    synthesis_chunks: list[dict[str, Any]] = field(default_factory=list)
     trace: list[dict[str, Any]] = field(default_factory=list)
     latency_sec: float | None = None
     error: str | None = None
+    source: ComparisonSource = "live"
 
     def to_dict(self) -> dict[str, Any]:
         """Return a serializable result for Streamlit and tests."""
@@ -81,6 +108,101 @@ class ComparisonResult:
 def get_backend_corpora() -> tuple[BackendCorpus, ...]:
     """Return the immutable corpus choices shown by the UI."""
     return BACKEND_CORPORA
+
+
+@lru_cache(maxsize=1)
+def _frozen_replay_rows() -> dict[str, dict[str, dict[str, Any]]]:
+    """Load the four frozen Human Verify runs once per process."""
+    runs = {}
+    for mode, path in FROZEN_REPLAY_FILES.items():
+        payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        runs[mode] = {
+            str(row["id"]): row
+            for row in payload.get("results", [])
+            if isinstance(row, dict) and row.get("id")
+        }
+    return runs
+
+
+def get_frozen_replay_queries() -> tuple[tuple[str, str], ...]:
+    """Return query IDs and text shared by all four frozen runs."""
+    rows = _frozen_replay_rows()
+    shared_ids = set.intersection(
+        *(set(mode_rows) for mode_rows in rows.values())
+    )
+    reference = rows[ComparisonMode.AGENT_GRAPH.value]
+    return tuple(
+        (query_id, str(reference[query_id].get("query") or ""))
+        for query_id in reference
+        if query_id in shared_ids
+    )
+
+
+def load_frozen_replay(
+    query_id: str,
+) -> tuple[str, dict[str, ComparisonResult]]:
+    """Load one frozen four-way comparison without calling a backend."""
+    rows = _frozen_replay_rows()
+    if not all(query_id in mode_rows for mode_rows in rows.values()):
+        raise ValueError(f"Unknown frozen replay query: {query_id}")
+
+    query = str(rows[ComparisonMode.AGENT_GRAPH.value][query_id]["query"])
+    results = {}
+    for mode, mode_rows in rows.items():
+        row = mode_rows[query_id]
+        synthesis_trace = dict(row.get("synthesis_trace") or {})
+        cited_ids = synthesis_trace.get("cited_chunk_ids") or []
+        selected_ids = synthesis_trace.get("selected_chunk_ids") or []
+        if not selected_ids:
+            selected_ids = [
+                chunk_id
+                for chunk_ids in (
+                    synthesis_trace.get("selected_chunk_ids_by_task") or {}
+                ).values()
+                for chunk_id in chunk_ids
+            ]
+        selection_recorded = bool(selected_ids)
+        if not selected_ids:
+            selected_ids = row.get("top_chunk_ids") or []
+        if isinstance(selected_ids, str):
+            selected_ids = [selected_ids]
+        elif not isinstance(selected_ids, list):
+            selected_ids = []
+        trace = [{
+            "stage": "replay",
+            "status": "complete",
+            "message": "Loaded a frozen Human Verify result",
+            "details": {
+                "query_id": query_id,
+                "retrieval_hit": row.get("hit"),
+                "retrieval_recall": row.get("recall"),
+                "reciprocal_rank": row.get("reciprocal_rank"),
+            },
+        }]
+        if synthesis_trace:
+            trace.append({"stage": "synthesis", **synthesis_trace})
+
+        results[mode] = ComparisonResult(
+            status="complete",
+            answer=str(row.get("final_answer") or "No answer returned."),
+            citations=[{"chunk_id": chunk_id} for chunk_id in cited_ids],
+            synthesis_chunks=[
+                {
+                    "chunk_id": chunk_id,
+                    "text": None,
+                    "selection_recorded": selection_recorded,
+                }
+                for chunk_id in selected_ids
+                if chunk_id
+            ],
+            trace=trace,
+            latency_sec=round(
+                float(row.get("total_latency_ms") or 0) / 1000,
+                3,
+            ),
+            source="replay",
+        )
+    return query, results
 
 
 def get_backend_corpus(corpus: str | BackendCorpus) -> BackendCorpus:
@@ -180,6 +302,7 @@ def _synthesis_result(
     synthesis: dict,
     trace: list[dict[str, Any]],
     latency_sec: float,
+    synthesis_chunks: list[dict[str, Any]],
 ) -> ComparisonResult:
     synthesis_trace = dict(synthesis.get("synthesis_trace") or {})
     status = synthesis_trace.get("status")
@@ -195,6 +318,7 @@ def _synthesis_result(
         status=result_status,
         answer=str(synthesis.get("final_answer") or ""),
         citations=list(synthesis.get("citation_map") or []),
+        synthesis_chunks=synthesis_chunks,
         trace=trace,
         latency_sec=round(latency_sec, 3),
         error=str(error_type) if error_type else None,
@@ -205,8 +329,13 @@ def _agent_result(
     result: dict,
     trace: list[dict[str, Any]],
     latency_sec: float,
+    max_synthesis_chunks: int,
 ) -> ComparisonResult:
     attempts = list(result.get("attempts") or [])
+    synthesis_chunks = select_synthesis_chunks(
+        attempts,
+        max_total=max_synthesis_chunks,
+    )
     plan_trace = result.get("plan_trace") or {}
     synthesis_trace = result.get("synthesis_trace") or {}
     if plan_trace:
@@ -228,6 +357,7 @@ def _agent_result(
         status="error" if has_error else "complete",
         answer=str(result.get("final_answer") or ""),
         citations=list(result.get("citation_map") or []),
+        synthesis_chunks=synthesis_chunks,
         trace=trace,
         latency_sec=round(latency_sec, 3),
         error=str(error_type) if error_type else None,
@@ -339,19 +469,25 @@ def run_comparison(
                 },
                 "Synthesizing a grounded answer from the evidence",
             )
+            synthesis_state = _direct_synthesis_state(
+                clean_query,
+                mode_value,
+                list(retrieved.get("chunks") or []),
+                dict(retrieved.get("trace") or {}),
+            )
             synthesis = nodes.synthesize_attempts_node(
-                _direct_synthesis_state(
-                    clean_query,
-                    mode_value,
-                    list(retrieved.get("chunks") or []),
-                    dict(retrieved.get("trace") or {}),
-                ),
+                synthesis_state,
                 cfg=cfg,
+            )
+            synthesis_chunks = select_synthesis_chunks(
+                synthesis_state["attempts"],
+                max_total=cfg.agent_max_synthesis_chunks,
             )
             result = _synthesis_result(
                 synthesis,
                 trace,
                 perf_counter() - started_at,
+                synthesis_chunks,
             )
             synthesis_event = trace[-1]
             emit(
@@ -385,6 +521,7 @@ def run_comparison(
             result,
             trace,
             perf_counter() - started_at,
+            cfg.agent_max_synthesis_chunks,
         )
         return finish(normalized_result)
     except Exception as exc:

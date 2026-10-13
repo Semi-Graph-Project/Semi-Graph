@@ -154,7 +154,7 @@ Agent จะวางแผน Retrieval Task, เรียก Tool, ประ�
 .\handoff.ps1 comparison
 ```
 
-UI นี้มาจาก `Demo/Mock_Result.py` และเปรียบเทียบ:
+UI นี้มาจาก `Demo/comparison_app.py` และเปรียบเทียบ:
 
 - Vector-only
 - Graph-only
@@ -326,7 +326,7 @@ final answer ถูกต้องโดยอัตโนมัติ
 | `src/semigraph/agent/nodes.py::execute_attempt_node` | เรียก retrieval tool และบันทึก Attempt |
 | `src/semigraph/agent/nodes.py::assess_node` | ประเมินหลักฐานและกำหนด Evidence Retry |
 | `src/semigraph/agent/nodes.py::synthesize_attempts_node` | รวม Accepted Evidence เป็นคำตอบพร้อม citation |
-| `src/semigraph/agent/tools.py` | adapter ของ Vector, Graph, Financial และ News |
+| `src/semigraph/agent/tools.py` | adapter ของ Vector และ Graph |
 | `src/semigraph/agent/ledger.py` | Attempt Ledger, trace และการเลือก synthesis context |
 
 ### 8.4 Ingestion และ Ontology
@@ -379,7 +379,6 @@ python eval_scripts/evaluate.py --help
 | `EDGAR_EMAIL`, `EDGAR_ORGANIZATION` | SEC EDGAR ingestion |
 | `NEO4J_USER`, `NEO4J_PASSWORD` | Neo4j ทุก corpus |
 | `POSTGRES_*` | extended PostgreSQL |
-| `FINNHUB_API_KEY` | Financial/News supporting tools |
 | `SEMIGRAPH_*_IMAGE` | tag ของ private GHCR images |
 
 `PRODUCTION_NEO4J_URI`, `CONTROLLED_NEO4J_URI` และ DSN ภายในถูก Compose กำหนดให้
@@ -394,7 +393,7 @@ application container แล้ว ไม่ต้องใส่เองใน
 | `neo4j-production` | default | Browser `7474`, Bolt `7687` | Demo และ ingestion หลัก |
 | `neo4j-controlled` | default | Browser `7477`, Bolt `7690` | SOX74 Eval |
 | `neo4j-finreflectkg` | extended | Browser `7475`, Bolt `7688` | แหล่ง FinReflectKG เต็ม |
-| `postgres` | extended | `5433` | Financial supporting data |
+| `postgres` | extended | `5433` | ข้อมูล Financial เก่าที่เก็บไว้; ระบบปัจจุบันไม่เรียกใช้ |
 
 ใน container ให้ใช้ชื่อ service เช่น `bolt://neo4j-controlled:7687` ห้ามใช้
 `localhost:7690` เพราะ `localhost` ภายใน container หมายถึง container ตัวเอง

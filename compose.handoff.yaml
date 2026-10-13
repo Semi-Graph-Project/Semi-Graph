@@ -80,7 +80,7 @@ services:
     command:
       - streamlit
       - run
-      - Demo/Mock_Result.py
+      - Demo/comparison_app.py
       - --server.address=0.0.0.0
       - --server.port=8502
       - --server.headless=true

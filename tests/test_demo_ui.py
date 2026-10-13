@@ -18,7 +18,7 @@ def test_panel_keys_cover_all_four_comparison_modes():
     ) == Component.PANEL_KEYS
 
 
-def test_live_result_uses_scroll_viewport_and_real_markdown_html():
+def test_live_result_uses_compact_trace_and_full_chat_popup():
     result = {
         "status": "complete",
         "answer": "**Grounded answer**\n\n- First fact\n- Second fact",
@@ -34,14 +34,18 @@ def test_live_result_uses_scroll_viewport_and_real_markdown_html():
     )
 
     assert markup.startswith(
-        '<div class="panel-result panel-result-settled">'
+        '<div class="panel-result panel-result-settled compact-result">'
     )
-    assert '<div class="panel-scroll chat-history"' in markup
+    assert '<div class="compact-trace-list"' in markup
+    assert 'class="chat-modal-trigger"' in markup
+    assert 'class="chat-detail-modal" popover="auto"' in markup
+    assert 'class="chat-history chat-modal-history"' in markup
     assert '<strong>Grounded answer</strong>' in markup
     assert "<li>First fact</li>" in markup
     assert '<details class="result-disclosure citation-details">' in markup
-    assert '<details class="result-disclosure trace-details">' in markup
-    assert 'class="panel-scroll chat-history"' in markup
+    assert '<details class="chat-advanced">' in markup
+    assert "Show advanced details" in markup
+    assert 'class="retrieval-metrics"' in markup
     assert 'class="chat-message-row user-message-row"' in markup
     assert 'class="chat-message-row assistant-message-row"' in markup
     assert markup.count("<section") == markup.count("</section>")
@@ -64,19 +68,24 @@ def test_first_exchange_starts_at_top_without_changing_history_order():
         result,
     )
 
-    assert 'class="panel-scroll chat-history" tabindex="0"' in markup
+    assert (
+        'class="chat-history chat-modal-history" tabindex="0"'
+        in markup
+    )
     assert "flex-direction: column;" in CUSTOM_CSS
     assert "flex-direction: column-reverse;" not in CUSTOM_CSS
 
 
 def test_comparison_card_uses_viewport_height_and_internal_vertical_scroll():
-    assert "height: clamp(560px, calc(100vh - 170px), 720px);" in CUSTOM_CSS
-    assert "max-width: 1680px;" in CUSTOM_CSS
-    assert "gap: 20px;" in CUSTOM_CSS
-    assert "width: calc(100% - 32px);" in CUSTOM_CSS
-    assert "margin-inline: auto;" in CUSTOM_CSS
-    assert ".panel-scroll {" in CUSTOM_CSS
+    grid_css = CUSTOM_CSS.split(".comparison-grid {", 1)[1].split("}", 1)[0]
+    card_css = CUSTOM_CSS.split(".comparison-card {", 1)[1].split("}", 1)[0]
+    assert "display: grid;" in grid_css
+    assert "repeat(2, minmax(0, 1fr))" in grid_css
+    assert "height: clamp(" in card_css
+    assert "overflow: hidden;" in card_css
+    assert ".compact-trace-list {" in CUSTOM_CSS
     assert "overflow-y: auto;" in CUSTOM_CSS
+    assert ".chat-detail-modal:popover-open {" in CUSTOM_CSS
 
     panel_result_css = CUSTOM_CSS.split(
         ".panel-result {", 1
@@ -87,6 +96,13 @@ def test_comparison_card_uses_viewport_height_and_internal_vertical_scroll():
     assert "height: 0;" in panel_result_css
     assert "height: 0;" in panel_scroll_css
     assert "max-height: 100%;" in panel_scroll_css
+
+    chat_history_css = CUSTOM_CSS.split(
+        ".chat-modal-history {", 1
+    )[1].split("}", 1)[0]
+    assert "position: absolute;" in chat_history_css
+    assert "inset: 0;" in chat_history_css
+    assert "overflow-y: auto;" in chat_history_css
 
 
 def test_workspace_keeps_only_the_comparison_chats():
@@ -106,12 +122,12 @@ def test_settled_result_does_not_replay_entry_animation():
 
     assert "animation:" not in panel_base
     assert ".panel-result-running {" in CUSTOM_CSS
-    assert "animation: panel-enter 360ms ease-out both;" in CUSTOM_CSS
+    assert "animation: panel-enter var(--duration-reveal) ease-out both;" in CUSTOM_CSS
 
 
 def test_runner_publishes_completion_without_final_page_rerun():
     runner_source = (
-        Path(__file__).resolve().parents[1] / "Demo" / "Mock_Result.py"
+        Path(__file__).resolve().parents[1] / "Demo" / "comparison_app.py"
     ).read_text(encoding="utf-8")
 
     assert "st.rerun()" not in runner_source
@@ -119,6 +135,35 @@ def test_runner_publishes_completion_without_final_page_rerun():
     assert "published_results = set()" in runner_source
     assert "if trace_updated or result_updated:" in runner_source
     assert "final_results = {}" in runner_source
+
+
+def test_comparison_app_has_live_timeout_and_frozen_replay():
+    runner_source = (
+        Path(__file__).resolve().parents[1] / "Demo" / "comparison_app.py"
+    ).read_text(encoding="utf-8")
+
+    assert "LIVE_RUN_TIMEOUT_SECONDS = 120.0" in runner_source
+    assert "load_frozen_replay" in runner_source
+    assert '"status": "timeout"' in runner_source
+
+
+def test_replay_result_is_labeled_as_frozen():
+    result = {
+        "status": "complete",
+        "answer": "Frozen answer",
+        "citations": [],
+        "trace": [],
+        "latency_sec": 1.0,
+        "source": "replay",
+    }
+
+    markup = Component._build_live_result_body(
+        Component.CONFIGURATIONS[0],
+        "Frozen query",
+        result,
+    )
+
+    assert "FROZEN REPLAY" in markup
 
 
 def test_streamlit_rerun_does_not_fade_existing_content():
@@ -140,10 +185,16 @@ def test_running_result_keeps_thinking_message_inside_panel():
         {"status": "running"},
     )
 
-    assert 'class="panel-result panel-result-running"' in markup
+    assert (
+        'class="panel-result panel-result-running compact-result"'
+        in markup
+    )
     assert "<strong>Thinking</strong>" in markup
     assert "Running Vector-only RAG against the selected corpus…" in markup
-    assert 'class="panel-scroll chat-history"' in markup
+    assert 'class="compact-trace-list"' in markup
+    assert 'class="chat-modal-trigger"' in markup
+    assert 'class="chat-detail-modal" popover="auto"' in markup
+    assert 'class="chat-history chat-modal-history"' in markup
     assert '<span class="thinking-mark" aria-label="Thinking">' in markup
     assert "<i></i><i></i><i></i>" in markup
 
@@ -184,7 +235,8 @@ def test_running_result_renders_live_trace_and_current_step():
     assert 'class="trace-detail-modal" popover="auto"' in markup
     assert '<details class="trace-detail-panel">' not in markup
     assert "Vector index" in markup
-    assert "RAW EVENT" in markup
+    assert "RAW EVENT" not in markup
+    assert "<pre>" not in markup
     assert "gold_chunk_embedding" in markup
 
 
@@ -220,13 +272,101 @@ def test_chat_history_keeps_latest_exchange_at_bottom():
     assert "justify-content: flex-start;" in CUSTOM_CSS
 
 
-def test_prompt_bubble_has_separate_modern_active_accent():
+def test_citation_chips_open_the_matching_source_inspector():
+    result = {
+        "status": "complete",
+        "answer": "Supported by [1][9]. Array code: `value[1]`.",
+        "citations": [
+            {"citation_index": 1, "chunk_id": "NVDA_10k.pdf::page_1::chunk_1"},
+            {"citation_index": 9, "chunk_id": "NVDA_10k.pdf::page_9::chunk_1"},
+        ],
+        "synthesis_chunks": [
+            {"chunk_id": "NVDA_10k.pdf::page_1::chunk_1", "text": "First source"},
+            {"chunk_id": "NVDA_10k.pdf::page_9::chunk_1", "text": "Ninth source"},
+        ],
+        "trace": [],
+    }
+    markup = Component._build_live_result_body(
+        Component.CONFIGURATIONS[0], "Question", result
+    )
+
+    assert 'popovertarget="source-vector-current-1"' in markup
+    assert 'popovertarget="source-vector-current-9"' in markup
+    assert '<aside id="source-vector-current-9" class="source-inspector"' in markup
+    assert "Ninth source" in markup
+    assert '<code>value[1]</code>' in markup
+    assert '2</strong><span>Retrieved chunks</span>' in markup
+    assert '1</strong><span>Sources</span>' in markup
+
+
+def test_full_chat_uses_css_icons_for_its_main_sections():
+    markup = Component._build_live_result_body(
+        Component.CONFIGURATIONS[0],
+        "Question",
+        {"status": "complete", "answer": "Answer", "citations": [], "trace": []},
+    )
+
+    for icon in ("bubble", "answer", "document", "stack", "check", "gear"):
+        assert f'chat-icon-{icon}' in markup
+        assert f'.chat-icon-{icon}' in CUSTOM_CSS
+    assert 'aria-hidden="true"' in markup
+
+
+def test_replay_does_not_invent_a_citation_index_from_unrecorded_ids():
+    result = {
+        "status": "complete",
+        "answer": "Answer [9]",
+        "citations": [{"chunk_id": "known-chunk"}],
+        "synthesis_chunks": [
+            {"chunk_id": "known-chunk", "selection_recorded": False}
+        ],
+        "trace": [],
+        "source": "replay",
+    }
+    markup = Component._build_live_result_body(
+        Component.CONFIGURATIONS[0], "Question", result
+    )
+
+    assert "Answer [9]" in markup
+    assert 'popovertarget="source-vector-current-9"' not in markup
+    assert "Retrieved IDs" in markup
+
+
+def test_replay_chunk_id_citation_opens_inspector_without_raw_text():
+    result = {
+        "status": "complete",
+        "answer": "Answer [NVDA_10k.pdf::page_1::chunk_1]",
+        "citations": [{"chunk_id": "NVDA_10k.pdf::page_1::chunk_1"}],
+        "synthesis_chunks": [{
+            "chunk_id": "NVDA_10k.pdf::page_1::chunk_1",
+            "text": None,
+            "selection_recorded": False,
+        }],
+        "trace": [],
+        "source": "replay",
+    }
+    markup = Component._build_live_result_body(
+        Component.CONFIGURATIONS[0], "Question", result
+    )
+
+    assert 'popovertarget="source-vector-current-1"' in markup
+    assert "Chunk text is not available in this result." in markup
+    assert "Cited evidence" not in markup
+
+
+def test_chat_bubbles_use_ant_design_theme_tokens():
     assert "border-radius: var(--sg-radius-md);" in CUSTOM_CSS
     assert ".user-message-row" in CUSTOM_CSS
     assert "padding-right: 8px;" in CUSTOM_CSS
-    assert ".user-message::after" in CUSTOM_CSS
-    assert "right: -7px;" in CUSTOM_CSS
-    assert "background: var(--sg-primary);" in CUSTOM_CSS
+    assert "--color-bg:" in CUSTOM_CSS
+    assert "--color-primary:" in CUSTOM_CSS
+    assert "--color-primary-soft:" in CUSTOM_CSS
+    assert '"Segoe UI", Roboto, "Helvetica Neue"' in CUSTOM_CSS
+    assert ".user-message {" in CUSTOM_CSS
+    assert "background: var(--color-primary-soft);" in CUSTOM_CSS
+    assert ".assistant-message {" in CUSTOM_CSS
+    assert "background: var(--color-surface);" in CUSTOM_CSS
+    assert "outline: 2px solid var(--color-primary);" in CUSTOM_CSS
 
 
 def test_graph_panel_renders_connected_result():
@@ -247,6 +387,7 @@ def test_graph_panel_renders_connected_result():
     assert "Graph-only RAG" in markup
     assert "COMPLETE" in markup
     assert "Graph-grounded answer" in markup
+    assert '<strong>2.4s</strong> total latency' in markup
     assert "Backend runner not connected" not in markup
 
 
@@ -375,7 +516,7 @@ def test_agent_graph_trace_rebuilds_graph_stages_from_compact_retrieval():
     assert "agent-graph-1" in markup
 
 
-def test_completed_trace_uses_readable_details_before_raw_json():
+def test_completed_trace_uses_readable_details_without_raw_json():
     result = {
         "status": "complete",
         "answer": "Grounded answer",
@@ -405,12 +546,11 @@ def test_completed_trace_uses_readable_details_before_raw_json():
     assert "Seed Mode" in markup
     assert "Top-K Triple" in markup
     assert "VIEW DETAILS" in markup
-    assert "RAW EVENT" in markup
+    assert "RAW EVENT" not in markup
     assert '<div class="trace-modal-footer">' in markup
     assert "Selected 2 graph seeds" in markup
-    assert "seed_count" in markup
-    assert "Intel" in markup
-    assert ".trace-raw-json pre" in CUSTOM_CSS
+    assert "No triple candidates returned." in markup
+    assert ".trace-raw-json" not in CUSTOM_CSS
 
 
 def test_plan_tasks_render_as_separate_markdown_lines_in_trace_modal():
@@ -462,11 +602,11 @@ def test_trace_modal_targets_stay_unique_across_chat_history():
 
 
 def test_citations_and_trace_use_readable_contrast_and_type():
-    assert "background: #202020;" in CUSTOM_CSS
+    assert "background: var(--color-surface);" in CUSTOM_CSS
     assert "font-size: 11px;" in CUSTOM_CSS
     assert "font-size: 12px;" in CUSTOM_CSS
-    assert "background: #2a2a2a;" in CUSTOM_CSS
-    assert "border: 1px solid #484848;" in CUSTOM_CSS
+    assert "background: var(--color-raised);" in CUSTOM_CSS
+    assert "border: 1px solid var(--color-control-border);" in CUSTOM_CSS
     assert "font-size: 14px;" in CUSTOM_CSS
     assert "font-weight: 700;" in CUSTOM_CSS
     assert "font-weight: 600;" in CUSTOM_CSS
@@ -511,7 +651,7 @@ def test_trace_timeline_collapses_adjacent_stage_transitions():
     assert "1.4s" in markup
     assert "Candidate budget" in markup
     assert "Candidates" in markup
-    assert "RAW EVENT" in markup
+    assert "RAW EVENT" not in markup
 
 
 def test_agent_trace_keeps_parallel_tasks_separate_and_shows_retry_query():

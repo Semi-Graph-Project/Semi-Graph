@@ -1,16 +1,20 @@
 import html
-import json
+import re
 from datetime import datetime
 from textwrap import dedent
 
 from markdown_it import MarkdownIt
 import streamlit as st
 
-from semigraph.demo import COMPARISON_MODES, get_backend_corpora
+from semigraph.demo import (
+    COMPARISON_MODES,
+    get_backend_corpora,
+    get_frozen_replay_queries,
+)
 
 
 PAGE_CONFIG = {
-    "page_title": "SemiGraph — Four-Way Comparison",
+    "page_title": "SemiGraph — RAG Comparison",
     "page_icon": "⚡",
     "layout": "wide",
 }
@@ -20,6 +24,7 @@ BACKEND_CORPORA = get_backend_corpora()
 
 
 TRACE_STAGE_LABELS = {
+    "replay": "Frozen replay",
     "config": "Configuration",
     "plan": "Retrieval planning",
     "execute": "Execute",
@@ -82,6 +87,10 @@ TRACE_FIELD_LABELS = {
     "stop_reason": "Task result",
     "selected_evidence_count": "Evidence synthesized",
     "citation_count": "Citations",
+    "query_id": "Query ID",
+    "retrieval_hit": "Retrieval hit",
+    "retrieval_recall": "Retrieval recall",
+    "reciprocal_rank": "MRR",
 }
 
 
@@ -133,6 +142,8 @@ CONFIGURATIONS = (
 
 
 PANEL_KEYS = COMPARISON_MODES
+RUN_SOURCE_LIVE = "live"
+RUN_SOURCE_REPLAY = "replay"
 
 
 def configure_page():
@@ -141,21 +152,38 @@ def configure_page():
 
 
 def render_topbar():
-    """Render the comparison workspace header."""
-    st.markdown(
-        """
-        <header class="topbar">
-            <div>
-                <div class="eyebrow">SEMIGRAPH · EVALUATION DEMO</div>
-                <div class="topbar-title">Four-way comparison</div>
-            </div>
-            <div class="topbar-actions">
-                <span class="mode-badge"><span class="mode-dot"></span> 4 CONFIGS LIVE</span>
-            </div>
-        </header>
-        """,
-        unsafe_allow_html=True,
-    )
+    """Render the title and shared comparison controls in one header row."""
+    with st.container(key="comparison-topbar"):
+        brand, corpus_column, source_column, query_column = st.columns(
+            [2.6, 0.95, 1.45, 0.72],
+            gap="small",
+            vertical_alignment="center",
+        )
+        with brand:
+            st.markdown(
+                '<div class="topbar-brand">'
+                '<span class="topbar-kicker">SEMIGRAPH · EVALUATION</span>'
+                '<i class="topbar-divider"></i>'
+                '<h1>Architecture comparison</h1></div>',
+                unsafe_allow_html=True,
+            )
+        with corpus_column:
+            corpus = render_backend_corpus_selector()
+        with source_column:
+            source = render_run_source_selector(corpus)
+        with query_column:
+            query_id = None
+            if source == RUN_SOURCE_REPLAY:
+                query_id = render_frozen_query_selector(
+                    get_frozen_replay_queries()
+                )
+            else:
+                st.markdown(
+                    '<div class="topbar-query-live">'
+                    '<small>QUERY</small><strong>Live</strong></div>',
+                    unsafe_allow_html=True,
+                )
+    return corpus, source, query_id
 
 
 def render_comparison_workspace(
@@ -164,28 +192,47 @@ def render_comparison_workspace(
     histories=None,
     corpus=None,
     container=None,
+    query_id=None,
 ):
-    """Render the backend selector and four independently inspectable panels."""
-    corpus = corpus or render_backend_corpus_selector()
-    if st.session_state.pop("backend_corpus_changed", False):
-        query = None
-        live_results = {}
-        histories = {}
+    """Render the question and four configurations in a 2 × 2 matrix."""
     live_results = live_results or {}
     histories = histories or {}
-    cards = "".join(
-        _build_comparison_card(
+    cards = {
+        config["key"]: _build_comparison_card(
             config,
             query,
             live_results.get(config["key"]),
             histories.get(config["key"], []),
         )
         for config in CONFIGURATIONS
+    }
+    question = html.escape(str(query).strip()) if query else (
+        "Ask a question to compare the four retrieval configurations."
+    )
+    question_class = "question-banner" if query else "question-banner is-empty"
+    query_badge = (
+        f'<span class="question-query-id">{html.escape(query_id)}</span>'
+        if query_id
+        else ""
     )
     markup = (
         '<main class="comparison-workspace">'
-        f'<section class="comparison-grid" '
-        f'aria-label="Comparison chats">{cards}</section>'
+        f'<section class="{question_class}" aria-label="Question">'
+        '<span>QUESTION</span>'
+        f'<p>{question}</p>{query_badge}</section>'
+        '<section class="comparison-grid" aria-label="Comparison chats">'
+        '<div class="matrix-corner"></div>'
+        '<div class="matrix-column-heading vector-column">Vector retrieval</div>'
+        '<div class="matrix-column-heading graph-column">Graph retrieval</div>'
+        '<div class="matrix-row-heading agent-off-row">'
+        '<span class="row-mode-icon row-mode-off" aria-hidden="true"></span>'
+        '<strong>Agent off</strong></div>'
+        f'{cards["vector"]}{cards["graph"]}'
+        '<div class="matrix-row-heading agent-on-row">'
+        '<span class="row-mode-icon row-mode-on" aria-hidden="true"></span>'
+        '<strong>Agent on</strong></div>'
+        f'{cards["agent_vector"]}{cards["agent_graph"]}'
+        '</section>'
         "</main>"
     )
     target = container if container is not None else st
@@ -200,78 +247,248 @@ def render_backend_corpus_selector():
         "Backend Corpus",
         labels,
         index=0,
+        format_func=lambda label: label.replace(" (", " · ").replace(")", ""),
         key="backend_corpus",
         label_visibility="collapsed",
+        width="stretch",
     )
     selected = next(
         corpus for corpus in BACKEND_CORPORA if corpus.label == selected_label
     )
     previous_key = st.session_state.get("backend_corpus_key")
     if previous_key is not None and previous_key != selected.key:
-        st.session_state["comparison_query"] = None
-        for panel_key in PANEL_KEYS:
-            st.session_state[f"{panel_key}_result"] = None
-            st.session_state[f"{panel_key}_pending_query"] = None
-        st.session_state["comparison_history"] = {
-            panel_key: [] for panel_key in PANEL_KEYS
-        }
-        st.session_state["backend_corpus_changed"] = True
+        _clear_comparison_state()
     st.session_state["backend_corpus_key"] = selected.key
     return selected
 
 
+def render_run_source_selector(corpus):
+    """Choose Live by default and expose Replay only for Benchmark."""
+    if corpus.key == "production":
+        source = RUN_SOURCE_LIVE
+        st.markdown(
+            '<div class="topbar-live-mode">'
+            '<span class="mode-dot"></span>Live run</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        selected = st.segmented_control(
+            "Run source",
+            ["Live run", "Frozen replay"],
+            default="Live run",
+            key="comparison_run_source",
+            label_visibility="collapsed",
+            width="stretch",
+        )
+        source = (
+            RUN_SOURCE_REPLAY
+            if selected == "Frozen replay"
+            else RUN_SOURCE_LIVE
+        )
+
+    previous = st.session_state.get("comparison_run_source_key")
+    if previous is not None and previous != source:
+        _clear_comparison_state()
+    st.session_state["comparison_run_source_key"] = source
+    return source
+
+
+def render_frozen_query_selector(queries):
+    """Select one query from the frozen 50-query Human Verify runs."""
+    query_by_id = dict(queries)
+    query_ids = list(query_by_id)
+    default_index = query_ids.index("FRKG111") if "FRKG111" in query_ids else 0
+    return st.selectbox(
+        "Frozen benchmark query",
+        query_ids,
+        index=default_index,
+        format_func=lambda query_id: query_id,
+        key="frozen_replay_query_id",
+        label_visibility="collapsed",
+        width="stretch",
+    )
+
+
+def _clear_comparison_state():
+    st.session_state["comparison_query"] = None
+    for panel_key in PANEL_KEYS:
+        st.session_state[f"{panel_key}_result"] = None
+        st.session_state[f"{panel_key}_pending_query"] = None
+    st.session_state["comparison_history"] = {
+        panel_key: [] for panel_key in PANEL_KEYS
+    }
+
+
 def render_comparison_input():
     """Render the single question shared by all four configurations."""
-    return st.chat_input("Ask one question to compare all four configurations…")
+    return st.chat_input("Ask a new question…")
 
 
 def _build_comparison_card(configuration, query, result=None, history=None):
     featured = configuration.get("featured", False)
     card_class = "comparison-card featured-card" if featured else "comparison-card"
-    featured_badge = (
-        '<span class="thesis-badge">THESIS SYSTEM</span>'
-        if featured
-        else "<!-- standard configuration -->"
+    architecture = _build_architecture_icons(configuration)
+    body = _build_overview_body(configuration, query, result, history)
+    return (
+        f'<article class="{card_class}">'
+        '<header class="card-header">'
+        f'{architecture}<h3>{html.escape(configuration["name"])}</h3>'
+        f'</header>{body}</article>'
     )
-    result_status = result.get("status") if result else None
-    if result_status == "running":
-        status_label = "RUNNING"
-        status_class = "status-running"
-    elif result_status == "complete":
-        status_label = "COMPLETE"
-        status_class = "status-complete"
-    elif result is not None:
-        status_label = "ERROR"
-        status_class = "status-error"
-    elif query:
-        status_label = "NOT CONNECTED"
-        status_class = "status-waiting"
-    else:
-        status_label = "WAITING"
-        status_class = "status-waiting"
-    body = _build_result_body(configuration, query, result, history)
 
-    header = _markup(
-        f"""
-        <div class="card-accent"></div>
-        <header class="card-header">
-            <div class="card-title-row">
-                <span class="config-number">{configuration['number']}</span>
-                <div>
-                    <div class="config-mode">{configuration['mode']}</div>
-                    <h3>{configuration['name']}</h3>
-                </div>
-            </div>
-            <div class="card-status-group">
-                {featured_badge}
-                <span class="panel-status {status_class}">
-                    <i></i>{status_label}
-                </span>
-            </div>
-        </header>
-        """
+
+def _build_architecture_icons(configuration):
+    """Show which retriever and whether an Agent is used by this card."""
+    key = configuration["key"]
+    agent = '<i class="architecture-icon agent-icon"></i>' if key.startswith(
+        "agent_"
+    ) else ""
+    retriever = (
+        '<i class="architecture-icon graph-icon"></i>'
+        if key.endswith("graph")
+        else '<i class="architecture-icon vector-icon"></i>'
     )
-    return f'<article class="{card_class}">{header}{body}</article>'
+    return (
+        '<span class="architecture-icons" aria-hidden="true">'
+        f'{agent}{retriever}</span>'
+    )
+
+
+def _build_overview_body(configuration, query, result, history):
+    """Render the answer preview, compact metrics, stages, and chat popup."""
+    status = str((result or {}).get("status") or "waiting")
+    if result and status == "complete" and result.get("answer"):
+        answer_preview = (
+            '<div class="card-answer-preview">'
+            f'{_render_answer_markdown(str(result["answer"]))}</div>'
+        )
+    elif status == "running":
+        answer_preview = (
+            '<div class="card-answer-preview is-running">'
+            '<span class="answer-loading-dot"></span>'
+            'Searching for evidence and preparing an answer…</div>'
+        )
+    elif result:
+        message = result.get("error") or result.get("answer") or (
+            "This configuration did not return an answer."
+        )
+        answer_preview = (
+            '<div class="card-answer-preview is-error">'
+            f'{html.escape(str(message))}</div>'
+        )
+    else:
+        answer_preview = (
+            '<div class="card-answer-preview is-empty">'
+            'The answer will appear here after the run.'
+            '</div>'
+        )
+
+    citations = [
+        item for item in (result or {}).get("citations") or []
+        if isinstance(item, dict)
+    ]
+    chunks = [
+        item for item in (result or {}).get("synthesis_chunks") or []
+        if isinstance(item, dict)
+    ]
+    source_names = {
+        str(item.get("source_file") or item.get("chunk_id") or "").split("::page")[0]
+        for item in citations
+    }
+    source_count = len(source_names - {""})
+    citation_count = len(citations)
+    evidence_count = len(chunks)
+    latency = (result or {}).get("latency_sec")
+    latency_label = f"{latency:.1f}s" if latency is not None and latency > 0 else "—"
+    status_label, status_class = {
+        "complete": ("Complete", "complete"),
+        "running": ("Running", "running"),
+        "timeout": ("Timeout", "error"),
+        "error": ("Failed", "error"),
+        "waiting": ("Ready", "waiting"),
+    }.get(status, ("Failed", "error"))
+    metrics = (
+        '<div class="card-metrics">'
+        '<span class="card-metric evidence-metric">'
+        '<i aria-hidden="true">▤</i>'
+        f'<strong>{evidence_count}</strong> evidence</span>'
+        '<span class="card-metric citation-metric">'
+        '<i aria-hidden="true">“</i>'
+        f'<strong>{citation_count}</strong> citations</span>'
+        '<span class="card-metric latency-metric" '
+        'title="End-to-end time for this configuration">'
+        f'<strong>{latency_label}</strong> total latency</span>'
+        f'<span class="card-status {status_class}">'
+        f'<i aria-hidden="true">{"✓" if status == "complete" else "•"}</i>'
+        f'{status_label}</span></div>'
+    )
+    stages = _build_stage_strip(configuration)
+    chat_modal = _build_overview_chat_modal(
+        configuration, query, result, history
+    ) if query and result else ""
+    return (
+        '<div class="card-overview-body">'
+        f'{answer_preview}{metrics}{stages}{chat_modal}</div>'
+    )
+
+
+def _build_stage_strip(configuration):
+    stages = (
+        ("Plan", "Execute", "Assess", "Synthesize")
+        if configuration["key"].startswith("agent_")
+        else ("Retrieve", "Synthesize")
+    )
+    items = []
+    for index, stage in enumerate(stages):
+        if index:
+            items.append('<span class="stage-connector">—</span>')
+        items.append(
+            '<span class="stage-item"><i></i>'
+            f'{stage}</span>'
+        )
+    return '<div class="card-stage-strip">' + "".join(items) + "</div>"
+
+
+def _build_overview_chat_modal(configuration, query, result, history):
+    status = str(result.get("status") or "error")
+    if status == "running":
+        trace = [
+            item for item in result.get("trace") or []
+            if isinstance(item, dict)
+        ]
+        current = trace[-1] if trace else {
+            "stage": "runner",
+            "status": "running",
+            "message": "Starting retrieval",
+        }
+        body = (
+            '<section class="chat-turn answer-turn chat-message '
+            'assistant-message thinking-message">'
+            '<div class="thinking-state"><strong>Working on the answer</strong>'
+            f'<p>{html.escape(str(current.get("message") or _trace_label(current)))}</p>'
+            '</div></section>'
+        )
+        exchanges = "".join((
+            _build_history_exchanges(configuration, history),
+            '<div class="chat-exchange current-exchange">',
+            _build_user_message(query),
+            '<div class="chat-message-row assistant-message-row">',
+            body,
+            '</div></div>',
+        ))
+        button_label = "View live chat"
+    else:
+        exchanges = "".join((
+            _build_history_exchanges(configuration, history),
+            _build_completed_exchange(configuration, query, result),
+        ))
+        button_label = "View chat"
+    return _build_chat_modal(
+        configuration,
+        exchanges,
+        status=status,
+        button_label=button_label,
+    )
 
 
 def _build_result_body(configuration, query, result=None, history=None):
@@ -298,7 +515,7 @@ def _build_result_body(configuration, query, result=None, history=None):
 
 
 def _build_running_body(configuration, query, result=None, history=None):
-    """Render an in-card status while this panel's runner is working."""
+    """Render compact live trace steps and keep the chat in a popup."""
     mode_label = html.escape(configuration["name"])
     trace = [
         event
@@ -315,6 +532,21 @@ def _build_running_body(configuration, query, result=None, history=None):
     current_message = html.escape(
         str(current_event.get("message") or _trace_label(current_event))
     )
+    compact_rows = "".join(
+        _build_compact_trace_row(
+            index,
+            group["event"],
+            raw_events=group["raw_events"],
+            is_active=index == len(trace_groups),
+        )
+        for index, group in enumerate(trace_groups, start=1)
+    )
+    if not compact_rows:
+        compact_rows = _build_compact_trace_row(
+            1,
+            current_event,
+            is_active=True,
+        )
     if trace_groups:
         trace_rows = "".join(
             _build_trace_row(
@@ -369,17 +601,25 @@ def _build_running_body(configuration, query, result=None, history=None):
             '</div>',
         )
     )
+    chat_modal = _build_chat_modal(
+        configuration,
+        exchanges,
+        status="running",
+        button_label="View live chat",
+    )
     return "".join(
         (
-            '<div class="panel-result panel-result-running">',
+            '<div class="panel-result panel-result-running compact-result">',
             '<div class="result-toolbar">',
-            "<span>RUNNER STATUS</span>",
-            "<small>IN PROGRESS</small>",
+            "<span>TRACE STEPS</span>",
+            f"<small>{len(trace_groups) or 1} STEPS · IN PROGRESS</small>",
             "</div>",
-            '<div class="panel-scroll chat-history" '
-            'tabindex="0" '
-            f'aria-label="{mode_label} chat history">',
-            exchanges,
+            '<div class="compact-trace-list" '
+            f'aria-label="{mode_label} trace steps">',
+            compact_rows,
+            "</div>",
+            '<div class="panel-action-bar">',
+            chat_modal,
             "</div>",
             '<div class="panel-footer">',
             "<span>RUNNING</span>",
@@ -391,7 +631,6 @@ def _build_running_body(configuration, query, result=None, history=None):
 
 
 def _build_unconnected_body(configuration, query, history=None):
-    mode_label = html.escape(configuration["name"])
     notice = "".join(
         (
             '<div class="chat-message-row assistant-message-row">',
@@ -412,16 +651,29 @@ def _build_unconnected_body(configuration, query, history=None):
             '</div>',
         )
     )
+    chat_modal = _build_chat_modal(
+        configuration,
+        exchanges,
+        status="error",
+    )
     return "".join(
         (
-            '<div class="panel-result panel-result-unconnected">',
+            '<div class="panel-result panel-result-unconnected compact-result">',
             '<div class="result-toolbar">',
-            '<span>CHAT HISTORY</span><small>RUNNER NOT CONNECTED</small>',
+            '<span>TRACE STEPS</span><small>RUNNER NOT CONNECTED</small>',
             '</div>',
-            '<div class="panel-scroll chat-history" '
-            'tabindex="0" '
-            f'aria-label="{mode_label} chat history">',
-            exchanges,
+            '<div class="compact-trace-list">',
+            _build_compact_trace_row(
+                1,
+                {
+                    "stage": "runner",
+                    "status": "error",
+                    "message": "Backend runner not connected",
+                },
+            ),
+            '</div>',
+            '<div class="panel-action-bar">',
+            chat_modal,
             '</div>',
             '<div class="panel-footer panel-footer-waiting">',
             '<span>RUNNER · PENDING</span><span>NOT CONNECTED</span>',
@@ -438,8 +690,80 @@ def _build_completed_exchange(
     exchange_id="current",
 ):
     answer = str(result.get("answer") or "No answer returned.")
+    citations = [
+        citation for citation in result.get("citations") or []
+        if isinstance(citation, dict)
+    ]
+    chunks = [
+        chunk for chunk in result.get("synthesis_chunks") or []
+        if isinstance(chunk, dict)
+    ]
+    citation_lookup = {}
+    citation_ids = {}
+    valid_numeric_indices = set()
+    for position, citation in enumerate(citations, start=1):
+        chunk_id = str(citation.get("chunk_id") or "")
+        matching_chunk = next(
+            (chunk for chunk in chunks if str(chunk.get("chunk_id")) == chunk_id),
+            None,
+        )
+        index = citation.get("citation_index")
+        if index is None and matching_chunk and matching_chunk.get("selection_recorded"):
+            index = chunks.index(matching_chunk) + 1
+        if index is None and result.get("source") != "replay":
+            index = position
+        inspector_index = index if isinstance(index, int) and index > 0 else position
+        if chunk_id:
+            citation_ids[chunk_id] = inspector_index
+        if isinstance(index, int) and index > 0:
+            valid_numeric_indices.add(index)
+            citation_lookup[index] = (citation, matching_chunk)
+        elif chunk_id:
+            citation_lookup[inspector_index] = (citation, matching_chunk)
+    source_prefix = f"source-{configuration['key']}-{exchange_id}"
     answer_html = _render_answer_markdown(answer)
-    citations = list(result.get("citations") or [])
+    def citation_chip(match):
+        reference = match.group(2)
+        if not reference:
+            return match.group(0)
+        index = citation_ids.get(reference) if not reference.isdigit() else int(reference)
+        if index not in citation_lookup or (
+            reference.isdigit() and index not in valid_numeric_indices
+        ):
+            return match.group(0)
+        citation, chunk = citation_lookup[index]
+        preview = _plain_chunk_preview(
+            (chunk or {}).get("text") or _citation_label(citation), 180
+        )
+        return (
+            '<button type="button" class="citation-chip" '
+            f'popovertarget="{html.escape(source_prefix, quote=True)}-{index}" '
+            f'aria-label="Inspect source {index}" '
+            f'title="{html.escape(preview, quote=True)}">[{index}]</button>'
+        )
+
+    answer_html = re.sub(
+        r"(<(?:pre|code)\b[^>]*>.*?</(?:pre|code)>|<[^>]+>)|(?<!\w)\[([^\[\]<>]+)\]",
+        citation_chip,
+        answer_html,
+        flags=re.DOTALL,
+    )
+    inspectors = "".join(
+        "".join((
+            f'<aside id="{html.escape(source_prefix, quote=True)}-{index}" '
+            'class="source-inspector" popover="auto" '
+            'aria-label="Source inspector">',
+            '<div class="source-inspector-heading"><span>Source inspector</span>',
+            f'<button type="button" popovertarget="{html.escape(source_prefix, quote=True)}-{index}" '
+            'popovertargetaction="hide" aria-label="Close source inspector">&times;</button></div>',
+            f'<b>[{index}] {html.escape(_citation_label(citation))}</b>',
+            '<p>' + html.escape(str(
+                (chunk or {}).get("text") or "Chunk text is not available in this result."
+            )) + '</p>',
+            '</aside>',
+        ))
+        for index, (citation, chunk) in citation_lookup.items()
+    )
     trace = list(result.get("trace") or [])
     graph_trace = _uses_compact_graph_trace(configuration, trace)
     trace_groups = _trace_groups_for_configuration(configuration, trace)
@@ -447,7 +771,8 @@ def _build_completed_exchange(
     error = result.get("error")
     citation_rows = "".join(
         (
-            f'<div class="citation-item"><b>[C{index}]</b>'
+            '<div class="citation-item"><b>['
+            f'{html.escape(str(citation.get("citation_index") or index))}]</b>'
             f'<span>{html.escape(_citation_label(citation))}</span></div>'
         )
         for index, citation in enumerate(citations, start=1)
@@ -457,6 +782,23 @@ def _build_completed_exchange(
             '<div class="citation-item citation-empty">'
             "<span>No evidence citation returned.</span></div>"
         )
+    synthesis_chunks = _build_synthesis_chunks(result, citations)
+    source_names = {
+        str(citation.get("source_file") or citation.get("chunk_id") or "")
+        .split("::page")[0]
+        for citation in citations
+    }
+    source_count = len(source_names - {""})
+    used_count = len({
+        str(citation.get("chunk_id"))
+        for citation in citations if citation.get("chunk_id")
+    })
+    retrieved_label = (
+        "Retrieved IDs"
+        if result.get("source") == "replay" and chunks
+        and not all(chunk.get("selection_recorded") for chunk in chunks)
+        else "Retrieved chunks"
+    )
     trace_rows = "".join(
         _build_trace_row(
             index,
@@ -485,9 +827,12 @@ def _build_completed_exchange(
             f"<p>{html.escape(str(error or 'Unknown error'))}</p></div>"
         )
     mode_label = html.escape(configuration["name"].upper())
+    source = str(result.get("source") or "live")
     result_label = (
-        "LIVE" if is_current and status == "complete"
+        "FROZEN REPLAY" if source == "replay" and status == "complete"
+        else "LIVE" if is_current and status == "complete"
         else "HISTORY" if status == "complete"
+        else "TIMEOUT" if status == "timeout"
         else "FAILED"
     )
     exchange_class = "chat-exchange current-exchange" if is_current else "chat-exchange"
@@ -501,52 +846,291 @@ def _build_completed_exchange(
             '<div class="chat-message-row assistant-message-row">',
             '<section class="chat-turn answer-turn chat-message assistant-message">',
             '<div class="answer-label-row">',
-            '<span class="turn-label">ANSWER</span>',
+            '<span class="turn-label"><i class="chat-icon chat-icon-answer" '
+            'aria-hidden="true"></i>ANSWER</span>',
             f'<span class="live-label">{mode_label} · {result_label}</span>',
             "</div>",
             f'<div class="answer-markdown">{answer_html}</div>',
+            inspectors,
             error_block,
+            '<div class="retrieval-metrics">',
+            '<div><span class="metric-icon"><i class="chat-icon chat-icon-document" '
+            'aria-hidden="true"></i></span><span class="metric-copy">'
+            f'<strong>{source_count}</strong><span>Sources</span></span></div>',
+            '<div><span class="metric-icon"><i class="chat-icon chat-icon-stack" '
+            'aria-hidden="true"></i></span><span class="metric-copy">'
+            f'<strong>{len(chunks)}</strong><span>{retrieved_label}</span></span></div>',
+            '<div><span class="metric-icon metric-icon-used">'
+            '<i class="chat-icon chat-icon-check" aria-hidden="true"></i></span>'
+            '<span class="metric-copy">'
+            f'<strong>{used_count}</strong><span>Used in answer</span></span></div>',
+            '</div></section></div>',
+            '<div class="chat-evidence">',
+            '<h4><i class="chat-icon chat-icon-stack" '
+            'aria-hidden="true"></i>Evidence</h4>',
             '<details class="result-disclosure citation-details">',
-            "<summary><span>CITATIONS</span>",
-            f"<small>{len(citations)} SOURCES</small></summary>",
+            '<summary><span class="evidence-row-icon"><i '
+            'class="chat-icon chat-icon-document" aria-hidden="true"></i></span>'
+            '<span>Sources</span>',
+            f"<small>{source_count} sources</small></summary>",
             f'<div class="citation-list">{citation_rows}</div>',
             "</details>",
-            '<details class="result-disclosure trace-details">',
-            "<summary><span>TECHNICAL TRACE</span>",
-            f"<small>{len(trace_groups)} STEPS</small></summary>",
+            synthesis_chunks,
+            '<details class="chat-advanced">',
+            '<summary><i class="chat-icon chat-icon-gear" '
+            'aria-hidden="true"></i>Show advanced details',
+            f'<small>{len(trace_groups)} trace steps</small></summary>',
             f'<div class="trace-table">{trace_rows}</div>',
             "</details>",
-            "</section></div></div>",
+            "</div></div>",
         )
     )
+
+
+def _build_synthesis_chunks(result, citations):
+    """Show every raw chunk passed to Synthesis and whether it was cited."""
+    chunks = [
+        chunk
+        for chunk in result.get("synthesis_chunks") or []
+        if isinstance(chunk, dict)
+    ]
+    cited_ids = {
+        str(citation.get("chunk_id"))
+        for citation in citations
+        if isinstance(citation, dict) and citation.get("chunk_id")
+    }
+    source = result.get("source")
+    replay_selection_recorded = bool(chunks) and all(
+        chunk.get("selection_recorded") for chunk in chunks
+    )
+    section_title = (
+        "Retrieved IDs · synthesis input not recorded"
+        if source == "replay" and chunks and not replay_selection_recorded
+        else "Recorded synthesis input IDs"
+        if source == "replay" and chunks
+        else "Retrieved chunks"
+    )
+
+    if not chunks:
+        message = (
+            "This frozen replay did not save the selected chunk IDs or text."
+            if source == "replay"
+            else "No chunks were passed into Synthesis."
+        )
+        content = (
+            '<div class="synthesis-chunk-empty">'
+            f"{html.escape(message)}</div>"
+        )
+    else:
+        cards = []
+        for index, chunk in enumerate(chunks, start=1):
+            chunk_id = str(chunk.get("chunk_id") or "Unknown chunk")
+            was_cited = chunk_id in cited_ids
+            status_class = "chunk-cited" if was_cited else "chunk-not-cited"
+            status_label = "CITED IN ANSWER" if was_cited else "NOT CITED"
+            metadata = [
+                f"{label}: {chunk[key]}"
+                for key, label in (
+                    ("ticker", "Ticker"),
+                    ("fiscal_year", "Fiscal year"),
+                    ("section", "Section"),
+                )
+                if chunk.get(key) not in (None, "")
+            ]
+            metadata_html = "".join(
+                f'<span class="synthesis-chunk-meta-item">'
+                f"{html.escape(str(value))}</span>"
+                for value in metadata
+            )
+            text = chunk.get("text")
+            if text:
+                text_html = (
+                    '<pre class="synthesis-chunk-text">'
+                    f"{html.escape(str(text))}</pre>"
+                )
+            else:
+                text_message = (
+                    "Frozen replay records this ID as a Synthesis input, "
+                    "but does not save its original text. Run this comparison "
+                    "live to inspect the full chunk."
+                    if source == "replay" and chunk.get("selection_recorded")
+                    else "Frozen replay only records this retrieved Top-k ID; "
+                    "it does not confirm whether the chunk entered Synthesis "
+                    "or save its original text. Run live to inspect it."
+                    if source == "replay"
+                    else "Chunk text is not available in this result."
+                )
+                text_html = (
+                    '<p class="synthesis-chunk-unavailable">'
+                    f"{html.escape(text_message)}</p>"
+                )
+            cards.append("".join((
+                '<details class="synthesis-chunk">',
+                '<summary>',
+                f'<span class="synthesis-chunk-number">[{index}]</span>',
+                f'<code>{html.escape(chunk_id)}</code>',
+                f'<span class="synthesis-chunk-status {status_class}">'
+                f"{status_label}</span>",
+                "</summary>",
+                '<div class="synthesis-chunk-content">',
+                f'<div class="synthesis-chunk-meta">{metadata_html}</div>',
+                text_html,
+                "</div></details>",
+            )))
+        content = "".join(cards)
+
+    cited_count = sum(
+        1
+        for chunk in chunks
+        if str(chunk.get("chunk_id") or "") in cited_ids
+    )
+    count_label = f"{cited_count} / {len(chunks)} cited"
+    return "".join((
+        '<details class="result-disclosure synthesis-chunks-details">',
+        '<summary><span class="evidence-row-icon"><i '
+        'class="chat-icon chat-icon-stack" aria-hidden="true"></i></span>',
+        f'<span>{html.escape(section_title)}</span>',
+        f"<small>{count_label}</small></summary>",
+        f'<div class="synthesis-chunk-list">{content}</div>',
+        "</details>",
+    ))
 
 
 def _build_live_result_body(configuration, query, result, history=None):
     latency = result.get("latency_sec")
     latency_label = f"{float(latency):.1f}s" if latency is not None else "n/a"
     mode_label = html.escape(configuration["name"].upper())
-    scroll_label = html.escape(f"{configuration['name']} chat history")
+    source_label = (
+        "FROZEN REPLAY"
+        if result.get("source") == "replay"
+        else "LIVE RESULT"
+    )
+    trace_label = html.escape(f"{configuration['name']} trace steps")
     exchanges = "".join(
         (
             _build_history_exchanges(configuration, history),
             _build_completed_exchange(configuration, query, result),
         )
     )
+    trace = [
+        event
+        for event in result.get("trace", [])
+        if isinstance(event, dict)
+    ]
+    trace_groups = _trace_groups_for_configuration(configuration, trace)
+    compact_rows = "".join(
+        _build_compact_trace_row(
+            index,
+            group["event"],
+            raw_events=group["raw_events"],
+        )
+        for index, group in enumerate(trace_groups, start=1)
+    )
+    if not compact_rows:
+        compact_rows = _build_compact_trace_row(
+            0,
+            {
+                "stage": "trace",
+                "status": "skipped",
+                "message": "No trace returned",
+            },
+        )
+    chat_modal = _build_chat_modal(
+        configuration,
+        exchanges,
+        status=str(result.get("status") or "error"),
+    )
     return "".join(
         (
-            '<div class="panel-result panel-result-settled">',
+            '<div class="panel-result panel-result-settled compact-result">',
             '<div class="result-toolbar">',
-            '<span>CHAT HISTORY</span><small>SCROLL FOR EARLIER MESSAGES</small>',
+            '<span>TRACE STEPS</span>',
+            f'<small>{len(trace_groups)} STEPS</small>',
             '</div>',
-            '<div class="panel-scroll chat-history" '
-            'tabindex="0" '
-            f'aria-label="{scroll_label}">',
-            exchanges,
+            '<div class="compact-trace-list" '
+            f'aria-label="{trace_label}">',
+            compact_rows,
+            '</div>',
+            '<div class="panel-action-bar">',
+            chat_modal,
             '</div>',
             '<div class="panel-footer">',
-            f'<span>LIVE RESULT · {latency_label}</span>',
+            f'<span>{source_label} · {latency_label}</span>',
             f'<span>{mode_label}</span>',
             '</div></div>',
+        )
+    )
+
+
+def _build_compact_trace_row(
+    index,
+    event,
+    raw_events=None,
+    is_active=False,
+):
+    """Render one small trace row for the four-card overview."""
+    status_class, status_label = _trace_status(event)
+    active_class = " is-active" if is_active else ""
+    duration = _trace_duration(event, list(raw_events or [event]))
+    duration_markup = f"<time>{html.escape(duration)}</time>" if duration else ""
+    return "".join(
+        (
+            f'<div class="compact-trace-row trace-status-{status_class}'
+            f'{active_class}">',
+            f'<span class="compact-trace-index">{index:02d}</span>',
+            '<span class="compact-trace-dot"></span>',
+            '<div class="compact-trace-copy">',
+            '<div class="compact-trace-heading">',
+            f'<b>{html.escape(_trace_stage_label(event))}</b>',
+            f'<span>{duration_markup}{status_label}</span>',
+            '</div>',
+            f'<p>{html.escape(_trace_label(event))}</p>',
+            '</div></div>',
+        )
+    )
+
+
+def _build_chat_modal(
+    configuration,
+    exchanges,
+    status="complete",
+    button_label="View chat",
+):
+    """Keep the full chat available without expanding the overview card."""
+    modal_id = f"chat-modal-{configuration['key']}"
+    safe_id = html.escape(modal_id, quote=True)
+    title_id = f"{safe_id}-title"
+    status_class, status_label = _trace_status({"status": status})
+    return "".join(
+        (
+            '<button type="button" class="chat-modal-trigger" ',
+            f'popovertarget="{safe_id}" aria-haspopup="dialog">',
+            f'<span>{html.escape(button_label)}</span>',
+            '</button>',
+            f'<section id="{safe_id}" class="chat-detail-modal" '
+            f'popover="auto" role="dialog" aria-labelledby="{title_id}">',
+            '<div class="trace-modal-header">',
+            '<div class="trace-modal-title">',
+            '<span class="trace-modal-eyebrow"><i '
+            'class="chat-icon chat-icon-bubble" aria-hidden="true"></i>'
+            'FULL CHAT</span>',
+            f'<h3 id="{title_id}">{html.escape(configuration["name"])}</h3>',
+            '<p class="chat-modal-subtitle">Retrieval benchmark · Full response</p>',
+            '</div><div class="trace-modal-meta">',
+            f'<span class="trace-modal-status trace-status-{status_class}">',
+            f'{status_label}</span>',
+            '<button type="button" class="trace-modal-close" ',
+            f'popovertarget="{safe_id}" popovertargetaction="hide" ',
+            'aria-label="Close chat">&times;</button>',
+            '</div></div>',
+            '<div class="chat-modal-body">',
+            '<div class="chat-history chat-modal-history" ',
+            'tabindex="0">',
+            exchanges,
+            '</div></div>',
+            '<div class="trace-modal-footer">',
+            '<span>Press ESC or click outside to close</span>',
+            '</div></section>',
         )
     )
 
@@ -1041,16 +1625,11 @@ def _build_trace_details(event, raw_events, detail_id, graph=False):
             for label, value in detail_items
         )
         field_label = (
-            f"{len(detail_items)} KEY FIELDS" if detail_items else "RAW EVENT"
+            f"{len(detail_items)} KEY FIELDS"
+            if detail_items
+            else "STEP SUMMARY"
         )
 
-    raw_payload = raw_events[0] if len(raw_events) == 1 else {
-        "stage": event.get("stage"),
-        "events": raw_events,
-    }
-    raw_json = html.escape(
-        json.dumps(raw_payload, ensure_ascii=False, indent=2, default=str)
-    )
     grid_markup = (
         f'<dl class="trace-detail-grid">{detail_grid}</dl>'
         if detail_grid
@@ -1087,10 +1666,6 @@ def _build_trace_details(event, raw_events, detail_id, graph=False):
         '<span>STEP SUMMARY</span>'
         f"<p>{html.escape(_trace_label(event))}</p></div>"
         f"{grid_markup}"
-        '<section class="trace-raw-json" aria-label="Raw trace event">'
-        '<div class="trace-modal-section-title">'
-        '<span>RAW EVENT</span><small>JSON</small></div>'
-        f"<pre>{raw_json}</pre></section>"
         '</div><div class="trace-modal-footer">'
         '<span>Press ESC or click outside to close</span>'
         '</div></section>'
@@ -1136,3 +1711,14 @@ def _render_answer_markdown(answer):
     """Render model Markdown safely before placing it inside the answer card."""
     renderer = MarkdownIt("commonmark", {"html": False, "breaks": True})
     return renderer.render(answer)
+
+
+def _plain_chunk_preview(text, limit):
+    """Show a short chunk excerpt without document Markdown formatting."""
+    plain = str(text).replace("**", "").replace("__", "")
+    plain = re.sub(r"(?m)^\s*(?:[-*+]\s+)?#{1,6}\s*", "", plain)
+    plain = re.sub(r"(?m)^\s*[-*+]\s+", "", plain)
+    plain = re.sub(r"(?m)^\s*[-*_]{3,}\s*$", "", plain)
+    plain = re.sub(r"(?m)[ \t]+#{1,6}[ \t]*$", "", plain)
+    plain = " ".join(plain.split())
+    return plain[:limit] + ("…" if len(plain) > limit else "")

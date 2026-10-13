@@ -86,6 +86,50 @@ _Avoid_: Agent Assess, Answer reranking
 
 ## Handoff Language
 
+**Defense Demo**:
+การสาธิตคำถามหลายทอดเดียวกันผ่าน Vector-only, Graph-only, Agent + Vector และ Agent + Graph เพื่อแสดงผลของ Retrieval Architecture และ Agent Controller แยกจากกันด้วยหลักฐานและ Trace
+_Avoid_: Feature showcase, Full Agent demo
+
+**Defense Replay**:
+การเล่นผล Run ที่บันทึกไว้พร้อมหลักฐาน Trace และเวลาจริง เพื่อให้ Defense Demo แสดงผลซ้ำได้แน่นอน โดยใช้การรัน Live เป็นส่วนเสริมเมื่อเวลาและระบบพร้อม
+_Avoid_: Mock result, fabricated demo
+
+**Defense Main Query**:
+ใช้ `FRKG111` เป็นคำถามหลักเพื่อแสดงการค้นหลักฐานสองส่วนและคำนวณอัตราส่วน โดย Agent + Graph เป็น Configuration เดียวที่ตอบครบทั้ง `human_verify_2` และ `human_verify_2_fast`
+_Avoid_: FRKG102, ผลทดลอง SOX74 `@9` รุ่นเก่า
+
+**Defense Limitation Segment**:
+ช่วงสั้นหลัง Main Demo ที่เปิดเผยช่องว่างระหว่าง Retrieval กับคำตอบสุดท้ายจากผล `human_verify_2*` เพื่อแสดงขอบเขตของระบบและลด Selection Bias
+_Avoid_: Success-only demo, การอ้างว่าคำถามตัวอย่างเดียวพิสูจน์ Generalization
+
+**Defense Audience Check**:
+ให้กรรมการเลือก Query ID ใดก็ได้จาก 50 ข้อใน `human_verify_2*` แล้วเปิดผล Replay ที่ Freeze ไว้ เพื่อให้ตรวจได้โดยไม่จำกัดเฉพาะ Main Demo Query
+_Avoid_: การคัดเฉพาะ Query ที่ Agent + Graph ชนะ
+
+**Defense Corpus Modes**:
+ใช้ตัวเลือกเดิมใน Comparison UI แยก `Benchmark (7690)` สำหรับหลักฐานการทดลองออกจาก `Production (7687)` สำหรับคำถามอิสระ โดยระบุว่าผล Production ไม่มี Gold Answer
+_Avoid_: การนำผล Live จาก Production ไปนับรวมกับคะแนน Benchmark
+
+**Defense Run Priority**:
+ใช้ Live Run ผ่าน Comparison UI เป็น Demo หลัก และใช้ Frozen Human-Verified Replay เมื่อ Live Run ช้าหรือระบบภายนอกผิดพลาด
+_Avoid_: Replay-only demo, การปล่อยให้ Live Run ค้างจนกระทบเวลานำเสนอ
+
+**Defense Live Cutoff**:
+ให้ Live Comparison ทำงานได้สูงสุด 120 วินาทีในช่วงนำเสนอ หากยังไม่เสร็จให้สลับไป Frozen Human-Verified Replay และอธิบายว่าเป็นข้อจำกัดของ Runtime ภายนอก
+_Avoid_: การรอ LLM จนครบ timeout 300 วินาทีต่อ Call
+
+**Defense Corpus Assignment**:
+Main Live Demo และ Query Benchmark ที่กรรมการเลือกใช้ `Benchmark (7690)` ส่วนคำถามใหม่แบบอิสระใช้ `Production (7687)` และไม่เปรียบผล Production กับคะแนน `human_verify_2*`
+_Avoid_: การรัน FRKG111 บน Production แล้วอ้างว่าเป็นผลเดียวกับ Benchmark
+
+**Production Query Scope Notice**:
+Comparison UI ยอมรับข้อความคำถามอิสระ แต่ต้องแสดงว่าฐาน Production รองรับเอกสาร Semiconductor `10-K` ปี 2023–2026 และคำถามนอกฐานอาจไม่มีหลักฐาน
+_Avoid_: การบล็อกคำถาม, การทำให้ผู้ชมเข้าใจว่าระบบมีข้อมูล Open World
+
+**Defense Demo Timebox**:
+จำกัด Demo หลักไว้ประมาณ 5 นาที โดย Live FRKG111 ใช้เวลาได้สูงสุด 120 วินาที ตามด้วยผลเปรียบเทียบ, Audience Replay และข้อจำกัด ส่วน Production Free-form อยู่ในช่วง Optional/Q&A
+_Avoid_: การบังคับรัน Production Free-form ภายใน Demo หลัก
+
 **Advisor Handoff Package**:
 ชุดส่งมอบแบบมี version ที่ให้อาจารย์เปิด Reference Runtime เพื่อสำรวจระบบผ่าน Smoke/Demo และรัน Full Evaluation ต่อได้ โดยไม่ต้องตั้ง development environment หรือรัน Unit Test เดิม
 _Avoid_: Source ZIP, Production Deployment

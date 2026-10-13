@@ -1,5 +1,5 @@
 from threading import Thread
-from time import sleep
+from time import monotonic, sleep
 from uuid import uuid4
 
 import streamlit as st
@@ -10,10 +10,18 @@ from Component import (
     render_comparison_input,
     render_comparison_workspace,
     render_topbar,
+    RUN_SOURCE_LIVE,
+    RUN_SOURCE_REPLAY,
 )
 from Style import apply_custom_style
-from semigraph.demo import run_comparison
+from semigraph.demo import (
+    load_frozen_replay,
+    run_comparison,
+)
 from semigraph.trace import TRACE_STORE
+
+
+LIVE_RUN_TIMEOUT_SECONDS = 120.0
 
 
 configure_page()
@@ -35,21 +43,37 @@ if "comparison_history" not in st.session_state:
 for panel_key in PANEL_KEYS:
     st.session_state.comparison_history.setdefault(panel_key, [])
 
-render_topbar()
-workspace = st.empty()
-live_results = {
-    panel_key: st.session_state[f"{panel_key}_result"]
-    for panel_key in PANEL_KEYS
-    if st.session_state[f"{panel_key}_result"]
-}
-selected_corpus = render_comparison_workspace(
-    st.session_state.comparison_query,
-    live_results,
-    histories=st.session_state.comparison_history,
-    container=workspace,
-)
+selected_corpus, run_source, replay_query_id = render_topbar()
 
-prompt = render_comparison_input()
+if run_source == RUN_SOURCE_REPLAY:
+    replay_query, frozen_results = load_frozen_replay(replay_query_id)
+    workspace = st.empty()
+    render_comparison_workspace(
+        replay_query,
+        {
+            panel_key: result.to_dict()
+            for panel_key, result in frozen_results.items()
+        },
+        corpus=selected_corpus,
+        container=workspace,
+        query_id=replay_query_id,
+    )
+    prompt = None
+else:
+    workspace = st.empty()
+    live_results = {
+        panel_key: st.session_state[f"{panel_key}_result"]
+        for panel_key in PANEL_KEYS
+        if st.session_state[f"{panel_key}_result"]
+    }
+    render_comparison_workspace(
+        st.session_state.comparison_query,
+        live_results,
+        histories=st.session_state.comparison_history,
+        corpus=selected_corpus,
+        container=workspace,
+    )
+    prompt = render_comparison_input()
 
 if prompt:
     previous_query = st.session_state.comparison_query
@@ -58,7 +82,8 @@ if prompt:
             previous_result = st.session_state.get(f"{panel_key}_result")
             if (
                 previous_result
-                and previous_result.get("status") in {"complete", "error"}
+                and previous_result.get("status")
+                in {"complete", "error", "timeout"}
             ):
                 panel_history = st.session_state.comparison_history.setdefault(
                     panel_key, []
@@ -77,6 +102,7 @@ if prompt:
             "trace": [],
             "latency_sec": None,
             "error": None,
+            "source": "live",
         }
         st.session_state[f"{panel_key}_result"] = running_result
         st.session_state[f"{panel_key}_pending_query"] = prompt
@@ -89,15 +115,17 @@ if prompt:
         container=workspace,
     )
 
-pending_queries = {
-    panel_key: st.session_state[f"{panel_key}_pending_query"]
-    for panel_key in PANEL_KEYS
-}
-pending_queries = {
-    panel_key: query
-    for panel_key, query in pending_queries.items()
-    if query
-}
+pending_queries = {}
+if run_source == RUN_SOURCE_LIVE:
+    pending_queries = {
+        panel_key: st.session_state[f"{panel_key}_pending_query"]
+        for panel_key in PANEL_KEYS
+    }
+    pending_queries = {
+        panel_key: query
+        for panel_key, query in pending_queries.items()
+        if query
+    }
 if any(pending_queries.values()):
     for panel_key in pending_queries:
         st.session_state[f"{panel_key}_pending_query"] = None
@@ -125,7 +153,11 @@ if any(pending_queries.values()):
 
     live_traces = {panel_key: [] for panel_key in pending_queries}
     published_results = set()
-    while any(worker.is_alive() for worker in workers.values()):
+    deadline = monotonic() + LIVE_RUN_TIMEOUT_SECONDS
+    while (
+        any(worker.is_alive() for worker in workers.values())
+        and monotonic() < deadline
+    ):
         trace_updated = False
         result_updated = False
         for panel_key, run_id in run_ids.items():
@@ -150,6 +182,7 @@ if any(pending_queries.values()):
                 visible_results[panel_key] = {
                     "status": "running",
                     "trace": live_traces[panel_key],
+                    "source": "live",
                 }
         if trace_updated or result_updated:
             render_comparison_workspace(
@@ -163,18 +196,42 @@ if any(pending_queries.values()):
             sleep(0.08)
     final_results = {}
     for panel_key, worker in workers.items():
-        worker.join()
         result = run_states[panel_key].get("result")
-        if result is None:
+        if worker.is_alive():
             trace_document = TRACE_STORE.read(run_ids[panel_key])
+            trace = list(trace_document.get("events") or [])
+            trace.append({
+                "stage": "runner",
+                "status": "timeout",
+                "message": "Live run exceeded the 120-second demo budget",
+            })
             result = {
-                "status": "error",
+                "status": "timeout",
                 "answer": "",
                 "citations": [],
-                "trace": list(trace_document.get("events") or []),
-                "latency_sec": None,
-                "error": f"{panel_key.title()} runner did not return a result.",
+                "trace": trace,
+                "latency_sec": LIVE_RUN_TIMEOUT_SECONDS,
+                "error": (
+                    "Live run exceeded 120 seconds. "
+                    "Switch to Frozen replay to continue the demo."
+                ),
+                "source": "live",
             }
+        else:
+            worker.join(timeout=0)
+            if result is None:
+                trace_document = TRACE_STORE.read(run_ids[panel_key])
+                result = {
+                    "status": "error",
+                    "answer": "",
+                    "citations": [],
+                    "trace": list(trace_document.get("events") or []),
+                    "latency_sec": None,
+                    "error": (
+                        f"{panel_key.title()} runner did not return a result."
+                    ),
+                    "source": "live",
+                }
         normalized_result = (
             result.to_dict() if hasattr(result, "to_dict") else result
         )

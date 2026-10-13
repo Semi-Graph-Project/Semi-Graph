@@ -1,15 +1,51 @@
-# SemiGraph RAG — Streamlit theme (enterprise dark)
-# Palette: GitHub-dark-inspired slate + deep-blue accent.
+# SemiGraph comparison UI — Ant Design inspired light theme.
 
 [theme]
-base = "dark"
-primaryColor = "#3B82F6"              # deep blue accent (was default red)
-backgroundColor = "#0D1117"           # near-black slate
-secondaryBackgroundColor = "#161B22"  # card / sidebar surface
-textColor = "#C9D1D9"                 # slate-200 body text
+base = "light"
+primaryColor = "#1677FF"
+backgroundColor = "#F5F7FA"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#262626"
+linkColor = "#1677FF"
+borderColor = "#D9D9D9"
+codeBackgroundColor = "#FAFAFA"
+codeTextColor = "#262626"
+font = "sans-serif"
+headingFont = "sans-serif"
+codeFont = "monospace"
+baseFontSize = 14
+baseFontWeight = 400
+headingFontSizes = ["32px", "24px", "20px", "16px", "14px", "14px"]
+headingFontWeights = [600, 600, 600, 600, 600, 600]
+baseRadius = "8px"
+buttonRadius = "6px"
+linkUnderline = false
+showWidgetBorder = true
+showSidebarBorder = true
+greenColor = "#52C41A"
+greenBackgroundColor = "#F6FFED"
+greenTextColor = "#389E0D"
+blueColor = "#1677FF"
+blueBackgroundColor = "#E6F4FF"
+blueTextColor = "#0958D9"
+orangeColor = "#FAAD14"
+yellowColor = "#FAAD14"
+redColor = "#FF4D4F"
+redBackgroundColor = "#FFF2F0"
+redTextColor = "#CF1322"
+grayColor = "#8C8C8C"
+chartCategoricalColors = ["#1677FF", "#52C41A", "#FAAD14", "#FF4D4F", "#722ED1", "#13C2C2"]
+
+[theme.sidebar]
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#FAFAFA"
+codeBackgroundColor = "#FAFAFA"
+textColor = "#262626"
+borderColor = "#D9D9D9"
+primaryColor = "#1677FF"
 
 [client]
-toolbarMode = "minimal"               # trims the dev toolbar
+toolbarMode = "minimal"
 showErrorDetails = true
 
 [browser]

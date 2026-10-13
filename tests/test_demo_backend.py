@@ -12,6 +12,8 @@ from semigraph.demo import (
     get_backend_config,
     get_backend_corpus,
     get_backend_corpora,
+    get_frozen_replay_queries,
+    load_frozen_replay,
     run_comparison,
 )
 from semigraph.trace import TRACE_STORE
@@ -88,10 +90,36 @@ def test_comparison_result_has_a_shared_serializable_shape():
         "status": "complete",
         "answer": "Grounded answer",
         "citations": [{"chunk_id": "c1"}],
+        "synthesis_chunks": [],
         "trace": [{"event": "vector_search", "status": "ok"}],
         "latency_sec": 1.25,
         "error": None,
+        "source": "live",
     }
+
+
+def test_frozen_replay_loads_all_four_human_verify_results():
+    query_ids = [query_id for query_id, _ in get_frozen_replay_queries()]
+
+    query, results = load_frozen_replay("FRKG111")
+
+    assert "FRKG111" in query_ids
+    assert "ratio" in query.lower()
+    assert set(results) == {
+        "vector",
+        "graph",
+        "agent_vector",
+        "agent_graph",
+    }
+    assert all(result.source == "replay" for result in results.values())
+    assert results["agent_graph"].status == "complete"
+    assert results["agent_graph"].citations
+    assert results["agent_graph"].trace[0]["stage"] == "replay"
+
+
+def test_frozen_replay_rejects_unknown_query():
+    with pytest.raises(ValueError, match="Unknown frozen replay query"):
+        load_frozen_replay("FRKG999")
 
 
 def test_run_comparison_direct_vector_uses_selected_config_and_shared_synthesis(
