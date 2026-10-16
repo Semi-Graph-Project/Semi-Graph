@@ -82,7 +82,7 @@ def benchmark(monkeypatch, tmp_path):
 
 @pytest.mark.parametrize(
     "tool",
-    ["vector", "graph", "text_to_cypher", "agent_vector", "agent_graph"],
+    ["vector", "graph", "text_to_cypher", "agent_vector", "agent_graph", "deepagent_vector"],
 )
 @pytest.mark.parametrize("mode", ["retrieve_only", "full_answer"])
 def test_latency_boundaries_and_selected_warmup(benchmark, tool, mode):
@@ -91,7 +91,7 @@ def test_latency_boundaries_and_selected_warmup(benchmark, tool, mode):
     assert result["latency_ms"] == pytest.approx(400.0)
     assert result["answer_latency_ms"] == pytest.approx(1200.0 if answering else 0.0)
     assert result["total_latency_ms"] == pytest.approx(1600.0 if answering else 400.0)
-    warmup_tool = evaluation.AGENT_TOOLS.get(tool, tool)
+    warmup_tool = evaluation.ALL_AGENT_TOOLS.get(tool, tool)
     assert benchmark.calls[0] == warmup_tool
 
     trace = yaml.safe_load((benchmark.path / f"{tool}.yaml").read_text())
@@ -104,7 +104,7 @@ def test_latency_boundaries_and_selected_warmup(benchmark, tool, mode):
         1 if warmup_tool in {"graph", "text_to_cypher"} else 0
     )
     expected_calls = (
-        2 + int(answering) if tool in evaluation.AGENT_TOOLS
+        2 + int(answering) if tool in evaluation.ALL_AGENT_TOOLS
         else int(tool in {"graph", "text_to_cypher"}) + 2 * int(answering)
     )
     assert result["token_usage"]["llm_calls"] == expected_calls
@@ -113,6 +113,28 @@ def test_latency_boundaries_and_selected_warmup(benchmark, tool, mode):
         assert "synthesis_trace" in result
     if tool == "text_to_cypher":
         assert result["generated_cypher"].startswith("MATCH")
+
+
+def test_rejected_deepagent_ids_are_saved_and_not_scored(benchmark, monkeypatch):
+    agent = evaluation._run_agent
+
+    def invalid_selection(*args, **kwargs):
+        result = agent(*args, **kwargs)
+        result["chunks"] = []
+        result["retrieval_trace"] = {
+            "selected_chunk_ids": [], "rejected_chunk_ids": ["C1"],
+        }
+        return result
+
+    monkeypatch.setattr(evaluation, "_run_agent", invalid_selection)
+    result, = evaluation.evaluate_sox_queries(
+        tool="deepagent_vector", mode="retrieve_only", workers=1, limit=1,
+    )
+    assert result["hit"] == 0
+    assert result["recall"] == 0
+    assert result["top_chunk_ids"] == []
+    trace = yaml.safe_load((benchmark.path / "deepagent_vector.yaml").read_text())
+    assert trace["results"][0]["retrieval_trace"]["rejected_chunk_ids"] == ["C1"]
 
 
 def test_range_uses_only_selected_queries_for_metrics(benchmark, monkeypatch):

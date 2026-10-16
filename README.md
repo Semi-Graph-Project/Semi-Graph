@@ -372,15 +372,16 @@ python scripts/run_agent_trace.py \
 ### Compare retrieval backbones
 
 ```bash
-python eval_scripts/evaluate.py \
+python eval_scripts/evaluate_new_agent.py \
   --tool vector \
   --version_name vector_v1 \
   --mode retrieve_only
 ```
 
-Run the same command with `graph`, `agent_vector`, or `agent_graph` to compare
-the four controlled configurations. All active evaluation entry points live in
-`eval_scripts/`.
+Run the same command with `graph`, `agent_vector`, `agent_graph`,
+`deepagent_vector`, or `deepagent_graph` to compare retrieval configurations.
+DeepAgent is an additional Agent architecture, not one of the original four
+configurations. All active evaluation entry points live in `eval_scripts/`.
 
 ## Design Boundaries
 

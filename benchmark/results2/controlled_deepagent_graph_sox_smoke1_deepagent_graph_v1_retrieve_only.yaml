@@ -1,0 +1,137 @@
+summary:
+  query_count: 1
+  hit: 1.0
+  recall: 0.667
+  mrr: 1.0
+  average_latency_ms: 15015.3
+  average_answer_latency_ms: 0.0
+  average_total_latency_ms: 15015.3
+  token_usage:
+    prompt_tokens: 48677
+    completion_tokens: 544
+    total_tokens: 49221
+    llm_calls: 3
+    calls_with_usage: 3
+    status: complete
+  token_usage_including_warmup:
+    prompt_tokens: 48677
+    completion_tokens: 544
+    total_tokens: 49221
+    llm_calls: 3
+    calls_with_usage: 3
+    status: complete
+results:
+- id: FRKG003
+  mode: retrieve_only
+  answer_audit_enabled: false
+  query: Based on the segment disclosures and term definitions in their 2024 10-K filings, how do Intel and NVIDIA differ
+    in the treatment of stock-based compensation expenses within their 'All Other' categories, and what does this reveal about
+    their corporate expense allocation practices?
+  gold_chunks:
+  - INTC_10k_2024.pdf::page_102::chunk_2
+  - INTC_10k_2024.pdf::page_71::chunk_1
+  - NVDA_10k_2024.pdf::page_78::chunk_1
+  top_chunk_ids:
+  - NVDA_10k_2024.pdf::page_78::chunk_1
+  - INTC_10k_2024.pdf::page_71::chunk_1
+  - INTC_10k_2024.pdf::page_73::chunk_4
+  - NVDA_10k_2024.pdf::page_41::chunk_5
+  answer_points:
+  - Intel's 'All Other' category, as defined in its glossary (Chunk 1), includes non-reportable segments and startup businesses.
+    According to Chunk 2, Intel does not allocate stock-based compensation expenses to its operating segments, as these are
+    considered corporate-level expenses. In contrast, NVIDIA's 'All Other' category, as detailed in Chunk 3, explicitly includes
+    stock-based compensation expense as part of its enterprise-level costs. This reveals that Intel maintains stock-based
+    compensation as a centralized corporate expense, while NVIDIA incorporates it directly into its 'All Other' segment's
+    financial reporting, highlighting different approaches to expense allocation between the two companies.
+  final_answer: None
+  hit: 1
+  recall: 0.6666666666666666
+  reciprocal_rank: 1.0
+  latency_ms: 15015.319962985814
+  answer_latency_ms: 0.0
+  total_latency_ms: 15015.319962985814
+  token_usage:
+    prompt_tokens: 48677
+    completion_tokens: 544
+    total_tokens: 49221
+    llm_calls: 3
+    calls_with_usage: 3
+    status: complete
+  retrieval_trace:
+    tool: graph
+    searches:
+    - tool: graph
+      query: Intel 2024 10-K segment disclosures All Other stock-based compensation expense term definition
+      status: ok
+      latency_ms: 1529.6807039994746
+      chunk_ids:
+      - INTC_10k_2024.pdf::page_70::chunk_1
+      - INTC_10k_2024.pdf::page_71::chunk_1
+      - INTC_10k_2024.pdf::page_63::chunk_2
+      - INTC_10k_2024.pdf::page_73::chunk_4
+      - INTC_10k_2022.pdf::page_78::chunk_2
+      - QCOM_10k_2022.pdf::page_83::chunk_3
+      - QCOM_10k_2023.pdf::page_64::chunk_2
+      - AMD_10k_2024.pdf::page_51::chunk_1
+      - INTC_10k_2024.pdf::page_35::chunk_1
+      - INTC_10k_2024.pdf::page_34::chunk_1
+    - tool: graph
+      query: NVIDIA 2024 10-K segment disclosures All Other stock-based compensation expense term definition
+      status: ok
+      latency_ms: 1564.621547004208
+      chunk_ids:
+      - NVDA_10k_2024.pdf::page_78::chunk_1
+      - NVDA_10k_2023.pdf::page_56::chunk_1
+      - NVDA_10k_2024.pdf::page_41::chunk_5
+      - NVDA_10k_2024.pdf::page_43::chunk_3
+      - NVDA_10k_2022.pdf::page_97::chunk_1
+      - NVDA_10k_2022.pdf::page_67::chunk_2
+      - AVGO_10k_2024.pdf::page_56::chunk_2
+      - AVGO_10k_2024.pdf::page_57::chunk_2
+      - AVGO_10k_2022.pdf::page_74::chunk_5
+      - AVGO_10k_2023.pdf::page_56::chunk_2
+    - tool: graph
+      query: Intel 2024 10-K All Other share-based compensation not allocated operating segments corporate unallocated expenses
+        segment operating income table
+      status: ok
+      latency_ms: 674.4890910340473
+      chunk_ids:
+      - INTC_10k_2023.pdf::page_90::chunk_2
+      - INTC_10k_2024.pdf::page_71::chunk_1
+      - INTC_10k_2024.pdf::page_70::chunk_1
+      - INTC_10k_2024.pdf::page_73::chunk_4
+      - INTC_10k_2024.pdf::page_63::chunk_2
+      - INTC_10k_2022.pdf::page_78::chunk_2
+      - QCOM_10k_2023.pdf::page_64::chunk_2
+      - QCOM_10k_2022.pdf::page_83::chunk_3
+      - INTC_10k_2022.pdf::page_35::chunk_1
+      - INTC_10k_2022.pdf::page_74::chunk_2
+    selected_chunk_ids:
+    - NVDA_10k_2024.pdf::page_78::chunk_1
+    - INTC_10k_2024.pdf::page_71::chunk_1
+    - INTC_10k_2024.pdf::page_73::chunk_4
+    - NVDA_10k_2024.pdf::page_41::chunk_5
+    rejected_chunk_ids: []
+measurement:
+  tool: deepagent_graph
+  mode: retrieve_only
+  workers: 1
+  selection:
+    start: 1
+    end: 1
+    query_count: 1
+  answer_audit_enabled: false
+  latency_scope: Per-query wall time after warm-up; excludes executor queue, metric calculation and trace writes; includes
+    internal lock waits. Agent retrieval includes planning, assessment and retries.
+  token_usage_scope: Provider-reported LLM tokens across all calls and retries; excludes local embeddings and reranking. Partial
+    totals cover only calls that returned usage. Warm-up is reported separately.
+  warmup:
+    tool: graph
+    latency_ms: 14528.887986030895
+    token_usage:
+      prompt_tokens: 0
+      completion_tokens: 0
+      total_tokens: 0
+      llm_calls: 0
+      calls_with_usage: 0
+      status: no_calls

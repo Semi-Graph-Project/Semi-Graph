@@ -46,6 +46,7 @@ dependencies = [
 
 [project.optional-dependencies]
 e2e = ["pytest-playwright>=0.7,<1"]
+deepagents = ["deepagents==0.7.25"]  # Requires Python >=3.11; use the py312 environment.
 
 [tool.setuptools.packages.find]
 where = ["src"]

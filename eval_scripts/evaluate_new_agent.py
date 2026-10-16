@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Evaluate Vector, Graph, Agent+Vector, or Agent+Graph on SOX74."""
+"""Evaluate retrieval configurations on SOX74."""
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
 from pathlib import Path
 import json
 import sys
@@ -41,6 +42,11 @@ AGENT_TOOLS = {
     "agent_vector": "vector",
     "agent_graph": "graph",
 }
+DEEP_AGENT_TOOLS = {
+    "deepagent_vector": "vector",
+    "deepagent_graph": "graph",
+}
+ALL_AGENT_TOOLS = {**AGENT_TOOLS, **DEEP_AGENT_TOOLS}
 SOX_DATASET = ROOT / "benchmark/freezes/sox74_retrieval_ablation_v1/inputs/finreflectkg_sox_strict74.yaml"
 SOX_QUERY_COUNT = 74
 TRACE_OUTPUT_TEMPLATE = ROOT / (
@@ -101,7 +107,7 @@ def _requires_llm(tool: str, mode: str, cfg) -> bool:
     )
     return (
         mode == "full_answer"
-        or tool in AGENT_TOOLS
+        or tool in ALL_AGENT_TOOLS
         or tool == "text_to_cypher"
         or (tool == "graph" and graph_filter == "llm")
     )
@@ -251,8 +257,27 @@ def _run_agent(
             "final_answer": "Do not Answer" if generate_answer else "",
             "answer_latency_ms": 0.0,
         }
+    if tool in DEEP_AGENT_TOOLS:
+        from semigraph.deepagents import Deepagent
+
+        cfg = deepcopy(get_config())
+        cfg.neo4j_uri = cfg.controlled_neo4j_uri
+        cfg.agent_retrieval["vector"]["vector_index"] = VECTOR_INDEX
+        cfg.agent_retrieval["graph"]["chunk_seed_vector_index"] = VECTOR_INDEX
+        cfg.agent_top_k_chunks = TOP_K
+        cfg.agent_max_synthesis_chunks = TOP_K
+        return Deepagent(
+            question,
+            tool=DEEP_AGENT_TOOLS[tool],
+            FullAnswer=generate_answer,
+            cfg=cfg,
+        )
+
     if tool not in AGENT_TOOLS:
-        raise ValueError("tool must be 'agent_vector' or 'agent_graph'")
+        raise ValueError(
+            "tool must be 'agent_vector', 'agent_graph', "
+            "'deepagent_vector', or 'deepagent_graph'"
+        )
 
     cfg = get_config()
     cfg.neo4j_uri = cfg.controlled_neo4j_uri
@@ -313,6 +338,24 @@ def agent_graph_search(question: str) -> list[dict]:
     )["chunks"]
 
 
+def deepagent_vector_search(question: str) -> list[dict]:
+    """Return chunks selected by DeepAgent for evaluator retrieval scoring."""
+    return _run_agent(
+        question,
+        tool="deepagent_vector",
+        generate_answer=False,
+    )["chunks"]
+
+
+def deepagent_graph_search(question: str) -> list[dict]:
+    """Return chunks selected by DeepAgent using Graph Search."""
+    return _run_agent(
+        question,
+        tool="deepagent_graph",
+        generate_answer=False,
+    )["chunks"]
+
+
 def evaluate_sox_queries(
     tool: str = "vector",
     version_name: str = "v1",
@@ -332,7 +375,7 @@ def evaluate_sox_queries(
     cfg = get_config()
     answer_audit_enabled = (
         mode == "full_answer"
-        and tool not in AGENT_TOOLS
+        and tool not in ALL_AGENT_TOOLS
         and cfg.eval_answer_audit_enabled
     )
     all_queries = load_sox_queries()
@@ -351,8 +394,12 @@ def evaluate_sox_queries(
         "text_to_cypher": text_to_cypher_search,
         "agent_vector": agent_vector_search,
         "agent_graph": agent_graph_search,
+        "deepagent_vector": deepagent_vector_search,
+        "deepagent_graph": deepagent_graph_search,
     }
-    search = searches[tool]
+    search = searches.get(tool)
+    if search is None and tool not in ALL_AGENT_TOOLS:
+        raise ValueError(f"Unknown evaluation tool: {tool}")
     trace_output = Path(
         str(TRACE_OUTPUT_TEMPLATE).format(
             tool=tool,
@@ -371,7 +418,7 @@ def evaluate_sox_queries(
     )
     # Warm the selected retriever, including its reranker and Triple cache.
     # Keep warm-up LLM tokens separate from the measured benchmark queries.
-    warmup_tool = AGENT_TOOLS.get(tool, tool)
+    warmup_tool = ALL_AGENT_TOOLS.get(tool, tool)
     print(f"Warm-up: {warmup_tool} (excluded from per-query latency)")
     with collect_token_usage() as warmup_usage:
         warmup_started = time.perf_counter()
@@ -406,7 +453,7 @@ def evaluate_sox_queries(
 
     llm = (
         get_llm(get_config())
-        if mode == "full_answer" and tool not in AGENT_TOOLS
+        if mode == "full_answer" and tool not in ALL_AGENT_TOOLS
         else None
     )
 
@@ -417,10 +464,11 @@ def evaluate_sox_queries(
         final_answer = "None"
         answer_latency_ms = 0.0
         synthesis_trace = None
+        retrieval_trace = None
         generated_cypher = None
         with collect_token_usage() as usage:
             started = time.perf_counter()
-            if tool in AGENT_TOOLS:
+            if tool in ALL_AGENT_TOOLS:
                 agent_result = _run_agent(
                     case["query"],
                     tool=tool,
@@ -432,6 +480,7 @@ def evaluate_sox_queries(
                     answer_latency_ms = agent_result["answer_latency_ms"]
                     answer_error = agent_result.get("answer_error")
                     synthesis_trace = agent_result.get("synthesis_trace")
+                retrieval_trace = agent_result.get("retrieval_trace")
             else:
                 retrieval_result = search(case["query"], top_k=TOP_K)
                 if tool == "text_to_cypher":
@@ -494,6 +543,8 @@ def evaluate_sox_queries(
             result["answer_error"] = answer_error
         if synthesis_trace is not None:
             result["synthesis_trace"] = synthesis_trace
+        if retrieval_trace is not None:
+            result["retrieval_trace"] = retrieval_trace
         if generated_cypher is not None:
             result["generated_cypher"] = generated_cypher
         return result
@@ -543,7 +594,7 @@ def evaluate_sox_queries(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Evaluate Vector/Graph/Text-to-Cypher/Agent on SOX74"
+        description="Evaluate Vector/Graph/Agent/DeepAgent retrieval on SOX74"
     )
     parser.add_argument(
         "--tool",
@@ -553,9 +604,11 @@ def main() -> None:
             "text_to_cypher",
             "agent_vector",
             "agent_graph",
+            "deepagent_vector",
+            "deepagent_graph",
         ),
         default="vector",
-        help="retriever to evaluate (default: vector)",
+        help="retrieval configuration to evaluate (default: vector)",
         required=True,
     )
     parser.add_argument(

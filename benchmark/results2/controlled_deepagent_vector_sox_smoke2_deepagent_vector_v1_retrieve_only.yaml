@@ -1,0 +1,204 @@
+summary:
+  query_count: 2
+  hit: 1.0
+  recall: 0.667
+  mrr: 1.0
+  average_latency_ms: 14742.7
+  average_answer_latency_ms: 0.0
+  average_total_latency_ms: 14742.7
+  token_usage:
+    prompt_tokens: 65671
+    completion_tokens: 1096
+    total_tokens: 66767
+    llm_calls: 7
+    calls_with_usage: 7
+    status: complete
+  token_usage_including_warmup:
+    prompt_tokens: 65671
+    completion_tokens: 1096
+    total_tokens: 66767
+    llm_calls: 7
+    calls_with_usage: 7
+    status: complete
+results:
+- id: FRKG003
+  mode: retrieve_only
+  answer_audit_enabled: false
+  query: Based on the segment disclosures and term definitions in their 2024 10-K filings, how do Intel and NVIDIA differ
+    in the treatment of stock-based compensation expenses within their 'All Other' categories, and what does this reveal about
+    their corporate expense allocation practices?
+  gold_chunks:
+  - INTC_10k_2024.pdf::page_102::chunk_2
+  - INTC_10k_2024.pdf::page_71::chunk_1
+  - NVDA_10k_2024.pdf::page_78::chunk_1
+  top_chunk_ids:
+  - INTC_10k_2024.pdf::page_71::chunk_1
+  - NVDA_10k_2024.pdf::page_78::chunk_1
+  - INTC_10k_2024.pdf::page_72::chunk_2
+  - INTC_10k_2024.pdf::page_70::chunk_1
+  answer_points:
+  - Intel's 'All Other' category, as defined in its glossary (Chunk 1), includes non-reportable segments and startup businesses.
+    According to Chunk 2, Intel does not allocate stock-based compensation expenses to its operating segments, as these are
+    considered corporate-level expenses. In contrast, NVIDIA's 'All Other' category, as detailed in Chunk 3, explicitly includes
+    stock-based compensation expense as part of its enterprise-level costs. This reveals that Intel maintains stock-based
+    compensation as a centralized corporate expense, while NVIDIA incorporates it directly into its 'All Other' segment's
+    financial reporting, highlighting different approaches to expense allocation between the two companies.
+  final_answer: None
+  hit: 1
+  recall: 0.6666666666666666
+  reciprocal_rank: 1.0
+  latency_ms: 17081.281097984174
+  answer_latency_ms: 0.0
+  total_latency_ms: 17081.281097984174
+  token_usage:
+    prompt_tokens: 30758
+    completion_tokens: 690
+    total_tokens: 31448
+    llm_calls: 3
+    calls_with_usage: 3
+    status: complete
+  retrieval_trace:
+    tool: vector
+    searches:
+    - query: Intel and NVIDIA 2024 10-K segment disclosures term definitions 'All Other' stock-based compensation expenses
+        treatment corporate expense allocation practices
+      status: ok
+      latency_ms: 241.83473701123148
+      chunk_ids:
+      - NVDA_10k_2024.pdf::page_78::chunk_1
+      - INTC_10k_2024.pdf::page_71::chunk_1
+      - NVDA_10k_2024.pdf::page_60::chunk_1
+      - INTC_10k_2024.pdf::page_70::chunk_1
+      - NVDA_10k_2024.pdf::page_36::chunk_1
+      - INTC_10k_2024.pdf::page_72::chunk_2
+      - INTC_10k_2024.pdf::page_25::chunk_3
+      - NVDA_10k_2023.pdf::page_58::chunk_1
+      - NVDA_10k_2023.pdf::page_71::chunk_1
+      - NVDA_10k_2022.pdf::page_91::chunk_1
+    - query: Intel 2024 10-K All Other corporate unallocated share-based compensation not allocate operating segments definition
+        stock-based compensation expense
+      status: ok
+      latency_ms: 433.68061500950716
+      chunk_ids:
+      - INTC_10k_2024.pdf::page_71::chunk_1
+      - INTC_10k_2024.pdf::page_52::chunk_3
+      - INTC_10k_2024.pdf::page_70::chunk_1
+      - INTC_10k_2024.pdf::page_84::chunk_5
+      - INTC_10k_2023.pdf::page_90::chunk_2
+      - INTC_10k_2023.pdf::page_69::chunk_3
+      - INTC_10k_2022.pdf::page_107::chunk_1
+      - AVGO_10k_2024.pdf::page_45::chunk_1
+      - AVGO_10k_2024.pdf::page_85::chunk_3
+      - AVGO_10k_2024.pdf::page_45::chunk_5
+    selected_chunk_ids:
+    - INTC_10k_2024.pdf::page_71::chunk_1
+    - NVDA_10k_2024.pdf::page_78::chunk_1
+    - INTC_10k_2024.pdf::page_72::chunk_2
+    - INTC_10k_2024.pdf::page_70::chunk_1
+- id: FRKG009
+  mode: retrieve_only
+  answer_audit_enabled: false
+  query: What percentage of Texas Instruments' 2022 total revenue was represented by restructuring charges disclosed in the
+    Other segment, and how does the company's segment reporting structure explain the separation of these charges from operating
+    segments like Embedded Processing?
+  gold_chunks:
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2023.pdf::page_30::chunk_1
+  - TXN_10k_2024.pdf::page_4::chunk_1
+  top_chunk_ids:
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2023.pdf::page_30::chunk_1
+  answer_points:
+  - In 2022, restructuring charges in the Other segment amounted to $257 million (Chunk 1), representing 1.28% of total revenue
+    ($257M / $20,028M). Texas Instruments' segment reporting structure (Chunk 2) explains that restructuring charges are classified
+    as corporate-level items in the Other segment, which are not allocated to operating segments like Embedded Processing.
+    This separation reflects how management evaluates segment performance by excluding non-operational corporate expenses
+    (Chunk 3 confirms Embedded Processing is a distinct operating segment with 16% revenue contribution in 2024, emphasizing
+    its structural independence from corporate charges).
+  final_answer: None
+  hit: 1
+  recall: 0.6666666666666666
+  reciprocal_rank: 1.0
+  latency_ms: 12404.119571991032
+  answer_latency_ms: 0.0
+  total_latency_ms: 12404.119571991032
+  token_usage:
+    prompt_tokens: 34913
+    completion_tokens: 406
+    total_tokens: 35319
+    llm_calls: 4
+    calls_with_usage: 4
+    status: complete
+  retrieval_trace:
+    tool: vector
+    searches:
+    - query: Texas Instruments 2022 total revenue restructuring charges Other segment Embedded Processing segment reporting
+        structure
+      status: ok
+      latency_ms: 119.95949799893424
+      chunk_ids:
+      - TXN_10k_2022.pdf::page_6::chunk_1
+      - TXN_10k_2022.pdf::page_33::chunk_2
+      - TXN_10k_2023.pdf::page_4::chunk_1
+      - TXN_10k_2023.pdf::page_30::chunk_1
+      - TXN_10k_2024.pdf::page_31::chunk_3
+      - TXN_10k_2024.pdf::page_31::chunk_1
+      - TXN_10k_2024.pdf::page_30::chunk_2
+      - TXN_10k_2024.pdf::page_30::chunk_1
+      - TXN_10k_2024.pdf::page_4::chunk_1
+      - AMD_10k_2022.pdf::page_77::chunk_1
+    - query: Texas Instruments 2022 Form 10-K 2022 revenue 20,028 restructuring charges other 257 Embedded Processing segment
+        table
+      status: ok
+      latency_ms: 123.38219897355884
+      chunk_ids:
+      - TXN_10k_2022.pdf::page_33::chunk_2
+      - TXN_10k_2022.pdf::page_6::chunk_1
+      - TXN_10k_2022.pdf::page_57::chunk_1
+      - TXN_10k_2024.pdf::page_31::chunk_3
+      - TXN_10k_2024.pdf::page_31::chunk_1
+      - TXN_10k_2024.pdf::page_30::chunk_2
+      - TXN_10k_2023.pdf::page_4::chunk_1
+      - TXN_10k_2024.pdf::page_1::chunk_1
+      - TXN_10k_2023.pdf::page_30::chunk_1
+      - QCOM_10k_2022.pdf::page_3::chunk_1
+    - query: TXN 2022 restructuring charges 257 20,028 total revenue Other segment 2022
+      status: ok
+      latency_ms: 102.92000099434517
+      chunk_ids:
+      - TXN_10k_2022.pdf::page_22::chunk_7
+      - TXN_10k_2022.pdf::page_22::chunk_2
+      - TXN_10k_2023.pdf::page_20::chunk_2
+      - TXN_10k_2024.pdf::page_31::chunk_1
+      - TXN_10k_2024.pdf::page_31::chunk_3
+      - TXN_10k_2024.pdf::page_20::chunk_2
+      - TXN_10k_2024.pdf::page_30::chunk_2
+      - AVGO_10k_2022.pdf::page_127::chunk_3
+      - QCOM_10k_2022.pdf::page_44::chunk_2
+      - INTC_10k_2022.pdf::page_39::chunk_2
+    selected_chunk_ids:
+    - TXN_10k_2024.pdf::page_31::chunk_3
+    - TXN_10k_2023.pdf::page_30::chunk_1
+measurement:
+  tool: deepagent_vector
+  mode: retrieve_only
+  workers: 1
+  selection:
+    start: 1
+    end: 2
+    query_count: 2
+  answer_audit_enabled: false
+  latency_scope: Per-query wall time after warm-up; excludes executor queue, metric calculation and trace writes; includes
+    internal lock waits. Agent retrieval includes planning, assessment and retries.
+  token_usage_scope: Provider-reported LLM tokens across all calls and retries; excludes local embeddings and reranking. Partial
+    totals cover only calls that returned usage. Warm-up is reported separately.
+  warmup:
+    tool: vector
+    latency_ms: 6549.746011005482
+    token_usage:
+      prompt_tokens: 0
+      completion_tokens: 0
+      total_tokens: 0
+      llm_calls: 0
+      calls_with_usage: 0
+      status: no_calls
