@@ -17,6 +17,7 @@
 
 <p>
   <a href="#quick-start">Quick Start</a> ·
+  <a href="library/README.md">Standalone SDK</a> ·
   <a href="#evaluation">Results</a> ·
   <a href="#architecture">Architecture</a> ·
   <a href="benchmark/README.md">Benchmark data</a>
@@ -66,6 +67,14 @@ streamlit run Demo/comparison_app.py
 Choose **Benchmark (7690) → Frozen replay** to inspect previously saved runs
 without a Neo4j or LLM call. For a Live run, configure the selected database
 and an LLM API key using [Developer Setup](#developer-setup).
+
+## Standalone SDK
+
+The experimental [`library/`](library/README.md) package isolates reusable
+database setup and Agent components from the thesis runtime. Database bootstrap
+and generic Agent compatibility are available now. Free Ontology ingestion and
+the unified retrieval API are still under development; the library README
+records the current support boundary.
 
 ## Research Positioning
 
