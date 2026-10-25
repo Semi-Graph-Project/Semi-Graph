@@ -10,7 +10,7 @@ from neo4j import Driver
 from .config import SDKConfig
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 REQUIRED_PROCEDURES = frozenset(
     {"apoc.merge.relationship", "gds.graph.project", "gds.pageRank.stream"}
 )
@@ -57,6 +57,11 @@ _CONSTRAINTS = {
         "ObservedRelation", ("id",),
         "CREATE CONSTRAINT sg_relation_id IF NOT EXISTS "
         "FOR (r:ObservedRelation) REQUIRE r.id IS UNIQUE",
+    ),
+    "sg_ingestion_checkpoint": (
+        "IngestionCheckpoint", ("chunk_id",),
+        "CREATE CONSTRAINT sg_ingestion_checkpoint IF NOT EXISTS "
+        "FOR (c:IngestionCheckpoint) REQUIRE c.chunk_id IS UNIQUE",
     ),
 }
 
@@ -108,7 +113,7 @@ def _check_metadata(session, config: SDKConfig) -> dict | None:
     meta = records[0]
     if meta["owner"] != config.workspace_id:
         raise IncompatibleDatabase("Database belongs to another SDK workspace")
-    if meta["schema_version"] != SCHEMA_VERSION:
+    if meta["schema_version"] not in {1, SCHEMA_VERSION}:
         raise IncompatibleDatabase("Database schema version differs from this SDK")
     if meta["embedding_fingerprint"] != config.embedding.fingerprint:
         raise IncompatibleDatabase(
@@ -242,6 +247,12 @@ def setup_database(
                 owner=config.workspace_id,
                 version=SCHEMA_VERSION,
                 fingerprint=config.embedding.fingerprint,
+            ).consume()
+            # Version 2 only adds the checkpoint uniqueness constraint. Keep this
+            # migration additive so existing version-1 workspaces retain data.
+            session.run(
+                "MATCH (m:SDKMeta {key: 'root'}) SET m.schema_version = $version",
+                version=SCHEMA_VERSION,
             ).consume()
             return SetupReport(
                 uri=config.database.uri,

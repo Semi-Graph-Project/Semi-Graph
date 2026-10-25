@@ -20,6 +20,7 @@ semigraph-sdk = "semigraph_sdk.cli:main"
 
 [project.optional-dependencies]
 deepagents = ["deepagents==0.7.25"]
+ingestion = ["langchain-openai>=1,<2", "sentence-transformers>=3,<6"]
 test = ["pytest>=9,<10"]
 
 [tool.setuptools.packages.find]
