@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "semigraph-sdk"
+version = "0.1.0a0"
+description = "Standalone Free Ontology knowledge-base SDK for SemiGraph"
+requires-python = ">=3.11"
+dependencies = [
+    "langgraph>=1.2.15,<2",
+    "langchain-core>=1.6.10,<2",
+    "pydantic>=2.13.5,<3",
+    "neo4j>=5.26,<7",
+    "PyYAML>=6,<7",
+]
+
+[project.scripts]
+semigraph-sdk = "semigraph_sdk.cli:main"
+
+[project.optional-dependencies]
+deepagents = ["deepagents==0.7.25"]
+test = ["pytest>=9,<10"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+semigraph_sdk = ["deployment/compose.yaml"]
