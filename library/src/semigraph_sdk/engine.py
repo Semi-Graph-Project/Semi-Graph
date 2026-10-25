@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+from threading import RLock
+from typing import TYPE_CHECKING, Literal
 
 from neo4j import GraphDatabase
 
@@ -13,27 +15,68 @@ from .ingestion.extract import LLMExtractor, build_extractor
 from .ingestion.models import IngestionReport
 from .ingestion.pipeline import ingest_texts
 
+if TYPE_CHECKING:
+    from .retrieval.models import RetrievalResult
+
 
 class Engine:
     def __init__(self, config: SDKConfig) -> None:
         self.config = config
         self._driver = None
+        self._driver_lock = RLock()
+        self._query_encoder = None
+        self._query_encoder_lock = RLock()
+        self._projection_lock = RLock()
+        from .retrieval.triple_cache import TripleVectorCache
+
+        self._triple_cache = TripleVectorCache()
 
     @classmethod
     def from_config(cls, path: str | Path) -> Engine:
         return cls(SDKConfig.from_file(path))
 
     def setup(self) -> SetupReport:
-        if self._driver is None:
-            self._driver = GraphDatabase.driver(
-                self.config.database.uri,
-                auth=(self.config.database.user, self.config.database_password()),
-            )
+        with self._driver_lock:
+            if self._driver is None:
+                self._driver = GraphDatabase.driver(
+                    self.config.database.uri,
+                    auth=(self.config.database.user, self.config.database_password()),
+                )
+            driver = self._driver
         try:
-            return setup_database(self.config, self._driver)
+            return setup_database(self.config, driver)
         except Exception:
             self.close()
             raise
+
+    def query(
+        self,
+        question: str,
+        *,
+        tool: Literal["vector", "graph"] = "vector",
+        agent: Literal["none", "task_specific", "deepagent"] = "none",
+        output: Literal["chunks", "answer"] = "chunks",
+        top_k: int = 10,
+    ) -> RetrievalResult:
+        """Retrieve evidence or one grounded answer from a finalized corpus."""
+        from .retrieval.query import query_engine
+
+        return query_engine(
+            self,
+            question,
+            tool=tool,
+            agent=agent,
+            output=output,
+            top_k=top_k,
+        )
+
+    def _get_query_encoder(self):
+        with self._query_encoder_lock:
+            if self._query_encoder is None:
+                from .retrieval.encoder import QueryEncoder
+
+                self._query_encoder = QueryEncoder(self.config.embedding)
+            return self._query_encoder
 
     def ingest(
         self,
@@ -66,9 +109,10 @@ class Engine:
         )
 
     def close(self) -> None:
-        if self._driver is not None:
-            self._driver.close()
-            self._driver = None
+        with self._driver_lock:
+            if self._driver is not None:
+                self._driver.close()
+                self._driver = None
 
     def __enter__(self) -> Engine:
         return self

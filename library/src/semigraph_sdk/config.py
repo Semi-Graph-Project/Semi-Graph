@@ -5,9 +5,10 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class ConfigError(ValueError):
@@ -80,6 +81,52 @@ class LLMConfig(BaseModel):
         return value
 
 
+class VectorRetrievalConfig(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    min_score: float | None = Field(default=None, ge=-1, le=1)
+
+
+class GraphRetrievalConfig(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    seed_mode: Literal["triple", "entity", "chunk"] = "triple"
+    seed_k: int = Field(default=10, ge=1, le=100)
+    min_seed_score: float | None = Field(default=None, ge=-1, le=1)
+    damping: float = Field(default=0.5, gt=0, lt=1)
+    max_iterations: int = Field(default=20, ge=1, le=100)
+    top_k_entities_in_trace: int = Field(default=20, ge=0, le=100)
+
+
+class AgentRetrievalConfig(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    max_planned_tasks: int = Field(default=3, ge=1, le=16)
+    max_attempts_per_task: int = Field(default=2, ge=1, le=8)
+    max_parallel_tasks: int = Field(default=2, ge=1, le=16)
+    max_relation_hints: int = Field(default=8, ge=0, le=32)
+
+
+class RetrievalConfig(BaseModel):
+    """Bounded retrieval controls; omitted from old configs by default."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    per_search_k: int = Field(default=10, ge=1, le=100)
+    max_top_k: int = Field(default=100, ge=1, le=1000)
+    vector: VectorRetrievalConfig = Field(default_factory=VectorRetrievalConfig)
+    graph: GraphRetrievalConfig = Field(default_factory=GraphRetrievalConfig)
+    agent: AgentRetrievalConfig = Field(default_factory=AgentRetrievalConfig)
+
+    @model_validator(mode="after")
+    def validate_budgets(self) -> RetrievalConfig:
+        if self.per_search_k > self.max_top_k:
+            raise ValueError("retrieval.per_search_k must not exceed retrieval.max_top_k")
+        if self.agent.max_planned_tasks > self.max_top_k:
+            raise ValueError("Agent tasks must fit within retrieval.max_top_k")
+        return self
+
+
 class SDKConfig(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -88,6 +135,7 @@ class SDKConfig(BaseModel):
     embedding: EmbeddingConfig
     secrets_file: Path
     llm: LLMConfig | None = None
+    retrieval: RetrievalConfig = Field(default_factory=RetrievalConfig)
     config_path: Path = Field(exclude=True)
 
     @classmethod
