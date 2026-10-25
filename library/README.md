@@ -1,7 +1,7 @@
-# SemiGraph SDK — database setup, ingestion + Agent components
+# SemiGraph SDK — database setup, ingestion + retrieval
 
 SDK นี้สร้าง workspace Neo4j แยก, รับข้อความไปสกัดเป็น Free Ontology พร้อม embedding และมี Agent components แบบ Task-specific กับ DeepAgent ให้เรียกใช้
-ตัวรวม Retrieval API (`Engine.query`) ยังอยู่ใน Stage 03
+ผู้ใช้เรียกค้นผ่าน `Engine.query()` ได้ โดยเลือก Vector/Graph, Agent และผลลัพธ์ chunks/answer ในคำสั่งเดียว
 
 ## Requirements
 
@@ -51,6 +51,85 @@ print(result["final_answer"])
 ```
 
 These low-level Agent examples need a caller-provided retriever and do not connect to a database on their own. `relations` is an optional hint map, not a required ontology.
+
+## Query the SDK corpus
+
+Install the retrieval dependencies from the repository root:
+
+```bash
+python -m pip install -e './library[ingestion]'
+# Optional, only when agent="deepagent":
+python -m pip install -e './library[deepagents]'
+```
+
+`[ingestion]` provides the local sentence-transformer model used to embed each query. The first query may download the configured model if it is not cached yet. `Engine.query()` connects to the workspace database and requires a finalized corpus (`search_ready=true`).
+
+Use this API:
+
+```python
+engine.query(question, *, tool="vector", agent="none", output="chunks", top_k=10)
+```
+
+| Parameter | Options | Meaning |
+| --- | --- | --- |
+| `tool` | `vector`, `graph` | Search the chunk vector index or use graph seeds and GDS Personalized PageRank. |
+| `agent` | `none`, `task_specific`, `deepagent` | Retrieve directly, plan focused searches, or use DeepAgent to plan retrieval. |
+| `output` | `chunks`, `answer` | Return evidence chunks only, or ask the configured LLM to write one grounded answer. |
+| `top_k` | `1` to `retrieval.max_top_k` | Maximum evidence chunks returned. Agent mode also requires `top_k >= retrieval.agent.max_planned_tasks` (default `3`). |
+
+`agent="none", output="chunks"` is Retrieve Only and does not call an LLM. Agent modes use an LLM for planning and evidence selection, even when `output="chunks"`. `output="answer"` uses an LLM for synthesis with any agent mode. DeepAgent also requires the `[deepagents]` extra.
+
+```python
+from semigraph_sdk import Engine
+
+with Engine.from_config("knowledge/semigraph.yaml") as engine:
+    result = engine.query(
+        "What material does pump P7 use?",
+        tool="graph",       # vector | graph
+        agent="none",       # none | task_specific | deepagent
+        output="chunks",    # chunks | answer
+        top_k=5,
+    )
+
+    print(result.status, result.corpus_revision)
+    for chunk in result.chunks:
+        print(chunk.rank, chunk.chunk_id, chunk.text)
+        for match in chunk.matches:
+            print(match.tool, match.score_kind, match.score, match.query)
+        print(chunk.assertions)
+```
+
+To ask the SDK to write one grounded answer, set `output="answer"`. The answer may cite only chunk IDs returned in `result.chunks`; no evidence returns `"Do not Answer"` without calling synthesis.
+
+```python
+with Engine.from_config("knowledge/semigraph.yaml") as engine:
+    result = engine.query(
+        "What material does pump P7 use?",
+        tool="vector",
+        agent="task_specific",
+        output="answer",
+        top_k=5,
+    )
+    print(result.answer)
+```
+
+Graph seed mode defaults to `triple`. Set `retrieval.graph.seed_mode` to `entity` or `chunk` in `knowledge/semigraph.yaml` to choose another seed source. Other settings live under `retrieval` and reject unknown keys. Lower `retrieval.agent.max_planned_tasks` when using a smaller evidence budget. Graph mode reuses its in-memory GDS projection when available, rebuilds it after a Neo4j restart, and refreshes it after ingestion.
+
+```yaml
+retrieval:
+  per_search_k: 10
+  graph:
+    seed_mode: triple
+    seed_k: 10
+    damping: 0.5
+    max_iterations: 20
+  agent:
+    max_planned_tasks: 3
+    max_attempts_per_task: 2
+    max_parallel_tasks: 2
+```
+
+`result.status` is `ok` or `no_evidence`. `result.chunks` contains ranked evidence with `chunk_id`, text, matches, entities, and assertions. `result.answer` is populated only for `output="answer"`; with no evidence it is `"Do not Answer"`. `result.corpus_revision` identifies the indexed corpus version. `result.trace` contains mode-specific details: direct Graph calls include seeds and projection state, while Agent calls include search results and controller traces. It never contains embedding vectors. Vector cosine and Graph PPR scores have separate `score_kind` values and must not be compared as one scale.
 
 ## Setup a database and ingest text
 
@@ -135,7 +214,13 @@ python -B -m pytest library/tests -q -p no:cacheprovider
 
 Agent-copy validation recorded 2026-10-25: **21 passed**. Live database setup acceptance on the same date covered a dedicated workspace, container restart, repeated setup, APOC 2025.04.0, GDS 2.17.1, and ONLINE 768-dimensional vector indexes.
 
-Stage 02 validation on 2026-10-25: **36 SDK tests passed**. Live smoke runs on RAGTEST at Bolt port `7695` migrated schema v1 to v2, used real `BAAI/bge-base-en-v1.5` 768-dimensional vectors, stored verified assertions, skipped completed chunks on retry, and restored the GDS projection after it was dropped. One run used a scripted extractor to verify partial failures; another used one real OpenRouter call with model `openai/gpt-5.6-luna` and published one assertion. Temporary config/secret files and smoke records were removed, leaving RAGTEST empty and `search_ready=false`; its YAML and `.env` were not changed.
+Stage 02 validation on 2026-10-25: **36 SDK tests passed**. Earlier live smoke on RAGTEST at Bolt port `7695` verified schema migration, ingestion, retry checkpoints, and projection recovery. The database now has a finalized corpus; current Stage 03 smoke is read-only apart from rebuilding its in-memory SDK projection.
+
+Stage 03 validation on 2026-10-25: **33 focused retrieval tests passed; 69 SDK tests passed overall**. Tests cover all 12 tool/Agent/output combinations, score provenance, cache reuse and revision replacement, seed modes, PPR ranking, projection reuse/rebuild and concurrent recovery, readiness, and revision changes.
+
+Read-only live query smoke used the existing RAGTEST corpus at Bolt port `7695`. All **12 public modes** passed against Neo4j: Vector/Graph × no Agent/Task-specific/DeepAgent × chunks/answer. Every mode returned both chunks. Agent planning, evidence selection and answer generation used scripted in-process LLMs; no provider call was made. Chunks output did not synthesize; answer output synthesized once and passed citation checks. Earlier kernel smoke verified triple, entity and chunk seed modes, warm triple-cache reuse, and projection recovery after dropping the SDK-owned in-memory projection. The corpus stayed `search_ready=true`, revision `1`, with 2 chunks, 5 entities and 2 assertions; no workspace config or corpus rows changed.
+
+A separate Neo4j `2025.04-community` smoke used the real SDK pipeline with an injected deterministic extractor and 8-dimensional test embedder. It ingested new relation `USES_MATERIAL`; Vector returned its chunk, Graph selected the triple, and GDS PPR returned the related chunk. A second ingest advanced revision `1 → 2` and invalidated the prior triple cache. Dropping the GDS projection and restarting Neo4j both triggered successful projection recovery. The temporary container, volume, config and credentials were removed. RAGTEST was not modified. This smoke used no paid LLM or external embedding model.
 
 Unit validation uses scripted LLMs, fake retrievers and fake embedders. Live ingestion smoke used Neo4j, the cached local embedding model and one OpenRouter extraction call. The verified environment uses Python 3.12, LangGraph 1.2.15, langchain-core 1.6.10, Pydantic 2.13.5 and DeepAgents 0.7.25. Package version ranges do not imply that every future version has been tested.
 
