@@ -1,0 +1,130 @@
+review_metadata:
+  reviewed_at: '2026-11-03T22:11:27.813717+07:00'
+  reference_dataset_revision: sox74_repaired_v1
+  reference_file: /home/kantinan/programming/project/benchmark/datasets/sox74_repaired_v1/reference_review.yaml
+  reference_sha256: c5b17c108dca6e032e45b3806f6e4db02dd316b6e97a09d85727c85679da79d2
+  rubric_html: /home/kantinan/programming/project/docs/answer-review/index.html
+  rubric_sha256: eb41f0487e7b939ffdc1715cd1e6b7a15976bc21694d4fce3dba46203dc510f0
+  decisions_sha256: 2c226fe18406e22725da9a444b2632df1db0ba3e2bd24cdead9ba5f566526c88
+  reviewer: Codex assistant applying the Human Verify rubric; not an independent human review
+  selection:
+    start: 1
+    end: 20
+    queries_per_experiment: 20
+    experiment_count: 5
+  answer_generation_rerun: false
+  retrieval_rerun: false
+  scoring_rule: Binary semantic coverage per repaired reference point; no partial credit within a point, no unsure or excluded
+    points.
+  averaging: 'Primary Answer Recall is micro: total correct points / total reference points, as in the HTML.'
+  point_roles: All 51 points in the repaired first-20 reference are MAIN; Main metrics equal Answer metrics.
+  policy:
+  - Each point corresponds to a requested part; no generic causal, governance or performance conclusions are added.
+  - Grade the requested fact or calculation, not incidental clarification wording. Explanatory qualifications not requested
+    by the question add no separate coverage requirement; contradictions remain incorrect.
+  - Equivalent wording and mathematically equivalent rounding are acceptable. Preserve signs, units, periods and metric identities.
+  - A requested single example accepts any documented valid alternative; see accepted_answer_alternatives.
+  - Scope-check questions are answered about the supplied excerpts, not about all possible evidence outside them.
+  adjudication_notes:
+  - Read and adjudicated each of the 100 saved Final Answers against its repaired reference; decisions are authored judgments,
+    not keyword-based grading.
+  - Preserve signs, units, periods and metric identities. Missing million on a monetary amount fails that amount point; correctly
+    computed dimensionless ratios can pass.
+  - Accept equivalent wording, documented alternative examples and mathematically equivalent rounding. Do not fill in unstated
+    calculations or requested facts from citations.
+  - Reference exhibit identifiers are treated as important parts of the filing route. Publication timing and incidental titles
+    not separately requested are not additional requirements.
+  - Each point containing several requested facts must cover those facts. A statement about DTL alone does not cover the additional
+    valuation-allowance balance in the repaired compliance question.
+  scope_note: Saved answers were generated for original questions/retrievals; repaired questions and Gold can differ. This
+    is a cross-revision reference-coverage review, not a new end-to-end run on Repair.
+  incorrect_label_note: Incorrect includes omissions, unit errors, refusals and changed-question mismatches; it does not always
+    mean a false factual statement.
+  no_faithfulness_claim: These scores measure reference-point coverage, not a separate claim-by-claim faithfulness or hallucination
+    audit.
+configurations:
+- configuration: vector
+  query_count: 20
+  reviewed_points: 51
+  correct_points: 14
+  answer_hit_count: 11
+  answer_hit: 0.55
+  answer_recall_micro: 0.27450980392156865
+  answer_recall_macro: 0.275
+  main_point_hit: 0.55
+  main_point_recall_micro: 0.27450980392156865
+  fully_correct_count: 1
+  fully_correct_rate: 0.05
+  partial_count: 10
+  zero_point_count: 9
+  review_progress: 1.0
+  result_file: controlled_vector_sox_smoke50_fast_full_answer_answer_review_first20.yaml
+  source_sha256: 681d8e8bf49bc368f480a3e6e9a00ffc1588f63e812d656547cf5bd0fe2dc071
+- configuration: graph
+  query_count: 20
+  reviewed_points: 51
+  correct_points: 13
+  answer_hit_count: 9
+  answer_hit: 0.45
+  answer_recall_micro: 0.2549019607843137
+  answer_recall_macro: 0.25833333333333336
+  main_point_hit: 0.45
+  main_point_recall_micro: 0.2549019607843137
+  fully_correct_count: 2
+  fully_correct_rate: 0.1
+  partial_count: 7
+  zero_point_count: 11
+  review_progress: 1.0
+  result_file: controlled_graph_sox_smoke50_fast_full_answer_answer_review_first20.yaml
+  source_sha256: e6a527feb4e50027252e7be5e1219b59ca0dd232d4f1c2e089c60459ec94c5db
+- configuration: agent_vector
+  query_count: 20
+  reviewed_points: 51
+  correct_points: 23
+  answer_hit_count: 14
+  answer_hit: 0.7
+  answer_recall_micro: 0.45098039215686275
+  answer_recall_macro: 0.4666666666666667
+  main_point_hit: 0.7
+  main_point_recall_micro: 0.45098039215686275
+  fully_correct_count: 5
+  fully_correct_rate: 0.25
+  partial_count: 9
+  zero_point_count: 6
+  review_progress: 1.0
+  result_file: controlled_agent_vector_sox_smoke50_fast_full_answer_answer_review_first20.yaml
+  source_sha256: 3ca165fdb16bae5c583068307d3da7f813266cb2ffd58e80950ff5063c63a88e
+- configuration: agent_graph
+  query_count: 20
+  reviewed_points: 51
+  correct_points: 24
+  answer_hit_count: 15
+  answer_hit: 0.75
+  answer_recall_micro: 0.47058823529411764
+  answer_recall_macro: 0.5125
+  main_point_hit: 0.75
+  main_point_recall_micro: 0.47058823529411764
+  fully_correct_count: 6
+  fully_correct_rate: 0.3
+  partial_count: 9
+  zero_point_count: 5
+  review_progress: 1.0
+  result_file: controlled_agent_graph_sox_smoke50_fast_full_answer_answer_review_first20.yaml
+  source_sha256: b06559ccccdecbe532431f79c06bb255469b136169b861e0976ab8d3761b137f
+- configuration: text_to_cypher
+  query_count: 20
+  reviewed_points: 51
+  correct_points: 19
+  answer_hit_count: 12
+  answer_hit: 0.6
+  answer_recall_micro: 0.37254901960784315
+  answer_recall_macro: 0.3458333333333333
+  main_point_hit: 0.6
+  main_point_recall_micro: 0.37254901960784315
+  fully_correct_count: 2
+  fully_correct_rate: 0.1
+  partial_count: 10
+  zero_point_count: 8
+  review_progress: 1.0
+  result_file: controlled_text_to_cypher_sox_smoke50_ttc_full_answer_full_answer_answer_review_first20.yaml
+  source_sha256: 9d2de5029323af0a404782ba2901be77974ae29218a0beeea8972310f7db8c80

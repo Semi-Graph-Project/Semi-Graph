@@ -1,0 +1,893 @@
+{
+  "dataset_revision": "sox74_repaired_v1",
+  "summary": {
+    "query_count": 74,
+    "answer_point_count": 206,
+    "gold_chunk_count": 79,
+    "new_gold_chunk_ids_relative_to_old_82": [
+      "INTC_10k_2023.pdf::page_97::chunk_1",
+      "QCOM_10k_2024.pdf::page_72::chunk_4",
+      "QCOM_10k_2024.pdf::page_72::chunk_3",
+      "QCOM_10k_2024.pdf::page_73::chunk_6",
+      "TXN_10k_2024.pdf::page_52::chunk_7",
+      "TXN_10k_2023.pdf::page_56::chunk_1",
+      "TXN_10k_2023.pdf::page_32::chunk_1",
+      "QCOM_10k_2024.pdf::page_77::chunk_2",
+      "QCOM_10k_2024.pdf::page_77::chunk_1",
+      "TXN_10k_2022.pdf::page_34::chunk_1",
+      "INTC_10k_2024.pdf::page_85::chunk_5",
+      "TXN_10k_2023.pdf::page_28::chunk_2",
+      "TXN_10k_2024.pdf::page_65::chunk_2",
+      "AMD_10k_2024.pdf::page_51::chunk_2",
+      "TXN_10k_2024.pdf::page_38::chunk_1",
+      "QCOM_10k_2024.pdf::page_41::chunk_6",
+      "QCOM_10k_2024.pdf::page_41::chunk_3",
+      "AMD_10k_2023.pdf::page_93::chunk_1"
+    ],
+    "new_gold_chunk_count": 18,
+    "single_content_chunk_ids": [
+      "FRKG071",
+      "FRKG093",
+      "FRKG102",
+      "FRKG107",
+      "FRKG138",
+      "FRKG142",
+      "FRKG276",
+      "FRKG358",
+      "FRKG437",
+      "FRKG458",
+      "FRKG516",
+      "FRKG523",
+      "FRKG525",
+      "FRKG528",
+      "FRKG529",
+      "FRKG531"
+    ],
+    "multiple_content_chunk_ids": [
+      "FRKG003",
+      "FRKG009",
+      "FRKG010",
+      "FRKG011",
+      "FRKG070",
+      "FRKG073",
+      "FRKG082",
+      "FRKG084",
+      "FRKG096",
+      "FRKG098",
+      "FRKG100",
+      "FRKG103",
+      "FRKG104",
+      "FRKG105",
+      "FRKG108",
+      "FRKG111",
+      "FRKG141",
+      "FRKG161",
+      "FRKG163",
+      "FRKG173",
+      "FRKG177",
+      "FRKG179",
+      "FRKG182",
+      "FRKG185",
+      "FRKG187",
+      "FRKG192",
+      "FRKG239",
+      "FRKG240",
+      "FRKG241",
+      "FRKG249",
+      "FRKG273",
+      "FRKG274",
+      "FRKG275",
+      "FRKG279",
+      "FRKG284",
+      "FRKG288",
+      "FRKG290",
+      "FRKG300",
+      "FRKG356",
+      "FRKG357",
+      "FRKG359",
+      "FRKG360",
+      "FRKG393",
+      "FRKG395",
+      "FRKG396",
+      "FRKG397",
+      "FRKG405",
+      "FRKG436",
+      "FRKG451",
+      "FRKG455",
+      "FRKG456",
+      "FRKG463",
+      "FRKG515",
+      "FRKG517",
+      "FRKG520",
+      "FRKG522",
+      "FRKG533",
+      "FRKG534"
+    ],
+    "max_gold_chunks_per_query": 5
+  },
+  "files": {
+    "queries.yaml": "b18dc23b709d7c4eb30732d8cad18dc442efaf986ab8973962ed956e8c1dfa63",
+    "gold_chunks.jsonl": "ebff7c4cb9f3971e4ff1b8b9ba65feed6480c3c92e07b9289c1d4e9bf1bf046d",
+    "reference_review.yaml": "c5b17c108dca6e032e45b3806f6e4db02dd316b6e97a09d85727c85679da79d2",
+    "changes.yaml": "5843fa7d74ccc82d03a7c2c17b307a2d777303b0ea18354673a4343295d96183",
+    "review.html": "5e15e8d2f9487d80397d10b0219103ea07ce2bda29bf95b3032908c2ee66a500"
+  },
+  "source_cell_checks": [
+    {
+      "chunk_id": "TXN_10k_2024.pdf::page_31::chunk_3",
+      "row": "Operating profit",
+      "column": 2,
+      "occurrence": 0,
+      "source_cell": "$ 1,253",
+      "value": 1253.0
+    },
+    {
+      "chunk_id": "TXN_10k_2024.pdf::page_31::chunk_3",
+      "row": "Operating profit",
+      "column": 3,
+      "occurrence": 0,
+      "source_cell": "$ 528",
+      "value": 528.0
+    },
+    {
+      "chunk_id": "TXN_10k_2024.pdf::page_31::chunk_1",
+      "row": "Operating profit",
+      "column": 2,
+      "occurrence": 0,
+      "source_cell": "$ 1,008",
+      "value": 1008.0
+    },
+    {
+      "chunk_id": "TXN_10k_2024.pdf::page_31::chunk_1",
+      "row": "Operating profit",
+      "column": 3,
+      "occurrence": 0,
+      "source_cell": "$ 502",
+      "value": 502.0
+    },
+    {
+      "chunk_id": "TXN_10k_2024.pdf::page_31::chunk_3",
+      "row": "Revenue",
+      "column": 3,
+      "occurrence": 0,
+      "source_cell": "$ 1,408",
+      "value": 1408.0
+    },
+    {
+      "chunk_id": "TXN_10k_2024.pdf::page_31::chunk_1",
+      "row": "Revenue",
+      "column": 3,
+      "occurrence": 0,
+      "source_cell": "$ 1,111",
+      "value": 1111.0
+    },
+    {
+      "chunk_id": "TXN_10k_2024.pdf::page_30::chunk_2",
+      "row": "Revenue",
+      "column": 3,
+      "occurrence": 0,
+      "source_cell": "$ 947",
+      "value": 947.0
+    },
+    {
+      "chunk_id": "TXN_10k_2024.pdf::page_31::chunk_3",
+      "row": "Restructuring charges/other",
+      "column": 3,
+      "occurrence": 0,
+      "source_cell": "257",
+      "value": 257.0
+    },
+    {
+      "chunk_id": "TXN_10k_2024.pdf::page_30::chunk_2",
+      "row": "Restructuring charges/other",
+      "column": 3,
+      "occurrence": 0,
+      "source_cell": "(124)",
+      "value": -124.0
+    },
+    {
+      "chunk_id": "TXN_10k_2024.pdf::page_31::chunk_3",
+      "row": "Revenue",
+      "column": 4,
+      "occurrence": 0,
+      "source_cell": "$ 20,028",
+      "value": 20028.0
+    },
+    {
+      "chunk_id": "AVGO_10k_2022.pdf::page_70::chunk_2",
+      "row": "Infrastructure software",
+      "column": 2,
+      "occurrence": 0,
+      "source_cell": "7,067",
+      "value": 7067.0
+    },
+    {
+      "chunk_id": "AVGO_10k_2022.pdf::page_70::chunk_2",
+      "row": "Infrastructure software",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "7,385",
+      "value": 7385.0
+    },
+    {
+      "chunk_id": "AVGO_10k_2022.pdf::page_71::chunk_4",
+      "row": "Infrastructure software",
+      "column": 2,
+      "occurrence": 0,
+      "source_cell": "4,936",
+      "value": 4936.0
+    },
+    {
+      "chunk_id": "AVGO_10k_2022.pdf::page_71::chunk_4",
+      "row": "Infrastructure software",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "5,219",
+      "value": 5219.0
+    },
+    {
+      "chunk_id": "INTC_10k_2023.pdf::page_89::chunk_2",
+      "row": "Mobileye",
+      "column": 3,
+      "occurrence": 0,
+      "source_cell": "989",
+      "value": 989.0
+    },
+    {
+      "chunk_id": "INTC_10k_2023.pdf::page_89::chunk_2",
+      "row": "Mobileye",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "1,838",
+      "value": 1838.0
+    },
+    {
+      "chunk_id": "INTC_10k_2023.pdf::page_89::chunk_2",
+      "row": "Mobileye",
+      "column": 4,
+      "occurrence": 0,
+      "source_cell": "6 %",
+      "value": 6.0
+    },
+    {
+      "chunk_id": "INTC_10k_2023.pdf::page_89::chunk_2",
+      "row": "Mobileye",
+      "column": 2,
+      "occurrence": 0,
+      "source_cell": "12 %",
+      "value": 12.0
+    },
+    {
+      "chunk_id": "INTC_10k_2023.pdf::page_88::chunk_2",
+      "row": "Mobileye",
+      "column": 1,
+      "occurrence": 1,
+      "source_cell": "664",
+      "value": 664.0
+    },
+    {
+      "chunk_id": "INTC_10k_2023.pdf::page_88::chunk_2",
+      "row": "Mobileye",
+      "column": 2,
+      "occurrence": 1,
+      "source_cell": "690",
+      "value": 690.0
+    },
+    {
+      "chunk_id": "INTC_10k_2023.pdf::page_88::chunk_2",
+      "row": "Total operating income (loss)",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "$ 93",
+      "value": 93.0
+    },
+    {
+      "chunk_id": "INTC_10k_2023.pdf::page_88::chunk_2",
+      "row": "Total operating income (loss)",
+      "column": 2,
+      "occurrence": 0,
+      "source_cell": "$ 2,334",
+      "value": 2334.0
+    },
+    {
+      "chunk_id": "TXN_10k_2024.pdf::page_52::chunk_8",
+      "row": "Embedded Processing",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "172",
+      "value": 172.0
+    },
+    {
+      "chunk_id": "TXN_10k_2024.pdf::page_52::chunk_8",
+      "row": "Total",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "$ 4,362",
+      "value": 4362.0
+    },
+    {
+      "chunk_id": "TXN_10k_2022.pdf::page_33::chunk_2",
+      "row": "Total revenue",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "$ 18,344",
+      "value": 18344.0
+    },
+    {
+      "chunk_id": "TXN_10k_2022.pdf::page_33::chunk_2",
+      "row": "Total revenue",
+      "column": 2,
+      "occurrence": 0,
+      "source_cell": "$ 14,461",
+      "value": 14461.0
+    },
+    {
+      "chunk_id": "TXN_10k_2022.pdf::page_33::chunk_2",
+      "row": "Other",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "1,245",
+      "value": 1245.0
+    },
+    {
+      "chunk_id": "TXN_10k_2022.pdf::page_33::chunk_2",
+      "row": "Other",
+      "column": 1,
+      "occurrence": 1,
+      "source_cell": "393",
+      "value": 393.0
+    },
+    {
+      "chunk_id": "QCOM_10k_2024.pdf::page_73::chunk_6",
+      "row": "Total QCT revenues",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "$ 33,196",
+      "value": 33196.0
+    },
+    {
+      "chunk_id": "QCOM_10k_2024.pdf::page_73::chunk_6",
+      "row": "Total QCT revenues",
+      "column": 2,
+      "occurrence": 0,
+      "source_cell": "$ 30,382",
+      "value": 30382.0
+    },
+    {
+      "chunk_id": "QCOM_10k_2024.pdf::page_73::chunk_6",
+      "row": "Total QCT revenues",
+      "column": 3,
+      "occurrence": 0,
+      "source_cell": "$ 37,677",
+      "value": 37677.0
+    },
+    {
+      "chunk_id": "INTC_10k_2022.pdf::page_86::chunk_2",
+      "row": "Programmable Solutions Group",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "1,934",
+      "value": 1934.0
+    },
+    {
+      "chunk_id": "INTC_10k_2022.pdf::page_86::chunk_2",
+      "row": "Programmable Solutions Group",
+      "column": 2,
+      "occurrence": 0,
+      "source_cell": "1,853",
+      "value": 1853.0
+    },
+    {
+      "chunk_id": "INTC_10k_2022.pdf::page_86::chunk_2",
+      "row": "Programmable Solutions Group",
+      "column": 1,
+      "occurrence": 1,
+      "source_cell": "297",
+      "value": 297.0
+    },
+    {
+      "chunk_id": "INTC_10k_2022.pdf::page_86::chunk_2",
+      "row": "Programmable Solutions Group",
+      "column": 2,
+      "occurrence": 1,
+      "source_cell": "260",
+      "value": 260.0
+    },
+    {
+      "chunk_id": "QCOM_10k_2024.pdf::page_72::chunk_4",
+      "row": "Balance at September 29, 2024 (1)",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "$ 10,065",
+      "value": 10065.0
+    },
+    {
+      "chunk_id": "TXN_10k_2022.pdf::page_30::chunk_1",
+      "row": "Amortization of capitalized software",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "57",
+      "value": 57.0
+    },
+    {
+      "chunk_id": "TXN_10k_2022.pdf::page_30::chunk_1",
+      "row": "Amortization of capitalized software",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "57",
+      "value": 57.0
+    },
+    {
+      "chunk_id": "TXN_10k_2022.pdf::page_31::chunk_1",
+      "row": "Net income",
+      "column": 3,
+      "occurrence": 0,
+      "source_cell": "5,017",
+      "value": 5017.0
+    },
+    {
+      "chunk_id": "TXN_10k_2022.pdf::page_31::chunk_1",
+      "row": "Net income",
+      "column": 3,
+      "occurrence": 1,
+      "source_cell": "5,595",
+      "value": 5595.0
+    },
+    {
+      "chunk_id": "TXN_10k_2022.pdf::page_31::chunk_1",
+      "row": "Net income",
+      "column": 3,
+      "occurrence": 2,
+      "source_cell": "7,769",
+      "value": 7769.0
+    },
+    {
+      "chunk_id": "QCOM_10k_2024.pdf::page_77::chunk_2",
+      "row": "Additions for current year tax positions",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "153",
+      "value": 153.0
+    },
+    {
+      "chunk_id": "QCOM_10k_2024.pdf::page_77::chunk_2",
+      "row": "Additions for current year tax positions",
+      "column": 2,
+      "occurrence": 0,
+      "source_cell": "158",
+      "value": 158.0
+    },
+    {
+      "chunk_id": "INTC_10k_2023.pdf::page_97::chunk_4",
+      "row": "Client Computing",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "$ 4,237",
+      "value": 4237.0
+    },
+    {
+      "chunk_id": "INTC_10k_2023.pdf::page_97::chunk_4",
+      "row": "Client Computing",
+      "column": 5,
+      "occurrence": 0,
+      "source_cell": "$ 4,254",
+      "value": 4254.0
+    },
+    {
+      "chunk_id": "INTC_10k_2023.pdf::page_88::chunk_2",
+      "row": "Desktop",
+      "column": 3,
+      "occurrence": 0,
+      "source_cell": "$ 12,437",
+      "value": 12437.0
+    },
+    {
+      "chunk_id": "INTC_10k_2023.pdf::page_88::chunk_2",
+      "row": "Notebook",
+      "column": 3,
+      "occurrence": 0,
+      "source_cell": "25,443",
+      "value": 25443.0
+    },
+    {
+      "chunk_id": "INTC_10k_2023.pdf::page_88::chunk_2",
+      "row": "Other",
+      "column": 3,
+      "occurrence": 0,
+      "source_cell": "3,201",
+      "value": 3201.0
+    },
+    {
+      "chunk_id": "INTC_10k_2023.pdf::page_88::chunk_2",
+      "row": "Network and Edge",
+      "column": 2,
+      "occurrence": 0,
+      "source_cell": "8,409",
+      "value": 8409.0
+    },
+    {
+      "chunk_id": "INTC_10k_2023.pdf::page_88::chunk_2",
+      "row": "Network and Edge",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "5,774",
+      "value": 5774.0
+    },
+    {
+      "chunk_id": "INTC_10k_2023.pdf::page_88::chunk_2",
+      "row": "Network and Edge",
+      "column": 2,
+      "occurrence": 1,
+      "source_cell": "1,033",
+      "value": 1033.0
+    },
+    {
+      "chunk_id": "INTC_10k_2023.pdf::page_88::chunk_2",
+      "row": "Network and Edge",
+      "column": 1,
+      "occurrence": 1,
+      "source_cell": "(482)",
+      "value": -482.0
+    },
+    {
+      "chunk_id": "TXN_10k_2022.pdf::page_38::chunk_8",
+      "row": "$ 28.13 to 193.58",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "25",
+      "value": 25.0
+    },
+    {
+      "chunk_id": "TXN_10k_2022.pdf::page_38::chunk_8",
+      "row": "$ 28.13 to 193.58",
+      "column": 3,
+      "occurrence": 0,
+      "source_cell": "$ 91.58",
+      "value": 91.58
+    },
+    {
+      "chunk_id": "INTC_10k_2024.pdf::page_85::chunk_2",
+      "row": "Intel Foundry",
+      "column": 4,
+      "occurrence": 0,
+      "source_cell": "(222)",
+      "value": -222.0
+    },
+    {
+      "chunk_id": "INTC_10k_2024.pdf::page_85::chunk_2",
+      "row": "Mobileye",
+      "column": 4,
+      "occurrence": 0,
+      "source_cell": "(2,613)",
+      "value": -2613.0
+    },
+    {
+      "chunk_id": "INTC_10k_2024.pdf::page_85::chunk_2",
+      "row": "All Other",
+      "column": 4,
+      "occurrence": 0,
+      "source_cell": "(149)",
+      "value": -149.0
+    },
+    {
+      "chunk_id": "TXN_10k_2023.pdf::page_28::chunk_2",
+      "row": "Cash flows from financing activities",
+      "column": 2,
+      "occurrence": 1,
+      "source_cell": "(6,718)",
+      "value": -6718.0
+    },
+    {
+      "chunk_id": "INTC_10k_2024.pdf::page_72::chunk_2",
+      "row": "Operating income (loss)",
+      "column": 6,
+      "occurrence": 0,
+      "source_cell": "$ (84)",
+      "value": -84.0
+    },
+    {
+      "chunk_id": "INTC_10k_2024.pdf::page_72::chunk_2",
+      "row": "Revenue",
+      "column": 6,
+      "occurrence": 0,
+      "source_cell": "$ 3,824",
+      "value": 3824.0
+    },
+    {
+      "chunk_id": "INTC_10k_2024.pdf::page_72::chunk_2",
+      "row": "Operating income (loss)",
+      "column": 3,
+      "occurrence": 0,
+      "source_cell": "$ 931",
+      "value": 931.0
+    },
+    {
+      "chunk_id": "INTC_10k_2024.pdf::page_72::chunk_2",
+      "row": "Revenue",
+      "column": 3,
+      "occurrence": 0,
+      "source_cell": "$ 5,842",
+      "value": 5842.0
+    },
+    {
+      "chunk_id": "TXN_10k_2024.pdf::page_31::chunk_3",
+      "row": "Operating profit",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "$ 8,359",
+      "value": 8359.0
+    },
+    {
+      "chunk_id": "TXN_10k_2024.pdf::page_31::chunk_1",
+      "row": "Operating profit",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "$ 5,821",
+      "value": 5821.0
+    },
+    {
+      "chunk_id": "TXN_10k_2024.pdf::page_52::chunk_8",
+      "row": "Analog",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "$ 4,158",
+      "value": 4158.0
+    },
+    {
+      "chunk_id": "INTC_10k_2022.pdf::page_92::chunk_2",
+      "row": "Settlements and effective settlements with tax authorities",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "(25)",
+      "value": -25.0
+    },
+    {
+      "chunk_id": "INTC_10k_2022.pdf::page_92::chunk_2",
+      "row": "Settlements and effective settlements with tax authorities",
+      "column": 2,
+      "occurrence": 0,
+      "source_cell": "(142)",
+      "value": -142.0
+    },
+    {
+      "chunk_id": "INTC_10k_2022.pdf::page_92::chunk_2",
+      "row": "Settlements and effective settlements with tax authorities",
+      "column": 3,
+      "occurrence": 0,
+      "source_cell": "(4)",
+      "value": -4.0
+    },
+    {
+      "chunk_id": "TXN_10k_2024.pdf::page_31::chunk_3",
+      "row": "Revenue",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "$ 15,359",
+      "value": 15359.0
+    },
+    {
+      "chunk_id": "TXN_10k_2024.pdf::page_30::chunk_2",
+      "row": "Revenue",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "$ 12,161",
+      "value": 12161.0
+    },
+    {
+      "chunk_id": "AVGO_10k_2022.pdf::page_71::chunk_4",
+      "row": "Total operating income",
+      "column": 2,
+      "occurrence": 0,
+      "source_cell": "$ 8,519",
+      "value": 8519.0
+    },
+    {
+      "chunk_id": "AVGO_10k_2022.pdf::page_71::chunk_4",
+      "row": "Total operating income",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "$ 14,225",
+      "value": 14225.0
+    },
+    {
+      "chunk_id": "INTC_10k_2023.pdf::page_43::chunk_2",
+      "row": "Litigation charges and other",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "(329)",
+      "value": -329.0
+    },
+    {
+      "chunk_id": "INTC_10k_2023.pdf::page_43::chunk_2",
+      "row": "Litigation charges and other",
+      "column": 2,
+      "occurrence": 0,
+      "source_cell": "(1,187)",
+      "value": -1187.0
+    },
+    {
+      "chunk_id": "INTC_10k_2023.pdf::page_43::chunk_2",
+      "row": "Litigation charges and other",
+      "column": 3,
+      "occurrence": 0,
+      "source_cell": "2,291",
+      "value": 2291.0
+    },
+    {
+      "chunk_id": "AMD_10k_2024.pdf::page_51::chunk_2",
+      "row": "Interest expense",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "(92)",
+      "value": -92.0
+    },
+    {
+      "chunk_id": "AMD_10k_2024.pdf::page_51::chunk_2",
+      "row": "Interest expense",
+      "column": 2,
+      "occurrence": 0,
+      "source_cell": "(106)",
+      "value": -106.0
+    },
+    {
+      "chunk_id": "TXN_10k_2024.pdf::page_31::chunk_3",
+      "row": "Revenue",
+      "column": 2,
+      "occurrence": 0,
+      "source_cell": "$ 3,261",
+      "value": 3261.0
+    },
+    {
+      "chunk_id": "TXN_10k_2022.pdf::page_49::chunk_3",
+      "row": "Discount rate",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "2.74%",
+      "value": 2.74
+    },
+    {
+      "chunk_id": "TXN_10k_2022.pdf::page_49::chunk_3",
+      "row": "Discount rate",
+      "column": 2,
+      "occurrence": 0,
+      "source_cell": "2.81%",
+      "value": 2.81
+    },
+    {
+      "chunk_id": "TXN_10k_2022.pdf::page_49::chunk_3",
+      "row": "Discount rate",
+      "column": 1,
+      "occurrence": 1,
+      "source_cell": "2.95%",
+      "value": 2.95
+    },
+    {
+      "chunk_id": "TXN_10k_2022.pdf::page_49::chunk_3",
+      "row": "Discount rate",
+      "column": 2,
+      "occurrence": 1,
+      "source_cell": "3.42%",
+      "value": 3.42
+    },
+    {
+      "chunk_id": "INTC_10k_2024.pdf::page_85::chunk_2",
+      "row": "Mobileye",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "10,919",
+      "value": 10919.0
+    },
+    {
+      "chunk_id": "INTC_10k_2024.pdf::page_85::chunk_2",
+      "row": "Mobileye",
+      "column": 5,
+      "occurrence": 0,
+      "source_cell": "8,306",
+      "value": 8306.0
+    },
+    {
+      "chunk_id": "INTC_10k_2024.pdf::page_85::chunk_2",
+      "row": "All Other",
+      "column": 1,
+      "occurrence": 0,
+      "source_cell": "393",
+      "value": 393.0
+    },
+    {
+      "chunk_id": "INTC_10k_2024.pdf::page_85::chunk_2",
+      "row": "All Other",
+      "column": 5,
+      "occurrence": 0,
+      "source_cell": "263",
+      "value": 263.0
+    }
+  ],
+  "gold_text_sha256": {
+    "INTC_10k_2024.pdf::page_71::chunk_1": "77a1088b53994accd2f4a8eaa598c8ca82012d51816fc8836fe7accbc509dab3",
+    "NVDA_10k_2024.pdf::page_78::chunk_1": "b35be8ac50ec16d07e7829205a22a25b3ce7d2a0138a6c82ea538320ac60924b",
+    "TXN_10k_2024.pdf::page_31::chunk_3": "b6b082f3467fbbdaaee20e811c0913a5f171ffb842d0001b540221c34b1bd4ce",
+    "TXN_10k_2023.pdf::page_30::chunk_1": "e8f52e4e0a3f22f4d057d1a77030ea60793cdf4300234b850835d2e26ea06b70",
+    "TXN_10k_2024.pdf::page_32::chunk_1": "1052719be615f4d2d5823ded459b575074797b36638ff4c112a54553cd63a623",
+    "TXN_10k_2024.pdf::page_31::chunk_1": "25ca3e99157a4582db0f14b5cd4cc9a1ee5ad6a9241f62c461a778ef3f458f2f",
+    "AMD_10k_2023.pdf::page_88::chunk_2": "e1312df26cddb86b4211d697f914af1dd00ae645735d59305459e1c7fea68404",
+    "AMD_10k_2023.pdf::page_36::chunk_1": "19f7c3671e44e436be36dd789c18887fd4aaa5ed349a55218364bf73b15b750a",
+    "INTC_10k_2023.pdf::page_88::chunk_2": "ebc785a730972ccf228e630e33360715b75136c6edf9ec20e9362d8a81570469",
+    "INTC_10k_2022.pdf::page_30::chunk_1": "6ce6f163303e01140839b1f8b37506baae982a690d0aae7eff3cf288afd58e40",
+    "TXN_10k_2024.pdf::page_4::chunk_1": "4e38dae9543475109c7b6fd27197e9467f27d9efb86c79a7bac9e5882d1b2ff1",
+    "INTC_10k_2023.pdf::page_97::chunk_2": "4727e26a017a68afbc6bc2c07461a9f904466797274ab683aa11e015a5d283d5",
+    "INTC_10k_2023.pdf::page_97::chunk_1": "6b5971014449db624a7bc2601f951d9e86815ba66c412f0e9b31bc073f49ac06",
+    "INTC_10k_2023.pdf::page_87::chunk_1": "11c0651b32cf6983f21ffd1ba17b6e82133f32189ec69935dbf351b93846e6fa",
+    "AVGO_10k_2022.pdf::page_70::chunk_2": "042b86d8e32352616c81a9adbb6c416d8ec9e03330e1d24a3ee3678fdc1f8942",
+    "AVGO_10k_2022.pdf::page_71::chunk_4": "9b6f8fb295168b13be383a0a709313fa4989ff393d6863eed726f58764d77a9d",
+    "INTC_10k_2023.pdf::page_89::chunk_2": "7d2eec08f2b9d3184b0efca03d2c5536f1bed63fdc6e20a9a70deee03a74818e",
+    "TXN_10k_2024.pdf::page_30::chunk_1": "51788dd1f74cf4f7e315883c050865e5c4fd521b9c09bc573f87bfaf0ca3e652",
+    "AMD_10k_2024.pdf::page_101::chunk_2": "ea1628c00f212148a45049c02d66de38a27bf9594b18ba4ff531809f16f7c44b",
+    "AMD_10k_2024.pdf::page_16::chunk_1": "d9f1f3138b5434137fa66a5652bae7cb7f59da9311a105670a4298c1011009e3",
+    "INTC_10k_2022.pdf::page_86::chunk_2": "794a5700d603c9b5bf63ac9f17534d921e3ae460442ebbeee622ff5e417a3c7d",
+    "QCOM_10k_2024.pdf::page_72::chunk_4": "e4e5a3c371166c4b33746bf5161eeccc5f40fe028ca8484633dd056ac2aaa713",
+    "QCOM_10k_2024.pdf::page_72::chunk_3": "4584471be2127a260ae1530da62610b2b31130484e8cd4fe712ce757af88bcab",
+    "QCOM_10k_2024.pdf::page_73::chunk_6": "f82fade5159592097891b922028e6c86ee949a6c6bf9cdb014dac9defa874ed5",
+    "QCOM_10k_2024.pdf::page_73::chunk_5": "983e436e2651cbd761913b17476d308996fd20efabcfbadf61ee52479f064f0f",
+    "TXN_10k_2024.pdf::page_52::chunk_8": "cd74ac502d78f7b6d7d3c9023a1ca45706a0ca18b4c6ca4db4e6a46eafcd054c",
+    "TXN_10k_2024.pdf::page_52::chunk_7": "97855417113d6294b5bf92a5af85e1dfb4f57c5c8cee00b3f644a28872430017",
+    "TXN_10k_2022.pdf::page_1::chunk_1": "7cb6862f537e08381ad02427534e4b90ae3f5e1284a1f0da2f1f626ba638247f",
+    "TXN_10k_2022.pdf::page_30::chunk_1": "dc0c4cd3812888d40344570e04a61da17a5faf5e790fbd30f09de384e38e216f",
+    "TXN_10k_2022.pdf::page_42::chunk_3": "3431c54cda1747c0e5250fd60d22a8954162bef154487c3e207445f1ebbd8c14",
+    "INTC_10k_2024.pdf::page_79::chunk_6": "0a8502be89ce3836b266efc287a87dede6d049d4d7efcbf367806c8f27441eda",
+    "INTC_10k_2024.pdf::page_111::chunk_1": "2f6e01a40cc6d2e4d47e93c3a6adf13bf3c63c2ccce52768c91ee0c63156be3a",
+    "TXN_10k_2024.pdf::page_50::chunk_3": "0b88aabdaa760c44f0707e57100cb13ec64e2adb3b818413a21234da9aa998b5",
+    "INTC_10k_2022.pdf::page_72::chunk_1": "2741b24d9c808bdfe943f8ae85ae93f73156f26149b134bda45bae880c98b743",
+    "INTC_10k_2024.pdf::page_70::chunk_1": "b2d7475c73fc2a4a7bd8bbce81c2bd00b6901d09f0039b78506a5527f19f762d",
+    "TXN_10k_2022.pdf::page_31::chunk_1": "d1991ab9a6a63575caa6937d6e55e3bbab481414ec7b75625329fdbf2ba2ffa3",
+    "TXN_10k_2022.pdf::page_69::chunk_2": "267546caa910907485569ec03bcd9b1dac27b3b31b7949c7faf639cf0ea318d7",
+    "TXN_10k_2023.pdf::page_52::chunk_6": "7050368f1f222ccc6788f25c1dc4d62e78beb5bcd156f8ad586387567e0a57ec",
+    "TXN_10k_2023.pdf::page_56::chunk_1": "cb3943097a3cba4deaff6ccadae808423e66a5263a9ac875c74871c617c87ded",
+    "TXN_10k_2023.pdf::page_32::chunk_1": "157a1d570342b5737fe4f668f7c29c4f0c06a17df7341f7935efcd2bbba0efbe",
+    "QCOM_10k_2024.pdf::page_77::chunk_2": "060507e7d9494591c721ebabe33c9b70c0fabd25e5eaaaef483b31c74f5e65bf",
+    "QCOM_10k_2024.pdf::page_57::chunk_2": "9e707e6dd16ad9b7b624945db1a7ac6580790adc49ce43cb48da0cd8e7237014",
+    "QCOM_10k_2024.pdf::page_77::chunk_1": "29289dacc15ba6b590e0cfba218900a7f517a8faaaf93e8853a4f0d11561354a",
+    "TXN_10k_2023.pdf::page_4::chunk_1": "58bb46e64b9941a761b84ccbb95704973691687642279b508243d806295e0fbb",
+    "TXN_10k_2022.pdf::page_47::chunk_2": "5ac14bc93cf27c2d632323fb77014bd892dd00f918a5a882be062b3c043daf77",
+    "TXN_10k_2022.pdf::page_69::chunk_1": "b5a927feb52e373cd605e6aee9e36b3ea4870fb760c89fea7ea85398ee988360",
+    "TXN_10k_2022.pdf::page_34::chunk_1": "f151176b558b810e0c55080fb3c9a84c85a0a3b822a96c145394bc6765eecf8c",
+    "INTC_10k_2023.pdf::page_97::chunk_4": "40cfb82ddb20b94f0f6bffef64016fd9f33c1eb72e2f966dd20546fa3b916666",
+    "INTC_10k_2024.pdf::page_24::chunk_1": "b7bc241a9e04e997e68e60e3ff10eb28397ec618717322b573a29c5eb9d86092",
+    "TXN_10k_2024.pdf::page_30::chunk_2": "b021ba5d10d2959651845c5cd8b692047bb3295515df8008cb1ad1d594638da6",
+    "TXN_10k_2022.pdf::page_38::chunk_8": "2f34a846b2678f4a13f3d0e1c1c176977b531d127ccef941f823d18a3e1d84e9",
+    "INTC_10k_2024.pdf::page_85::chunk_2": "2774af537be10abc8c94e78b6966d6d69d01efb438e61147e5576959184e7304",
+    "INTC_10k_2024.pdf::page_85::chunk_5": "4bcc4a24c014b7c7c41fdb7d72613a8297d9bb52e206c2f9c5501070948c1e55",
+    "AMD_10k_2023.pdf::page_69::chunk_5": "1261d84cf7542e56c72828e56c65d79c314d34112b2482237a6a63c1bd66a0c6",
+    "TXN_10k_2023.pdf::page_28::chunk_2": "449c534a29380117a6416ae869f47c222ea6aed39a5d110dfe248dbf97e2dbbf",
+    "TXN_10k_2022.pdf::page_33::chunk_2": "c39ce9fe9c2e5a7310c26217532e6b2370f0dd1c1f10c8bdfe18e13a2d411fc3",
+    "QCOM_10k_2024.pdf::page_59::chunk_1": "4cc3c089b4b0572c53d62e1c330bdab4f2c29fd89ac31402c9178ed2ad2e4334",
+    "INTC_10k_2024.pdf::page_72::chunk_2": "b8b5fb4d4fc59e6a0084ab553fd258b6e9802f33fcf382bf8ec73669bd00b87d",
+    "INTC_10k_2022.pdf::page_92::chunk_2": "a29fb75f35a380fdca5eb8ec8d46e911f9e28bcb97969f57042fe0de8300d36f",
+    "INTC_10k_2023.pdf::page_53::chunk_1": "ee6b0d387b0b43013ed4a7b7271bf5a29c494f0a097918826909deed5c28f57b",
+    "AMD_10k_2024.pdf::page_69::chunk_1": "72ec43eb6701474fe88884e4ded72ac1b72decc46a8f222147b7bfc58e6bf0bd",
+    "AMD_10k_2024.pdf::page_90::chunk_1": "4f55b9d59ea1191fcc4cf480f3c75b46ed24a3a5756fd4b007caf6d48c3af1a8",
+    "INTC_10k_2024.pdf::page_58::chunk_1": "045454c01ba3d52a281823bd1c9ba408cc23acc7ae6753836a6f77c059854dcd",
+    "AVGO_10k_2022.pdf::page_79::chunk_1": "7f248a1701d36a31a36caebc20136f7723a9dc5233f4bdeface2394d006947dd",
+    "TXN_10k_2024.pdf::page_38::chunk_10": "9a4b3f668d4ea53c6053e7eb32ebe3eb1ffb9899dcc54fa05dd4699d83201e0d",
+    "TXN_10k_2024.pdf::page_65::chunk_2": "79374b9a2e461f24fbe8cd3307d0e03d5fa1e3bddc37082104dd05b238d30954",
+    "INTC_10k_2023.pdf::page_43::chunk_2": "7c77986d3d05db65f01016ae47dee5bdf58341edfc825035785135918132e5c5",
+    "AMD_10k_2024.pdf::page_51::chunk_2": "cdcc0550647751b436a6ec65c6d9356a8998bec4e269e1dbf30b0871da59627e",
+    "TXN_10k_2024.pdf::page_38::chunk_2": "1c76e844176007b7cff256aa9e951939ef3c16c030f3ba260378ac99dfa80e38",
+    "TXN_10k_2024.pdf::page_38::chunk_1": "4fb9a9e072ec0f07069e86f2e7e63eb14438d26defd0023e302ddea4d385a4d6",
+    "QCOM_10k_2024.pdf::page_41::chunk_6": "b76b09f4063ab3c846495dd3744df8781369ae6a60850c7af554717311393079",
+    "QCOM_10k_2024.pdf::page_41::chunk_3": "55f39310c24ea3a2a1749fdb1cbf5524d4dd616f63e6cfc9cb54c91ddd0c3390",
+    "AMD_10k_2024.pdf::page_81::chunk_5": "96833b99646a263f66735ae003692b498fc0ded7e5ed22076b2a54c09810835f",
+    "AMD_10k_2024.pdf::page_73::chunk_1": "1f4892daef2926881ee733f01d4bb1cfd42ce34bbae9a18f834eb213967d83a1",
+    "TXN_10k_2022.pdf::page_49::chunk_3": "907a5fa3e5c0f022c403619ad9999e73d8c3732e4276656eb320f1b5b3969ff9",
+    "QCOM_10k_2022.pdf::page_58::chunk_1": "d750807ae066d8e3a8c4932323998682377b5d0ea69ebab9cabae8cfc2a02ace",
+    "AMD_10k_2023.pdf::page_54::chunk_3": "480b604a7c171e8d36515676f9909dcbd9f710a01fd908eed90d04badc389682",
+    "AMD_10k_2023.pdf::page_94::chunk_3": "3de5bf28837d599cec27b12d49b5e760bc0a51bf71649e0662935aaf2f7c3fb2",
+    "AMD_10k_2023.pdf::page_93::chunk_1": "a7a8b9fdba4b407722be72edadf6cd5af3376c65a22bf7ecc43aa2eaa6eec80b"
+  },
+  "validation": {
+    "all_source_texts_match_parquet": true,
+    "all_74_original_ids_preserved": true,
+    "all_answer_points_have_gold_mapping": true,
+    "reference_points_generated_from_same_canonical_queries": true,
+    "independent_human_review_completed": false
+  }
+}

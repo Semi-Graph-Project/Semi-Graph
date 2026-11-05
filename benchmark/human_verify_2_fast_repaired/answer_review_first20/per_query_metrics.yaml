@@ -1,0 +1,1393 @@
+review_metadata:
+  reviewed_at: '2026-11-03T22:11:27.813717+07:00'
+  reference_dataset_revision: sox74_repaired_v1
+  reference_file: /home/kantinan/programming/project/benchmark/datasets/sox74_repaired_v1/reference_review.yaml
+  reference_sha256: c5b17c108dca6e032e45b3806f6e4db02dd316b6e97a09d85727c85679da79d2
+  rubric_html: /home/kantinan/programming/project/docs/answer-review/index.html
+  rubric_sha256: eb41f0487e7b939ffdc1715cd1e6b7a15976bc21694d4fce3dba46203dc510f0
+  decisions_sha256: 2c226fe18406e22725da9a444b2632df1db0ba3e2bd24cdead9ba5f566526c88
+  reviewer: Codex assistant applying the Human Verify rubric; not an independent human review
+  selection:
+    start: 1
+    end: 20
+    queries_per_experiment: 20
+    experiment_count: 5
+  answer_generation_rerun: false
+  retrieval_rerun: false
+  scoring_rule: Binary semantic coverage per repaired reference point; no partial credit within a point, no unsure or excluded
+    points.
+  averaging: 'Primary Answer Recall is micro: total correct points / total reference points, as in the HTML.'
+  point_roles: All 51 points in the repaired first-20 reference are MAIN; Main metrics equal Answer metrics.
+  policy:
+  - Each point corresponds to a requested part; no generic causal, governance or performance conclusions are added.
+  - Grade the requested fact or calculation, not incidental clarification wording. Explanatory qualifications not requested
+    by the question add no separate coverage requirement; contradictions remain incorrect.
+  - Equivalent wording and mathematically equivalent rounding are acceptable. Preserve signs, units, periods and metric identities.
+  - A requested single example accepts any documented valid alternative; see accepted_answer_alternatives.
+  - Scope-check questions are answered about the supplied excerpts, not about all possible evidence outside them.
+  adjudication_notes:
+  - Read and adjudicated each of the 100 saved Final Answers against its repaired reference; decisions are authored judgments,
+    not keyword-based grading.
+  - Preserve signs, units, periods and metric identities. Missing million on a monetary amount fails that amount point; correctly
+    computed dimensionless ratios can pass.
+  - Accept equivalent wording, documented alternative examples and mathematically equivalent rounding. Do not fill in unstated
+    calculations or requested facts from citations.
+  - Reference exhibit identifiers are treated as important parts of the filing route. Publication timing and incidental titles
+    not separately requested are not additional requirements.
+  - Each point containing several requested facts must cover those facts. A statement about DTL alone does not cover the additional
+    valuation-allowance balance in the repaired compliance question.
+  scope_note: Saved answers were generated for original questions/retrievals; repaired questions and Gold can differ. This
+    is a cross-revision reference-coverage review, not a new end-to-end run on Repair.
+  incorrect_label_note: Incorrect includes omissions, unit errors, refusals and changed-question mismatches; it does not always
+    mean a false factual statement.
+  no_faithfulness_claim: These scores measure reference-point coverage, not a separate claim-by-claim faithfulness or hallucination
+    audit.
+results:
+- configuration: vector
+  number: 1
+  id: FRKG003
+  correct_point_numbers:
+  - 3
+  statuses:
+  - incorrect
+  - incorrect
+  - correct
+  correct_points: 1
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.3333333333333333
+  fully_correct: false
+- configuration: vector
+  number: 2
+  id: FRKG009
+  correct_point_numbers:
+  - 2
+  statuses:
+  - incorrect
+  - correct
+  correct_points: 1
+  total_points: 2
+  answer_hit: 1
+  answer_recall: 0.5
+  fully_correct: false
+- configuration: vector
+  number: 3
+  id: FRKG010
+  correct_point_numbers:
+  - 1
+  - 2
+  statuses:
+  - correct
+  - correct
+  - incorrect
+  - incorrect
+  correct_points: 2
+  total_points: 4
+  answer_hit: 1
+  answer_recall: 0.5
+  fully_correct: false
+- configuration: vector
+  number: 4
+  id: FRKG011
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 3
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: vector
+  number: 5
+  id: FRKG070
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 3
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: vector
+  number: 6
+  id: FRKG071
+  correct_point_numbers:
+  - 1
+  - 2
+  statuses:
+  - correct
+  - correct
+  correct_points: 2
+  total_points: 2
+  answer_hit: 1
+  answer_recall: 1.0
+  fully_correct: true
+- configuration: vector
+  number: 7
+  id: FRKG073
+  correct_point_numbers:
+  - 1
+  statuses:
+  - correct
+  - incorrect
+  correct_points: 1
+  total_points: 2
+  answer_hit: 1
+  answer_recall: 0.5
+  fully_correct: false
+- configuration: vector
+  number: 8
+  id: FRKG082
+  correct_point_numbers:
+  - 1
+  statuses:
+  - correct
+  - incorrect
+  correct_points: 1
+  total_points: 2
+  answer_hit: 1
+  answer_recall: 0.5
+  fully_correct: false
+- configuration: vector
+  number: 9
+  id: FRKG084
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 3
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: vector
+  number: 10
+  id: FRKG093
+  correct_point_numbers:
+  - 2
+  statuses:
+  - incorrect
+  - correct
+  - incorrect
+  correct_points: 1
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.3333333333333333
+  fully_correct: false
+- configuration: vector
+  number: 11
+  id: FRKG096
+  correct_point_numbers:
+  - 2
+  statuses:
+  - incorrect
+  - correct
+  correct_points: 1
+  total_points: 2
+  answer_hit: 1
+  answer_recall: 0.5
+  fully_correct: false
+- configuration: vector
+  number: 12
+  id: FRKG098
+  correct_point_numbers:
+  - 2
+  statuses:
+  - incorrect
+  - correct
+  correct_points: 1
+  total_points: 2
+  answer_hit: 1
+  answer_recall: 0.5
+  fully_correct: false
+- configuration: vector
+  number: 13
+  id: FRKG100
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 3
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: vector
+  number: 14
+  id: FRKG102
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 3
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: vector
+  number: 15
+  id: FRKG103
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 2
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: vector
+  number: 16
+  id: FRKG104
+  correct_point_numbers:
+  - 1
+  - 2
+  statuses:
+  - correct
+  - correct
+  - incorrect
+  - incorrect
+  correct_points: 2
+  total_points: 4
+  answer_hit: 1
+  answer_recall: 0.5
+  fully_correct: false
+- configuration: vector
+  number: 17
+  id: FRKG105
+  correct_point_numbers:
+  - 3
+  statuses:
+  - incorrect
+  - incorrect
+  - correct
+  correct_points: 1
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.3333333333333333
+  fully_correct: false
+- configuration: vector
+  number: 18
+  id: FRKG107
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 3
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: vector
+  number: 19
+  id: FRKG108
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  correct_points: 0
+  total_points: 1
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: vector
+  number: 20
+  id: FRKG111
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  correct_points: 0
+  total_points: 1
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: graph
+  number: 1
+  id: FRKG003
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 3
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: graph
+  number: 2
+  id: FRKG009
+  correct_point_numbers:
+  - 1
+  - 2
+  statuses:
+  - correct
+  - correct
+  correct_points: 2
+  total_points: 2
+  answer_hit: 1
+  answer_recall: 1.0
+  fully_correct: true
+- configuration: graph
+  number: 3
+  id: FRKG010
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 4
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: graph
+  number: 4
+  id: FRKG011
+  correct_point_numbers:
+  - 1
+  statuses:
+  - correct
+  - incorrect
+  - incorrect
+  correct_points: 1
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.3333333333333333
+  fully_correct: false
+- configuration: graph
+  number: 5
+  id: FRKG070
+  correct_point_numbers:
+  - 2
+  statuses:
+  - incorrect
+  - correct
+  - incorrect
+  correct_points: 1
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.3333333333333333
+  fully_correct: false
+- configuration: graph
+  number: 6
+  id: FRKG071
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 2
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: graph
+  number: 7
+  id: FRKG073
+  correct_point_numbers:
+  - 1
+  statuses:
+  - correct
+  - incorrect
+  correct_points: 1
+  total_points: 2
+  answer_hit: 1
+  answer_recall: 0.5
+  fully_correct: false
+- configuration: graph
+  number: 8
+  id: FRKG082
+  correct_point_numbers:
+  - 1
+  statuses:
+  - correct
+  - incorrect
+  correct_points: 1
+  total_points: 2
+  answer_hit: 1
+  answer_recall: 0.5
+  fully_correct: false
+- configuration: graph
+  number: 9
+  id: FRKG084
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 3
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: graph
+  number: 10
+  id: FRKG093
+  correct_point_numbers:
+  - 1
+  - 2
+  statuses:
+  - correct
+  - correct
+  - incorrect
+  correct_points: 2
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.6666666666666666
+  fully_correct: false
+- configuration: graph
+  number: 11
+  id: FRKG096
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 2
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: graph
+  number: 12
+  id: FRKG098
+  correct_point_numbers:
+  - 1
+  statuses:
+  - correct
+  - incorrect
+  correct_points: 1
+  total_points: 2
+  answer_hit: 1
+  answer_recall: 0.5
+  fully_correct: false
+- configuration: graph
+  number: 13
+  id: FRKG100
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 3
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: graph
+  number: 14
+  id: FRKG102
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 3
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: graph
+  number: 15
+  id: FRKG103
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 2
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: graph
+  number: 16
+  id: FRKG104
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 4
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: graph
+  number: 17
+  id: FRKG105
+  correct_point_numbers:
+  - 3
+  statuses:
+  - incorrect
+  - incorrect
+  - correct
+  correct_points: 1
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.3333333333333333
+  fully_correct: false
+- configuration: graph
+  number: 18
+  id: FRKG107
+  correct_point_numbers:
+  - 1
+  - 2
+  - 3
+  statuses:
+  - correct
+  - correct
+  - correct
+  correct_points: 3
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 1.0
+  fully_correct: true
+- configuration: graph
+  number: 19
+  id: FRKG108
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  correct_points: 0
+  total_points: 1
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: graph
+  number: 20
+  id: FRKG111
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  correct_points: 0
+  total_points: 1
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: agent_vector
+  number: 1
+  id: FRKG003
+  correct_point_numbers:
+  - 3
+  statuses:
+  - incorrect
+  - incorrect
+  - correct
+  correct_points: 1
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.3333333333333333
+  fully_correct: false
+- configuration: agent_vector
+  number: 2
+  id: FRKG009
+  correct_point_numbers:
+  - 1
+  - 2
+  statuses:
+  - correct
+  - correct
+  correct_points: 2
+  total_points: 2
+  answer_hit: 1
+  answer_recall: 1.0
+  fully_correct: true
+- configuration: agent_vector
+  number: 3
+  id: FRKG010
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 4
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: agent_vector
+  number: 4
+  id: FRKG011
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 3
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: agent_vector
+  number: 5
+  id: FRKG070
+  correct_point_numbers:
+  - 1
+  - 2
+  - 3
+  statuses:
+  - correct
+  - correct
+  - correct
+  correct_points: 3
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 1.0
+  fully_correct: true
+- configuration: agent_vector
+  number: 6
+  id: FRKG071
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 2
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: agent_vector
+  number: 7
+  id: FRKG073
+  correct_point_numbers:
+  - 1
+  - 2
+  statuses:
+  - correct
+  - correct
+  correct_points: 2
+  total_points: 2
+  answer_hit: 1
+  answer_recall: 1.0
+  fully_correct: true
+- configuration: agent_vector
+  number: 8
+  id: FRKG082
+  correct_point_numbers:
+  - 1
+  statuses:
+  - correct
+  - incorrect
+  correct_points: 1
+  total_points: 2
+  answer_hit: 1
+  answer_recall: 0.5
+  fully_correct: false
+- configuration: agent_vector
+  number: 9
+  id: FRKG084
+  correct_point_numbers:
+  - 1
+  - 3
+  statuses:
+  - correct
+  - incorrect
+  - correct
+  correct_points: 2
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.6666666666666666
+  fully_correct: false
+- configuration: agent_vector
+  number: 10
+  id: FRKG093
+  correct_point_numbers:
+  - 1
+  - 2
+  - 3
+  statuses:
+  - correct
+  - correct
+  - correct
+  correct_points: 3
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 1.0
+  fully_correct: true
+- configuration: agent_vector
+  number: 11
+  id: FRKG096
+  correct_point_numbers:
+  - 2
+  statuses:
+  - incorrect
+  - correct
+  correct_points: 1
+  total_points: 2
+  answer_hit: 1
+  answer_recall: 0.5
+  fully_correct: false
+- configuration: agent_vector
+  number: 12
+  id: FRKG098
+  correct_point_numbers:
+  - 2
+  statuses:
+  - incorrect
+  - correct
+  correct_points: 1
+  total_points: 2
+  answer_hit: 1
+  answer_recall: 0.5
+  fully_correct: false
+- configuration: agent_vector
+  number: 13
+  id: FRKG100
+  correct_point_numbers:
+  - 1
+  statuses:
+  - correct
+  - incorrect
+  - incorrect
+  correct_points: 1
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.3333333333333333
+  fully_correct: false
+- configuration: agent_vector
+  number: 14
+  id: FRKG102
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 3
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: agent_vector
+  number: 15
+  id: FRKG103
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 2
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: agent_vector
+  number: 16
+  id: FRKG104
+  correct_point_numbers:
+  - 1
+  - 2
+  statuses:
+  - correct
+  - correct
+  - incorrect
+  - incorrect
+  correct_points: 2
+  total_points: 4
+  answer_hit: 1
+  answer_recall: 0.5
+  fully_correct: false
+- configuration: agent_vector
+  number: 17
+  id: FRKG105
+  correct_point_numbers:
+  - 2
+  - 3
+  statuses:
+  - incorrect
+  - correct
+  - correct
+  correct_points: 2
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.6666666666666666
+  fully_correct: false
+- configuration: agent_vector
+  number: 18
+  id: FRKG107
+  correct_point_numbers:
+  - 3
+  statuses:
+  - incorrect
+  - incorrect
+  - correct
+  correct_points: 1
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.3333333333333333
+  fully_correct: false
+- configuration: agent_vector
+  number: 19
+  id: FRKG108
+  correct_point_numbers:
+  - 1
+  statuses:
+  - correct
+  correct_points: 1
+  total_points: 1
+  answer_hit: 1
+  answer_recall: 1.0
+  fully_correct: true
+- configuration: agent_vector
+  number: 20
+  id: FRKG111
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  correct_points: 0
+  total_points: 1
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: agent_graph
+  number: 1
+  id: FRKG003
+  correct_point_numbers:
+  - 3
+  statuses:
+  - incorrect
+  - incorrect
+  - correct
+  correct_points: 1
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.3333333333333333
+  fully_correct: false
+- configuration: agent_graph
+  number: 2
+  id: FRKG009
+  correct_point_numbers:
+  - 1
+  - 2
+  statuses:
+  - correct
+  - correct
+  correct_points: 2
+  total_points: 2
+  answer_hit: 1
+  answer_recall: 1.0
+  fully_correct: true
+- configuration: agent_graph
+  number: 3
+  id: FRKG010
+  correct_point_numbers:
+  - 1
+  - 2
+  - 4
+  statuses:
+  - correct
+  - correct
+  - incorrect
+  - correct
+  correct_points: 3
+  total_points: 4
+  answer_hit: 1
+  answer_recall: 0.75
+  fully_correct: false
+- configuration: agent_graph
+  number: 4
+  id: FRKG011
+  correct_point_numbers:
+  - 1
+  statuses:
+  - correct
+  - incorrect
+  - incorrect
+  correct_points: 1
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.3333333333333333
+  fully_correct: false
+- configuration: agent_graph
+  number: 5
+  id: FRKG070
+  correct_point_numbers:
+  - 3
+  statuses:
+  - incorrect
+  - incorrect
+  - correct
+  correct_points: 1
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.3333333333333333
+  fully_correct: false
+- configuration: agent_graph
+  number: 6
+  id: FRKG071
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 2
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: agent_graph
+  number: 7
+  id: FRKG073
+  correct_point_numbers:
+  - 1
+  statuses:
+  - correct
+  - incorrect
+  correct_points: 1
+  total_points: 2
+  answer_hit: 1
+  answer_recall: 0.5
+  fully_correct: false
+- configuration: agent_graph
+  number: 8
+  id: FRKG082
+  correct_point_numbers:
+  - 1
+  statuses:
+  - correct
+  - incorrect
+  correct_points: 1
+  total_points: 2
+  answer_hit: 1
+  answer_recall: 0.5
+  fully_correct: false
+- configuration: agent_graph
+  number: 9
+  id: FRKG084
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 3
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: agent_graph
+  number: 10
+  id: FRKG093
+  correct_point_numbers:
+  - 1
+  - 2
+  - 3
+  statuses:
+  - correct
+  - correct
+  - correct
+  correct_points: 3
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 1.0
+  fully_correct: true
+- configuration: agent_graph
+  number: 11
+  id: FRKG096
+  correct_point_numbers:
+  - 1
+  - 2
+  statuses:
+  - correct
+  - correct
+  correct_points: 2
+  total_points: 2
+  answer_hit: 1
+  answer_recall: 1.0
+  fully_correct: true
+- configuration: agent_graph
+  number: 12
+  id: FRKG098
+  correct_point_numbers:
+  - 1
+  statuses:
+  - correct
+  - incorrect
+  correct_points: 1
+  total_points: 2
+  answer_hit: 1
+  answer_recall: 0.5
+  fully_correct: false
+- configuration: agent_graph
+  number: 13
+  id: FRKG100
+  correct_point_numbers:
+  - 1
+  statuses:
+  - correct
+  - incorrect
+  - incorrect
+  correct_points: 1
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.3333333333333333
+  fully_correct: false
+- configuration: agent_graph
+  number: 14
+  id: FRKG102
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 3
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: agent_graph
+  number: 15
+  id: FRKG103
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 2
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: agent_graph
+  number: 16
+  id: FRKG104
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 4
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: agent_graph
+  number: 17
+  id: FRKG105
+  correct_point_numbers:
+  - 2
+  - 3
+  statuses:
+  - incorrect
+  - correct
+  - correct
+  correct_points: 2
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.6666666666666666
+  fully_correct: false
+- configuration: agent_graph
+  number: 18
+  id: FRKG107
+  correct_point_numbers:
+  - 1
+  - 2
+  - 3
+  statuses:
+  - correct
+  - correct
+  - correct
+  correct_points: 3
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 1.0
+  fully_correct: true
+- configuration: agent_graph
+  number: 19
+  id: FRKG108
+  correct_point_numbers:
+  - 1
+  statuses:
+  - correct
+  correct_points: 1
+  total_points: 1
+  answer_hit: 1
+  answer_recall: 1.0
+  fully_correct: true
+- configuration: agent_graph
+  number: 20
+  id: FRKG111
+  correct_point_numbers:
+  - 1
+  statuses:
+  - correct
+  correct_points: 1
+  total_points: 1
+  answer_hit: 1
+  answer_recall: 1.0
+  fully_correct: true
+- configuration: text_to_cypher
+  number: 1
+  id: FRKG003
+  correct_point_numbers:
+  - 3
+  statuses:
+  - incorrect
+  - incorrect
+  - correct
+  correct_points: 1
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.3333333333333333
+  fully_correct: false
+- configuration: text_to_cypher
+  number: 2
+  id: FRKG009
+  correct_point_numbers:
+  - 2
+  statuses:
+  - incorrect
+  - correct
+  correct_points: 1
+  total_points: 2
+  answer_hit: 1
+  answer_recall: 0.5
+  fully_correct: false
+- configuration: text_to_cypher
+  number: 3
+  id: FRKG010
+  correct_point_numbers:
+  - 1
+  - 2
+  statuses:
+  - correct
+  - correct
+  - incorrect
+  - incorrect
+  correct_points: 2
+  total_points: 4
+  answer_hit: 1
+  answer_recall: 0.5
+  fully_correct: false
+- configuration: text_to_cypher
+  number: 4
+  id: FRKG011
+  correct_point_numbers:
+  - 1
+  statuses:
+  - correct
+  - incorrect
+  - incorrect
+  correct_points: 1
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.3333333333333333
+  fully_correct: false
+- configuration: text_to_cypher
+  number: 5
+  id: FRKG070
+  correct_point_numbers:
+  - 1
+  - 3
+  statuses:
+  - correct
+  - incorrect
+  - correct
+  correct_points: 2
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.6666666666666666
+  fully_correct: false
+- configuration: text_to_cypher
+  number: 6
+  id: FRKG071
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 2
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: text_to_cypher
+  number: 7
+  id: FRKG073
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 2
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: text_to_cypher
+  number: 8
+  id: FRKG082
+  correct_point_numbers:
+  - 1
+  statuses:
+  - correct
+  - incorrect
+  correct_points: 1
+  total_points: 2
+  answer_hit: 1
+  answer_recall: 0.5
+  fully_correct: false
+- configuration: text_to_cypher
+  number: 9
+  id: FRKG084
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 3
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: text_to_cypher
+  number: 10
+  id: FRKG093
+  correct_point_numbers:
+  - 1
+  - 2
+  statuses:
+  - correct
+  - correct
+  - incorrect
+  correct_points: 2
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.6666666666666666
+  fully_correct: false
+- configuration: text_to_cypher
+  number: 11
+  id: FRKG096
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 2
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: text_to_cypher
+  number: 12
+  id: FRKG098
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 2
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: text_to_cypher
+  number: 13
+  id: FRKG100
+  correct_point_numbers:
+  - 1
+  statuses:
+  - correct
+  - incorrect
+  - incorrect
+  correct_points: 1
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.3333333333333333
+  fully_correct: false
+- configuration: text_to_cypher
+  number: 14
+  id: FRKG102
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 3
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: text_to_cypher
+  number: 15
+  id: FRKG103
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  - incorrect
+  correct_points: 0
+  total_points: 2
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: text_to_cypher
+  number: 16
+  id: FRKG104
+  correct_point_numbers:
+  - 1
+  - 2
+  - 3
+  statuses:
+  - correct
+  - correct
+  - correct
+  - incorrect
+  correct_points: 3
+  total_points: 4
+  answer_hit: 1
+  answer_recall: 0.75
+  fully_correct: false
+- configuration: text_to_cypher
+  number: 17
+  id: FRKG105
+  correct_point_numbers:
+  - 3
+  statuses:
+  - incorrect
+  - incorrect
+  - correct
+  correct_points: 1
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 0.3333333333333333
+  fully_correct: false
+- configuration: text_to_cypher
+  number: 18
+  id: FRKG107
+  correct_point_numbers:
+  - 1
+  - 2
+  - 3
+  statuses:
+  - correct
+  - correct
+  - correct
+  correct_points: 3
+  total_points: 3
+  answer_hit: 1
+  answer_recall: 1.0
+  fully_correct: true
+- configuration: text_to_cypher
+  number: 19
+  id: FRKG108
+  correct_point_numbers: []
+  statuses:
+  - incorrect
+  correct_points: 0
+  total_points: 1
+  answer_hit: 0
+  answer_recall: 0.0
+  fully_correct: false
+- configuration: text_to_cypher
+  number: 20
+  id: FRKG111
+  correct_point_numbers:
+  - 1
+  statuses:
+  - correct
+  correct_points: 1
+  total_points: 1
+  answer_hit: 1
+  answer_recall: 1.0
+  fully_correct: true

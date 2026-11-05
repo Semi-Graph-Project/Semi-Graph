@@ -1,0 +1,75 @@
+{
+  "generated_at_utc": "2026-11-02T13:07:45.637525+00:00",
+  "configurations": [
+    {
+      "configuration": "vector",
+      "query_count": 50,
+      "evaluation_k": 5,
+      "hit_at_5": 0.6,
+      "recall_at_5": 0.32,
+      "mrr_at_5": 0.359,
+      "queries_with_hit_at_5": 30,
+      "queries_truncated": 50,
+      "queries_with_fewer_than_5": 0,
+      "source_file": "controlled_vector_sox_smoke50_fast_full_answer.yaml",
+      "source_sha256": "dfd6e5d21b51667badf3f608099fa273ebdf3012d4bff20c64c1851908d1d5fb",
+      "result_file": "controlled_vector_sox_smoke50_fast_full_answer_at5.yaml"
+    },
+    {
+      "configuration": "graph",
+      "query_count": 50,
+      "evaluation_k": 5,
+      "hit_at_5": 0.66,
+      "recall_at_5": 0.35666666666666663,
+      "mrr_at_5": 0.3426666666666667,
+      "queries_with_hit_at_5": 33,
+      "queries_truncated": 50,
+      "queries_with_fewer_than_5": 0,
+      "source_file": "controlled_graph_sox_smoke50_fast_full_answer.yaml",
+      "source_sha256": "7840fd2f3bf49c89c09dccc005bbc35702f987f0bcae37827faa7c7645606c23",
+      "result_file": "controlled_graph_sox_smoke50_fast_full_answer_at5.yaml"
+    },
+    {
+      "configuration": "agent_vector",
+      "query_count": 50,
+      "evaluation_k": 5,
+      "hit_at_5": 0.86,
+      "recall_at_5": 0.59,
+      "mrr_at_5": 0.7283333333333333,
+      "queries_with_hit_at_5": 43,
+      "queries_truncated": 6,
+      "queries_with_fewer_than_5": 41,
+      "source_file": "controlled_agent_vector_sox_smoke50_fast_full_answer.yaml",
+      "source_sha256": "57d0c8c14af0b524e64fdb6b945e69257e230a3f0a971ae2d4a198f7e1f13367",
+      "result_file": "controlled_agent_vector_sox_smoke50_fast_full_answer_at5.yaml"
+    },
+    {
+      "configuration": "agent_graph",
+      "query_count": 50,
+      "evaluation_k": 5,
+      "hit_at_5": 0.94,
+      "recall_at_5": 0.6633333333333333,
+      "mrr_at_5": 0.7863333333333334,
+      "queries_with_hit_at_5": 47,
+      "queries_truncated": 10,
+      "queries_with_fewer_than_5": 38,
+      "source_file": "controlled_agent_graph_sox_smoke50_fast_full_answer.yaml",
+      "source_sha256": "ba767f4c80696df2363036392eeff3123e66dd01d88a4dd0f06579f2eef1052e",
+      "result_file": "controlled_agent_graph_sox_smoke50_fast_full_answer_at5.yaml"
+    },
+    {
+      "configuration": "text_to_cypher",
+      "query_count": 50,
+      "evaluation_k": 5,
+      "hit_at_5": 0.64,
+      "recall_at_5": 0.41666666666666663,
+      "mrr_at_5": 0.45233333333333337,
+      "queries_with_hit_at_5": 32,
+      "queries_truncated": 18,
+      "queries_with_fewer_than_5": 30,
+      "source_file": "controlled_text_to_cypher_sox_smoke50_ttc_full_answer_full_answer.yaml",
+      "source_sha256": "f126d82609af9f1c249a614ca7a1a134fc060257b89f463c38d08170e3293e18",
+      "result_file": "controlled_text_to_cypher_sox_smoke50_ttc_full_answer_full_answer_at5.yaml"
+    }
+  ]
+}
