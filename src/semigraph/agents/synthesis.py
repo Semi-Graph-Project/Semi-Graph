@@ -14,6 +14,8 @@ def parse_synthesis_response(
     strict_json: bool = False,
 ) -> dict:
     """Parse structured output and compose every LLM-written part in order."""
+
+    
     content = response.strip()
     if content.startswith("```") and content.endswith("```"):
         content = re.sub(r"^```(?:json)?\s*", "", content, count=1)

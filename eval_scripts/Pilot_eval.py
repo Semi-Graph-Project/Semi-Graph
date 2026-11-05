@@ -36,14 +36,13 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from semigraph.config import get_config  # noqa: E402
-from semigraph.connections import get_llm, get_neo4j_driver  # noqa: E402
-from semigraph.offline.chunker import Chunk  # noqa: E402
-from semigraph.offline.kg_extract import extract_chunk  # noqa: E402
-from semigraph.offline.kg_store import KGStore, init_schema  # noqa: E402
-from semigraph.ontology.nodes import GraphExtractionResult  # noqa: E402
-from semigraph.ontology.schema import FULL_ONTOLOGY  # noqa: E402
-
+from semigraph.config import get_config  
+from semigraph.connections import get_llm, get_neo4j_driver  
+from semigraph.offline.chunker import Chunk  
+from semigraph.offline.kg_extract import extract_chunk  
+from semigraph.offline.kg_store import KGStore, init_schema 
+from semigraph.ontology.nodes import GraphExtractionResult  
+from semigraph.ontology.schema import FULL_ONTOLOGY  
 
 SOX_DATASET = ROOT / "benchmark/freezes/sox74_retrieval_ablation_v1/inputs/finreflectkg_sox_strict74.yaml"
 
@@ -64,7 +63,6 @@ def load_chunks(
     limit: int | None = None,
     problem_gold: bool = False,
 ) -> list[Chunk]:
-    """Load unprocessed Chunks or Gold Chunks with incomplete graph output."""
     cfg = controlled_config()
 
     if problem_gold:
@@ -80,7 +78,7 @@ def load_chunks(
             }
           )
         """
-        params = {"gold_ids": load_gold_chunk_ids()}
+        params = {"gold_ids": load_gold_chunk_ids()} # ["ID001" , "ID002"]
     else:
         query = """
         MATCH (c:Chunk)
@@ -102,10 +100,11 @@ def load_chunks(
     if limit is not None:
         query += "LIMIT $limit"
         params["limit"] = limit
+        
 
     driver = get_neo4j_driver(cfg)
     try:
-        with driver.session() as session:
+        with driver.session() as session: 
             rows = session.run(query, **params).data()
     finally:
         driver.close()
@@ -114,7 +113,6 @@ def load_chunks(
 
 
 def controlled_config():
-    """Return the project config pointed explicitly at the controlled database."""
     cfg = get_config()
     cfg.neo4j_uri = cfg.controlled_neo4j_uri
     return cfg
@@ -125,7 +123,6 @@ def extract_chunks(
     llm,
     store: KGStore | None = None,
 ) -> list[tuple[Chunk, GraphExtractionResult]]:
-    """Extract each Chunk and optionally store chunk-level graph output."""
     extracted: list[tuple[Chunk, GraphExtractionResult]] = []
 
     for position, chunk in enumerate(chunks, start=1):

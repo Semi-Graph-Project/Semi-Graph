@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-"""Import a bounded FinReflectKG parquet corpus into an isolated Neo4j."""
+"""Import the selected FinReflectKG corpus into its Neo4j database."""
 from __future__ import annotations
 
-import argparse
 import json
-import os
 import re
 import sys
 import time
@@ -12,7 +10,6 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 import pyarrow.dataset as ds
-from dotenv import load_dotenv
 from neo4j import GraphDatabase
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,7 +17,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from semigraph.benchmark.finreflectkg import (  # noqa: E402
+from semigraph.benchmark.finreflectkg import ( 
     canonical_chunk_id,
     default_dataset_dir,
     normalize_entity_type,
@@ -28,7 +25,14 @@ from semigraph.benchmark.finreflectkg import (  # noqa: E402
     normalize_relation_type,
     question_tickers,
 )
+from semigraph.config import get_config  
 
+QA_FILE = Path.home() / "Documents/book/paper/project/final_master_dataset.json"
+DATA_DIR = default_dataset_dir()
+YEARS = [2022, 2023, 2024]
+BATCH_SIZE = 2000
+DATASET_REVISION = "81819dfb4c95a96963c9a1848466cdf9612d47c0"
+MANIFEST_PATH = ROOT / "data/neo4j/finreflectkg_import_manifest.json"
 
 SCHEMA_STATEMENTS = (
     "CREATE CONSTRAINT entity_name_type IF NOT EXISTS "
@@ -80,21 +84,10 @@ MERGE (c)-[:MENTIONS]->(e)
 """
 
 
-def _load_questions(path: Path, limit: int | None) -> list[dict]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    questions = list(payload["questions"])
-    return questions[:limit] if limit is not None else questions
-
-
-def _parse_tickers(raw: str | None, qa_file: Path, question_limit: int | None) -> list[str]:
-    if raw:
-        return sorted({value.strip().upper() for value in raw.split(",") if value.strip()})
-    return sorted(question_tickers(_load_questions(qa_file, question_limit)))
-
-
-def _relationship_cypher(relation_type: str) -> str:
+def relationship_cypher(relation_type: str) -> str:
     if not re.fullmatch(r"[A-Z][A-Z0-9_]*", relation_type):
         raise ValueError(f"Unsafe relationship type: {relation_type!r}")
+
     return f"""
     UNWIND $rows AS row
     MATCH (source:Entity {{name: row.source_name, type: row.source_type}})
@@ -113,119 +106,102 @@ def _relationship_cypher(relation_type: str) -> str:
     """
 
 
-def _clear_database(session) -> None:
-    session.run("MATCH (n) DETACH DELETE n").consume()
-
-
-def _init_schema(session) -> None:
-    for statement in SCHEMA_STATEMENTS:
-        session.run(statement).consume()
-
-
-def _flush(session, chunks: dict, mentions: set, relationships: dict) -> None:
+def write_batch(session, chunks: dict, mentions: set, relationships: dict) -> None:
     if chunks:
         session.run(CHUNK_CYPHER, rows=list(chunks.values())).consume()
+
     if mentions:
-        session.run(
-            MENTION_CYPHER,
-            rows=[
-                {"chunk_id": chunk_id, "name": name, "type": entity_type}
-                for chunk_id, name, entity_type in mentions
-            ],
-        ).consume()
+        rows = [
+            {"chunk_id": chunk_id, "name": name, "type": entity_type}
+            for chunk_id, name, entity_type in mentions
+        ]
+        session.run(MENTION_CYPHER, rows=rows).consume()
+
     for relation_type, rows in relationships.items():
         if rows:
-            session.run(_relationship_cypher(relation_type), rows=rows).consume()
+            session.run(relationship_cypher(relation_type), rows=rows).consume()
 
 
-def _summary(session) -> dict:
-    row = session.run("""
+def graph_summary(session) -> dict:
+    counts = session.run("""
         MATCH (n)
         WITH count(n) AS nodes
         MATCH ()-[r]->()
         RETURN nodes, count(r) AS relationships
     """).single()
+
     labels = {
-        record["label"]: record["n"]
-        for record in session.run("""
+        row["label"]: row["count"]
+        for row in session.run("""
             MATCH (n)
             UNWIND labels(n) AS label
-            RETURN label, count(*) AS n
+            RETURN label, count(*) AS count
             ORDER BY label
         """)
     }
-    rel_types = {
-        record["type"]: record["n"]
-        for record in session.run("""
+    relationship_types = {
+        row["type"]: row["count"]
+        for row in session.run("""
             MATCH ()-[r]->()
-            RETURN type(r) AS type, count(*) AS n
+            RETURN type(r) AS type, count(*) AS count
             ORDER BY type
         """)
     }
+
     return {
-        "nodes": int(row["nodes"]),
-        "relationships": int(row["relationships"]),
+        "nodes": int(counts["nodes"]),
+        "relationships": int(counts["relationships"]),
         "labels": labels,
-        "relationship_types": rel_types,
+        "relationship_types": relationship_types,
     }
 
 
 def main() -> None:
-    load_dotenv(ROOT / ".env")
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--data-dir", type=Path, default=default_dataset_dir())
-    parser.add_argument(
-        "--qa-file",
-        type=Path,
-        default=Path("/home/kantinan/Documents/book/paper/project/final_master_dataset.json"),
-    )
-    parser.add_argument("--question-limit", type=int)
-    parser.add_argument("--tickers", help="Comma-separated override; defaults to tickers in QA selection")
-    parser.add_argument("--years", default="2022,2023,2024")
-    parser.add_argument("--batch-size", type=int, default=2000)
-    parser.add_argument("--neo4j-uri", default=os.getenv("FINREFLECTKG_NEO4J_URI", "bolt://localhost:7688"))
-    parser.add_argument("--neo4j-user", default=os.getenv("NEO4J_USER", "neo4j"))
-    parser.add_argument("--neo4j-password", default=os.getenv("NEO4J_PASSWORD", ""))
-    parser.add_argument("--clear", action="store_true")
-    parser.add_argument(
-        "--manifest",
-        type=Path,
-        # Keep metadata outside the Docker-owned volume mount.
-        default=ROOT / "data" / "neo4j" / "finreflectkg_import_manifest.json",
-    )
-    args = parser.parse_args()
-    if not args.neo4j_password:
-        parser.error("NEO4J_PASSWORD is required")
-    if not args.data_dir.exists():
-        parser.error(f"Dataset directory does not exist: {args.data_dir}")
+    if not QA_FILE.exists():
+        raise FileNotFoundError(f"QA file not found: {QA_FILE}")
+    if not DATA_DIR.exists():
+        raise FileNotFoundError(f"FinReflectKG data not found: {DATA_DIR}")
 
-    tickers = _parse_tickers(args.tickers, args.qa_file, args.question_limit)
-    years = sorted({int(value) for value in args.years.split(",") if value.strip()})
+    questions = json.loads(QA_FILE.read_text(encoding="utf-8"))["questions"]
+    tickers = sorted(question_tickers(questions))
     print(f"[import] tickers={tickers}")
-    print(f"[import] years={years} target={args.neo4j_uri}")
+    print(f"[import] years={YEARS}")
 
-    dataset = ds.dataset(args.data_dir, format="parquet")
-    corpus_filter = ds.field("ticker").isin(tickers) & ds.field("year").isin(years)
-    scanner = dataset.scanner(filter=corpus_filter, batch_size=args.batch_size)
-
-    driver = GraphDatabase.driver(
-        args.neo4j_uri,
-        auth=(args.neo4j_user, args.neo4j_password),
+    dataset = ds.dataset(DATA_DIR, format="parquet")
+    data_filter = (
+        ds.field("ticker").isin(tickers)
+        & ds.field("year").isin(YEARS)
     )
+    batches = dataset.scanner(
+        filter=data_filter,
+        batch_size=BATCH_SIZE,
+    ).to_batches()
+
+    config = get_config()
+    if not config.neo4j_password:
+        raise RuntimeError("NEO4J_PASSWORD is required")
+
+    target_uri = config.finreflectkg_neo4j_uri
+    print(f"[import] target={target_uri}")
+    driver = GraphDatabase.driver(
+        target_uri,
+        auth=(config.neo4j_user, config.neo4j_password),
+    )
+
     stats = Counter()
     started = time.time()
+
     try:
         driver.verify_connectivity()
         with driver.session() as session:
-            if args.clear:
-                print("[import] clearing isolated benchmark database")
-                _clear_database(session)
-            _init_schema(session)
+            for statement in SCHEMA_STATEMENTS:
+                session.run(statement).consume()
 
-            for batch_number, batch in enumerate(scanner.to_batches(), start=1):
-                chunks: dict[str, dict] = {}
-                mentions: set[tuple[str, str, str]] = set()
-                relationships: dict[str, list[dict]] = defaultdict(list)
+            for batch_number, batch in enumerate(batches, start=1):
+                chunks = {}
+                mentions = set()
+                relationships = defaultdict(list)
+
                 for row in batch.to_pylist():
                     stats["rows_seen"] += 1
                     text = str(row.get("chunk_text") or "").strip()
@@ -234,11 +210,14 @@ def main() -> None:
                         continue
 
                     chunk_id = canonical_chunk_id(
-                        row["source_file"], row["page_id"], row["chunk_id"]
+                        row["source_file"],
+                        row["page_id"],
+                        row["chunk_id"],
                     )
                     ticker = str(row["ticker"]).upper()
                     fiscal_year = int(row["year"])
                     doc_key = f"{ticker}_{fiscal_year}_10-K"
+
                     chunks[chunk_id] = {
                         "chunk_id": chunk_id,
                         "raw_chunk_id": str(row["chunk_id"]),
@@ -254,10 +233,12 @@ def main() -> None:
                     source_type = normalize_entity_type(row.get("entity_type"))
                     target_name = normalize_name(row.get("target"))
                     target_type = normalize_entity_type(row.get("target_type"))
+
                     if source_name and source_type:
                         mentions.add((chunk_id, source_name, source_type))
                     else:
                         stats["invalid_source_entities"] += 1
+
                     if target_name and target_type:
                         mentions.add((chunk_id, target_name, target_type))
                     else:
@@ -267,9 +248,11 @@ def main() -> None:
                     if not relation_type:
                         stats["filtered_relationships"] += 1
                         continue
+
                     if not (source_name and source_type and target_name and target_type):
                         stats["relationships_with_invalid_endpoint"] += 1
                         continue
+
                     relationships[relation_type].append({
                         "triplet_id": str(row["triplet_id"]),
                         "source_name": source_name,
@@ -288,34 +271,37 @@ def main() -> None:
                     })
                     stats["accepted_relationships"] += 1
 
-                _flush(session, chunks, mentions, relationships)
+                write_batch(session, chunks, mentions, relationships)
                 stats["chunk_rows_written"] += len(chunks)
                 stats["mention_rows_written"] += len(mentions)
+
                 if batch_number % 10 == 0:
                     print(
-                        f"[import] batches={batch_number} rows={stats['rows_seen']} "
+                        f"[import] batches={batch_number} "
+                        f"rows={stats['rows_seen']} "
                         f"accepted_rels={stats['accepted_relationships']}"
                     )
 
-            graph_summary = _summary(session)
+            summary = graph_summary(session)
     finally:
         driver.close()
 
     manifest = {
-        "dataset_revision": "81819dfb4c95a96963c9a1848466cdf9612d47c0",
-        "data_dir": str(args.data_dir),
-        "qa_file": str(args.qa_file),
-        "question_limit": args.question_limit,
+        "dataset_revision": DATASET_REVISION,
+        "data_dir": str(DATA_DIR),
+        "qa_file": str(QA_FILE),
+        "question_limit": None,
         "tickers": tickers,
-        "years": years,
+        "years": YEARS,
         "elapsed_seconds": round(time.time() - started, 3),
         "import_stats": dict(stats),
-        "graph": graph_summary,
+        "graph": summary,
     }
-    args.manifest.parent.mkdir(parents=True, exist_ok=True)
-    args.manifest.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+    MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)
+    MANIFEST_PATH.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     print(json.dumps(manifest, indent=2))
-    print(f"[import] manifest={args.manifest}")
+    print(f"[import] manifest={MANIFEST_PATH}")
 
 
 if __name__ == "__main__":

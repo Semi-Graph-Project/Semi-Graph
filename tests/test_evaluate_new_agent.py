@@ -1,3 +1,4 @@
+import json
 from types import SimpleNamespace
 
 import pytest
@@ -13,11 +14,16 @@ def benchmark(monkeypatch, tmp_path):
     clock = [0.0]
     calls = []
     llm = FakeMessagesListChatModel(responses=[AIMessage(content="answer")])
-    cfg = SimpleNamespace(
-        llm_api_key="test-only",
-        eval_answer_audit_enabled=True,
-        agent_retrieval={"graph": {"triple_filter": "none"}},
-    )
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(yaml.safe_dump({
+        "llm": {"provider": "openai", "model": "test-model", "reasoning": {"effort": "high"}},
+        "agent_retrieval": {
+            "vector": {"candidate_pool_k": 20},
+            "graph": {"triple_filter": "none", "damping": 0.3},
+        },
+    }), encoding="utf-8")
+    cfg = evaluation.Config(config_path)
+    cfg.llm_api_key = "test-only"
     monkeypatch.setattr(evaluation, "get_config", lambda: cfg)
     monkeypatch.setattr(evaluation, "get_llm", lambda cfg: llm)
     monkeypatch.setattr(evaluation.time, "perf_counter", lambda: clock[0])
@@ -78,6 +84,58 @@ def benchmark(monkeypatch, tmp_path):
     monkeypatch.setattr(evaluation, "generate_final_answer", answer)
     monkeypatch.setattr(evaluation, "_run_agent", agent)
     return SimpleNamespace(clock=clock, calls=calls, path=tmp_path, llm=llm, cfg=cfg)
+
+
+@pytest.mark.parametrize("tool", ["vector", "agent_graph", "deepagent_graph"])
+def test_config_snapshot_is_saved_in_yaml_and_jsonl(benchmark, tool):
+    benchmark.cfg.neo4j_password = "test-password"
+    evaluation.evaluate_sox_queries(tool=tool, version_name="snapshot-test", workers=1)
+
+    yaml_trace = yaml.safe_load((benchmark.path / f"{tool}.yaml").read_text())
+    jsonl_trace = [
+        json.loads(line)
+        for line in (benchmark.path / f"{tool}.jsonl").read_text().splitlines()
+    ]
+    snapshot = yaml_trace["config_snapshot"]
+    assert jsonl_trace[0]["config_snapshot"] == snapshot
+    assert snapshot["llm"]["model"] == "test-model"
+    assert snapshot["llm"]["reasoning"] == {"effort": "high"}
+    assert snapshot["embeddings"]["dimensions"] == benchmark.cfg.embed_dim
+    assert snapshot["agent_retrieval"]["graph"]["damping"] == 0.3
+    assert snapshot["agent_harness"]["max_parallel_tasks"] == benchmark.cfg.agent_max_parallel_tasks
+    assert snapshot["evaluation"]["answer_audit_enabled"] is True
+    assert snapshot["evaluator"]["version_name"] == "snapshot-test"
+    assert snapshot["evaluator"]["top_k"] == evaluation.TOP_K
+    overrides = snapshot["evaluator"]["overrides"]
+    if tool == "vector":
+        assert snapshot["agent_retrieval"]["vector"]["candidate_pool_k"] == 20
+        assert overrides["agent_retrieval.vector"]["candidate_pool_k"] == evaluation.TOP_K
+    else:
+        assert overrides["agent_retrieval.graph"]["chunk_seed_vector_index"] == evaluation.VECTOR_INDEX
+    if tool in evaluation.DEEP_AGENT_TOOLS:
+        assert overrides["agent_harness"]["max_synthesis_chunks"] == evaluation.TOP_K
+    for path in [benchmark.path / f"{tool}.yaml", benchmark.path / f"{tool}.jsonl"]:
+        saved = path.read_text()
+        assert "test-only" not in saved
+        assert "test-password" not in saved
+        assert "api_key" not in saved
+        assert "neo4j_password" not in saved
+
+
+def test_config_snapshot_is_frozen_before_warmup(benchmark, monkeypatch):
+    retrieve = evaluation.vector_search
+
+    def mutate_config(question, top_k):
+        benchmark.cfg.llm_reasoning["effort"] = "low"
+        benchmark.cfg.agent_retrieval["graph"]["damping"] = 0.9
+        return retrieve(question, top_k)
+
+    monkeypatch.setattr(evaluation, "vector_search", mutate_config)
+    evaluation.evaluate_sox_queries(tool="vector", workers=1)
+
+    trace = yaml.safe_load((benchmark.path / "vector.yaml").read_text())
+    assert trace["config_snapshot"]["llm"]["reasoning"]["effort"] == "high"
+    assert trace["config_snapshot"]["agent_retrieval"]["graph"]["damping"] == 0.3
 
 
 @pytest.mark.parametrize(

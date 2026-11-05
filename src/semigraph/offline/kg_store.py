@@ -1,24 +1,4 @@
-"""
-Idempotent storage layer for the knowledge graph.
 
-Writes a `GraphExtractionResult` (output of `extract_chunk`) into Neo4j with a
-provenance hierarchy:
-
-    (:Document {ticker, fiscal_year, filing_type})
-        -[:HAS_SECTION]-> (:Section {name})
-            -[:HAS_CHUNK]-> (:Chunk {chunk_id, text, char_count})
-                -[:MENTIONS]-> (:Entity {name, type, ...})
-
-Domain relationships between entities are stored with a `source_chunk` property
-so every fact can be traced back to the chunk it was extracted from. This is
-the layer that the online Graph Search Tool (PPR) reads from.
-
-Idempotency: every write uses MERGE keyed by deterministic identifiers, so
-re-running the pipeline does not duplicate anything.
-
-Dynamic relationship types use APOC's `apoc.merge.relationship` since plain
-Cypher MERGE cannot parameterize the relationship type.
-"""
 from __future__ import annotations
 
 from neo4j import Driver

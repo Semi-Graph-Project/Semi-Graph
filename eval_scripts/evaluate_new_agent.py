@@ -21,7 +21,7 @@ if str(ROOT) not in sys.path:
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from semigraph.config import get_config  # noqa: E402
+from semigraph.config import Config, get_config  # noqa: E402
 from semigraph.connections import get_llm  # noqa: E402
 from semigraph.agents.graph import run_agent as run_new_agent  # noqa: E402
 from semigraph.online.vector_search import vector_search as production_vector_search  # noqa: E402
@@ -123,6 +123,65 @@ def _validate_runtime(tool: str, mode: str) -> None:
         )
 
 
+def _build_config_snapshot(cfg: Config, tool: str, version_name: str) -> dict:
+    """Capture important loaded settings without exporting credentials."""
+    overrides = {}
+    if tool in {"vector", "agent_vector"} or tool in DEEP_AGENT_TOOLS:
+        overrides["agent_retrieval.vector"] = {"vector_index": VECTOR_INDEX}
+        if tool == "vector":
+            overrides["agent_retrieval.vector"]["candidate_pool_k"] = TOP_K
+    if tool in {"graph", "agent_graph"} or tool in DEEP_AGENT_TOOLS:
+        overrides["agent_retrieval.graph"] = {
+            "chunk_seed_vector_index": VECTOR_INDEX,
+        }
+    if tool in DEEP_AGENT_TOOLS:
+        overrides["agent_harness"] = {
+            "top_k_chunks": TOP_K,
+            "max_synthesis_chunks": TOP_K,
+        }
+
+    return deepcopy({
+        "llm": {
+            "provider": cfg.llm_provider,
+            "model": cfg.llm_model,
+            "temperature": cfg.llm_temperature,
+            "reasoning": cfg.llm_reasoning,
+            "base_url": cfg.llm_base_url,
+            "json_mode": cfg.llm_json_mode,
+            "timeout": cfg.llm_timeout,
+        },
+        "embeddings": {
+            "model": cfg.embed_model,
+            "dimensions": cfg.embed_dim,
+            "batch_size": cfg.embed_batch_size,
+            "device": cfg.embed_device,
+            "normalize": cfg.embed_normalize,
+        },
+        "agent_retrieval": cfg.agent_retrieval,
+        "agent_harness": {
+            "max_planned_tasks": cfg.agent_max_planned_tasks,
+            "max_parallel_tasks": cfg.agent_max_parallel_tasks,
+            "top_k_chunks": cfg.agent_top_k_chunks,
+            "max_attempts_per_task": cfg.agent_max_attempts_per_task,
+            "max_assessment_attempts": cfg.agent_max_assessment_attempts,
+            "max_technical_retries": cfg.agent_max_technical_retries,
+            "max_synthesis_chunks": cfg.agent_max_synthesis_chunks,
+            "assess_context_max_chars": cfg.agent_assess_context_max_chars,
+            "max_num_ontology": cfg.agent_max_num_ontology,
+        },
+        "evaluation": {"answer_audit_enabled": cfg.eval_answer_audit_enabled},
+        "graph": {"informative_rel_types": cfg.informative_rel_types},
+        "tickers": cfg.tickers,
+        "evaluator": {
+            "dataset": str(SOX_DATASET),
+            "version_name": version_name,
+            "top_k": TOP_K,
+            "vector_index": VECTOR_INDEX,
+            "overrides": overrides,
+        },
+    })
+
+
 def _reciprocal_rank(retrieved_ids: list[str], gold_ids: set[str]) -> float:
     """Return 1/rank for the first retrieved Gold chunk, or zero if absent."""
     for rank, chunk_id in enumerate(retrieved_ids, start=1):
@@ -196,6 +255,7 @@ def write_yaml_trace(
     results: list[dict],
     output_path: Path,
     measurement: dict | None = None,
+    config_snapshot: dict | None = None,
 ) -> None:
     """Write summary metrics followed by all completed query traces."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -228,6 +288,8 @@ def write_yaml_trace(
         ),
     }
     trace = {"summary": summary, "results": results}
+    if config_snapshot is not None:
+        trace["config_snapshot"] = config_snapshot
     if measurement is not None:
         trace["measurement"] = measurement
         summary["token_usage_including_warmup"] = summarize_token_usage([
@@ -400,6 +462,7 @@ def evaluate_sox_queries(
     search = searches.get(tool)
     if search is None and tool not in ALL_AGENT_TOOLS:
         raise ValueError(f"Unknown evaluation tool: {tool}")
+    config_snapshot = _build_config_snapshot(cfg, tool, version_name)
     trace_output = Path(
         str(TRACE_OUTPUT_TEMPLATE).format(
             tool=tool,
@@ -551,13 +614,13 @@ def evaluate_sox_queries(
 
     # Start a fresh trace; each completed query is appended immediately.
     write_trace([], trace_output)
-    write_yaml_trace([], yaml_trace_output, measurement)
+    write_yaml_trace([], yaml_trace_output, measurement, config_snapshot)
     results = []
     with ThreadPoolExecutor(max_workers=workers) as executor:
         for result in executor.map(evaluate_case, queries):
             results.append(result)
-            append_trace(result, trace_output)
-            write_yaml_trace(results, yaml_trace_output, measurement)
+            append_trace({**result, "config_snapshot": config_snapshot}, trace_output)
+            write_yaml_trace(results, yaml_trace_output, measurement, config_snapshot)
             print(
                 f"{result['id']} | Hit={result['hit']} | "
                 f"Recall={result['recall']:.3f} | "
