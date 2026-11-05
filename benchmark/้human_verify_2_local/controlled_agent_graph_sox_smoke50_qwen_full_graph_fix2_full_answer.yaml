@@ -1,0 +1,3632 @@
+summary:
+  query_count: 50
+  hit: 0.78
+  recall: 0.5
+  mrr: 0.573
+  average_latency_ms: 102777.5
+  average_answer_latency_ms: 52158.3
+  average_total_latency_ms: 154935.8
+  token_usage:
+    prompt_tokens: 3904743
+    completion_tokens: 55799
+    total_tokens: 3960542
+    llm_calls: 661
+    calls_with_usage: 661
+    status: complete
+  token_usage_including_warmup:
+    prompt_tokens: 3905509
+    completion_tokens: 55814
+    total_tokens: 3961323
+    llm_calls: 662
+    calls_with_usage: 662
+    status: complete
+results:
+- id: FRKG003
+  mode: full_answer
+  answer_audit_enabled: false
+  query: Based on the segment disclosures and term definitions in their 2024 10-K filings, how do Intel and NVIDIA differ
+    in the treatment of stock-based compensation expenses within their 'All Other' categories, and what does this reveal about
+    their corporate expense allocation practices?
+  gold_chunks:
+  - INTC_10k_2024.pdf::page_102::chunk_2
+  - INTC_10k_2024.pdf::page_71::chunk_1
+  - NVDA_10k_2024.pdf::page_78::chunk_1
+  top_chunk_ids:
+  - INTC_10k_2024.pdf::page_6::chunk_1
+  - NVDA_10k_2024.pdf::page_41::chunk_5
+  - NVDA_10k_2024.pdf::page_78::chunk_1
+  - INTC_10k_2024.pdf::page_71::chunk_1
+  answer_points:
+  - Intel's 'All Other' category, as defined in its glossary (Chunk 1), includes non-reportable segments and startup businesses.
+    According to Chunk 2, Intel does not allocate stock-based compensation expenses to its operating segments, as these are
+    considered corporate-level expenses. In contrast, NVIDIA's 'All Other' category, as detailed in Chunk 3, explicitly includes
+    stock-based compensation expense as part of its enterprise-level costs. This reveals that Intel maintains stock-based
+    compensation as a centralized corporate expense, while NVIDIA incorporates it directly into its 'All Other' segment's
+    financial reporting, highlighting different approaches to expense allocation between the two companies.
+  final_answer: NVIDIA includes stock-based compensation expense in their 'All Other' category, whereas Intel does not. [NVDA_10k_2024.pdf::page_78::chunk_1]
+    [INTC_10k_2024.pdf::page_71::chunk_1] NVIDIA allocates stock-based compensation expense to their 'All Other' category,
+    indicating that they consider these expenses as part of their overall corporate infrastructure and support costs. Intel,
+    however, excludes stock-based compensation expense from their 'All Other' category, suggesting a different approach to
+    expense allocation.
+  hit: 1
+  recall: 0.6666666666666666
+  reciprocal_rank: 0.3333333333333333
+  latency_ms: 141917.39056700317
+  answer_latency_ms: 23572.08019599784
+  total_latency_ms: 165489.470763001
+  token_usage:
+    prompt_tokens: 130762
+    completion_tokens: 1484
+    total_tokens: 132246
+    llm_calls: 20
+    calls_with_usage: 20
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - INTC_10k_2024.pdf::page_6::chunk_1
+    - NVDA_10k_2024.pdf::page_41::chunk_5
+    - NVDA_10k_2024.pdf::page_78::chunk_1
+    - INTC_10k_2024.pdf::page_71::chunk_1
+    - NVDA_10k_2024.pdf::page_78::chunk_1
+    llm_calls: 1
+    latency_ms: 23572.08019599784
+    output_format: structured_json
+    parts:
+    - requested_part: How do Intel and NVIDIA differ in the treatment of stock-based compensation expenses within their 'All
+        Other' categories?
+      supported_facts:
+      - claim: NVIDIA's 'All Other' category includes stock-based compensation expense.
+        evidence_ids:
+        - NVDA_10k_2024.pdf::page_78::chunk_1
+      - claim: Intel's 'All Other' category does not include stock-based compensation expense.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_71::chunk_1
+      missing_information: null
+      answer: NVIDIA includes stock-based compensation expense in their 'All Other' category, whereas Intel does not.
+    - requested_part: What does this reveal about their corporate expense allocation practices?
+      supported_facts: []
+      missing_information: Intel's specific expense allocation practices are not detailed in the provided evidence.
+      answer: NVIDIA allocates stock-based compensation expense to their 'All Other' category, indicating that they consider
+        these expenses as part of their overall corporate infrastructure and support costs. Intel, however, excludes stock-based
+        compensation expense from their 'All Other' category, suggesting a different approach to expense allocation.
+    cited_chunk_ids:
+    - NVDA_10k_2024.pdf::page_78::chunk_1
+    - INTC_10k_2024.pdf::page_71::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG009
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What percentage of Texas Instruments' 2022 total revenue was represented by restructuring charges disclosed in the
+    Other segment, and how does the company's segment reporting structure explain the separation of these charges from operating
+    segments like Embedded Processing?
+  gold_chunks:
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2023.pdf::page_30::chunk_1
+  - TXN_10k_2024.pdf::page_4::chunk_1
+  top_chunk_ids:
+  - TXN_10k_2022.pdf::page_54::chunk_1
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2023.pdf::page_4::chunk_1
+  - TXN_10k_2022.pdf::page_33::chunk_2
+  - TXN_10k_2024.pdf::page_30::chunk_1
+  answer_points:
+  - In 2022, restructuring charges in the Other segment amounted to $257 million (Chunk 1), representing 1.28% of total revenue
+    ($257M / $20,028M). Texas Instruments' segment reporting structure (Chunk 2) explains that restructuring charges are classified
+    as corporate-level items in the Other segment, which are not allocated to operating segments like Embedded Processing.
+    This separation reflects how management evaluates segment performance by excluding non-operational corporate expenses
+    (Chunk 3 confirms Embedded Processing is a distinct operating segment with 16% revenue contribution in 2024, emphasizing
+    its structural independence from corporate charges).
+  final_answer: The restructuring charges/other in the Other segment for 2022 were $257 million, representing approximately
+    14.07% of the Other segment's revenue ($257 / $1,408 * 100 = 18.25%). However, without the total revenue for 2022, the
+    exact percentage of the total revenue cannot be calculated. [TXN_10k_2022.pdf::page_54::chunk_1] [TXN_10k_2023.pdf::page_4::chunk_1]
+    [TXN_10k_2024.pdf::page_31::chunk_3] Texas Instruments separates restructuring charges and other corporate-level items
+    into the Other segment because they are not used in evaluating the results of or in allocating resources to the operating
+    segments. This means that these charges are not directly tied to the performance of the Analog or Embedded Processing
+    segments, hence their separation. [TXN_10k_2024.pdf::page_30::chunk_1] [TXN_10k_2023.pdf::page_4::chunk_1]
+  hit: 1
+  recall: 0.3333333333333333
+  reciprocal_rank: 0.5
+  latency_ms: 88395.57980000245
+  answer_latency_ms: 90066.16424200183
+  total_latency_ms: 178461.74404200428
+  token_usage:
+    prompt_tokens: 41496
+    completion_tokens: 1334
+    total_tokens: 42830
+    llm_calls: 10
+    calls_with_usage: 10
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - TXN_10k_2022.pdf::page_54::chunk_1
+    - TXN_10k_2024.pdf::page_31::chunk_3
+    - TXN_10k_2023.pdf::page_4::chunk_1
+    - TXN_10k_2022.pdf::page_33::chunk_2
+    - TXN_10k_2024.pdf::page_30::chunk_1
+    llm_calls: 1
+    latency_ms: 90066.16424200183
+    output_format: structured_json
+    parts:
+    - requested_part: What percentage of Texas Instruments' 2022 total revenue was represented by restructuring charges disclosed
+        in the Other segment?
+      supported_facts:
+      - claim: Restructuring charges/other are included in Other for segment reporting purposes and are comprised of the following
+          components.
+        evidence_ids:
+        - TXN_10k_2022.pdf::page_54::chunk_1
+      - claim: Other generated $1.11 billion of revenue in 2023 and includes revenue from DLP products (primarily used to
+          project high-definition images), calculators and certain custom semiconductors known as application-specific integrated
+          circuits (ASICs). In Other, we also include items that are not used in evaluating the results of or in allocating
+          resources to our segments. Examples of these items include acquisition, integration and restructuring charges, as
+          well as certain corporate-level items, such as litigation expenses, environmental costs and gains and losses from
+          other activities, including asset dispositions.
+        evidence_ids:
+        - TXN_10k_2023.pdf::page_4::chunk_1
+      - claim: For Year Ended December 31, 2022, Other had $1,408 million in revenue and Restructuring charges/other were
+          $257 million.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_31::chunk_3
+      missing_information: Total revenue for 2022 is not provided in the given evidence.
+      answer: The restructuring charges/other in the Other segment for 2022 were $257 million, representing approximately
+        14.07% of the Other segment's revenue ($257 / $1,408 * 100 = 18.25%). However, without the total revenue for 2022,
+        the exact percentage of the total revenue cannot be calculated.
+    - requested_part: How does the company's segment reporting structure explain the separation of these charges from operating
+        segments like Embedded Processing?
+      supported_facts:
+      - claim: Our segments reflect how our chief operating decision maker (CODM), which is our chief executive officer, allocates
+          resources and measures results.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_30::chunk_1
+      - claim: In Other, we also include items that are not used in evaluating the results of or in allocating resources to
+          our segments. Examples of these items include acquisition, integration and restructuring charges, as well as certain
+          corporate-level items, such as litigation expenses, environmental costs and gains and losses from other activities,
+          including asset dispositions.
+        evidence_ids:
+        - TXN_10k_2023.pdf::page_4::chunk_1
+      missing_information: null
+      answer: Texas Instruments separates restructuring charges and other corporate-level items into the Other segment because
+        they are not used in evaluating the results of or in allocating resources to the operating segments. This means that
+        these charges are not directly tied to the performance of the Analog or Embedded Processing segments, hence their
+        separation.
+    cited_chunk_ids:
+    - TXN_10k_2022.pdf::page_54::chunk_1
+    - TXN_10k_2023.pdf::page_4::chunk_1
+    - TXN_10k_2024.pdf::page_31::chunk_3
+    - TXN_10k_2024.pdf::page_30::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG010
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was the total operating profit contribution from the Embedded Processing and Other segments in 2022 compared
+    to 2023, considering that the Other segment includes restructuring charges and gains/losses from other activities as disclosed
+    in the prior year's filing?
+  gold_chunks:
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2024.pdf::page_31::chunk_1
+  - TXN_10k_2022.pdf::page_6::chunk_1
+  top_chunk_ids:
+  - TXN_10k_2022.pdf::page_6::chunk_1
+  - TXN_10k_2022.pdf::page_33::chunk_2
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2024.pdf::page_31::chunk_1
+  answer_points:
+  - In 2022, the Embedded Processing segment contributed $1,253M and the Other segment contributed $528M (including $257M
+    in restructuring charges) for a combined total of $1,781M (Chunk 1). In 2023, Embedded Processing contributed $1,008M
+    and Other contributed $502M (no restructuring charges) for a combined total of $1,510M (Chunk 2). The $271M decrease (-15.2%)
+    occurred despite removing restructuring charges from Other's 2023 results, highlighting how both segments' performance
+    and corporate-level adjustments (Chunk 3) directly impacted profitability. The Other segment's inclusion of restructuring
+    charges and gains/losses from activities (Chunk 3) explains why its 2022 operating profit was artificially reduced by
+    257M before comparing year-over-year changes.
+  final_answer: The operating profit contribution from the Embedded Processing segment in 2022 is not provided in the given
+    chunks. [TXN_10k_2022.pdf::page_33::chunk_2] The operating profit contribution from the Embedded Processing segment in
+    2023 was $1,008 million. [TXN_10k_2024.pdf::page_31::chunk_1] The operating profit contribution from the Other segment
+    in 2022 was $528 million. [TXN_10k_2024.pdf::page_31::chunk_3] The operating profit contribution from the Other segment
+    in 2023 was $502 million. [TXN_10k_2024.pdf::page_31::chunk_1] In 2022, the total operating profit contribution from the
+    Embedded Processing and Other segments was $1,702 million, while in 2023, it was $1,510 million. [TXN_10k_2022.pdf::page_33::chunk_2]
+    [TXN_10k_2024.pdf::page_31::chunk_3] [TXN_10k_2024.pdf::page_31::chunk_1]
+  hit: 1
+  recall: 1.0
+  reciprocal_rank: 1.0
+  latency_ms: 138391.01435500197
+  answer_latency_ms: 90890.57022199995
+  total_latency_ms: 229281.58457700192
+  token_usage:
+    prompt_tokens: 51570
+    completion_tokens: 1651
+    total_tokens: 53221
+    llm_calls: 14
+    calls_with_usage: 14
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - TXN_10k_2022.pdf::page_6::chunk_1
+    - TXN_10k_2022.pdf::page_33::chunk_2
+    - TXN_10k_2024.pdf::page_31::chunk_3
+    - TXN_10k_2024.pdf::page_31::chunk_1
+    - TXN_10k_2024.pdf::page_31::chunk_1
+    llm_calls: 1
+    latency_ms: 90890.57022199995
+    output_format: structured_json
+    parts:
+    - requested_part: What was the total operating profit contribution from the Embedded Processing segment in 2022?
+      supported_facts:
+      - claim: The Embedded Processing segment had an operating profit of $1,174 million in 2021.
+        evidence_ids:
+        - TXN_10k_2022.pdf::page_33::chunk_2
+      missing_information: Operating profit for 2022 is not provided directly in the given chunks.
+      answer: The operating profit contribution from the Embedded Processing segment in 2022 is not provided in the given
+        chunks.
+    - requested_part: What was the total operating profit contribution from the Embedded Processing segment in 2023?
+      supported_facts:
+      - claim: The Embedded Processing segment had an operating profit of $1,008 million in 2023.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_31::chunk_1
+      missing_information: null
+      answer: The operating profit contribution from the Embedded Processing segment in 2023 was $1,008 million.
+    - requested_part: What was the total operating profit contribution from the Other segment in 2022?
+      supported_facts:
+      - claim: The Other segment had an operating profit of $528 million in 2022.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_31::chunk_3
+      missing_information: null
+      answer: The operating profit contribution from the Other segment in 2022 was $528 million.
+    - requested_part: What was the total operating profit contribution from the Other segment in 2023?
+      supported_facts:
+      - claim: The Other segment had an operating profit of $502 million in 2023.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_31::chunk_1
+      missing_information: null
+      answer: The operating profit contribution from the Other segment in 2023 was $502 million.
+    - requested_part: How does the total operating profit contribution from the Embedded Processing and Other segments compare
+        between 2022 and 2023?
+      supported_facts:
+      - claim: In 2022, the total operating profit contribution from the Embedded Processing and Other segments was $1,702
+          million ($1,174 million + $528 million).
+        evidence_ids:
+        - TXN_10k_2022.pdf::page_33::chunk_2
+        - TXN_10k_2024.pdf::page_31::chunk_3
+      - claim: In 2023, the total operating profit contribution from the Embedded Processing and Other segments was $1,510
+          million ($1,008 million + $502 million).
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_31::chunk_1
+      missing_information: null
+      answer: In 2022, the total operating profit contribution from the Embedded Processing and Other segments was $1,702
+        million, while in 2023, it was $1,510 million.
+    cited_chunk_ids:
+    - TXN_10k_2022.pdf::page_33::chunk_2
+    - TXN_10k_2024.pdf::page_31::chunk_1
+    - TXN_10k_2024.pdf::page_31::chunk_3
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG011
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was the change in AMD's deferred tax liability related to acquired intangibles from 2022 to 2023, and how might
+    the company's increasing compliance costs associated with SEC regulations influence this financial metric?
+  gold_chunks:
+  - AMD_10k_2023.pdf::page_36::chunk_1
+  - AMD_10k_2023.pdf::page_88::chunk_2
+  top_chunk_ids:
+  - AMD_10k_2023.pdf::page_88::chunk_2
+  - AMD_10k_2023.pdf::page_36::chunk_1
+  answer_points:
+  - AMD's deferred tax liability for acquired intangibles decreased by $326 million from 2022 ($3,430M) to 2023 ($3,104M).
+    This decrease could be partially attributed to higher compliance costs linked to SEC regulations (e.g., conflict minerals
+    reporting), which increase operating expenses and reduce taxable income. Lower taxable income reduces deferred tax liabilities
+    over time, as these liabilities reflect future tax obligations tied to temporary differences in asset/liability valuations.
+    The $46M increase in valuation allowances (from $2,078M to $2,124M) further suggests heightened uncertainty in realizing
+    tax benefits, potentially exacerbated by compliance-driven cost pressures.
+  final_answer: The deferred tax liability related to acquired intangibles decreased by $326 million from 2022 to 2023. [AMD_10k_2023.pdf::page_88::chunk_2]
+    The increasing compliance costs associated with SEC regulations, particularly related to conflict minerals, may indirectly
+    influence the financial metric of deferred tax liability related to acquired intangibles through potential changes in
+    operational efficiency and supply chain management, but the direct impact is not specified. [AMD_10k_2023.pdf::page_36::chunk_1]
+  hit: 1
+  recall: 1.0
+  reciprocal_rank: 1.0
+  latency_ms: 103854.4591999962
+  answer_latency_ms: 53935.10983700253
+  total_latency_ms: 157789.56903699873
+  token_usage:
+    prompt_tokens: 67894
+    completion_tokens: 997
+    total_tokens: 68891
+    llm_calls: 12
+    calls_with_usage: 12
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - AMD_10k_2023.pdf::page_88::chunk_2
+    - AMD_10k_2023.pdf::page_36::chunk_1
+    - AMD_10k_2023.pdf::page_88::chunk_2
+    llm_calls: 1
+    latency_ms: 53935.10983700253
+    output_format: structured_json
+    parts:
+    - requested_part: What was the change in AMD's deferred tax liability related to acquired intangibles from 2022 to 2023?
+      supported_facts:
+      - claim: The deferred tax liability related to acquired intangibles decreased from $3,430 million in 2022 to $3,104
+          million in 2023.
+        evidence_ids:
+        - AMD_10k_2023.pdf::page_88::chunk_2
+      missing_information: null
+      answer: The deferred tax liability related to acquired intangibles decreased by $326 million from 2022 to 2023.
+    - requested_part: How might the company's increasing compliance costs associated with SEC regulations influence this financial
+        metric?
+      supported_facts:
+      - claim: AMD incurs costs associated with complying with conflict minerals reporting requirements to customers and the
+          SEC, and faces potential increases in compliance costs due to new policies in jurisdictions like the EU, China,
+          and others.
+        evidence_ids:
+        - AMD_10k_2023.pdf::page_36::chunk_1
+      missing_information: While the evidence suggests that compliance costs may increase, it does not directly link these
+        costs to the specific financial metric of deferred tax liability related to acquired intangibles.
+      answer: The increasing compliance costs associated with SEC regulations, particularly related to conflict minerals,
+        may indirectly influence the financial metric of deferred tax liability related to acquired intangibles through potential
+        changes in operational efficiency and supply chain management, but the direct impact is not specified.
+    cited_chunk_ids:
+    - AMD_10k_2023.pdf::page_88::chunk_2
+    - AMD_10k_2023.pdf::page_36::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG070
+  mode: full_answer
+  answer_audit_enabled: false
+  query: Calculate the total percentage growth in Mobileye's revenue from 2021 to 2023 and explain how the strategic initiatives
+    outlined in the 2022 filing contributed to this increase.
+  gold_chunks:
+  - INTC_10k_2022.pdf::page_30::chunk_1
+  - INTC_10k_2023.pdf::page_88::chunk_2
+  top_chunk_ids:
+  - INTC_10k_2022.pdf::page_30::chunk_1
+  - INTC_10k_2022.pdf::page_35::chunk_1
+  answer_points:
+  - Mobileye's revenue grew from $1,386 million in 2021 to $2,079 million in 2023, representing a 50% increase ($2,079M -
+    $1,386M = $693M; $693M ÷ $1,386M = 0.50). This growth was driven by strategic initiatives mentioned in the 2022 filing,
+    including securing 41 new ADAS design wins with major OEMs like Toyota and VW, expanding REM high-definition mapping partnerships,
+    and launching scalable autonomous driving solutions (Mobileye Drive™ and Robotaxi services). These initiatives directly
+    supported increased adoption of ADAS technologies and positioned Mobileye for growth in both commercial and consumer autonomous
+    vehicle markets.
+  final_answer: The provided information does not include revenue figures for 2023, so the total percentage growth in Mobileye's
+    revenue from 2021 to 2023 cannot be calculated. The strategic initiatives outlined in the 2022 filing contributed to the
+    increase in Mobileye's revenue by achieving record revenue in 2021 through improved global vehicle production, securing
+    numerous ADAS design wins with major OEMs, launching advanced autonomous driving solutions like Mobileye Drive™, and unveiling
+    the Mobileye Robotaxi for commercial use. These initiatives expanded Mobileye's customer base and product offerings, driving
+    revenue growth. [INTC_10k_2022.pdf::page_30::chunk_1]
+  hit: 1
+  recall: 0.5
+  reciprocal_rank: 1.0
+  latency_ms: 81566.79911300307
+  answer_latency_ms: 96355.77545399428
+  total_latency_ms: 177922.57456699735
+  token_usage:
+    prompt_tokens: 108996
+    completion_tokens: 1364
+    total_tokens: 110360
+    llm_calls: 16
+    calls_with_usage: 16
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - INTC_10k_2022.pdf::page_30::chunk_1
+    - INTC_10k_2022.pdf::page_35::chunk_1
+    - INTC_10k_2022.pdf::page_30::chunk_1
+    llm_calls: 1
+    latency_ms: 96355.77545399428
+    output_format: structured_json
+    parts:
+    - requested_part: Calculate the total percentage growth in Mobileye's revenue from 2021 to 2023
+      supported_facts: []
+      missing_information: Revenue figures for 2023 are not provided.
+      answer: The provided information does not include revenue figures for 2023, so the total percentage growth in Mobileye's
+        revenue from 2021 to 2023 cannot be calculated.
+    - requested_part: Explain how the strategic initiatives outlined in the 2022 filing contributed to this increase
+      supported_facts:
+      - claim: Mobileye achieved record revenue in 2021 as global vehicle production improved amid recovery from the economic
+          impacts of COVID-19.
+        evidence_ids:
+        - INTC_10k_2022.pdf::page_30::chunk_1
+      - claim: Mobileye secured a record 41 new ADAS design wins, including deals with major OEMs such as Toyota, VW, BMW,
+          Nissan, Honda, and PSA Group.
+        evidence_ids:
+        - INTC_10k_2022.pdf::page_30::chunk_1
+      - claim: Mobileye launched its SAE L4 SDS, Mobileye Drive™, and secured multiple collaborations for commercial use,
+          including with Udelv for autonomous cargo delivery, and with Transdev for self-driving mobility services.
+        evidence_ids:
+        - INTC_10k_2022.pdf::page_30::chunk_1
+      - claim: Mobileye unveiled the Mobileye Robotaxi, a production-grade self-driving electric vehicle, with mobility rider
+          services and MaaS platform, as well as mobility intelligence, tele-operations and data services by Moovit.
+        evidence_ids:
+        - INTC_10k_2022.pdf::page_30::chunk_1
+      missing_information: null
+      answer: The strategic initiatives outlined in the 2022 filing contributed to the increase in Mobileye's revenue by achieving
+        record revenue in 2021 through improved global vehicle production, securing numerous ADAS design wins with major OEMs,
+        launching advanced autonomous driving solutions like Mobileye Drive™, and unveiling the Mobileye Robotaxi for commercial
+        use. These initiatives expanded Mobileye's customer base and product offerings, driving revenue growth.
+    cited_chunk_ids:
+    - INTC_10k_2022.pdf::page_30::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG071
+  mode: full_answer
+  answer_audit_enabled: false
+  query: Which segment includes acquisition, integration and restructuring charges, and what was its reported revenue in 2024?
+  gold_chunks:
+  - TXN_10k_2023.pdf::page_30::chunk_1
+  - TXN_10k_2024.pdf::page_4::chunk_1
+  top_chunk_ids:
+  - AVGO_10k_2024.pdf::page_45::chunk_5
+  - INTC_10k_2024.pdf::page_25::chunk_3
+  - INTC_10k_2024.pdf::page_70::chunk_1
+  - INTC_10k_2024.pdf::page_71::chunk_1
+  answer_points:
+  - The 'Other' segment includes acquisition, integration and restructuring charges as disclosed in the 2023 filing (Chunk
+    1). In 2024, this same segment generated $947 million in revenue according to the 2024 filing (Chunk 2). This demonstrates
+    how operational costs and revenue generation are reported together for non-core business activities that don't meet reportable
+    segment thresholds.
+  final_answer: The unallocated expenses segment includes restructuring and other charges. [AVGO_10k_2024.pdf::page_45::chunk_5]
+    The revenue for the unallocated expenses segment in 2024 is not provided in the given evidence.
+  hit: 0
+  recall: 0.0
+  reciprocal_rank: 0.0
+  latency_ms: 102469.6422699999
+  answer_latency_ms: 42554.581096999755
+  total_latency_ms: 145024.22336699965
+  token_usage:
+    prompt_tokens: 58421
+    completion_tokens: 721
+    total_tokens: 59142
+    llm_calls: 10
+    calls_with_usage: 10
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - AVGO_10k_2024.pdf::page_45::chunk_5
+    - INTC_10k_2024.pdf::page_25::chunk_3
+    - INTC_10k_2024.pdf::page_70::chunk_1
+    - INTC_10k_2024.pdf::page_71::chunk_1
+    llm_calls: 1
+    latency_ms: 42554.581096999755
+    output_format: structured_json
+    parts:
+    - requested_part: Which segment includes acquisition, integration and restructuring charges?
+      supported_facts:
+      - claim: Unallocated expenses include restructuring and other charges.
+        evidence_ids:
+        - AVGO_10k_2024.pdf::page_45::chunk_5
+      missing_information: null
+      answer: The unallocated expenses segment includes restructuring and other charges.
+    - requested_part: What was its reported revenue in 2024?
+      supported_facts: []
+      missing_information: Revenue for the unallocated expenses segment in 2024 is not provided in the given evidence.
+      answer: The revenue for the unallocated expenses segment in 2024 is not provided in the given evidence.
+    cited_chunk_ids:
+    - AVGO_10k_2024.pdf::page_45::chunk_5
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG073
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was the change in operating losses for the 'All other' segment between 2021 and 2022, and what asset transfer
+    amount into this segment was disclosed in 2023 according to Intel's financial reports?
+  gold_chunks:
+  - INTC_10k_2023.pdf::page_97::chunk_2
+  - INTC_10k_2022.pdf::page_86::chunk_2
+  top_chunk_ids:
+  - INTC_10k_2024.pdf::page_70::chunk_1
+  - INTC_10k_2023.pdf::page_97::chunk_4
+  - INTC_10k_2022.pdf::page_40::chunk_1
+  - INTC_10k_2024.pdf::page_15::chunk_1
+  - INTC_10k_2024.pdf::page_23::chunk_3
+  answer_points:
+  - The 'All other' segment's operating losses decreased by $2,003 million from 2021 ($5,384 million loss) to 2022 ($3,381
+    million loss). In 2023, Intel disclosed a $393 million asset transfer into this segment, as shown in the reconciliation
+    table.
+  final_answer: The 'All other' segment revenue for 2023 was $5.6 billion, up $78 million from 2022. [INTC_10k_2024.pdf::page_23::chunk_3]
+  hit: 0
+  recall: 0.0
+  reciprocal_rank: 0.0
+  latency_ms: 131192.6104019949
+  answer_latency_ms: 31723.33728200465
+  total_latency_ms: 162915.94768399955
+  token_usage:
+    prompt_tokens: 130324
+    completion_tokens: 1246
+    total_tokens: 131570
+    llm_calls: 18
+    calls_with_usage: 18
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - INTC_10k_2024.pdf::page_70::chunk_1
+    - INTC_10k_2023.pdf::page_97::chunk_4
+    - INTC_10k_2022.pdf::page_40::chunk_1
+    - INTC_10k_2024.pdf::page_15::chunk_1
+    - INTC_10k_2024.pdf::page_23::chunk_3
+    - INTC_10k_2024.pdf::page_70::chunk_1
+    llm_calls: 1
+    latency_ms: 31723.33728200465
+    output_format: structured_json
+    parts:
+    - requested_part: What was the change in operating losses for the 'All other' segment between 2021 and 2022?
+      supported_facts: []
+      missing_information: Operating loss figures for 'All other' segment in 2021 and 2022 are not provided.
+      answer: null
+    - requested_part: What asset transfer amount into this segment was disclosed in 2023 according to Intel's financial reports?
+      supported_facts:
+      - claim: The 'All other' segment revenue for 2023 was $5.6 billion, up $78 million from 2022.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_23::chunk_3
+      missing_information: null
+      answer: The 'All other' segment revenue for 2023 was $5.6 billion, up $78 million from 2022.
+    cited_chunk_ids:
+    - INTC_10k_2024.pdf::page_23::chunk_3
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG082
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was the impact of the All Other segment's operating loss in 2023 on Intel's total operating income, and how
+    does the segment's composition of non-reportable businesses and intersegment allocations contribute to this financial
+    outcome?
+  gold_chunks:
+  - INTC_10k_2024.pdf::page_71::chunk_1
+  - INTC_10k_2023.pdf::page_88::chunk_2
+  top_chunk_ids:
+  - INTC_10k_2023.pdf::page_88::chunk_2
+  - INTC_10k_2023.pdf::page_87::chunk_1
+  answer_points:
+  - The All Other segment reported an operating loss of $5,597 million in 2023 (Chunk 2), which significantly reduced Intel's
+    total operating income to just $93 million. This segment's composition—including non-reportable businesses like Altera
+    and Mobileye, startup initiatives, and intersegment revenue/expenses (Chunk 1)—means its financial performance reflects
+    both unprofitable strategic ventures and allocated costs from corporate functions. The intersegment allocations (e.g.,
+    sales/marketing expenses to Intel Products segments and unallocated corporate costs) amplify its negative contribution,
+    demonstrating how Intel's internal cost distribution and underperforming subsidiaries directly erode consolidated profitability.
+  final_answer: The All Other segment's operating loss of $5,597 million in 2023 significantly reduced Intel's total operating
+    income, which was $93 million in 2023. [INTC_10k_2023.pdf::page_88::chunk_2] The All Other segment includes non-reportable
+    segments and start-up businesses, contributing to its operating loss. Additionally, expenses from various groups are allocated
+    to the operating segments, potentially affecting the segment's financial performance. [INTC_10k_2023.pdf::page_87::chunk_1]
+  hit: 1
+  recall: 0.5
+  reciprocal_rank: 1.0
+  latency_ms: 97766.32157299173
+  answer_latency_ms: 37376.745680005115
+  total_latency_ms: 135143.06725299684
+  token_usage:
+    prompt_tokens: 56031
+    completion_tokens: 945
+    total_tokens: 56976
+    llm_calls: 11
+    calls_with_usage: 11
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - INTC_10k_2023.pdf::page_88::chunk_2
+    - INTC_10k_2023.pdf::page_87::chunk_1
+    llm_calls: 1
+    latency_ms: 37376.745680005115
+    output_format: structured_json
+    parts:
+    - requested_part: What was the impact of the All Other segment's operating loss in 2023 on Intel's total operating income?
+      supported_facts:
+      - claim: The All Other segment had an operating loss of $5,597 million in 2023.
+        evidence_ids:
+        - INTC_10k_2023.pdf::page_88::chunk_2
+      missing_information: null
+      answer: The All Other segment's operating loss of $5,597 million in 2023 significantly reduced Intel's total operating
+        income, which was $93 million in 2023.
+    - requested_part: How does the segment's composition of non-reportable businesses and intersegment allocations contribute
+        to this financial outcome?
+      supported_facts:
+      - claim: The All Other segment includes results of operations from non-reportable segments not otherwise presented,
+          and from start-up businesses that support Intel's initiatives.
+        evidence_ids:
+        - INTC_10k_2023.pdf::page_87::chunk_1
+      - claim: Expenses for sales and marketing, manufacturing, engineering, finance, and administration groups are generally
+          allocated to the operating segments.
+        evidence_ids:
+        - INTC_10k_2023.pdf::page_87::chunk_1
+      missing_information: The specific allocation of expenses to the All Other segment and the impact of intersegment allocations
+        on the operating loss are not detailed in the provided evidence.
+      answer: The All Other segment includes non-reportable segments and start-up businesses, contributing to its operating
+        loss. Additionally, expenses from various groups are allocated to the operating segments, potentially affecting the
+        segment's financial performance.
+    cited_chunk_ids:
+    - INTC_10k_2023.pdf::page_88::chunk_2
+    - INTC_10k_2023.pdf::page_87::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG084
+  mode: full_answer
+  answer_audit_enabled: false
+  query: By how many percentage points did the operating income growth rate for AVGO's Infrastructure Software segment exceed
+    its revenue growth rate in fiscal year 2022, and what does this indicate about the segment's operational efficiency?
+  gold_chunks:
+  - AVGO_10k_2022.pdf::page_70::chunk_2
+  - AVGO_10k_2022.pdf::page_71::chunk_4
+  top_chunk_ids:
+  - AVGO_10k_2024.pdf::page_58::chunk_1
+  - AVGO_10k_2022.pdf::page_71::chunk_4
+  - AVGO_10k_2023.pdf::page_43::chunk_3
+  answer_points:
+  - The Infrastructure Software segment's revenue grew by 4% (from $7,067M in 2021 to $7,385M in 2022) while its operating
+    income grew by 6% (from $4,936M in 2021 to $5,219M in 2022). This 2 percentage point difference indicates improved operational
+    efficiency, as the segment generated higher profit growth relative to its revenue growth. The increased operating margin
+    (from 69.8% in 2021 to 70.7% in 2022) demonstrates better cost management and profitability enhancement.
+  final_answer: The required data to calculate the difference in growth rates between operating income and revenue for the
+    Infrastructure Software segment in fiscal year 2022 is not available. The required data to determine the operational efficiency
+    of the Infrastructure Software segment based on the difference in growth rates between operating income and revenue in
+    fiscal year 2022 is not available.
+  hit: 1
+  recall: 0.5
+  reciprocal_rank: 0.5
+  latency_ms: 106115.19979799778
+  answer_latency_ms: 46238.713363003626
+  total_latency_ms: 152353.9131610014
+  token_usage:
+    prompt_tokens: 94239
+    completion_tokens: 1058
+    total_tokens: 95297
+    llm_calls: 16
+    calls_with_usage: 16
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - AVGO_10k_2024.pdf::page_58::chunk_1
+    - AVGO_10k_2022.pdf::page_71::chunk_4
+    - AVGO_10k_2023.pdf::page_43::chunk_3
+    - AVGO_10k_2022.pdf::page_71::chunk_4
+    llm_calls: 1
+    latency_ms: 46238.713363003626
+    output_format: structured_json
+    parts:
+    - requested_part: By how many percentage points did the operating income growth rate for AVGO's Infrastructure Software
+        segment exceed its revenue growth rate in fiscal year 2022?
+      supported_facts: []
+      missing_information: Operating income and revenue growth rates for the Infrastructure Software segment in fiscal year
+        2022 are not provided.
+      answer: The required data to calculate the difference in growth rates between operating income and revenue for the Infrastructure
+        Software segment in fiscal year 2022 is not available.
+    - requested_part: What does this indicate about the segment's operational efficiency?
+      supported_facts: []
+      missing_information: Operating income and revenue growth rates for the Infrastructure Software segment in fiscal year
+        2022 are not provided.
+      answer: The required data to determine the operational efficiency of the Infrastructure Software segment based on the
+        difference in growth rates between operating income and revenue in fiscal year 2022 is not available.
+    cited_chunk_ids: []
+    invalid_citation_ids: []
+    citation_status: missing
+- id: FRKG093
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was the percentage change in the value per percentage point of Mobileye's non-controlling interest from 2022
+    to 2023, and how does this reflect Intel's stake valuation in the segment?
+  gold_chunks:
+  - INTC_10k_2024.pdf::page_70::chunk_1
+  - INTC_10k_2023.pdf::page_89::chunk_2
+  top_chunk_ids:
+  - INTC_10k_2024.pdf::page_23::chunk_3
+  - INTC_10k_2023.pdf::page_8::chunk_1
+  answer_points:
+  - In 2022, Mobileye's non-controlling interest was $989 million at 6% ownership, equating to $164.83 million per percentage
+    point (Chunk 2). In 2023, this increased to $1,838 million at 12% ownership, equating to $153.17 million per percentage
+    point. The percentage change in value per point was ($153.17 - $164.83)/$164.83 = -7.07%. This decline suggests that while
+    Intel increased its ownership stake (from 6% to 12%) in Mobileye (Chunk 1), the valuation per percentage point decreased,
+    potentially indicating equity dilution or lower asset valuations in Mobileye relative to Intel's consolidated financial
+    position.
+  final_answer: The evidence does not provide the necessary financial details to determine the percentage change in the value
+    per percentage point of Mobileye's non-controlling interest from 2022 to 2023. The evidence does not provide the necessary
+    financial details to determine how the change in Mobileye's non-controlling interest reflects Intel's stake valuation
+    in the segment.
+  hit: 0
+  recall: 0.0
+  reciprocal_rank: 0.0
+  latency_ms: 100750.45656000293
+  answer_latency_ms: 34781.44387999782
+  total_latency_ms: 135531.90044000075
+  token_usage:
+    prompt_tokens: 62324
+    completion_tokens: 761
+    total_tokens: 63085
+    llm_calls: 10
+    calls_with_usage: 10
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - INTC_10k_2024.pdf::page_23::chunk_3
+    - INTC_10k_2023.pdf::page_8::chunk_1
+    llm_calls: 1
+    latency_ms: 34781.44387999782
+    output_format: structured_json
+    parts:
+    - requested_part: What was the percentage change in the value per percentage point of Mobileye's non-controlling interest
+        from 2022 to 2023?
+      supported_facts: []
+      missing_information: The provided evidence does not contain the specific financial details required to calculate the
+        value per percentage point of Mobileye's non-controlling interest for 2022 and 2023.
+      answer: The evidence does not provide the necessary financial details to determine the percentage change in the value
+        per percentage point of Mobileye's non-controlling interest from 2022 to 2023.
+    - requested_part: How does this reflect Intel's stake valuation in the segment?
+      supported_facts: []
+      missing_information: The provided evidence does not contain the specific financial details required to assess how the
+        change in Mobileye's non-controlling interest reflects Intel's stake valuation in the segment.
+      answer: The evidence does not provide the necessary financial details to determine how the change in Mobileye's non-controlling
+        interest reflects Intel's stake valuation in the segment.
+    cited_chunk_ids: []
+    invalid_citation_ids: []
+    citation_status: missing
+- id: FRKG096
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was the total revenue contribution from Texas Instruments' Other segment in 2024, and which specific non-operational
+    items are explicitly included in this segment's financial reporting?
+  gold_chunks:
+  - TXN_10k_2024.pdf::page_30::chunk_1
+  - TXN_10k_2024.pdf::page_4::chunk_1
+  top_chunk_ids:
+  - TXN_10k_2024.pdf::page_30::chunk_1
+  - TXN_10k_2023.pdf::page_30::chunk_1
+  - TXN_10k_2024.pdf::page_16::chunk_1
+  - TXN_10k_2022.pdf::page_1::chunk_1
+  - TXN_10k_2024.pdf::page_30::chunk_2
+  answer_points:
+  - Texas Instruments' Other segment generated $947 million in revenue during 2024 (Chunk 2). This segment specifically includes
+    non-operational items such as gains and losses from asset dispositions, acquisition-related charges, litigation expenses,
+    and environmental costs (Chunk 1). The combination of these non-core activities with revenue from DLP products, calculators,
+    and custom ASICs constitutes the financial reporting basis for the Other segment.
+  final_answer: The revenue contribution from Texas Instruments' Other segment in 2024 was $947 million. [TXN_10k_2024.pdf::page_30::chunk_2]
+    Texas Instruments includes acquisition, integration and restructuring charges, and certain corporate-level items like
+    litigation expenses, environmental costs, insurance settlements, and gains and losses from other activities, including
+    asset dispositions, in the Other segment's financial reporting. [TXN_10k_2024.pdf::page_30::chunk_1] [TXN_10k_2023.pdf::page_30::chunk_1]
+  hit: 1
+  recall: 0.5
+  reciprocal_rank: 1.0
+  latency_ms: 104731.48738100281
+  answer_latency_ms: 36716.92788299697
+  total_latency_ms: 141448.41526399978
+  token_usage:
+    prompt_tokens: 56252
+    completion_tokens: 975
+    total_tokens: 57227
+    llm_calls: 12
+    calls_with_usage: 12
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - TXN_10k_2024.pdf::page_30::chunk_1
+    - TXN_10k_2023.pdf::page_30::chunk_1
+    - TXN_10k_2024.pdf::page_16::chunk_1
+    - TXN_10k_2022.pdf::page_1::chunk_1
+    - TXN_10k_2024.pdf::page_30::chunk_2
+    - TXN_10k_2024.pdf::page_30::chunk_1
+    llm_calls: 1
+    latency_ms: 36716.92788299697
+    output_format: structured_json
+    parts:
+    - requested_part: What was the total revenue contribution from Texas Instruments' Other segment in 2024?
+      supported_facts:
+      - claim: The revenue contribution from Texas Instruments' Other segment in 2024 was $947 million.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_30::chunk_2
+      missing_information: null
+      answer: The revenue contribution from Texas Instruments' Other segment in 2024 was $947 million.
+    - requested_part: Which specific non-operational items are explicitly included in this segment's financial reporting?
+      supported_facts:
+      - claim: In the Other segment, Texas Instruments includes items such as acquisition, integration and restructuring charges,
+          and certain corporate-level items like litigation expenses, environmental costs, insurance settlements, and gains
+          and losses from other activities, including asset dispositions.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_30::chunk_1
+        - TXN_10k_2023.pdf::page_30::chunk_1
+      missing_information: null
+      answer: Texas Instruments includes acquisition, integration and restructuring charges, and certain corporate-level items
+        like litigation expenses, environmental costs, insurance settlements, and gains and losses from other activities,
+        including asset dispositions, in the Other segment's financial reporting.
+    cited_chunk_ids:
+    - TXN_10k_2024.pdf::page_30::chunk_2
+    - TXN_10k_2024.pdf::page_30::chunk_1
+    - TXN_10k_2023.pdf::page_30::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG098
+  mode: full_answer
+  answer_audit_enabled: false
+  query: How does AMD disclose its executive compensation agreements, such as the sign-on bonus agreement with Jean Hu, to
+    regulatory bodies and the public?
+  gold_chunks:
+  - AMD_10k_2024.pdf::page_16::chunk_1
+  - AMD_10k_2024.pdf::page_101::chunk_2
+  top_chunk_ids:
+  - AMD_10k_2023.pdf::page_105::chunk_2
+  - AMD_10k_2024.pdf::page_99::chunk_2
+  answer_points:
+  - AMD discloses executive compensation agreements through its Investor Relations website (Chunk 1), where it posts SEC filings
+    and corporate governance documents 'as soon as reasonably practical' after submission. This includes agreements like the
+    Sign-On Bonus Agreement with Jean Hu (Chunk 2), which was filed as Exhibit 10.2 to AMD's Current Report on Form 8-K dated
+    January 8, 2023. The SEC requires such disclosures to ensure transparency, and AMD complies by making these documents
+    freely accessible on its website, demonstrating the regulatory-to-public disclosure chain mandated by SEC regulations.
+  final_answer: AMD discloses executive compensation agreements, such as the sign-on bonus agreement with Jean Hu, through
+    exhibits in their filings with the SEC. This includes documents like offer letters and sign-on bonus agreements which
+    are filed as Exhibits 10.67 and 10.68 to their Current Report on Form 8-K dated January 8, 2023. [AMD_10k_2023.pdf::page_105::chunk_2]
+    [AMD_10k_2024.pdf::page_99::chunk_2]
+  hit: 0
+  recall: 0.0
+  reciprocal_rank: 0.0
+  latency_ms: 98415.10949000076
+  answer_latency_ms: 20239.084506996733
+  total_latency_ms: 118654.19399699749
+  token_usage:
+    prompt_tokens: 45372
+    completion_tokens: 561
+    total_tokens: 45933
+    llm_calls: 6
+    calls_with_usage: 6
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - AMD_10k_2023.pdf::page_105::chunk_2
+    - AMD_10k_2024.pdf::page_99::chunk_2
+    llm_calls: 1
+    latency_ms: 20239.084506996733
+    output_format: structured_json
+    parts:
+    - requested_part: How does AMD disclose its executive compensation agreements, such as the sign-on bonus agreement with
+        Jean Hu, to regulatory bodies and the public?
+      supported_facts:
+      - claim: AMD discloses executive compensation agreements through exhibits in their filings with the SEC.
+        evidence_ids:
+        - AMD_10k_2023.pdf::page_105::chunk_2
+        - AMD_10k_2024.pdf::page_99::chunk_2
+      missing_information: null
+      answer: AMD discloses executive compensation agreements, such as the sign-on bonus agreement with Jean Hu, through exhibits
+        in their filings with the SEC. This includes documents like offer letters and sign-on bonus agreements which are filed
+        as Exhibits 10.67 and 10.68 to their Current Report on Form 8-K dated January 8, 2023.
+    cited_chunk_ids:
+    - AMD_10k_2023.pdf::page_105::chunk_2
+    - AMD_10k_2024.pdf::page_99::chunk_2
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG100
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was the operating profit contribution from the Embedded Processing segment in 2022, and how does this directly
+    affect Texas Instruments' deferred tax liabilities under their asset and liability accounting approach for income taxes?
+  gold_chunks:
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2024.pdf::page_32::chunk_1
+  top_chunk_ids:
+  - TXN_10k_2022.pdf::page_6::chunk_1
+  - TXN_10k_2023.pdf::page_4::chunk_1
+  - TXN_10k_2024.pdf::page_4::chunk_1
+  - TXN_10k_2023.pdf::page_30::chunk_1
+  - TXN_10k_2024.pdf::page_30::chunk_1
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2024.pdf::page_5::chunk_2
+  - TXN_10k_2022.pdf::page_41::chunk_5
+  - TXN_10k_2024.pdf::page_32::chunk_1
+  - TXN_10k_2022.pdf::page_40::chunk_5
+  answer_points:
+  - The Embedded Processing segment generated an operating profit of $1,253 million in 2022 (Chunk 1). Under Texas Instruments'
+    income tax accounting policy, which uses an asset and liability approach to record deferred tax assets and liabilities
+    for future tax consequences of events recognized in financial statements (Chunk 2), this profit increases taxable income.
+    Higher taxable income directly leads to higher deferred tax liabilities if temporary differences exist between book and
+    tax accounting, as the company must recognize future tax obligations tied to current profitability.
+  final_answer: The operating profit contribution from the Embedded Processing segment in 2022 was $1,253 million. [TXN_10k_2024.pdf::page_31::chunk_3]
+    Texas Instruments records the amount of taxes payable or refundable for the current year and the deferred tax assets and
+    liabilities for future tax consequences related to events that have been recognized in the financial statements or tax
+    returns. A valuation allowance is recorded when it is more likely than not that some or all of the deferred tax assets
+    will not be realized. The direct impact of the Embedded Processing segment's operating profit on Texas Instruments' deferred
+    tax liabilities is not specified in the provided evidence. [TXN_10k_2024.pdf::page_32::chunk_1]
+  hit: 1
+  recall: 1.0
+  reciprocal_rank: 0.16666666666666666
+  latency_ms: 132855.4403599992
+  answer_latency_ms: 44592.195723998884
+  total_latency_ms: 177447.63608399808
+  token_usage:
+    prompt_tokens: 103292
+    completion_tokens: 1521
+    total_tokens: 104813
+    llm_calls: 20
+    calls_with_usage: 20
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - TXN_10k_2022.pdf::page_6::chunk_1
+    - TXN_10k_2023.pdf::page_4::chunk_1
+    - TXN_10k_2024.pdf::page_4::chunk_1
+    - TXN_10k_2023.pdf::page_30::chunk_1
+    - TXN_10k_2024.pdf::page_30::chunk_1
+    - TXN_10k_2024.pdf::page_31::chunk_3
+    - TXN_10k_2024.pdf::page_5::chunk_2
+    - TXN_10k_2022.pdf::page_41::chunk_5
+    - TXN_10k_2024.pdf::page_32::chunk_1
+    - TXN_10k_2022.pdf::page_40::chunk_5
+    llm_calls: 1
+    latency_ms: 44592.195723998884
+    output_format: structured_json
+    parts:
+    - requested_part: What was the operating profit contribution from the Embedded Processing segment in 2022?
+      supported_facts:
+      - claim: The operating profit from the Embedded Processing segment in 2022 was $1,253 million.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_31::chunk_3
+      missing_information: null
+      answer: The operating profit contribution from the Embedded Processing segment in 2022 was $1,253 million.
+    - requested_part: How does this directly affect Texas Instruments' deferred tax liabilities under their asset and liability
+        accounting approach for income taxes?
+      supported_facts:
+      - claim: Texas Instruments records the amount of taxes payable or refundable for the current year and the deferred tax
+          assets and liabilities for future tax consequences related to events that have been recognized in the financial
+          statements or tax returns. A valuation allowance is recorded when it is more likely than not that some or all of
+          the deferred tax assets will not be realized.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_32::chunk_1
+      missing_information: The direct impact of the Embedded Processing segment's operating profit on Texas Instruments' deferred
+        tax liabilities is not specified in the provided evidence.
+      answer: Texas Instruments records the amount of taxes payable or refundable for the current year and the deferred tax
+        assets and liabilities for future tax consequences related to events that have been recognized in the financial statements
+        or tax returns. A valuation allowance is recorded when it is more likely than not that some or all of the deferred
+        tax assets will not be realized. The direct impact of the Embedded Processing segment's operating profit on Texas
+        Instruments' deferred tax liabilities is not specified in the provided evidence.
+    cited_chunk_ids:
+    - TXN_10k_2024.pdf::page_31::chunk_3
+    - TXN_10k_2024.pdf::page_32::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG102
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was the return on assets for Intel's Programmable Solutions Group in 2021, and how does this reflect the segment's
+    efficiency in converting investments into operating income?
+  gold_chunks:
+  - INTC_10k_2022.pdf::page_95::chunk_2
+  - INTC_10k_2022.pdf::page_86::chunk_2
+  top_chunk_ids:
+  - INTC_10k_2022.pdf::page_95::chunk_2
+  - INTC_10k_2022.pdf::page_95::chunk_4
+  - INTC_10k_2022.pdf::page_86::chunk_2
+  answer_points:
+  - The Programmable Solutions Group reported total assets of $2,656 million (Chunk 1) and operating income of $297 million
+    (Chunk 2) in 2021. Return on assets is calculated as $297M ÷ $2,656M = 11.2%. This metric demonstrates how effectively
+    the segment utilized its asset base to generate profit, with higher values indicating better efficiency in deploying capital.
+  final_answer: The return on assets for Intel's Programmable Solutions Group in 2021 can be calculated as $297 million /
+    $1,934 million = 0.1535 or 15.35%. [INTC_10k_2022.pdf::page_86::chunk_2] The return on assets for Intel's Programmable
+    Solutions Group in 2021 was 15.35%, which indicates the segment's efficiency in converting its assets into operating income.
+    However, without comparison to industry standards or historical data, it is difficult to fully assess the segment's relative
+    efficiency. [INTC_10k_2022.pdf::page_86::chunk_2]
+  hit: 1
+  recall: 1.0
+  reciprocal_rank: 1.0
+  latency_ms: 108008.70053599647
+  answer_latency_ms: 55998.39191800129
+  total_latency_ms: 164007.09245399776
+  token_usage:
+    prompt_tokens: 54756
+    completion_tokens: 1055
+    total_tokens: 55811
+    llm_calls: 10
+    calls_with_usage: 10
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - INTC_10k_2022.pdf::page_95::chunk_2
+    - INTC_10k_2022.pdf::page_95::chunk_4
+    - INTC_10k_2022.pdf::page_86::chunk_2
+    - INTC_10k_2022.pdf::page_95::chunk_2
+    - INTC_10k_2022.pdf::page_95::chunk_4
+    llm_calls: 1
+    latency_ms: 55998.39191800129
+    output_format: structured_json
+    parts:
+    - requested_part: What was the return on assets for Intel's Programmable Solutions Group in 2021?
+      supported_facts:
+      - claim: The operating income for Programmable Solutions Group in 2021 was $297 million.
+        evidence_ids:
+        - INTC_10k_2022.pdf::page_86::chunk_2
+      - claim: The total assets for Programmable Solutions Group in 2021 were $1,934 million.
+        evidence_ids:
+        - INTC_10k_2022.pdf::page_86::chunk_2
+      missing_information: The exact formula used to calculate return on assets is not provided in the given evidence.
+      answer: The return on assets for Intel's Programmable Solutions Group in 2021 can be calculated as $297 million / $1,934
+        million = 0.1535 or 15.35%. [INTC_10k_2022.pdf::page_86::chunk_2]
+    - requested_part: How does this reflect the segment's efficiency in converting investments into operating income?
+      supported_facts:
+      - claim: The return on assets for Programmable Solutions Group in 2021 was 15.35%.
+        evidence_ids:
+        - INTC_10k_2022.pdf::page_86::chunk_2
+      missing_information: No additional details about the industry average or historical performance of the segment are provided
+        in the given evidence.
+      answer: The return on assets for Intel's Programmable Solutions Group in 2021 was 15.35%, which indicates the segment's
+        efficiency in converting its assets into operating income. However, without comparison to industry standards or historical
+        data, it is difficult to fully assess the segment's relative efficiency. [INTC_10k_2022.pdf::page_86::chunk_2]
+    cited_chunk_ids:
+    - INTC_10k_2022.pdf::page_86::chunk_2
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG103
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What percentage of QCT's fiscal 2024 revenue was represented by its accounts receivable balance as of September 29,
+    2024, and how does this relationship reflect the segment's revenue recognition practices for customer incentives?
+  gold_chunks:
+  - QCOM_10k_2023.pdf::page_72::chunk_4
+  - QCOM_10k_2023.pdf::page_59::chunk_1
+  top_chunk_ids:
+  - QCOM_10k_2024.pdf::page_59::chunk_1
+  answer_points:
+  - QCT's accounts receivable balance of $10,065 million (Chunk 1) represented approximately 30.3% of its fiscal 2024 revenue
+    of $33.2 billion (Chunk 2). This relationship reflects QCT's revenue recognition practices where customer incentive arrangements
+    (e.g., rebates, cost reimbursements) directly reduce both reported revenues and accounts receivable balances. The high
+    percentage indicates that a significant portion of earned revenue remains uncollected as of the balance sheet date, aligning
+    with the audit's focus on verifying the accuracy of these incentive-related reductions to accounts receivable.
+  final_answer: The provided evidence does not contain the necessary information to calculate the percentage of QCT's fiscal
+    2024 revenue represented by its accounts receivable balance as of September 29, 2024. QCT reflects its revenue recognition
+    practices for customer incentives by recording reductions to revenues for these arrangements in the period the related
+    revenues are earned. These reductions are then recorded as a reduction to accounts receivable, net or as other current
+    liabilities, depending on the Company's intent and contractual right of offset. The amounts are also considered variable
+    consideration and included in the transaction price based on the most likely amount expected to be provided to the customer.
+    [QCOM_10k_2024.pdf::page_59::chunk_1]
+  hit: 0
+  recall: 0.0
+  reciprocal_rank: 0.0
+  latency_ms: 97439.57243800833
+  answer_latency_ms: 60875.10292499792
+  total_latency_ms: 158314.67536300624
+  token_usage:
+    prompt_tokens: 41382
+    completion_tokens: 1055
+    total_tokens: 42437
+    llm_calls: 8
+    calls_with_usage: 8
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - QCOM_10k_2024.pdf::page_59::chunk_1
+    - QCOM_10k_2024.pdf::page_59::chunk_1
+    llm_calls: 1
+    latency_ms: 60875.10292499792
+    output_format: structured_json
+    parts:
+    - requested_part: What percentage of QCT's fiscal 2024 revenue was represented by its accounts receivable balance as of
+        September 29, 2024?
+      supported_facts: []
+      missing_information: The provided evidence does not include the accounts receivable balance for QCT as of September
+        29, 2024.
+      answer: The provided evidence does not contain the necessary information to calculate the percentage of QCT's fiscal
+        2024 revenue represented by its accounts receivable balance as of September 29, 2024.
+    - requested_part: How does this relationship reflect the segment's revenue recognition practices for customer incentives?
+      supported_facts:
+      - claim: QCT records reductions to revenues for customer incentive arrangements, including volume-related and other
+          pricing rebates and cost reimbursements for marketing and other activities involving certain products and technologies,
+          in the period that the related revenues are earned.
+        evidence_ids:
+        - QCOM_10k_2024.pdf::page_59::chunk_1
+      - claim: The amounts accrued for customer incentive arrangements are recorded as a reduction to accounts receivable,
+          net or as other current liabilities based on whether the Company has the intent and contractual right of offset.
+        evidence_ids:
+        - QCOM_10k_2024.pdf::page_59::chunk_1
+      - claim: Certain amounts recorded as a reduction to revenues for customer incentive arrangements are considered variable
+          consideration and are included in the transaction price primarily based on estimating the most likely amount expected
+          to be provided to the customer.
+        evidence_ids:
+        - QCOM_10k_2024.pdf::page_59::chunk_1
+      missing_information: null
+      answer: QCT reflects its revenue recognition practices for customer incentives by recording reductions to revenues for
+        these arrangements in the period the related revenues are earned. These reductions are then recorded as a reduction
+        to accounts receivable, net or as other current liabilities, depending on the Company's intent and contractual right
+        of offset. The amounts are also considered variable consideration and included in the transaction price based on the
+        most likely amount expected to be provided to the customer.
+    cited_chunk_ids:
+    - QCOM_10k_2024.pdf::page_59::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG104
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was the dollar increase in Intel's consolidated share of Mobileye's operating income between 2022 and 2023,
+    and how did this compare to the overall decline in Intel's total operating income during the same period?
+  gold_chunks:
+  - INTC_10k_2023.pdf::page_89::chunk_2
+  - INTC_10k_2023.pdf::page_88::chunk_2
+  top_chunk_ids:
+  - INTC_10k_2023.pdf::page_89::chunk_2
+  - INTC_10k_2023.pdf::page_88::chunk_2
+  - INTC_10k_2023.pdf::page_32::chunk_1
+  - INTC_10k_2022.pdf::page_35::chunk_1
+  answer_points:
+  - Intel's ownership stake in Mobileye increased from 6% (2022) to 12% (2023) (Chunk 1), while Mobileye's operating income
+    decreased from $690M to $664M (Chunk 2). In 2022, Intel consolidated 6% × $690M = $41.4M of Mobileye's operating income.
+    In 2023, this increased to 12% × $664M = $79.68M. This represents a $38.28M increase in Intel's consolidated share. However,
+    Intel's total operating income plummeted from $2,334M to $93M, a $2,241M decline. The $38.28M gain from Mobileye was insufficient
+    to offset losses in other segments, highlighting how partial stake increases cannot counterbalance broader operational
+    challenges.
+  final_answer: The dollar increase in Intel's share of Mobileye's operating income between 2022 and 2023 was a decrease of
+    $26 million ($690 million - $664 million). [INTC_10k_2023.pdf::page_88::chunk_2] Intel's total operating income declined
+    by $2,331 million ($2,334 million - $93 million) between 2022 and 2023. The decrease in Intel's share of Mobileye's operating
+    income ($26 million) was a smaller percentage of the overall decline in Intel's total operating income. [INTC_10k_2023.pdf::page_88::chunk_2]
+  hit: 1
+  recall: 1.0
+  reciprocal_rank: 1.0
+  latency_ms: 128058.03412199748
+  answer_latency_ms: 31147.77089600102
+  total_latency_ms: 159205.8050179985
+  token_usage:
+    prompt_tokens: 86248
+    completion_tokens: 1190
+    total_tokens: 87438
+    llm_calls: 16
+    calls_with_usage: 16
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - INTC_10k_2023.pdf::page_89::chunk_2
+    - INTC_10k_2023.pdf::page_88::chunk_2
+    - INTC_10k_2023.pdf::page_32::chunk_1
+    - INTC_10k_2022.pdf::page_35::chunk_1
+    - INTC_10k_2023.pdf::page_32::chunk_1
+    llm_calls: 1
+    latency_ms: 31147.77089600102
+    output_format: structured_json
+    parts:
+    - requested_part: What was the dollar increase in Intel's consolidated share of Mobileye's operating income between 2022
+        and 2023?
+      supported_facts:
+      - claim: Mobileye's operating income in 2023 was $664 million, while in 2022 it was $690 million.
+        evidence_ids:
+        - INTC_10k_2023.pdf::page_88::chunk_2
+      missing_information: The exact share of Mobileye's operating income attributed to Intel in 2022 and 2023 is not provided.
+      answer: The dollar increase in Intel's share of Mobileye's operating income between 2022 and 2023 was a decrease of
+        $26 million ($690 million - $664 million).
+    - requested_part: How did this compare to the overall decline in Intel's total operating income during the same period?
+      supported_facts:
+      - claim: Intel's total operating income in 2023 was $93 million, while in 2022 it was $2,334 million.
+        evidence_ids:
+        - INTC_10k_2023.pdf::page_88::chunk_2
+      missing_information: The exact share of Intel's total operating income attributed to Mobileye in 2022 and 2023 is not
+        provided.
+      answer: Intel's total operating income declined by $2,331 million ($2,334 million - $93 million) between 2022 and 2023.
+        The decrease in Intel's share of Mobileye's operating income ($26 million) was a smaller percentage of the overall
+        decline in Intel's total operating income.
+    cited_chunk_ids:
+    - INTC_10k_2023.pdf::page_88::chunk_2
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG105
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What is the ratio of goodwill allocated to the Embedded Processing segment relative to its average operating profit
+    across 2022 and 2023, and how does this compare to the company's total goodwill allocation?
+  gold_chunks:
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2024.pdf::page_31::chunk_1
+  - TXN_10k_2024.pdf::page_52::chunk_8
+  top_chunk_ids:
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2024.pdf::page_31::chunk_1
+  - TXN_10k_2022.pdf::page_6::chunk_1
+  - TXN_10k_2023.pdf::page_30::chunk_1
+  - TXN_10k_2024.pdf::page_30::chunk_1
+  - AVGO_10k_2024.pdf::page_67::chunk_2
+  answer_points:
+  - 'The Embedded Processing segment''s goodwill allocation of $172 (Chunk 3) divided by its average operating profit of $1,130.5
+    (calculated from Chunk 1: $1,253 in 2022 and Chunk 2: $1,008 in 2023) yields a ratio of 0.152. This segment-specific ratio
+    contrasts with the company''s total goodwill of $4,362 (Chunk 3), indicating how goodwill is proportionally tied to segment
+    performance metrics.'
+  final_answer: The average operating profit of the Embedded Processing segment across 2022 and 2023 is ($1,253 + $1,008)
+    / 2 = $1,130.5 million. [TXN_10k_2024.pdf::page_31::chunk_3] [TXN_10k_2024.pdf::page_31::chunk_1] Without knowing the
+    exact goodwill allocated to the Embedded Processing segment, we cannot calculate the ratio. However, the average operating
+    profit of the Embedded Processing segment across 2022 and 2023 is $1,130.5 million. [AVGO_10k_2024.pdf::page_67::chunk_2]
+  hit: 1
+  recall: 0.6666666666666666
+  reciprocal_rank: 1.0
+  latency_ms: 79599.97256299539
+  answer_latency_ms: 67733.37029699906
+  total_latency_ms: 147333.34285999445
+  token_usage:
+    prompt_tokens: 53039
+    completion_tokens: 1104
+    total_tokens: 54143
+    llm_calls: 12
+    calls_with_usage: 12
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - TXN_10k_2024.pdf::page_31::chunk_3
+    - TXN_10k_2024.pdf::page_31::chunk_1
+    - TXN_10k_2022.pdf::page_6::chunk_1
+    - TXN_10k_2023.pdf::page_30::chunk_1
+    - TXN_10k_2024.pdf::page_30::chunk_1
+    - AVGO_10k_2024.pdf::page_67::chunk_2
+    llm_calls: 1
+    latency_ms: 67733.37029699906
+    output_format: structured_json
+    parts:
+    - requested_part: What is the ratio of goodwill allocated to the Embedded Processing segment relative to its average operating
+        profit across 2022 and 2023?
+      supported_facts:
+      - claim: Embedded Processing segment's operating profit for 2022 was $1,253 million.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_31::chunk_3
+      - claim: Embedded Processing segment's operating profit for 2023 was $1,008 million.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_31::chunk_1
+      missing_information: Goodwill allocated to the Embedded Processing segment
+      answer: The average operating profit of the Embedded Processing segment across 2022 and 2023 is ($1,253 + $1,008) /
+        2 = $1,130.5 million.
+    - requested_part: How does this ratio compare to the company's total goodwill allocation?
+      supported_facts:
+      - claim: Total goodwill allocation is $54,206 million.
+        evidence_ids:
+        - AVGO_10k_2024.pdf::page_67::chunk_2
+      missing_information: Goodwill allocated to the Embedded Processing segment
+      answer: Without knowing the exact goodwill allocated to the Embedded Processing segment, we cannot calculate the ratio.
+        However, the average operating profit of the Embedded Processing segment across 2022 and 2023 is $1,130.5 million.
+    cited_chunk_ids:
+    - TXN_10k_2024.pdf::page_31::chunk_3
+    - TXN_10k_2024.pdf::page_31::chunk_1
+    - AVGO_10k_2024.pdf::page_67::chunk_2
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG107
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was the percentage change in Mobileye's total equity from 2022 to 2023, based on Intel's non-controlling interest
+    disclosures and ownership percentages?
+  gold_chunks:
+  - INTC_10k_2024.pdf::page_74::chunk_6
+  - INTC_10k_2023.pdf::page_89::chunk_2
+  top_chunk_ids:
+  - INTC_10k_2023.pdf::page_97::chunk_2
+  - INTC_10k_2024.pdf::page_85::chunk_2
+  - INTC_10k_2023.pdf::page_88::chunk_2
+  - INTC_10k_2024.pdf::page_85::chunk_4
+  answer_points:
+  - In 2022, Mobileye's total equity was calculated as $989 million (non-controlling interest) ÷ 6% ownership = $16,483 million.
+    In 2023, it became $1,838 million ÷ 12% ownership = $15,317 million. This represents a (15,317 - 16,483)/16,483 = -7.08%
+    change, indicating Intel's increased ownership reduced Mobileye's total equity despite higher non-controlling interest
+    amounts. The ownership percentage increase (from chunk 1) and dollar values (from chunk 2) together reveal this dynamic.
+  final_answer: The percentage change in Mobileye's total equity from 2022 to 2023 was 0% since the value remained the same
+    at $10,919 million. [INTC_10k_2023.pdf::page_97::chunk_2] [INTC_10k_2024.pdf::page_85::chunk_2] [INTC_10k_2024.pdf::page_85::chunk_4]
+  hit: 0
+  recall: 0.0
+  reciprocal_rank: 0.0
+  latency_ms: 129022.23704399512
+  answer_latency_ms: 18947.740283998428
+  total_latency_ms: 147969.97732799355
+  token_usage:
+    prompt_tokens: 109624
+    completion_tokens: 1236
+    total_tokens: 110860
+    llm_calls: 19
+    calls_with_usage: 19
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - INTC_10k_2023.pdf::page_97::chunk_2
+    - INTC_10k_2024.pdf::page_85::chunk_2
+    - INTC_10k_2023.pdf::page_88::chunk_2
+    - INTC_10k_2024.pdf::page_85::chunk_2
+    - INTC_10k_2024.pdf::page_85::chunk_4
+    - INTC_10k_2024.pdf::page_85::chunk_2
+    - INTC_10k_2024.pdf::page_85::chunk_4
+    llm_calls: 1
+    latency_ms: 18947.740283998428
+    output_format: structured_json
+    parts:
+    - requested_part: What was the percentage change in Mobileye's total equity from 2022 to 2023?
+      supported_facts:
+      - claim: Mobileye's total equity in 2022 was $10,919 million and in 2023 was $10,919 million.
+        evidence_ids:
+        - INTC_10k_2023.pdf::page_97::chunk_2
+        - INTC_10k_2024.pdf::page_85::chunk_2
+        - INTC_10k_2024.pdf::page_85::chunk_4
+      missing_information: null
+      answer: The percentage change in Mobileye's total equity from 2022 to 2023 was 0% since the value remained the same
+        at $10,919 million.
+    cited_chunk_ids:
+    - INTC_10k_2023.pdf::page_97::chunk_2
+    - INTC_10k_2024.pdf::page_85::chunk_2
+    - INTC_10k_2024.pdf::page_85::chunk_4
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG108
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was the operating profit per share contributed by Texas Instruments' 'Other' segment in 2022, based on the total
+    shares outstanding as of January 25, 2022?
+  gold_chunks:
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2022.pdf::page_1::chunk_1
+  top_chunk_ids:
+  - TXN_10k_2022.pdf::page_6::chunk_1
+  - TXN_10k_2022.pdf::page_30::chunk_1
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2022.pdf::page_37::chunk_1
+  answer_points:
+  - The 'Other' segment generated an operating profit of $528 million in 2022 (Chunk 1). With 923,547,062 shares outstanding
+    as of January 25, 2022 (Chunk 2), this equates to approximately $0.57 in operating profit per share ($528,000,000 ÷ 923,547,062
+    shares). This demonstrates how segment-level profitability translates to shareholder value through per-share metrics.
+  final_answer: The operating profit of the Other segment in 2022 was $528 million. [TXN_10k_2024.pdf::page_31::chunk_3]
+  hit: 1
+  recall: 0.5
+  reciprocal_rank: 0.3333333333333333
+  latency_ms: 133268.6904889997
+  answer_latency_ms: 14320.312278003257
+  total_latency_ms: 147589.00276700297
+  token_usage:
+    prompt_tokens: 112308
+    completion_tokens: 1238
+    total_tokens: 113546
+    llm_calls: 21
+    calls_with_usage: 21
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - TXN_10k_2022.pdf::page_6::chunk_1
+    - TXN_10k_2022.pdf::page_30::chunk_1
+    - TXN_10k_2024.pdf::page_31::chunk_3
+    - TXN_10k_2022.pdf::page_37::chunk_1
+    - TXN_10k_2024.pdf::page_31::chunk_3
+    llm_calls: 1
+    latency_ms: 14320.312278003257
+    output_format: structured_json
+    parts:
+    - requested_part: What was the operating profit per share contributed by Texas Instruments' 'Other' segment in 2022?
+      supported_facts:
+      - claim: The operating profit of the Other segment in 2022 was $528 million.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_31::chunk_3
+      missing_information: Total shares outstanding as of January 25, 2022
+      answer: The operating profit of the Other segment in 2022 was $528 million.
+    cited_chunk_ids:
+    - TXN_10k_2024.pdf::page_31::chunk_3
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG111
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was the ratio of the amortization of capitalized software in 2021 to the operating profit of the 'Other' segment
+    in 2022?
+  gold_chunks:
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2022.pdf::page_30::chunk_1
+  top_chunk_ids:
+  - TXN_10k_2022.pdf::page_30::chunk_1
+  - INTC_10k_2022.pdf::page_6::chunk_1
+  answer_points:
+  - The amortization of capitalized software in 2021 was $57 million (Chunk 2), and the operating profit of the 'Other' segment
+    in 2022 was $528 million (Chunk 1). The ratio is calculated as $57M ÷ $528M = 0.108, or 10.8%. This indicates that amortization
+    expenses represented approximately 10.8% of the 'Other' segment's operating profit in the subsequent year.
+  final_answer: The amortization of capitalized software in 2021 was 57 million dollars [TXN_10k_2022.pdf::page_30::chunk_1].
+  hit: 1
+  recall: 0.5
+  reciprocal_rank: 1.0
+  latency_ms: 79124.48875499831
+  answer_latency_ms: 50494.90743299975
+  total_latency_ms: 129619.39618799806
+  token_usage:
+    prompt_tokens: 52889
+    completion_tokens: 673
+    total_tokens: 53562
+    llm_calls: 10
+    calls_with_usage: 10
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - TXN_10k_2022.pdf::page_30::chunk_1
+    - INTC_10k_2022.pdf::page_6::chunk_1
+    llm_calls: 1
+    latency_ms: 50494.90743299975
+    output_format: structured_json
+    parts:
+    - requested_part: What was the amortization of capitalized software in 2021?
+      supported_facts:
+      - claim: The amortization of capitalized software in 2021 was 57 million dollars.
+        evidence_ids:
+        - TXN_10k_2022.pdf::page_30::chunk_1
+      missing_information: null
+      answer: The amortization of capitalized software in 2021 was 57 million dollars [TXN_10k_2022.pdf::page_30::chunk_1].
+    - requested_part: What was the operating profit of the 'Other' segment in 2022?
+      supported_facts: []
+      missing_information: The operating profit of the 'Other' segment in 2022 is not provided in the given evidence.
+      answer: null
+    cited_chunk_ids:
+    - TXN_10k_2022.pdf::page_30::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG138
+  mode: full_answer
+  answer_audit_enabled: false
+  query: As Senior Vice President and Chief Financial Officer listed in Texas Instruments' governance records, how does Rafael
+    R. Lizardi's organizational role specifically connect to the $249 million tax benefit disclosed from the settlement of
+    a depreciation-related uncertain tax position in 2020?
+  gold_chunks:
+  - TXN_10k_2022.pdf::page_69::chunk_2
+  - TXN_10k_2022.pdf::page_42::chunk_3
+  top_chunk_ids:
+  - TXN_10k_2022.pdf::page_69::chunk_2
+  - TXN_10k_2022.pdf::page_42::chunk_3
+  answer_points:
+  - Rafael R. Lizardi, as Chief Financial Officer (Chunk 1), holds direct responsibility for overseeing tax accounting and
+    financial disclosures. This includes managing settlements of uncertain tax positions like the $249 million benefit from
+    depreciation-related settlements disclosed in 2020 (Chunk 2). The CFO's role in directing tax strategy and financial reporting
+    creates a direct causal link between Lizardi's executive responsibilities and the quantifiable tax benefit disclosure.
+  final_answer: Rafael R. Lizardi is the Senior Vice President and Chief Financial Officer. [TXN_10k_2022.pdf::page_69::chunk_2]
+    The $249 million tax benefit was from the effective settlement of a depreciation-related uncertain tax position in 2020.
+    [TXN_10k_2022.pdf::page_42::chunk_3]
+  hit: 1
+  recall: 1.0
+  reciprocal_rank: 1.0
+  latency_ms: 51164.130014003604
+  answer_latency_ms: 60703.7993039994
+  total_latency_ms: 111867.929318003
+  token_usage:
+    prompt_tokens: 40390
+    completion_tokens: 823
+    total_tokens: 41213
+    llm_calls: 10
+    calls_with_usage: 10
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - TXN_10k_2022.pdf::page_69::chunk_2
+    - TXN_10k_2022.pdf::page_42::chunk_3
+    - TXN_10k_2022.pdf::page_69::chunk_2
+    llm_calls: 1
+    latency_ms: 60703.7993039994
+    output_format: structured_json
+    parts:
+    - requested_part: Rafael R. Lizardi's organizational role
+      supported_facts:
+      - claim: Rafael R. Lizardi is the Senior Vice President and Chief Financial Officer.
+        evidence_ids:
+        - TXN_10k_2022.pdf::page_69::chunk_2
+        - TXN_10k_2022.pdf::page_69::chunk_3
+      missing_information: null
+      answer: Rafael R. Lizardi is the Senior Vice President and Chief Financial Officer.
+    - requested_part: How his role connects to the $249 million tax benefit
+      supported_facts:
+      - claim: The $249 million tax benefit was from the effective settlement of a depreciation-related uncertain tax position
+          in 2020.
+        evidence_ids:
+        - TXN_10k_2022.pdf::page_42::chunk_3
+      missing_information: It is not specified how Rafael R. Lizardi's role directly influenced the settlement of the uncertain
+        tax position.
+      answer: The $249 million tax benefit was from the effective settlement of a depreciation-related uncertain tax position
+        in 2020.
+    cited_chunk_ids:
+    - TXN_10k_2022.pdf::page_69::chunk_2
+    - TXN_10k_2022.pdf::page_42::chunk_3
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG141
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What accrued balance is disclosed in Intel's 2024 financial statements, and how does Michelle Johnston Holthaus's
+    executive role relate to this financial disclosure?
+  gold_chunks:
+  - INTC_10k_2024.pdf::page_111::chunk_1
+  - INTC_10k_2024.pdf::page_79::chunk_6
+  top_chunk_ids:
+  - INTC_10k_2024.pdf::page_79::chunk_6
+  - INTC_10k_2024.pdf::page_111::chunk_1
+  answer_points:
+  - Intel's 2024 financial statements disclose an accrued balance of $302 million for the 2024 Restructuring Plan (Chunk 2).
+    Michelle Johnston Holthaus, as Interim Co-Chief Executive Officer and Chief Executive Officer of Intel Products (Chunk
+    1), holds a principal executive officer role that requires her to sign and certify the accuracy of the financial statements
+    containing this disclosure. This creates a direct accountability link between her executive responsibilities and the formal
+    reporting of the accrued balance.
+  final_answer: $302 million [INTC_10k_2024.pdf::page_79::chunk_6] Michelle Johnston Holthaus is the Interim Co-Chief Executive
+    Officer and Chief Executive Officer of Intel Products, and she is a co-principal executive officer, which means she is
+    involved in the financial disclosures of the company [INTC_10k_2024.pdf::page_111::chunk_1].
+  hit: 1
+  recall: 1.0
+  reciprocal_rank: 1.0
+  latency_ms: 76070.58105500619
+  answer_latency_ms: 48770.63453899609
+  total_latency_ms: 124841.21559400228
+  token_usage:
+    prompt_tokens: 51325
+    completion_tokens: 734
+    total_tokens: 52059
+    llm_calls: 8
+    calls_with_usage: 8
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - INTC_10k_2024.pdf::page_79::chunk_6
+    - INTC_10k_2024.pdf::page_111::chunk_1
+    llm_calls: 1
+    latency_ms: 48770.63453899609
+    output_format: structured_json
+    parts:
+    - requested_part: What accrued balance is disclosed in Intel's 2024 financial statements?
+      supported_facts:
+      - claim: The accrued balance as of December 28, 2024, is $302 million.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_79::chunk_6
+      missing_information: null
+      answer: $302 million [INTC_10k_2024.pdf::page_79::chunk_6]
+    - requested_part: How does Michelle Johnston Holthaus's executive role relate to this financial disclosure?
+      supported_facts:
+      - claim: Michelle Johnston Holthaus serves as the Interim Co-Chief Executive Officer and Chief Executive Officer of
+          Intel Products, and she is also a co-principal executive officer.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_111::chunk_1
+      missing_information: null
+      answer: Michelle Johnston Holthaus is the Interim Co-Chief Executive Officer and Chief Executive Officer of Intel Products,
+        and she is a co-principal executive officer, which means she is involved in the financial disclosures of the company
+        [INTC_10k_2024.pdf::page_111::chunk_1].
+    cited_chunk_ids:
+    - INTC_10k_2024.pdf::page_79::chunk_6
+    - INTC_10k_2024.pdf::page_111::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG142
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was the total cash payments for interest on long-term debt made by Texas Instruments during Richard K. Templeton's
+    tenure as President and Chief Executive Officer, based on the disclosed amounts for 2022 through 2024?
+  gold_chunks:
+  - TXN_10k_2022.pdf::page_69::chunk_2
+  - TXN_10k_2024.pdf::page_50::chunk_3
+  top_chunk_ids:
+  - TXN_10k_2023.pdf::page_51::chunk_3
+  - TXN_10k_2024.pdf::page_50::chunk_3
+  answer_points:
+  - Richard K. Templeton is listed as President and Chief Executive Officer of Texas Instruments in the 2022 filing (Chunk
+    1). Chunk 2 discloses cash payments for interest on long-term debt as $198 million in 2022, $321 million in 2023, and
+    $473 million in 2024. Assuming his tenure spanned these years, the total payments amount to $198M + $321M + $473M = $992
+    million. This calculation directly connects Templeton's executive role to the cumulative interest obligations disclosed
+    in subsequent filings.
+  final_answer: The total cash payments for interest on long-term debt made by Texas Instruments during Richard K. Templeton's
+    tenure as President and Chief Executive Officer, based on the disclosed amounts for 2022 through 2024, were $198 million
+    (2022) + $321 million (2023) + $473 million (2024) = $1,000 million. [TXN_10k_2023.pdf::page_51::chunk_3] [TXN_10k_2024.pdf::page_50::chunk_3]
+  hit: 1
+  recall: 0.5
+  reciprocal_rank: 0.5
+  latency_ms: 34515.02303999587
+  answer_latency_ms: 65581.83273800387
+  total_latency_ms: 100096.85577799974
+  token_usage:
+    prompt_tokens: 11507
+    completion_tokens: 606
+    total_tokens: 12113
+    llm_calls: 4
+    calls_with_usage: 4
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - TXN_10k_2023.pdf::page_51::chunk_3
+    - TXN_10k_2024.pdf::page_50::chunk_3
+    llm_calls: 1
+    latency_ms: 65581.83273800387
+    output_format: structured_json
+    parts:
+    - requested_part: What was the total cash payments for interest on long-term debt made by Texas Instruments during Richard
+        K. Templeton's tenure as President and Chief Executive Officer, based on the disclosed amounts for 2022 through 2024?
+      supported_facts:
+      - claim: Cash payments for interest on long-term debt in 2022 were $198 million.
+        evidence_ids:
+        - TXN_10k_2023.pdf::page_51::chunk_3
+      - claim: Cash payments for interest on long-term debt in 2023 were $321 million.
+        evidence_ids:
+        - TXN_10k_2023.pdf::page_51::chunk_3
+      - claim: Cash payments for interest on long-term debt in 2024 were $473 million.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_50::chunk_3
+      missing_information: The start date of Richard K. Templeton's tenure as President and Chief Executive Officer is not
+        provided.
+      answer: The total cash payments for interest on long-term debt made by Texas Instruments during Richard K. Templeton's
+        tenure as President and Chief Executive Officer, based on the disclosed amounts for 2022 through 2024, were $198 million
+        (2022) + $321 million (2023) + $473 million (2024) = $1,000 million.
+    cited_chunk_ids:
+    - TXN_10k_2023.pdf::page_51::chunk_3
+    - TXN_10k_2024.pdf::page_50::chunk_3
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG161
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was the dollar increase in Mobileye's non-controlling interest value from 2022 to 2023, and how does this growth
+    relate to Intel's retained ownership stake following Mobileye's IPO?
+  gold_chunks:
+  - INTC_10k_2022.pdf::page_30::chunk_1
+  - INTC_10k_2023.pdf::page_89::chunk_2
+  top_chunk_ids:
+  - INTC_10k_2022.pdf::page_51::chunk_1
+  - INTC_10k_2024.pdf::page_75::chunk_1
+  - INTC_10k_2022.pdf::page_30::chunk_1
+  answer_points:
+  - Mobileye's non-controlling interest value increased by $849 million (from $989 million in 2022 to $1,838 million in 2023).
+    Intel's retained ownership stake decreased from 94% (6% non-controlling ownership) to 88% (12% non-controlling ownership)
+    during this period. The significant dollar growth in non-controlling interest value reflects Mobileye's expanded valuation
+    post-IPO and operational growth in ADAS technologies, despite Intel's reduced controlling stake. This demonstrates how
+    strategic milestones (e.g., IPO, ADAS adoption) directly influence financial disclosures and ownership dynamics.
+  final_answer: The non-controlling interest value of Mobileye increased by $663 million from 2022 to 2023. [INTC_10k_2024.pdf::page_75::chunk_1]
+    Intel's retained ownership stake in Mobileye following the IPO remained at 5%, and the $663 million increase in capital
+    in excess of par value reflects the non-controlling interest's share of the proceeds from the secondary offering of Mobileye's
+    Class A shares. [INTC_10k_2024.pdf::page_75::chunk_1]
+  hit: 1
+  recall: 0.5
+  reciprocal_rank: 0.3333333333333333
+  latency_ms: 98919.64586599352
+  answer_latency_ms: 66449.07039800455
+  total_latency_ms: 165368.71626399807
+  token_usage:
+    prompt_tokens: 117446
+    completion_tokens: 1325
+    total_tokens: 118771
+    llm_calls: 17
+    calls_with_usage: 17
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - INTC_10k_2022.pdf::page_51::chunk_1
+    - INTC_10k_2024.pdf::page_75::chunk_1
+    - INTC_10k_2022.pdf::page_30::chunk_1
+    - INTC_10k_2024.pdf::page_75::chunk_1
+    llm_calls: 1
+    latency_ms: 66449.07039800455
+    output_format: structured_json
+    parts:
+    - requested_part: What was the dollar increase in Mobileye's non-controlling interest value from 2022 to 2023?
+      supported_facts:
+      - claim: During 2023, we converted 38.5 million of our Mobileye Class B shares into Class A shares, representing 5%
+          of Mobileye's outstanding capital stock, and subsequently sold the Class A shares for $42 per share as part of a
+          secondary offering, receiving net proceeds of $1.6 billion and increasing our capital in excess of par value by
+          $663 million, net of tax.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_75::chunk_1
+      missing_information: null
+      answer: The non-controlling interest value of Mobileye increased by $663 million from 2022 to 2023.
+    - requested_part: How does this growth relate to Intel's retained ownership stake following Mobileye's IPO?
+      supported_facts:
+      - claim: In 2022, Mobileye completed its IPO and certain other equity financing transactions. During 2023, we converted
+          38.5 million of our Mobileye Class B shares into Class A shares, representing 5% of Mobileye's outstanding capital
+          stock, and subsequently sold the Class A shares for $42 per share as part of a secondary offering, receiving net
+          proceeds of $1.6 billion and increasing our capital in excess of par value by $663 million, net of tax. We continue
+          to consolidate the results of Mobileye into our Consolidated Financial Statements.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_75::chunk_1
+      missing_information: null
+      answer: Intel's retained ownership stake in Mobileye following the IPO remained at 5%, and the $663 million increase
+        in capital in excess of par value reflects the non-controlling interest's share of the proceeds from the secondary
+        offering of Mobileye's Class A shares.
+    cited_chunk_ids:
+    - INTC_10k_2024.pdf::page_75::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG163
+  mode: full_answer
+  answer_audit_enabled: false
+  query: How does the inclusion of gains and losses from asset dispositions in the Other segment affect the evaluation of
+    its $947 million revenue in 2024?
+  gold_chunks:
+  - TXN_10k_2024.pdf::page_30::chunk_1
+  - TXN_10k_2024.pdf::page_4::chunk_1
+  top_chunk_ids:
+  - TXN_10k_2024.pdf::page_4::chunk_1
+  answer_points:
+  - The Other segment's $947 million revenue in 2024 (Chunk 2) includes gains and losses from asset dispositions, which are
+    explicitly excluded from the metrics used to evaluate segment performance (Chunk 1). This means the reported revenue figure
+    contains non-operational items that management does not consider when assessing the segment's core performance or allocating
+    resources, creating a disconnect between the stated revenue and the operational evaluation criteria.
+  final_answer: Gains and losses from asset dispositions are included in the Other segment, which generates $947 million of
+    revenue in 2024. However, the specific impact on the evaluation of this revenue is not provided. [TXN_10k_2024.pdf::page_4::chunk_1]
+  hit: 1
+  recall: 0.5
+  reciprocal_rank: 1.0
+  latency_ms: 83950.64944699698
+  answer_latency_ms: 22675.876039000286
+  total_latency_ms: 106626.52548599726
+  token_usage:
+    prompt_tokens: 78154
+    completion_tokens: 865
+    total_tokens: 79019
+    llm_calls: 12
+    calls_with_usage: 12
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - TXN_10k_2024.pdf::page_4::chunk_1
+    - TXN_10k_2024.pdf::page_4::chunk_1
+    llm_calls: 1
+    latency_ms: 22675.876039000286
+    output_format: structured_json
+    parts:
+    - requested_part: How does the inclusion of gains and losses from asset dispositions in the Other segment affect the evaluation
+        of its $947 million revenue in 2024?
+      supported_facts:
+      - claim: Gains and losses from asset dispositions are included in the Other segment.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_4::chunk_1
+      missing_information: The specific impact on the evaluation of the $947 million revenue is not provided.
+      answer: Gains and losses from asset dispositions are included in the Other segment, which generates $947 million of
+        revenue in 2024. However, the specific impact on the evaluation of this revenue is not provided.
+    cited_chunk_ids:
+    - TXN_10k_2024.pdf::page_4::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG173
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was the percentage change in the Programmable Solutions Group's operating income from 2020 to 2021, and how
+    does this relate to the segment's asset adjustments and the auditor's evaluation of inventory valuation practices?
+  gold_chunks:
+  - INTC_10k_2022.pdf::page_72::chunk_1
+  - INTC_10k_2022.pdf::page_95::chunk_4
+  - INTC_10k_2022.pdf::page_86::chunk_2
+  top_chunk_ids:
+  - AMD_10k_2022.pdf::page_43::chunk_1
+  - INTC_10k_2022.pdf::page_86::chunk_2
+  - INTC_10k_2022.pdf::page_39::chunk_2
+  - INTC_10k_2022.pdf::page_6::chunk_1
+  - INTC_10k_2022.pdf::page_72::chunk_1
+  answer_points:
+  - The Programmable Solutions Group's operating income increased by 14.2% from $260 million in 2020 to $297 million in 2021
+    (Chunk 3). During the same period, its asset base decreased by $34 million (from $2,654 million in 2019 to $2,622 million
+    in 2020) (Chunk 2), potentially reflecting inventory adjustments or reallocation of resources. The auditor evaluated inventory
+    valuation assumptions, including demand forecasts and net realizable value, which directly impact both asset valuation
+    (Chunk 1) and cost of goods sold—a key component of operating income (Chunk 3). This demonstrates how inventory management
+    practices (validated by the auditor) and asset base adjustments interconnect to influence financial performance metrics.
+  final_answer: The percentage change in the Programmable Solutions Group's operating income from 2020 to 2021 is calculated
+    as ((297 - 260) / 260) * 100 = 14.23%. [INTC_10k_2022.pdf::page_86::chunk_2] The increase in the Programmable Solutions
+    Group's operating income from 2020 to 2021 is $297 million to $260 million, respectively. This improvement could be influenced
+    by better inventory management and valuation practices, as the company assesses inventory at each reporting date to ensure
+    it is recorded at net realizable value. However, the specific asset adjustments made by the group and the details of the
+    auditor's evaluation of inventory valuation practices are not detailed in the provided evidence. [INTC_10k_2022.pdf::page_86::chunk_2,
+    INTC_10k_2022.pdf::page_72::chunk_1] [INTC_10k_2022.pdf::page_86::chunk_2] [INTC_10k_2022.pdf::page_72::chunk_1]
+  hit: 1
+  recall: 0.6666666666666666
+  reciprocal_rank: 0.5
+  latency_ms: 82203.60236300621
+  answer_latency_ms: 85853.42449699965
+  total_latency_ms: 168057.02686000586
+  token_usage:
+    prompt_tokens: 86828
+    completion_tokens: 1334
+    total_tokens: 88162
+    llm_calls: 14
+    calls_with_usage: 14
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - AMD_10k_2022.pdf::page_43::chunk_1
+    - INTC_10k_2022.pdf::page_86::chunk_2
+    - INTC_10k_2022.pdf::page_39::chunk_2
+    - INTC_10k_2022.pdf::page_6::chunk_1
+    - INTC_10k_2022.pdf::page_72::chunk_1
+    llm_calls: 1
+    latency_ms: 85853.42449699965
+    output_format: structured_json
+    parts:
+    - requested_part: What was the percentage change in the Programmable Solutions Group's operating income from 2020 to 2021?
+      supported_facts:
+      - claim: The Programmable Solutions Group's operating income in 2021 was $297 million, compared to $260 million in 2020.
+        evidence_ids:
+        - INTC_10k_2022.pdf::page_86::chunk_2
+      missing_information: null
+      answer: The percentage change in the Programmable Solutions Group's operating income from 2020 to 2021 is calculated
+        as ((297 - 260) / 260) * 100 = 14.23%. [INTC_10k_2022.pdf::page_86::chunk_2]
+    - requested_part: How does this relate to the segment's asset adjustments and the auditor's evaluation of inventory valuation
+        practices?
+      supported_facts:
+      - claim: The Programmable Solutions Group had an operating income of $297 million in 2021, up from $260 million in 2020.
+        evidence_ids:
+        - INTC_10k_2022.pdf::page_86::chunk_2
+      - claim: The Company assesses inventory at each reporting date in order to assert that it is recorded at net realizable
+          value, considering factors such as product saleability and estimation of excess and obsolete inventory.
+        evidence_ids:
+        - INTC_10k_2022.pdf::page_72::chunk_1
+      missing_information: The specific asset adjustments made by the Programmable Solutions Group and the details of the
+        auditor's evaluation of inventory valuation practices are not provided in the given evidence.
+      answer: The increase in the Programmable Solutions Group's operating income from 2020 to 2021 is $297 million to $260
+        million, respectively. This improvement could be influenced by better inventory management and valuation practices,
+        as the company assesses inventory at each reporting date to ensure it is recorded at net realizable value. However,
+        the specific asset adjustments made by the group and the details of the auditor's evaluation of inventory valuation
+        practices are not detailed in the provided evidence. [INTC_10k_2022.pdf::page_86::chunk_2, INTC_10k_2022.pdf::page_72::chunk_1]
+    cited_chunk_ids:
+    - INTC_10k_2022.pdf::page_86::chunk_2
+    - INTC_10k_2022.pdf::page_72::chunk_1
+    invalid_citation_ids:
+    - INTC_10k_2022.pdf::page_86::chunk_2, INTC_10k_2022.pdf::page_72::chunk_1
+    citation_status: invalid
+- id: FRKG177
+  mode: full_answer
+  answer_audit_enabled: false
+  query: How does CDP's role in managing environmental impacts influence the structure of corporate infrastructure and support
+    cost reporting in Intel's 'All Other' segment, and how does this compare to NVIDIA's treatment of similar costs in its
+    'All Other' category?
+  gold_chunks:
+  - INTC_10k_2024.pdf::page_102::chunk_2
+  - INTC_10k_2024.pdf::page_70::chunk_1
+  - NVDA_10k_2024.pdf::page_78::chunk_1
+  top_chunk_ids:
+  - INTC_10k_2023.pdf::page_20::chunk_1
+  - INTC_10k_2022.pdf::page_54::chunk_1
+  - INTC_10k_2024.pdf::page_71::chunk_1
+  - INTC_10k_2024.pdf::page_72::chunk_2
+  - INTC_10k_2024.pdf::page_25::chunk_3
+  - NVDA_10k_2023.pdf::page_10::chunk_1
+  - NVDA_10k_2022.pdf::page_97::chunk_1
+  - INTC_10k_2022.pdf::page_16::chunk_1
+  answer_points:
+  - CDP operates a global disclosure system for organizations to manage environmental impacts (Chunk 1), which Intel participates
+    in as part of its ESG reporting obligations. Intel's 'All Other' segment explicitly includes corporate infrastructure
+    and support costs that aren't allocated to specific business units (Chunk 2), suggesting centralized environmental compliance
+    expenditures might be embedded here. Similarly, NVIDIA's 'All Other' category also incorporates corporate infrastructure
+    and support costs alongside enterprise-level expenses (Chunk 3), indicating an industry pattern of consolidating unallocated
+    environmental and corporate expenses into residual segments. This shows how regulatory frameworks like CDP's disclosure
+    requirements cascade through corporate segment structures at both Intel and NVIDIA.
+  final_answer: Intel's role in managing environmental impacts influences the structure of its corporate infrastructure by
+    actively managing the supply chain and focusing on reducing climate change impacts. These efforts are reflected in the
+    'All Other' segment, which includes A ltera and Mobileye businesses, and start-up businesses supporting initiatives. Intersegment
+    sales are recorded at prices intended to approximate market pricing. [INTC_10k_2023.pdf::page_20::chunk_1] [INTC_10k_2024.pdf::page_71::chunk_1]
+    NVIDIA publishes metrics related to its environmental impact and aims to purchase renewable energy. Its 'All Other' category
+    includes businesses supporting its initiatives. This indicates that both companies are committed to environmental sustainability
+    and include related businesses in their 'All Other' segments. [NVDA_10k_2023.pdf::page_10::chunk_1] [INTC_10k_2024.pdf::page_71::chunk_1]
+  hit: 0
+  recall: 0.0
+  reciprocal_rank: 0.0
+  latency_ms: 185747.21259199578
+  answer_latency_ms: 78010.70251299825
+  total_latency_ms: 263757.915104994
+  token_usage:
+    prompt_tokens: 183668
+    completion_tokens: 2024
+    total_tokens: 185692
+    llm_calls: 22
+    calls_with_usage: 22
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - INTC_10k_2023.pdf::page_20::chunk_1
+    - INTC_10k_2022.pdf::page_54::chunk_1
+    - INTC_10k_2024.pdf::page_71::chunk_1
+    - INTC_10k_2024.pdf::page_72::chunk_2
+    - INTC_10k_2024.pdf::page_25::chunk_3
+    - NVDA_10k_2023.pdf::page_10::chunk_1
+    - NVDA_10k_2022.pdf::page_97::chunk_1
+    - INTC_10k_2022.pdf::page_16::chunk_1
+    llm_calls: 1
+    latency_ms: 78010.70251299825
+    output_format: structured_json
+    parts:
+    - requested_part: How does CDP's role in managing environmental impacts influence the structure of corporate infrastructure
+        and support cost reporting in Intel's 'All Other' segment?
+      supported_facts:
+      - claim: Intel manages its supply chain to reduce risk and improve environmental and social goals.
+        evidence_ids:
+        - INTC_10k_2023.pdf::page_20::chunk_1
+      - claim: Intel focuses on reducing its own climate change impact and investing in renewable electricity.
+        evidence_ids:
+        - INTC_10k_2023.pdf::page_20::chunk_1
+      - claim: Intel's 'All Other' segment includes A ltera and Mobileye businesses, and start-up businesses supporting initiatives.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_71::chunk_1
+      - claim: Intersegment sales are recorded at prices intended to approximate market pricing.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_71::chunk_1
+      missing_information: null
+      answer: Intel's role in managing environmental impacts influences the structure of its corporate infrastructure by actively
+        managing the supply chain and focusing on reducing climate change impacts. These efforts are reflected in the 'All
+        Other' segment, which includes A ltera and Mobileye businesses, and start-up businesses supporting initiatives. Intersegment
+        sales are recorded at prices intended to approximate market pricing.
+    - requested_part: How does this compare to NVIDIA's treatment of similar costs in its 'All Other' category?
+      supported_facts:
+      - claim: NVIDIA publishes metrics related to its environmental impact and aims to purchase renewable energy.
+        evidence_ids:
+        - NVDA_10k_2023.pdf::page_10::chunk_1
+      - claim: NVIDIA's 'All Other' category includes businesses supporting its initiatives.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_71::chunk_1
+      missing_information: null
+      answer: NVIDIA publishes metrics related to its environmental impact and aims to purchase renewable energy. Its 'All
+        Other' category includes businesses supporting its initiatives. This indicates that both companies are committed to
+        environmental sustainability and include related businesses in their 'All Other' segments.
+    cited_chunk_ids:
+    - INTC_10k_2023.pdf::page_20::chunk_1
+    - INTC_10k_2024.pdf::page_71::chunk_1
+    - NVDA_10k_2023.pdf::page_10::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG179
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was the total net income reported by Texas Instruments (TXN) during Rafael R. Lizardi's tenure as Chief Financial
+    Officer, based on the financial data provided for the years 2019 through 2021?
+  gold_chunks:
+  - TXN_10k_2022.pdf::page_69::chunk_2
+  - TXN_10k_2022.pdf::page_31::chunk_1
+  top_chunk_ids:
+  - TXN_10k_2022.pdf::page_30::chunk_1
+  answer_points:
+  - Rafael R. Lizardi is identified as Texas Instruments' Chief Financial Officer in the leadership disclosures (Chunk 1).
+    The financial data in Chunk 2 shows net income of $5,017M in 2019, $5,595M in 2020, and $7,769M in 2021. Summing these
+    values ($5,017 + $5,595 + $7,769 = $18,381M) reveals the total net income during his tenure as CFO. This demonstrates
+    how executive roles (Chunk 1) directly connect to financial performance metrics (Chunk 2) through reporting responsibilities.
+  final_answer: Texas Instruments reported net income of $7,769 million in 2021, $5,595 million in 2020, and $5,017 million
+    in 2019. [TXN_10k_2022.pdf::page_30::chunk_1]
+  hit: 0
+  recall: 0.0
+  reciprocal_rank: 0.0
+  latency_ms: 65561.05402499816
+  answer_latency_ms: 60729.58887700224
+  total_latency_ms: 126290.6429020004
+  token_usage:
+    prompt_tokens: 32905
+    completion_tokens: 586
+    total_tokens: 33491
+    llm_calls: 6
+    calls_with_usage: 6
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - TXN_10k_2022.pdf::page_30::chunk_1
+    llm_calls: 1
+    latency_ms: 60729.58887700224
+    output_format: structured_json
+    parts:
+    - requested_part: What was the total net income reported by Texas Instruments (TXN) during Rafael R. Lizardi's tenure
+        as Chief Financial Officer, based on the financial data provided for the years 2019 through 2021?
+      supported_facts:
+      - claim: Texas Instruments reported net income of $7,769 million in 2021, $5,595 million in 2020, and $5,017 million
+          in 2019.
+        evidence_ids:
+        - TXN_10k_2022.pdf::page_30::chunk_1
+      missing_information: The evidence does not specify the start and end dates of Rafael R. Lizardi's tenure as Chief Financial
+        Officer.
+      answer: Texas Instruments reported net income of $7,769 million in 2021, $5,595 million in 2020, and $5,017 million
+        in 2019.
+    cited_chunk_ids:
+    - TXN_10k_2022.pdf::page_30::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG182
+  mode: full_answer
+  answer_audit_enabled: false
+  query: How does the auditor's assessment of internal control effectiveness influence the reliability of Texas Instruments'
+    purchase commitment disclosures, and what total amount is committed beyond 2023?
+  gold_chunks:
+  - TXN_10k_2022.pdf::page_60::chunk_1
+  - TXN_10k_2023.pdf::page_52::chunk_6
+  top_chunk_ids:
+  - TXN_10k_2022.pdf::page_60::chunk_1
+  - TXN_10k_2022.pdf::page_57::chunk_1
+  - TXN_10k_2023.pdf::page_52::chunk_6
+  answer_points:
+  - The auditor's unqualified opinion on Texas Instruments' internal control over financial reporting as of December 31, 2021
+    (Chunk 1) ensures that controls are effective in maintaining accurate financial records and preventing misstatements.
+    This assurance directly supports the reliability of disclosed financial obligations like purchase commitments. As of December
+    31, 2023, Texas Instruments had committed to $1,868 million in total minimum payments under purchase commitments, including
+    $215 million for periods beyond 2028 (Chunk 2). The auditor's validation of internal controls confirms these commitments
+    are accurately recorded and disclosed, linking regulatory compliance to the credibility of long-term financial obligations.
+  final_answer: The auditor's assessment of internal control effectiveness influences the reliability of Texas Instruments'
+    purchase commitment disclosures positively. Since the auditor found Texas Instruments' internal control over financial
+    reporting to be effective, the disclosures are more likely to be reliable. [TXN_10k_2022.pdf::page_60::chunk_1] The total
+    amount committed beyond 2023 is $1,868 million, which includes $215 million in 2028 and the remaining commitments after
+    2028. [TXN_10k_2023.pdf::page_52::chunk_6]
+  hit: 1
+  recall: 1.0
+  reciprocal_rank: 1.0
+  latency_ms: 94082.9235850033
+  answer_latency_ms: 45781.6461409966
+  total_latency_ms: 139864.5697259999
+  token_usage:
+    prompt_tokens: 33917
+    completion_tokens: 761
+    total_tokens: 34678
+    llm_calls: 8
+    calls_with_usage: 8
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - TXN_10k_2022.pdf::page_60::chunk_1
+    - TXN_10k_2022.pdf::page_57::chunk_1
+    - TXN_10k_2023.pdf::page_52::chunk_6
+    llm_calls: 1
+    latency_ms: 45781.6461409966
+    output_format: structured_json
+    parts:
+    - requested_part: How does the auditor's assessment of internal control effectiveness influence the reliability of Texas
+        Instruments' purchase commitment disclosures?
+      supported_facts:
+      - claim: The auditor has assessed Texas Instruments' internal control over financial reporting and found it to be effective.
+        evidence_ids:
+        - TXN_10k_2022.pdf::page_60::chunk_1
+      missing_information: 'null'
+      answer: The auditor's assessment of internal control effectiveness influences the reliability of Texas Instruments'
+        purchase commitment disclosures positively. Since the auditor found Texas Instruments' internal control over financial
+        reporting to be effective, the disclosures are more likely to be reliable.
+    - requested_part: What total amount is committed beyond 2023?
+      supported_facts:
+      - claim: 'As of December 31, 2023, Texas Instruments had committed to make the following minimum payments under their
+          purchase commitments: $215 million in 2028 and $1,868 million in total.'
+        evidence_ids:
+        - TXN_10k_2023.pdf::page_52::chunk_6
+      missing_information: 'null'
+      answer: The total amount committed beyond 2023 is $1,868 million, which includes $215 million in 2028 and the remaining
+        commitments after 2028.
+    cited_chunk_ids:
+    - TXN_10k_2022.pdf::page_60::chunk_1
+    - TXN_10k_2023.pdf::page_52::chunk_6
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG185
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was the year-over-year change in Qualcomm's current year tax position additions between 2023 and 2024, and how
+    does this relate to Kornelis Smit's governance role at the company?
+  gold_chunks:
+  - QCOM_10k_2024.pdf::page_57::chunk_2
+  - QCOM_10k_2023.pdf::page_77::chunk_2
+  top_chunk_ids:
+  - QCOM_10k_2023.pdf::page_76::chunk_1
+  - QCOM_10k_2024.pdf::page_57::chunk_2
+  - QCOM_10k_2023.pdf::page_57::chunk_2
+  answer_points:
+  - Qualcomm's current year tax position additions decreased from $158 million in 2023 to $153 million in 2024, representing
+    a $5 million reduction (Chunk 2). Kornelis Smit served as a director of Qualcomm in 2024 (Chunk 1), participating in the
+    governance of financial disclosures including tax-related accounting. This demonstrates how board-level oversight intersects
+    with corporate tax position reporting as part of regulatory compliance mechanisms.
+  final_answer: Qualcomm recognized a tax benefit of $317 million in the fourth quarter of fiscal 2024 from the establishment
+    of a deferred tax asset. At September 29, 2024, the company had $2.2 billion and $2.0 billion recorded as a noncurrent
+    income taxes receivable and $2.5 billion and $2.3 billion recorded as a noncurrent liability for uncertain tax benefits,
+    respectively. However, the exact change in current year tax position additions between 2023 and 2024 is not provided.
+    [QCOM_10k_2023.pdf::page_76::chunk_1] Kornelis Smit is listed as a director of Qualcomm. However, no specific information
+    about his involvement in tax matters or how his role relates to the tax changes is provided. [QCOM_10k_2023.pdf::page_57::chunk_2]
+    [QCOM_10k_2024.pdf::page_57::chunk_2]
+  hit: 1
+  recall: 0.5
+  reciprocal_rank: 0.5
+  latency_ms: 94761.48761100194
+  answer_latency_ms: 90069.66875299986
+  total_latency_ms: 184831.1563640018
+  token_usage:
+    prompt_tokens: 72343
+    completion_tokens: 1219
+    total_tokens: 73562
+    llm_calls: 10
+    calls_with_usage: 10
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - QCOM_10k_2023.pdf::page_76::chunk_1
+    - QCOM_10k_2024.pdf::page_57::chunk_2
+    - QCOM_10k_2023.pdf::page_57::chunk_2
+    llm_calls: 1
+    latency_ms: 90069.66875299986
+    output_format: structured_json
+    parts:
+    - requested_part: What was the year-over-year change in Qualcomm's current year tax position additions between 2023 and
+        2024?
+      supported_facts:
+      - claim: In the fourth quarter of fiscal 2024, Qualcomm recognized a tax benefit of $317 million from the establishment
+          of a deferred tax asset.
+        evidence_ids:
+        - QCOM_10k_2023.pdf::page_76::chunk_1
+      - claim: At September 29, 2024, Qualcomm had $2.2 billion and $2.0 billion recorded as a noncurrent income taxes receivable
+          and $2.5 billion and $2.3 billion recorded as a noncurrent liability for uncertain tax benefits, respectively.
+        evidence_ids:
+        - QCOM_10k_2023.pdf::page_76::chunk_1
+      missing_information: The exact change in current year tax position additions between 2023 and 2024 is not provided.
+      answer: Qualcomm recognized a tax benefit of $317 million in the fourth quarter of fiscal 2024 from the establishment
+        of a deferred tax asset. At September 29, 2024, the company had $2.2 billion and $2.0 billion recorded as a noncurrent
+        income taxes receivable and $2.5 billion and $2.3 billion recorded as a noncurrent liability for uncertain tax benefits,
+        respectively. However, the exact change in current year tax position additions between 2023 and 2024 is not provided.
+    - requested_part: How does this relate to Kornelis Smit's governance role at the company?
+      supported_facts:
+      - claim: Kornelis Smit is listed as a director of Qualcomm.
+        evidence_ids:
+        - QCOM_10k_2023.pdf::page_57::chunk_2
+        - QCOM_10k_2024.pdf::page_57::chunk_2
+      missing_information: No specific information about Kornelis Smit's involvement in tax matters or how his role relates
+        to the tax changes is provided.
+      answer: Kornelis Smit is listed as a director of Qualcomm. However, no specific information about his involvement in
+        tax matters or how his role relates to the tax changes is provided.
+    cited_chunk_ids:
+    - QCOM_10k_2023.pdf::page_76::chunk_1
+    - QCOM_10k_2023.pdf::page_57::chunk_2
+    - QCOM_10k_2024.pdf::page_57::chunk_2
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG187
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was the total revenue decline in Texas Instruments' 'Other' segment from 2022 to 2024, and how does this relate
+    to the inclusion of asset dispositions in the segment's financial reporting as disclosed in both 2023 and 2024 filings?
+  gold_chunks:
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2023.pdf::page_4::chunk_1
+  - TXN_10k_2024.pdf::page_4::chunk_1
+  top_chunk_ids:
+  - TXN_10k_2022.pdf::page_6::chunk_1
+  - TXN_10k_2023.pdf::page_4::chunk_1
+  - TXN_10k_2024.pdf::page_30::chunk_2
+  - TXN_10k_2023.pdf::page_30::chunk_1
+  - TXN_10k_2024.pdf::page_30::chunk_1
+  answer_points:
+  - Texas Instruments' 'Other' segment revenue declined from $1,408 million in 2022 (Chunk 1) to $947 million in 2024 (Chunk
+    3), a total decrease of $461 million. This decline occurred alongside the segment's explicit inclusion of 'gains and losses
+    from other activities, including asset dispositions' in both 2023 (Chunk 2) and 2024 (Chunk 3) disclosures. The consistent
+    mention of asset dispositions in the 'Other' segment's financial reporting suggests that divestitures or restructuring
+    activities directly contributed to the revenue reduction over this period, as these transactions likely removed revenue-generating
+    assets from the segment's portfolio.
+  final_answer: The revenue in the 'Other' segment declined from $1.25 billion in 2021 to $1.11 billion in 2023, and further
+    to $947 million in 2024. [TXN_10k_2022.pdf::page_6::chunk_1] [TXN_10k_2023.pdf::page_4::chunk_1] [TXN_10k_2024.pdf::page_30::chunk_2]
+    Asset dispositions are included in the 'Other' segment's financial reporting as examples of items that are not used in
+    evaluating the results of or in allocating resources to the segments. This indicates that changes in asset dispositions
+    could impact the reported revenue in the 'Other' segment. [TXN_10k_2023.pdf::page_4::chunk_1] [TXN_10k_2024.pdf::page_30::chunk_1]
+  hit: 1
+  recall: 0.3333333333333333
+  reciprocal_rank: 0.5
+  latency_ms: 138561.67806300073
+  answer_latency_ms: 52809.967733999656
+  total_latency_ms: 191371.64579700038
+  token_usage:
+    prompt_tokens: 102569
+    completion_tokens: 1627
+    total_tokens: 104196
+    llm_calls: 18
+    calls_with_usage: 18
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - TXN_10k_2022.pdf::page_6::chunk_1
+    - TXN_10k_2023.pdf::page_4::chunk_1
+    - TXN_10k_2024.pdf::page_30::chunk_2
+    - TXN_10k_2023.pdf::page_4::chunk_1
+    - TXN_10k_2023.pdf::page_30::chunk_1
+    - TXN_10k_2024.pdf::page_30::chunk_1
+    llm_calls: 1
+    latency_ms: 52809.967733999656
+    output_format: structured_json
+    parts:
+    - requested_part: What was the total revenue decline in Texas Instruments' 'Other' segment from 2022 to 2024?
+      supported_facts:
+      - claim: '''Other'' generated $1.25 billion of revenue in 2021.'
+        evidence_ids:
+        - TXN_10k_2022.pdf::page_6::chunk_1
+      - claim: '''Other'' generated $1.11 billion of revenue in 2023.'
+        evidence_ids:
+        - TXN_10k_2023.pdf::page_4::chunk_1
+        - TXN_10k_2023.pdf::page_4::chunk_1
+      - claim: '''Other'' generated $947 million of revenue in 2024.'
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_30::chunk_2
+      missing_information: null
+      answer: The revenue in the 'Other' segment declined from $1.25 billion in 2021 to $1.11 billion in 2023, and further
+        to $947 million in 2024.
+    - requested_part: How does this relate to the inclusion of asset dispositions in the segment's financial reporting as
+        disclosed in both 2023 and 2024 filings?
+      supported_facts:
+      - claim: In Other, we also include items that are not used in evaluating the results of or in allocating resources to
+          our segments. Examples of these items include acquisition, integration and restructuring charges, as well as certain
+          corporate-level items, such as litigation expenses, environmental costs and gains and losses from other activities,
+          including asset dispositions.
+        evidence_ids:
+        - TXN_10k_2023.pdf::page_4::chunk_1
+        - TXN_10k_2024.pdf::page_30::chunk_1
+      missing_information: null
+      answer: Asset dispositions are included in the 'Other' segment's financial reporting as examples of items that are not
+        used in evaluating the results of or in allocating resources to the segments. This indicates that changes in asset
+        dispositions could impact the reported revenue in the 'Other' segment.
+    cited_chunk_ids:
+    - TXN_10k_2022.pdf::page_6::chunk_1
+    - TXN_10k_2023.pdf::page_4::chunk_1
+    - TXN_10k_2024.pdf::page_30::chunk_2
+    - TXN_10k_2024.pdf::page_30::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG192
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What financial impact did Texas Instruments' delegation of signing authority to attorneys-in-fact have on its pension
+    plan obligations, specifically regarding plan amendments disclosed in the 2021 financial statements?
+  gold_chunks:
+  - TXN_10k_2022.pdf::page_69::chunk_1
+  - TXN_10k_2022.pdf::page_47::chunk_2
+  top_chunk_ids:
+  - TXN_10k_2022.pdf::page_47::chunk_2
+  - TXN_10k_2024.pdf::page_30::chunk_1
+  - TXN_10k_2022.pdf::page_69::chunk_2
+  - TXN_10k_2023.pdf::page_49::chunk_5
+  - TXN_10k_2023.pdf::page_46::chunk_2
+  - TXN_10k_2022.pdf::page_49::chunk_3
+  answer_points:
+  - The delegation of signing authority to attorneys-in-fact (Chunk 1) enabled Texas Instruments to implement plan amendments,
+    which directly contributed to a $1 million increase in non-U.S. defined benefit plan obligations in 2021 (Chunk 2). This
+    demonstrates how corporate governance structures (attorney-in-fact authority) translate into specific financial disclosures
+    and liability adjustments through pension plan amendments.
+  final_answer: The delegation of signing authority to attorneys-in-fact is not discussed in the provided evidence, so there
+    is no information about its impact on pension plan obligations. Plan amendments were disclosed in the 2021 financial statements,
+    but their specific impact on pension plan obligations is not detailed in the provided evidence. [TXN_10k_2022.pdf::page_47::chunk_2]
+  hit: 1
+  recall: 0.5
+  reciprocal_rank: 1.0
+  latency_ms: 83342.7865229969
+  answer_latency_ms: 30680.9460220029
+  total_latency_ms: 114023.7325449998
+  token_usage:
+    prompt_tokens: 81387
+    completion_tokens: 988
+    total_tokens: 82375
+    llm_calls: 14
+    calls_with_usage: 14
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - TXN_10k_2022.pdf::page_47::chunk_2
+    - TXN_10k_2024.pdf::page_30::chunk_1
+    - TXN_10k_2022.pdf::page_69::chunk_2
+    - TXN_10k_2023.pdf::page_49::chunk_5
+    - TXN_10k_2023.pdf::page_46::chunk_2
+    - TXN_10k_2022.pdf::page_47::chunk_2
+    - TXN_10k_2022.pdf::page_49::chunk_3
+    - TXN_10k_2022.pdf::page_47::chunk_2
+    llm_calls: 1
+    latency_ms: 30680.9460220029
+    output_format: structured_json
+    parts:
+    - requested_part: What financial impact did Texas Instruments' delegation of signing authority to attorneys-in-fact have
+        on its pension plan obligations?
+      supported_facts: []
+      missing_information: The delegation of signing authority to attorneys-in-fact is not mentioned in the provided evidence.
+      answer: The delegation of signing authority to attorneys-in-fact is not discussed in the provided evidence, so there
+        is no information about its impact on pension plan obligations.
+    - requested_part: Specifically regarding plan amendments disclosed in the 2021 financial statements?
+      supported_facts:
+      - claim: Plan amendments were disclosed in the 2021 financial statements.
+        evidence_ids:
+        - TXN_10k_2022.pdf::page_47::chunk_2
+      missing_information: null
+      answer: Plan amendments were disclosed in the 2021 financial statements, but their specific impact on pension plan obligations
+        is not detailed in the provided evidence.
+    cited_chunk_ids:
+    - TXN_10k_2022.pdf::page_47::chunk_2
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG239
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What percentage of the Client Computing Group's 2021 net revenue did its value represent as of December 25, 2021?
+  gold_chunks:
+  - INTC_10k_2023.pdf::page_97::chunk_4
+  - INTC_10k_2022.pdf::page_86::chunk_2
+  top_chunk_ids:
+  - INTC_10k_2022.pdf::page_86::chunk_2
+  answer_points:
+  - The Client Computing Group's value of $4,237 million as of December 25, 2021 (Chunk 1) represented 10.46% of its 2021
+    net revenue of $40,511 million (Chunk 2). This is calculated as ($4,237 ÷ $40,511) × 100 = 10.46%. The relationship highlights
+    how segment valuation metrics connect to disclosed revenue performance.
+  final_answer: The Client Computing Group's net revenue of $40,511 million represented approximately 51.3% of the total net
+    revenue of $79,024 million in 2021. [INTC_10k_2022.pdf::page_86::chunk_2]
+  hit: 1
+  recall: 0.5
+  reciprocal_rank: 1.0
+  latency_ms: 68731.61349999282
+  answer_latency_ms: 21305.051337003533
+  total_latency_ms: 90036.66483699635
+  token_usage:
+    prompt_tokens: 45143
+    completion_tokens: 748
+    total_tokens: 45891
+    llm_calls: 10
+    calls_with_usage: 10
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - INTC_10k_2022.pdf::page_86::chunk_2
+    - INTC_10k_2022.pdf::page_86::chunk_2
+    llm_calls: 1
+    latency_ms: 21305.051337003533
+    output_format: structured_json
+    parts:
+    - requested_part: What percentage of the Client Computing Group's 2021 net revenue did its value represent as of December
+        25, 2021?
+      supported_facts:
+      - claim: Client Computing Group's net revenue for 2021 was $40,511 million.
+        evidence_ids:
+        - INTC_10k_2022.pdf::page_86::chunk_2
+      - claim: Total net revenue for 2021 was $79,024 million.
+        evidence_ids:
+        - INTC_10k_2022.pdf::page_86::chunk_2
+      missing_information: null
+      answer: The Client Computing Group's net revenue of $40,511 million represented approximately 51.3% of the total net
+        revenue of $79,024 million in 2021. [INTC_10k_2022.pdf::page_86::chunk_2]
+    cited_chunk_ids:
+    - INTC_10k_2022.pdf::page_86::chunk_2
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG240
+  mode: full_answer
+  answer_audit_enabled: false
+  query: How did the increase in Mobileye's research and development expenditures and operating costs in 2023 affect its operating
+    income compared to 2022, and what was the resulting impact on Intel's total operating income?
+  gold_chunks:
+  - INTC_10k_2024.pdf::page_24::chunk_1
+  - INTC_10k_2023.pdf::page_88::chunk_2
+  top_chunk_ids:
+  - INTC_10k_2023.pdf::page_33::chunk_1
+  - INTC_10k_2024.pdf::page_23::chunk_3
+  - INTC_10k_2024.pdf::page_25::chunk_3
+  - INTC_10k_2022.pdf::page_30::chunk_1
+  - INTC_10k_2022.pdf::page_35::chunk_1
+  - INTC_10k_2023.pdf::page_32::chunk_1
+  - INTC_10k_2023.pdf::page_87::chunk_1
+  answer_points:
+  - Mobileye's research and development expenditures and operating costs increased by $123 million in 2023 (Chunk 1), which
+    directly reduced its operating income from $690 million in 2022 to $664 million in 2023 (Chunk 2), a decrease of $26 million.
+    This decline in Mobileye's operating income contributed to Intel's total operating income falling from $2,334 million
+    in 2022 to $93 million in 2023 (Chunk 2), highlighting how segment-level cost increases cascaded into the company's overall
+    profitability.
+  final_answer: Intel's total operating income was negatively impacted by the decrease in Mobileye's revenue from $2.1 billion
+    in 2022 to $1.7 billion in 2023. This reduction contributed to the overall decrease in revenue from $53.1 billion in 2024
+    to $52 billion, down $1.1 billion from 2023. [INTC_10k_2024.pdf::page_23::chunk_3] [INTC_10k_2024.pdf::page_25::chunk_3]
+  hit: 0
+  recall: 0.0
+  reciprocal_rank: 0.0
+  latency_ms: 130829.30344700435
+  answer_latency_ms: 68096.16083999572
+  total_latency_ms: 198925.46428700007
+  token_usage:
+    prompt_tokens: 131186
+    completion_tokens: 1588
+    total_tokens: 132774
+    llm_calls: 20
+    calls_with_usage: 20
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - INTC_10k_2023.pdf::page_33::chunk_1
+    - INTC_10k_2024.pdf::page_23::chunk_3
+    - INTC_10k_2023.pdf::page_33::chunk_1
+    - INTC_10k_2024.pdf::page_25::chunk_3
+    - INTC_10k_2022.pdf::page_30::chunk_1
+    - INTC_10k_2024.pdf::page_23::chunk_3
+    - INTC_10k_2022.pdf::page_35::chunk_1
+    - INTC_10k_2022.pdf::page_35::chunk_1
+    - INTC_10k_2023.pdf::page_32::chunk_1
+    - INTC_10k_2023.pdf::page_87::chunk_1
+    llm_calls: 1
+    latency_ms: 68096.16083999572
+    output_format: structured_json
+    parts:
+    - requested_part: How did the increase in Mobileye's research and development expenditures and operating costs in 2023
+        affect its operating income compared to 2022?
+      supported_facts: []
+      missing_information: No specific details on Mobileye's R&D expenditures or operating costs in 2023 are provided.
+      answer: null
+    - requested_part: What was the resulting impact on Intel's total operating income?
+      supported_facts:
+      - claim: Mobileye revenue was $2.1 billion in 2022, up $210 million from 2021, due to higher demand for EyeQ products.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_23::chunk_3
+      - claim: Mobileye revenue was $1.7 billion in 2023, down $425 million from 2022 as customers tempered purchases to reduce
+          existing inventories of EyeQ products.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_23::chunk_3
+      - claim: 2024 revenue was $53.1 billion, down $1.1 billion, or 2%, from 2023 due to lower all other revenue and lower
+          Intel Foundry revenue, partially offset by higher Intel Products revenue.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_25::chunk_3
+      missing_information: null
+      answer: Intel's total operating income was negatively impacted by the decrease in Mobileye's revenue from $2.1 billion
+        in 2022 to $1.7 billion in 2023. This reduction contributed to the overall decrease in revenue from $53.1 billion
+        in 2024 to $52 billion, down $1.1 billion from 2023.
+    cited_chunk_ids:
+    - INTC_10k_2024.pdf::page_23::chunk_3
+    - INTC_10k_2024.pdf::page_25::chunk_3
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG241
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What amount in Texas Instruments' 2024 financial statements represents environmental costs included within the Other
+    segment's restructuring charges/other line item?
+  gold_chunks:
+  - TXN_10k_2024.pdf::page_30::chunk_2
+  - TXN_10k_2024.pdf::page_4::chunk_1
+  top_chunk_ids:
+  - TXN_10k_2024.pdf::page_30::chunk_1
+  answer_points:
+  - The $124 million restructuring charges/other amount in the Other segment's financial results (Chunk 1) includes environmental
+    costs as disclosed in the segment description (Chunk 2). This demonstrates how specific financial line items directly
+    incorporate regulatory-related expenses like environmental remediation.
+  final_answer: The amount representing environmental costs within the Other segment's restructuring charges/other line item
+    is not specified in the provided information. [TXN_10k_2024.pdf::page_30::chunk_1]
+  hit: 0
+  recall: 0.0
+  reciprocal_rank: 0.0
+  latency_ms: 70316.78348599962
+  answer_latency_ms: 21742.781592001847
+  total_latency_ms: 92059.56507800147
+  token_usage:
+    prompt_tokens: 31854
+    completion_tokens: 486
+    total_tokens: 32340
+    llm_calls: 7
+    calls_with_usage: 7
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - TXN_10k_2024.pdf::page_30::chunk_1
+    llm_calls: 1
+    latency_ms: 21742.781592001847
+    output_format: structured_json
+    parts:
+    - requested_part: What amount in Texas Instruments' 2024 financial statements represents environmental costs included
+        within the Other segment's restructuring charges/other line item?
+      supported_facts:
+      - claim: Environmental costs are included in the restructuring charges/other line item under the Other segment.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_30::chunk_1
+      missing_information: null
+      answer: The amount representing environmental costs within the Other segment's restructuring charges/other line item
+        is not specified in the provided information.
+    cited_chunk_ids:
+    - TXN_10k_2024.pdf::page_30::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG249
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was the percentage decrease in revenue and change in operating income for Intel's Network and Edge segment from
+    2022 to 2023, and how do these changes reflect the impact of the organizational restructuring announced in 2023?
+  gold_chunks:
+  - INTC_10k_2023.pdf::page_87::chunk_1
+  - INTC_10k_2023.pdf::page_88::chunk_2
+  top_chunk_ids:
+  - INTC_10k_2023.pdf::page_87::chunk_1
+  - INTC_10k_2022.pdf::page_54::chunk_1
+  - INTC_10k_2024.pdf::page_15::chunk_1
+  - INTC_10k_2024.pdf::page_25::chunk_3
+  - INTC_10k_2023.pdf::page_88::chunk_2
+  answer_points:
+  - Intel's Network and Edge segment revenue decreased from $8,409 million in 2022 to $5,774 million in 2023, a 31.3% decline
+    ((8,409 - 5,774)/8,409 * 100). Operating income shifted from $1,033 million profit in 2022 to a $482 million loss in 2023,
+    representing a $1,515 million deterioration. This reflects the impact of the organizational restructuring announced in
+    2023 (Chunk 1), which integrated AXG into other segments to reduce costs and accelerate scalability. However, the significant
+    revenue drop and profitability shift suggest potential disruptions from the restructuring, including possible resource
+    reallocation or market focus changes, directly affecting Network and Edge's financial performance (Chunk 2).
+  final_answer: The revenue for Intel's Network and Edge segment decreased by 31.3% from 2022 to 2023. This is calculated
+    as ((8,409 - 5,774) / 8,409) * 100 = 31.3% [INTC_10k_2023.pdf::page_88::chunk_2] The operating income for Intel's Network
+    and Edge segment changed from a profit of $1,033 million in 2022 to a loss of $482 million in 2023, indicating a decrease
+    of $1,515 million. [INTC_10k_2023.pdf::page_88::chunk_2] The changes in revenue and operating income for the Network and
+    Edge segment reflect the cost-cutting measures and realignment of resources as part of the organizational restructuring
+    announced in 2023. The integration of AXG into CCG and DCAI aimed to drive a more effective go-to-market capability and
+    accelerate the scale of these businesses, while also reducing costs. However, the specific details of how these changes
+    directly impacted the Network and Edge segment are not provided in the evidence. [INTC_10k_2023.pdf::page_87::chunk_1]
+    [INTC_10k_2023.pdf::page_88::chunk_2]
+  hit: 1
+  recall: 1.0
+  reciprocal_rank: 1.0
+  latency_ms: 165503.65983600204
+  answer_latency_ms: 84973.75708199979
+  total_latency_ms: 250477.41691800184
+  token_usage:
+    prompt_tokens: 113523
+    completion_tokens: 1694
+    total_tokens: 115217
+    llm_calls: 18
+    calls_with_usage: 18
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - INTC_10k_2023.pdf::page_87::chunk_1
+    - INTC_10k_2022.pdf::page_54::chunk_1
+    - INTC_10k_2024.pdf::page_15::chunk_1
+    - INTC_10k_2024.pdf::page_25::chunk_3
+    - INTC_10k_2023.pdf::page_88::chunk_2
+    - INTC_10k_2023.pdf::page_88::chunk_2
+    - INTC_10k_2024.pdf::page_15::chunk_1
+    llm_calls: 1
+    latency_ms: 84973.75708199979
+    output_format: structured_json
+    parts:
+    - requested_part: What was the percentage decrease in revenue for Intel's Network and Edge segment from 2022 to 2023?
+      supported_facts:
+      - claim: Network and Edge revenue in 2022 was $8,409 million and in 2023 was $5,774 million.
+        evidence_ids:
+        - INTC_10k_2023.pdf::page_88::chunk_2
+      missing_information: null
+      answer: The revenue for Intel's Network and Edge segment decreased by 31.3% from 2022 to 2023. This is calculated as
+        ((8,409 - 5,774) / 8,409) * 100 = 31.3%
+    - requested_part: What was the change in operating income for Intel's Network and Edge segment from 2022 to 2023?
+      supported_facts:
+      - claim: Operating income for Network and Edge in 2022 was $1,033 million and in 2023 was -$482 million.
+        evidence_ids:
+        - INTC_10k_2023.pdf::page_88::chunk_2
+      missing_information: null
+      answer: The operating income for Intel's Network and Edge segment changed from a profit of $1,033 million in 2022 to
+        a loss of $482 million in 2023, indicating a decrease of $1,515 million.
+    - requested_part: How do these changes reflect the impact of the organizational restructuring announced in 2023?
+      supported_facts:
+      - claim: Intel announced the integration of AXG into CCG and DCAI in 2023, which was intended to drive a more effective
+          go-to-market capability and to accelerate the scale of these businesses, while also reducing costs.
+        evidence_ids:
+        - INTC_10k_2023.pdf::page_87::chunk_1
+      - claim: The restructuring resulted in a decrease in revenue and operating income for the Network and Edge segment,
+          reflecting the cost-cutting measures and realignment of resources.
+        evidence_ids:
+        - INTC_10k_2023.pdf::page_88::chunk_2
+      missing_information: The specific details of how the restructuring directly impacted the Network and Edge segment's
+        revenue and operating income are not provided in the evidence.
+      answer: The changes in revenue and operating income for the Network and Edge segment reflect the cost-cutting measures
+        and realignment of resources as part of the organizational restructuring announced in 2023. The integration of AXG
+        into CCG and DCAI aimed to drive a more effective go-to-market capability and accelerate the scale of these businesses,
+        while also reducing costs. However, the specific details of how these changes directly impacted the Network and Edge
+        segment are not provided in the evidence.
+    cited_chunk_ids:
+    - INTC_10k_2023.pdf::page_88::chunk_2
+    - INTC_10k_2023.pdf::page_87::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG273
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What total value of stock options outstanding is disclosed in Texas Instruments' 2021 financial report, calculated
+    using the weighted average exercise price per share, and which individuals are explicitly authorized to file regulatory
+    disclosures containing this metric?
+  gold_chunks:
+  - TXN_10k_2022.pdf::page_69::chunk_1
+  - TXN_10k_2022.pdf::page_38::chunk_8
+  top_chunk_ids:
+  - TXN_10k_2022.pdf::page_38::chunk_4
+  - TXN_10k_2022.pdf::page_38::chunk_8
+  - TXN_10k_2022.pdf::page_1::chunk_1
+  answer_points:
+  - The total value of stock options outstanding is calculated as 25 shares × $91.58 weighted average exercise price per share
+    = $2,289.50. The individuals explicitly authorized to file regulatory disclosures containing this metric include Richard
+    K. Templeton, Rafael R. Lizardi, Julie C. Knecht, and Cynthia Hoff Trochu, who were appointed as attorneys-in-fact to
+    sign and submit the 2021 Form 10-K filing. This authorization ensures compliance with SEC requirements for disclosing
+    equity compensation metrics like stock option valuations.
+  final_answer: The total value of stock options outstanding as of December 31, 2021, calculated using the weighted average
+    exercise price per share, is 25 shares * $91.58 = $2,289.50 per share. [TXN_10k_2022.pdf::page_38::chunk_4]
+  hit: 1
+  recall: 0.5
+  reciprocal_rank: 0.5
+  latency_ms: 132531.87333000096
+  answer_latency_ms: 42835.98399499897
+  total_latency_ms: 175367.85732499993
+  token_usage:
+    prompt_tokens: 90957
+    completion_tokens: 1183
+    total_tokens: 92140
+    llm_calls: 16
+    calls_with_usage: 16
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - TXN_10k_2022.pdf::page_38::chunk_4
+    - TXN_10k_2022.pdf::page_38::chunk_4
+    - TXN_10k_2022.pdf::page_38::chunk_8
+    - TXN_10k_2022.pdf::page_1::chunk_1
+    llm_calls: 1
+    latency_ms: 42835.98399499897
+    output_format: structured_json
+    parts:
+    - requested_part: What total value of stock options outstanding is disclosed in Texas Instruments' 2021 financial report,
+        calculated using the weighted average exercise price per share?
+      supported_facts:
+      - claim: The number of stock options outstanding as of December 31, 2021 is 25 shares.
+        evidence_ids:
+        - TXN_10k_2022.pdf::page_38::chunk_4
+      - claim: The weighted average exercise price per share for stock options outstanding as of December 31, 2021 is $91.58.
+        evidence_ids:
+        - TXN_10k_2022.pdf::page_38::chunk_4
+      missing_information: null
+      answer: The total value of stock options outstanding as of December 31, 2021, calculated using the weighted average
+        exercise price per share, is 25 shares * $91.58 = $2,289.50 per share.
+    cited_chunk_ids:
+    - TXN_10k_2022.pdf::page_38::chunk_4
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG274
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What is the combined total of the Other segment's 2022 revenue and restructuring charges, and how does this amount
+    relate to the segment's 2024 revenue disclosure considering corporate-level environmental costs included in Other?
+  gold_chunks:
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2024.pdf::page_30::chunk_1
+  - TXN_10k_2024.pdf::page_4::chunk_1
+  top_chunk_ids:
+  - INTC_10k_2024.pdf::page_15::chunk_1
+  - INTC_10k_2024.pdf::page_70::chunk_1
+  - INTC_10k_2024.pdf::page_71::chunk_1
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2022.pdf::page_6::chunk_1
+  answer_points:
+  - The Other segment reported $1,408 million in revenue and $257 million in restructuring charges in 2022 (Chunk 1), totaling
+    $1,665 million. By 2024, the segment's revenue declined to $947 million (Chunk 3). This significant decrease occurred
+    despite the inclusion of corporate-level items like environmental costs in Other (Chunk 2), which suggests that restructuring
+    and non-operational expenses may have contributed to long-term revenue challenges in the segment.
+  final_answer: The combined total of the Other segment's 2022 revenue and restructuring charges is $1,408 million + $257
+    million = $1,665 million. [INTC_10k_2024.pdf::page_71::chunk_1] [TXN_10k_2024.pdf::page_31::chunk_3] The combined total
+    of the Other segment's 2022 revenue and restructuring charges ($1,665 million) is higher than the 2024 revenue disclosed
+    for the Other segment ($1,408 million). Corporate-level environmental costs are included in the Other segment, but the
+    exact amount for 2024 is not provided. [INTC_10k_2024.pdf::page_71::chunk_1]
+  hit: 1
+  recall: 0.3333333333333333
+  reciprocal_rank: 0.25
+  latency_ms: 110923.27495100471
+  answer_latency_ms: 49445.0924039993
+  total_latency_ms: 160368.367355004
+  token_usage:
+    prompt_tokens: 62604
+    completion_tokens: 1135
+    total_tokens: 63739
+    llm_calls: 12
+    calls_with_usage: 12
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - INTC_10k_2024.pdf::page_15::chunk_1
+    - INTC_10k_2024.pdf::page_70::chunk_1
+    - INTC_10k_2024.pdf::page_71::chunk_1
+    - TXN_10k_2024.pdf::page_31::chunk_3
+    - TXN_10k_2022.pdf::page_6::chunk_1
+    - INTC_10k_2024.pdf::page_71::chunk_1
+    llm_calls: 1
+    latency_ms: 49445.0924039993
+    output_format: structured_json
+    parts:
+    - requested_part: What is the combined total of the Other segment's 2022 revenue and restructuring charges?
+      supported_facts:
+      - claim: The Other segment's 2022 revenue was $1,408 million.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_71::chunk_1
+      - claim: The Other segment's 2022 restructuring charges were $257 million.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_31::chunk_3
+      missing_information: null
+      answer: The combined total of the Other segment's 2022 revenue and restructuring charges is $1,408 million + $257 million
+        = $1,665 million.
+    - requested_part: How does this amount relate to the segment's 2024 revenue disclosure considering corporate-level environmental
+        costs included in Other?
+      supported_facts:
+      - claim: The Other segment's 2024 revenue was $1,408 million.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_71::chunk_1
+      - claim: Corporate-level environmental costs are included in the Other segment.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_71::chunk_1
+      missing_information: The exact amount of corporate-level environmental costs included in the Other segment for 2024
+        is not provided.
+      answer: The combined total of the Other segment's 2022 revenue and restructuring charges ($1,665 million) is higher
+        than the 2024 revenue disclosed for the Other segment ($1,408 million). Corporate-level environmental costs are included
+        in the Other segment, but the exact amount for 2024 is not provided.
+    cited_chunk_ids:
+    - INTC_10k_2024.pdf::page_71::chunk_1
+    - TXN_10k_2024.pdf::page_31::chunk_3
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG275
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What is the total restructuring charge impact on TXN's financial reporting when considering the historical charges
+    disclosed in the Other segment's 2022 results and its inclusion in corporate-level financial evaluations alongside the
+    Embedded Processing segment's 2024 revenue contribution?
+  gold_chunks:
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2024.pdf::page_4::chunk_1
+  top_chunk_ids:
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2024.pdf::page_19::chunk_1
+  - TXN_10k_2024.pdf::page_4::chunk_1
+  answer_points:
+  - In 2022, TXN's Other segment reported restructuring charges of $257 million (Chunk 1). The company's segment reporting
+    structure explicitly states that the Other segment includes restructuring charges as part of corporate-level financial
+    evaluations (Chunk 2). This structural relationship means these charges directly affect consolidated financial metrics,
+    even as the Embedded Processing segment contributed 16% of TXN's total revenue in 2024 (Chunk 3). The combined view shows
+    how non-operational costs in one segment create financial headwinds that must be evaluated alongside revenue-generating
+    segment performance across reporting periods.
+  final_answer: In 2022, the Other segment reported a restructuring charge of $257 million. [TXN_10k_2024.pdf::page_31::chunk_3]
+    The evidence does not provide specific details on how the Other segment's restructuring charges are included in corporate-level
+    financial evaluations alongside the Embedded Processing segment's 2024 revenue contribution.
+  hit: 1
+  recall: 1.0
+  reciprocal_rank: 1.0
+  latency_ms: 88145.91783200012
+  answer_latency_ms: 52427.532504996634
+  total_latency_ms: 140573.45033699676
+  token_usage:
+    prompt_tokens: 66711
+    completion_tokens: 1015
+    total_tokens: 67726
+    llm_calls: 15
+    calls_with_usage: 15
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - TXN_10k_2024.pdf::page_31::chunk_3
+    - TXN_10k_2024.pdf::page_19::chunk_1
+    - TXN_10k_2024.pdf::page_4::chunk_1
+    llm_calls: 1
+    latency_ms: 52427.532504996634
+    output_format: structured_json
+    parts:
+    - requested_part: What is the total restructuring charge impact on TXN's financial reporting when considering the historical
+        charges disclosed in the Other segment's 2022 results?
+      supported_facts:
+      - claim: The Other segment had a restructuring charge of $257 million in 2022.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_31::chunk_3
+      missing_information: null
+      answer: In 2022, the Other segment reported a restructuring charge of $257 million.
+    - requested_part: and its inclusion in corporate-level financial evaluations alongside the Embedded Processing segment's
+        2024 revenue contribution?
+      supported_facts: []
+      missing_information: No specific information about the inclusion of the Other segment's restructuring charges in corporate-level
+        financial evaluations alongside the Embedded Processing segment's 2024 revenue contribution is provided in the given
+        evidence.
+      answer: The evidence does not provide specific details on how the Other segment's restructuring charges are included
+        in corporate-level financial evaluations alongside the Embedded Processing segment's 2024 revenue contribution.
+    cited_chunk_ids:
+    - TXN_10k_2024.pdf::page_31::chunk_3
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG276
+  mode: full_answer
+  answer_audit_enabled: false
+  query: How did CDP's environmental disclosure requirements influence Intel's restructuring of Intel Foundry, and what was
+    the combined financial impact on Intel Foundry Services' operating loss in 2023?
+  gold_chunks:
+  - INTC_10k_2024.pdf::page_102::chunk_2
+  - INTC_10k_2024.pdf::page_85::chunk_2
+  - INTC_10k_2023.pdf::page_88::chunk_2
+  top_chunk_ids:
+  - INTC_10k_2023.pdf::page_20::chunk_1
+  - INTC_10k_2023.pdf::page_21::chunk_1
+  - INTC_10k_2024.pdf::page_15::chunk_1
+  - INTC_10k_2024.pdf::page_6::chunk_1
+  - INTC_10k_2023.pdf::page_88::chunk_2
+  - INTC_10k_2024.pdf::page_25::chunk_3
+  answer_points:
+  - CDP's role in managing environmental impacts (Chunk 1) pressured Intel to implement its 2024 Restructuring Plan, which
+    included reducing capital expenditures and adjusting spending for its new operating model. This led to $222 million in
+    impairments for Intel Foundry's assets in 2023 (Chunk 2). These impairments, combined with Intel Foundry Services' operating
+    loss worsening from $281 million in 2022 to $482 million in 2023 (Chunk 3), demonstrate how environmental disclosure pressures
+    cascaded through restructuring decisions to amplify financial losses in the segment.
+  final_answer: In 2023, Intel Foundry Services had an operating loss of $482 million. [INTC_10k_2023.pdf::page_88::chunk_2]
+  hit: 1
+  recall: 0.3333333333333333
+  reciprocal_rank: 0.2
+  latency_ms: 116855.08177800511
+  answer_latency_ms: 41176.07703599788
+  total_latency_ms: 158031.158814003
+  token_usage:
+    prompt_tokens: 135909
+    completion_tokens: 1096
+    total_tokens: 137005
+    llm_calls: 16
+    calls_with_usage: 16
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - INTC_10k_2023.pdf::page_20::chunk_1
+    - INTC_10k_2023.pdf::page_21::chunk_1
+    - INTC_10k_2024.pdf::page_15::chunk_1
+    - INTC_10k_2024.pdf::page_6::chunk_1
+    - INTC_10k_2023.pdf::page_88::chunk_2
+    - INTC_10k_2024.pdf::page_15::chunk_1
+    - INTC_10k_2024.pdf::page_25::chunk_3
+    llm_calls: 1
+    latency_ms: 41176.07703599788
+    output_format: structured_json
+    parts:
+    - requested_part: How did CDP's environmental disclosure requirements influence Intel's restructuring of Intel Foundry?
+      supported_facts: []
+      missing_information: No specific information about CDP's environmental disclosure requirements influencing Intel's restructuring
+        of Intel Foundry is provided.
+      answer: null
+    - requested_part: What was the combined financial impact on Intel Foundry Services' operating loss in 2023?
+      supported_facts:
+      - claim: Intel Foundry Services had an operating loss of $482 million in 2023.
+        evidence_ids:
+        - INTC_10k_2023.pdf::page_88::chunk_2
+      missing_information: null
+      answer: In 2023, Intel Foundry Services had an operating loss of $482 million.
+    cited_chunk_ids:
+    - INTC_10k_2023.pdf::page_88::chunk_2
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG279
+  mode: full_answer
+  answer_audit_enabled: false
+  query: How did the Network and Edge segment's operating loss in 2023 contribute to Intel's total operating income, given
+    its unchanged asset balance and the historical tax settlements with authorities?
+  gold_chunks:
+  - INTC_10k_2022.pdf::page_92::chunk_2
+  - INTC_10k_2023.pdf::page_97::chunk_2
+  - INTC_10k_2023.pdf::page_88::chunk_2
+  top_chunk_ids:
+  - INTC_10k_2023.pdf::page_88::chunk_2
+  - INTC_10k_2023.pdf::page_22::chunk_1
+  - INTC_10k_2024.pdf::page_15::chunk_1
+  - INTC_10k_2024.pdf::page_29::chunk_5
+  answer_points:
+  - The Network and Edge segment's 2023 operating loss of $482 million (Chunk 3) directly reduced Intel's total operating
+    income to $93 million, as segment losses offset profits from other divisions. Despite maintaining a stable asset balance
+    of $2,809 million (Chunk 2), the segment's declining revenue (from $7,665 million in 2021 to $5,774 million in 2023) exacerbated
+    its negative contribution. Historical tax settlements with authorities (-$25 million in 2021 and -$142 million in 2020)
+    (Chunk 1) reflect resolved liabilities but did not mitigate the segment's operational challenges, highlighting how structural
+    business performance, not tax adjustments, drove the final total operating income.
+  final_answer: $482 million [INTC_10k_2023.pdf::page_88::chunk_2] The Network and Edge segment's operating loss of $482 million
+    negatively impacted Intel's total operating income of $93 million in 2023. [INTC_10k_2023.pdf::page_88::chunk_2] The evidence
+    does not provide information about the Network and Edge segment's asset balance or its impact on financial health. The
+    2024 effective tax rate increased due to the establishment of a valuation allowance against US federal deferred tax assets.
+    No specific historical tax settlements with authorities are mentioned in the evidence. [INTC_10k_2024.pdf::page_29::chunk_5]
+  hit: 1
+  recall: 0.3333333333333333
+  reciprocal_rank: 1.0
+  latency_ms: 117752.55510699935
+  answer_latency_ms: 85503.94059300015
+  total_latency_ms: 203256.4956999995
+  token_usage:
+    prompt_tokens: 93012
+    completion_tokens: 1400
+    total_tokens: 94412
+    llm_calls: 16
+    calls_with_usage: 16
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - INTC_10k_2023.pdf::page_88::chunk_2
+    - INTC_10k_2023.pdf::page_22::chunk_1
+    - INTC_10k_2024.pdf::page_15::chunk_1
+    - INTC_10k_2024.pdf::page_29::chunk_5
+    llm_calls: 1
+    latency_ms: 85503.94059300015
+    output_format: structured_json
+    parts:
+    - requested_part: What was the operating loss of the Network and Edge segment in 2023?
+      supported_facts:
+      - claim: The Network and Edge segment had an operating loss of $482 million in 2023.
+        evidence_ids:
+        - INTC_10k_2023.pdf::page_88::chunk_2
+      missing_information: null
+      answer: $482 million [INTC_10k_2023.pdf::page_88::chunk_2]
+    - requested_part: How did the Network and Edge segment's operating loss in 2023 contribute to Intel's total operating
+        income?
+      supported_facts:
+      - claim: Intel's total operating income in 2023 was $93 million.
+        evidence_ids:
+        - INTC_10k_2023.pdf::page_88::chunk_2
+      missing_information: The specific contribution of the Network and Edge segment to Intel's total operating income is
+        not provided in the evidence.
+      answer: The Network and Edge segment's operating loss of $482 million negatively impacted Intel's total operating income
+        of $93 million in 2023. [INTC_10k_2023.pdf::page_88::chunk_2]
+    - requested_part: Given its unchanged asset balance, how did the Network and Edge segment's operating loss in 2023 affect
+        its financial health?
+      supported_facts: []
+      missing_information: The evidence does not provide information about the Network and Edge segment's asset balance or
+        its impact on financial health.
+      answer: The evidence does not provide information about the Network and Edge segment's asset balance or its impact on
+        financial health.
+    - requested_part: What are the historical tax settlements with authorities mentioned in the question?
+      supported_facts:
+      - claim: The 2024 effective tax rate increased due to the establishment of a valuation allowance against US federal
+          deferred tax assets.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_29::chunk_5
+      missing_information: No specific historical tax settlements with authorities are mentioned in the evidence.
+      answer: The 2024 effective tax rate increased due to the establishment of a valuation allowance against US federal deferred
+        tax assets. No specific historical tax settlements with authorities are mentioned in the evidence. [INTC_10k_2024.pdf::page_29::chunk_5]
+    cited_chunk_ids:
+    - INTC_10k_2023.pdf::page_88::chunk_2
+    - INTC_10k_2024.pdf::page_29::chunk_5
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG284
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was AMD's total depreciation expense from 2021 to 2023, and how does this financial metric relate to SEC regulatory
+    requirements that involve attorneys-in-fact for compliance filings?
+  gold_chunks:
+  - AVGO_10k_2023.pdf::page_104::chunk_1
+  - AMD_10k_2023.pdf::page_36::chunk_1
+  - AMD_10k_2023.pdf::page_69::chunk_5
+  top_chunk_ids:
+  - AMD_10k_2023.pdf::page_69::chunk_5
+  answer_points:
+  - AMD's total depreciation expense from 2021 to 2023 was $1,176 million ($296M + $439M + $441M). The SEC's regulatory requirements
+    (Chunk 2) mandate compliance filings managed by attorneys-in-fact (Chunk 1), who ensure disclosure of financial metrics
+    like depreciation (Chunk 3). This demonstrates how SEC oversight cascades through corporate compliance mechanisms to standardized
+    financial reporting.
+  final_answer: AMD's total depreciation expense from 2021 to 2023 was $1,176 million ($441 million + $439 million + $296
+    million). [AMD_10k_2023.pdf::page_69::chunk_5]
+  hit: 1
+  recall: 0.3333333333333333
+  reciprocal_rank: 1.0
+  latency_ms: 104144.44482199178
+  answer_latency_ms: 35593.657235003775
+  total_latency_ms: 139738.10205699556
+  token_usage:
+    prompt_tokens: 45756
+    completion_tokens: 604
+    total_tokens: 46360
+    llm_calls: 8
+    calls_with_usage: 8
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - AMD_10k_2023.pdf::page_69::chunk_5
+    llm_calls: 1
+    latency_ms: 35593.657235003775
+    output_format: structured_json
+    parts:
+    - requested_part: What was AMD's total depreciation expense from 2021 to 2023?
+      supported_facts:
+      - claim: AMD's depreciation expense for 2023 was $441 million.
+        evidence_ids:
+        - AMD_10k_2023.pdf::page_69::chunk_5
+      - claim: AMD's depreciation expense for 2022 was $439 million.
+        evidence_ids:
+        - AMD_10k_2023.pdf::page_69::chunk_5
+      - claim: AMD's depreciation expense for 2021 was $296 million.
+        evidence_ids:
+        - AMD_10k_2023.pdf::page_69::chunk_5
+      missing_information: null
+      answer: AMD's total depreciation expense from 2021 to 2023 was $1,176 million ($441 million + $439 million + $296 million).
+    cited_chunk_ids:
+    - AMD_10k_2023.pdf::page_69::chunk_5
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG288
+  mode: full_answer
+  answer_audit_enabled: false
+  query: How does the confirmation of effective internal control over financial reporting by Ernst & Young LLP in their 2022
+    audit relate to the reliability of Texas Instruments' 2022 cash flows from financing activities disclosure?
+  gold_chunks:
+  - TXN_10k_2022.pdf::page_60::chunk_1
+  - TXN_10k_2024.pdf::page_28::chunk_1
+  top_chunk_ids:
+  - TXN_10k_2022.pdf::page_60::chunk_1
+  - TXN_10k_2022.pdf::page_30::chunk_1
+  answer_points:
+  - Ernst & Young LLP's 2022 audit confirmed Texas Instruments maintained effective internal control over financial reporting
+    as of December 31, 2021 (Chunk 1). This assurance provides reasonable confidence in the reliability of TI's financial
+    statements, including the 2022 cash flows from financing activities disclosure showing a net outflow of $6,718 million
+    (Chunk 2). Effective controls ensure transactions are recorded accurately and in accordance with GAAP, directly supporting
+    the credibility of the reported financing activities figures.
+  final_answer: Ernst & Young LLP confirmed that Texas Instruments Incorporated maintained, in all material respects, effective
+    internal control over financial reporting as of December 31, 2021. [TXN_10k_2022.pdf::page_60::chunk_1] The provided evidence
+    does not contain information about the specific details of Texas Instruments' 2022 cash flows from financing activities
+    disclosure or how the confirmation of internal control over financial reporting relates to the reliability of these disclosures.
+  hit: 1
+  recall: 0.5
+  reciprocal_rank: 1.0
+  latency_ms: 95525.55661400402
+  answer_latency_ms: 41406.18068699405
+  total_latency_ms: 136931.73730099807
+  token_usage:
+    prompt_tokens: 84972
+    completion_tokens: 1169
+    total_tokens: 86141
+    llm_calls: 14
+    calls_with_usage: 14
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - TXN_10k_2022.pdf::page_60::chunk_1
+    - TXN_10k_2022.pdf::page_60::chunk_1
+    - TXN_10k_2022.pdf::page_30::chunk_1
+    - TXN_10k_2022.pdf::page_60::chunk_1
+    llm_calls: 1
+    latency_ms: 41406.18068699405
+    output_format: structured_json
+    parts:
+    - requested_part: What is the confirmation of effective internal control over financial reporting by Ernst & Young LLP
+        in their 2022 audit?
+      supported_facts:
+      - claim: Ernst & Young LLP confirmed that Texas Instruments Incorporated maintained, in all material respects, effective
+          internal control over financial reporting as of December 31, 2021.
+        evidence_ids:
+        - TXN_10k_2022.pdf::page_60::chunk_1
+      missing_information: null
+      answer: Ernst & Young LLP confirmed that Texas Instruments Incorporated maintained, in all material respects, effective
+        internal control over financial reporting as of December 31, 2021.
+    - requested_part: How does the confirmation of effective internal control over financial reporting by Ernst & Young LLP
+        in their 2022 audit relate to the reliability of Texas Instruments' 2022 cash flows from financing activities disclosure?
+      supported_facts: []
+      missing_information: The provided evidence does not contain information about the specific details of Texas Instruments'
+        2022 cash flows from financing activities disclosure or how the confirmation of internal control over financial reporting
+        relates to the reliability of these disclosures.
+      answer: The provided evidence does not contain information about the specific details of Texas Instruments' 2022 cash
+        flows from financing activities disclosure or how the confirmation of internal control over financial reporting relates
+        to the reliability of these disclosures.
+    cited_chunk_ids:
+    - TXN_10k_2022.pdf::page_60::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG290
+  mode: full_answer
+  answer_audit_enabled: false
+  query: As the Chief Financial Officer of Texas Instruments, Rafael R. Lizardi oversees financial reporting. What was the
+    dollar amount and percentage increase in Texas Instruments' total revenue from 2020 to 2021, and how does this growth
+    reflect the financial disclosures under his responsibility?
+  gold_chunks:
+  - TXN_10k_2022.pdf::page_69::chunk_2
+  - TXN_10k_2022.pdf::page_33::chunk_2
+  top_chunk_ids:
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2024.pdf::page_30::chunk_2
+  - TXN_10k_2024.pdf::page_31::chunk_1
+  - INTC_10k_2022.pdf::page_40::chunk_1
+  - TXN_10k_2022.pdf::page_69::chunk_2
+  answer_points:
+  - Texas Instruments' total revenue increased from $14,461 million in 2020 to $18,344 million in 2021, representing a dollar
+    increase of $3,883 million and a percentage increase of approximately 26.85% [(18,344 - 14,461) / 14,461 * 100]. As Chief
+    Financial Officer, Rafael R. Lizardi's oversight of financial reporting ensures accurate disclosure of these metrics,
+    demonstrating his direct role in validating and communicating the company's revenue growth to stakeholders.
+  final_answer: The provided data does not include the total revenue for 2020 and 2021. The provided data does not include
+    the total revenue for 2020 and 2021.
+  hit: 1
+  recall: 0.5
+  reciprocal_rank: 0.2
+  latency_ms: 90310.68748299731
+  answer_latency_ms: 21010.697808997065
+  total_latency_ms: 111321.38529199437
+  token_usage:
+    prompt_tokens: 73491
+    completion_tokens: 919
+    total_tokens: 74410
+    llm_calls: 13
+    calls_with_usage: 13
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - TXN_10k_2024.pdf::page_31::chunk_3
+    - TXN_10k_2024.pdf::page_30::chunk_2
+    - TXN_10k_2024.pdf::page_31::chunk_1
+    - INTC_10k_2022.pdf::page_40::chunk_1
+    - TXN_10k_2022.pdf::page_69::chunk_2
+    llm_calls: 1
+    latency_ms: 21010.697808997065
+    output_format: structured_json
+    parts:
+    - requested_part: What was the dollar amount and percentage increase in Texas Instruments' total revenue from 2020 to
+        2021?
+      supported_facts: []
+      missing_information: No data available for 2020 and 2021 total revenue.
+      answer: The provided data does not include the total revenue for 2020 and 2021.
+    - requested_part: How does this growth reflect the financial disclosures under his responsibility?
+      supported_facts: []
+      missing_information: No data available for 2020 and 2021 total revenue.
+      answer: The provided data does not include the total revenue for 2020 and 2021.
+    cited_chunk_ids: []
+    invalid_citation_ids: []
+    citation_status: missing
+- id: FRKG300
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What is the total revenue generated by the Other segment across the fiscal years 2022, 2023, and 2024, and how does
+    this reflect the segment's role in including integration and restructuring charges over time?
+  gold_chunks:
+  - TXN_10k_2024.pdf::page_31::chunk_3
+  - TXN_10k_2023.pdf::page_4::chunk_1
+  - TXN_10k_2024.pdf::page_4::chunk_1
+  top_chunk_ids:
+  - TXN_10k_2024.pdf::page_30::chunk_2
+  - TXN_10k_2023.pdf::page_4::chunk_1
+  - TXN_10k_2022.pdf::page_6::chunk_1
+  - INTC_10k_2024.pdf::page_28::chunk_3
+  answer_points:
+  - The Other segment generated $1,408 million in 2022 (Chunk 1), $1,110 million in 2023 (Chunk 2), and $947 million in 2024
+    (Chunk 3). Summing these values results in a total revenue of $3,465 million across the three years. This trend shows
+    a consistent decline in the segment's revenue, which includes integration and restructuring charges as noted in Chunk
+    1 (restructuring charges of $257 million) and explicitly mentioned in Chunks 2 and 3. The cumulative revenue highlights
+    the segment's financial role in absorbing non-core operational costs while managing declining revenue streams.
+  final_answer: The total revenue generated by the Other segment across the fiscal years 2022, 2023, and 2024 is $1.25 billion
+    + $1.11 billion + $947 million = $3.307 billion. [TXN_10k_2022.pdf::page_6::chunk_1] [TXN_10k_2023.pdf::page_4::chunk_1]
+    [TXN_10k_2024.pdf::page_30::chunk_2] The inclusion of restructuring and integration charges in the Other segment reflects
+    its role in managing the company's cost structure. In 2024, the segment had a restructuring charge of $(124) million,
+    indicating ongoing efforts to streamline operations. Additionally, Intel reported $294 million in charges for other actions
+    to reduce costs, and the 2022 Restructuring Program, which was completed in Q1 2024, aimed to rebalance the workforce
+    and operations. These charges suggest that the Other segment plays a significant role in supporting broader corporate
+    strategies through restructuring and integration efforts. [TXN_10k_2024.pdf::page_30::chunk_2] [INTC_10k_2024.pdf::page_28::chunk_3]
+  hit: 1
+  recall: 0.3333333333333333
+  reciprocal_rank: 0.5
+  latency_ms: 70942.12600999163
+  answer_latency_ms: 88188.09199700627
+  total_latency_ms: 159130.2180069979
+  token_usage:
+    prompt_tokens: 50394
+    completion_tokens: 1329
+    total_tokens: 51723
+    llm_calls: 9
+    calls_with_usage: 9
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - TXN_10k_2024.pdf::page_30::chunk_2
+    - TXN_10k_2023.pdf::page_4::chunk_1
+    - TXN_10k_2022.pdf::page_6::chunk_1
+    - INTC_10k_2024.pdf::page_28::chunk_3
+    llm_calls: 1
+    latency_ms: 88188.09199700627
+    output_format: structured_json
+    parts:
+    - requested_part: What is the total revenue generated by the Other segment across the fiscal years 2022, 2023, and 2024?
+      supported_facts:
+      - claim: The Other segment generated $1.25 billion of revenue in 2022.
+        evidence_ids:
+        - TXN_10k_2022.pdf::page_6::chunk_1
+      - claim: The Other segment generated $1.11 billion of revenue in 2023.
+        evidence_ids:
+        - TXN_10k_2023.pdf::page_4::chunk_1
+      - claim: The Other segment generated $947 million of revenue in 2024.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_30::chunk_2
+      missing_information: null
+      answer: The total revenue generated by the Other segment across the fiscal years 2022, 2023, and 2024 is $1.25 billion
+        + $1.11 billion + $947 million = $3.307 billion.
+    - requested_part: How does this reflect the segment's role in including integration and restructuring charges over time?
+      supported_facts:
+      - claim: Restructuring charges/other in the Other segment were $(124) million in 2024.
+        evidence_ids:
+        - TXN_10k_2024.pdf::page_30::chunk_2
+      - claim: Charges relating to other actions taken to streamline operations and to reduce costs were $294 million in 2024.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_28::chunk_3
+      - claim: Charges in 2023 and 2022 primarily related to the 2022 Restructuring Program, which was approved to rebalance
+          the workforce and operations in alignment with the strategy.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_28::chunk_3
+      missing_information: null
+      answer: The inclusion of restructuring and integration charges in the Other segment reflects its role in managing the
+        company's cost structure. In 2024, the segment had a restructuring charge of $(124) million, indicating ongoing efforts
+        to streamline operations. Additionally, Intel reported $294 million in charges for other actions to reduce costs,
+        and the 2022 Restructuring Program, which was completed in Q1 2024, aimed to rebalance the workforce and operations.
+        These charges suggest that the Other segment plays a significant role in supporting broader corporate strategies through
+        restructuring and integration efforts.
+    cited_chunk_ids:
+    - TXN_10k_2022.pdf::page_6::chunk_1
+    - TXN_10k_2023.pdf::page_4::chunk_1
+    - TXN_10k_2024.pdf::page_30::chunk_2
+    - INTC_10k_2024.pdf::page_28::chunk_3
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG356
+  mode: full_answer
+  answer_audit_enabled: false
+  query: As a director of Qualcomm (QCOM), what role does Jeffrey W. Henderson play in overseeing the financial performance
+    of the QCT segment, which reported revenues of $33.2 billion in fiscal 2024?
+  gold_chunks:
+  - QCOM_10k_2024.pdf::page_57::chunk_2
+  - QCOM_10k_2024.pdf::page_73::chunk_5
+  - QCOM_10k_2024.pdf::page_59::chunk_1
+  top_chunk_ids:
+  - QCOM_10k_2024.pdf::page_57::chunk_2
+  - QCOM_10k_2024.pdf::page_73::chunk_5
+  answer_points:
+  - Jeffrey W. Henderson, as a director of Qualcomm (QCOM) (Chunk 1), participates in corporate governance that oversees the
+    financial reporting and strategic direction of business segments like QCT (Chunk 2). The QCT segment, which generates
+    revenues primarily from equipment sales recognized at a point in time, reported $33.2 billion in fiscal 2024 revenues
+    (Chunk 3). Henderson's role involves ensuring accountability for revenue recognition practices, such as the accounting
+    for customer incentive arrangements that directly impact the $33.2 billion revenue figure, as highlighted in the critical
+    audit matter related to QCT's financial disclosures (Chunk 3). This demonstrates how director oversight connects to segment-level
+    financial metrics through governance and audit validation.
+  final_answer: The provided evidence does not specify the roles of individual directors in overseeing specific segments like
+    QCT. The QCT segment reported revenues of $33.2 billion in fiscal 2024 [QCOM_10k_2024.pdf::page_73::chunk_5].
+  hit: 1
+  recall: 0.6666666666666666
+  reciprocal_rank: 1.0
+  latency_ms: 45937.40471199999
+  answer_latency_ms: 35920.155997999245
+  total_latency_ms: 81857.56070999923
+  token_usage:
+    prompt_tokens: 31264
+    completion_tokens: 600
+    total_tokens: 31864
+    llm_calls: 7
+    calls_with_usage: 7
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - QCOM_10k_2024.pdf::page_57::chunk_2
+    - QCOM_10k_2024.pdf::page_73::chunk_5
+    llm_calls: 1
+    latency_ms: 35920.155997999245
+    output_format: structured_json
+    parts:
+    - requested_part: Jeffrey W. Henderson's role in overseeing the financial performance of the QCT segment.
+      supported_facts: []
+      missing_information: The provided evidence does not specify the roles of individual directors in overseeing specific
+        segments like QCT.
+      answer: The provided evidence does not specify the roles of individual directors in overseeing specific segments like
+        QCT.
+    - requested_part: The reported revenues of the QCT segment in fiscal 2024.
+      supported_facts:
+      - claim: The QCT segment reported revenues of $33.2 billion in fiscal 2024.
+        evidence_ids:
+        - QCOM_10k_2024.pdf::page_73::chunk_5
+      missing_information: null
+      answer: The QCT segment reported revenues of $33.2 billion in fiscal 2024 [QCOM_10k_2024.pdf::page_73::chunk_5].
+    cited_chunk_ids:
+    - QCOM_10k_2024.pdf::page_73::chunk_5
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG357
+  mode: full_answer
+  answer_audit_enabled: false
+  query: How do Intel's and NVIDIA's disclosures about non-recurring charges and benefits within their 'All Other' segments
+    reflect differences in their corporate expense allocation strategies?
+  gold_chunks:
+  - INTC_10k_2024.pdf::page_71::chunk_1
+  - NVDA_10k_2024.pdf::page_78::chunk_1
+  top_chunk_ids:
+  - INTC_10k_2024.pdf::page_15::chunk_1
+  - INTC_10k_2023.pdf::page_87::chunk_1
+  - NVDA_10k_2024.pdf::page_78::chunk_1
+  answer_points:
+  - Intel's 'All Other' segment aggregates non-recurring charges like restructuring costs, share-based compensation, and acquisition-related
+    adjustments that are not allocated to operating segments (Chunk 1). NVIDIA's 'All Other' category similarly consolidates
+    non-recurring charges, including stock-based compensation, corporate infrastructure costs, and acquisition-related expenses
+    deemed enterprise-level priorities by the CODM (Chunk 2). This reveals that both companies use their 'All Other' segments
+    to isolate non-operational, strategic costs from core business performance metrics, but Intel explicitly ties these exclusions
+    to its CODM evaluation framework, while NVIDIA emphasizes centralized corporate control over these expenses.
+  final_answer: Intel disclosed significant non-cash charges and restructuring charges in their 'All Other' segment, reflecting
+    a complex corporate expense allocation strategy involving manufacturing assets, goodwill, and restructuring activities.
+    [INTC_10k_2024.pdf::page_15::chunk_1] NVIDIA's 'All Other' segment includes various non-recurring charges and benefits
+    such as stock-based compensation, corporate infrastructure costs, and acquisition-related expenses, indicating a different
+    corporate expense allocation strategy compared to their primary segments. [NVDA_10k_2024.pdf::page_78::chunk_1]
+  hit: 1
+  recall: 0.5
+  reciprocal_rank: 0.3333333333333333
+  latency_ms: 73997.07619299443
+  answer_latency_ms: 95091.61806700286
+  total_latency_ms: 169088.69425999728
+  token_usage:
+    prompt_tokens: 74118
+    completion_tokens: 1127
+    total_tokens: 75245
+    llm_calls: 10
+    calls_with_usage: 10
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - INTC_10k_2024.pdf::page_15::chunk_1
+    - INTC_10k_2023.pdf::page_87::chunk_1
+    - NVDA_10k_2024.pdf::page_78::chunk_1
+    llm_calls: 1
+    latency_ms: 95091.61806700286
+    output_format: structured_json
+    parts:
+    - requested_part: Intel's disclosures about non-recurring charges and benefits within their 'All Other' segments reflect
+        differences in their corporate expense allocation strategies.
+      supported_facts:
+      - claim: Intel reported non-cash charges related to a valuation allowance recognized against its US deferred tax assets.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_15::chunk_1
+      - claim: Non-cash charges related to the impairment of goodwill and certain other assets were recorded.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_15::chunk_1
+      - claim: Non-cash charges related to the acceleration of depreciation for certain manufacturing assets were recorded.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_15::chunk_1
+      - claim: Restructuring charges of $2.8 billion were recognized in 2024.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_15::chunk_1
+      missing_information: 'null'
+      answer: Intel disclosed significant non-cash charges and restructuring charges in their 'All Other' segment, reflecting
+        a complex corporate expense allocation strategy involving manufacturing assets, goodwill, and restructuring activities.
+    - requested_part: NVIDIA's disclosures about non-recurring charges and benefits within their 'All Other' segments reflect
+        differences in their corporate expense allocation strategies.
+      supported_facts:
+      - claim: '''All Other'' category includes expenses that are not allocated to either Compute &amp; Networking or Graphics
+          for purposes of making operating decisions or assessing financial performance.'
+        evidence_ids:
+        - NVDA_10k_2024.pdf::page_78::chunk_1
+      - claim: The 'All Other' category includes stock-based compensation expense, corporate infrastructure and support costs,
+          acquisition-related and other costs, and other non-recurring charges and benefits.
+        evidence_ids:
+        - NVDA_10k_2024.pdf::page_78::chunk_1
+      missing_information: 'null'
+      answer: NVIDIA's 'All Other' segment includes various non-recurring charges and benefits such as stock-based compensation,
+        corporate infrastructure costs, and acquisition-related expenses, indicating a different corporate expense allocation
+        strategy compared to their primary segments.
+    cited_chunk_ids:
+    - INTC_10k_2024.pdf::page_15::chunk_1
+    - NVDA_10k_2024.pdf::page_78::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG358
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was the change in operating income (loss) for Intel's 'All Other' segment from 2023 to 2024, and how might this
+    relate to the non-recurring charges typically disclosed in similar segments like NVIDIA's?
+  gold_chunks:
+  - INTC_10k_2024.pdf::page_72::chunk_2
+  - NVDA_10k_2024.pdf::page_78::chunk_1
+  top_chunk_ids:
+  - INTC_10k_2023.pdf::page_88::chunk_2
+  - INTC_10k_2024.pdf::page_72::chunk_2
+  - NVDA_10k_2024.pdf::page_78::chunk_1
+  answer_points:
+  - Intel's 'All Other' segment operating income decreased from $1,079 million in 2023 to a loss of $84 million in 2024, representing
+    a $1,163 million decline (Chunk 1). This sharp drop aligns with how segments like NVIDIA's 'All Other' category explicitly
+    include non-recurring charges and benefits in their disclosures (Chunk 2), suggesting Intel's 2024 loss may have been
+    significantly impacted by similar one-time expenses or adjustments that are commonly consolidated into such residual segments.
+  final_answer: The operating income (loss) for Intel's 'All Other' segment did not change from 2023 to 2024, remaining at
+    -5,597 million dollars. [INTC_10k_2023.pdf::page_88::chunk_2] [INTC_10k_2024.pdf::page_72::chunk_2] Intel's 'All Other'
+    segment's operating income (loss) remained unchanged from 2023 to 2024. This can be compared to NVIDIA's 'All Other' category,
+    which includes various expenses such as stock-based compensation, corporate infrastructure, and other non-recurring charges.
+    However, specific non-recurring charges for NVIDIA's 'All Other' segment in 2023 and 2024 are not provided. [NVDA_10k_2024.pdf::page_78::chunk_1]
+  hit: 1
+  recall: 1.0
+  reciprocal_rank: 0.5
+  latency_ms: 137832.86738000606
+  answer_latency_ms: 82427.27456599823
+  total_latency_ms: 220260.1419460043
+  token_usage:
+    prompt_tokens: 159588
+    completion_tokens: 1881
+    total_tokens: 161469
+    llm_calls: 23
+    calls_with_usage: 23
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - INTC_10k_2023.pdf::page_88::chunk_2
+    - INTC_10k_2024.pdf::page_72::chunk_2
+    - INTC_10k_2024.pdf::page_72::chunk_2
+    - INTC_10k_2023.pdf::page_88::chunk_2
+    - NVDA_10k_2024.pdf::page_78::chunk_1
+    - NVDA_10k_2024.pdf::page_78::chunk_1
+    llm_calls: 1
+    latency_ms: 82427.27456599823
+    output_format: structured_json
+    parts:
+    - requested_part: The change in operating income (loss) for Intel's 'All Other' segment from 2023 to 2024.
+      supported_facts:
+      - claim: Operating income (loss) for Intel's 'All Other' segment in 2023 was -5,597 million dollars.
+        evidence_ids:
+        - INTC_10k_2023.pdf::page_88::chunk_2
+      - claim: Operating income (loss) for Intel's 'All Other' segment in 2024 was -5,597 million dollars.
+        evidence_ids:
+        - INTC_10k_2024.pdf::page_72::chunk_2
+      missing_information: No change occurred as the operating income (loss) remained the same in both years.
+      answer: The operating income (loss) for Intel's 'All Other' segment did not change from 2023 to 2024, remaining at -5,597
+        million dollars.
+    - requested_part: How this relates to the non-recurring charges typically disclosed in similar segments like NVIDIA's.
+      supported_facts:
+      - claim: NVIDIA's 'All Other' category includes expenses such as stock-based compensation expense, corporate infrastructure
+          and support costs, acquisition-related and other costs, and other non-recurring charges and benefits.
+        evidence_ids:
+        - NVDA_10k_2024.pdf::page_78::chunk_1
+      missing_information: The specific non-recurring charges for NVIDIA's 'All Other' segment in 2023 and 2024 are not provided.
+      answer: Intel's 'All Other' segment's operating income (loss) remained unchanged from 2023 to 2024. This can be compared
+        to NVIDIA's 'All Other' category, which includes various expenses such as stock-based compensation, corporate infrastructure,
+        and other non-recurring charges. However, specific non-recurring charges for NVIDIA's 'All Other' segment in 2023
+        and 2024 are not provided.
+    cited_chunk_ids:
+    - INTC_10k_2023.pdf::page_88::chunk_2
+    - INTC_10k_2024.pdf::page_72::chunk_2
+    - NVDA_10k_2024.pdf::page_78::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG359
+  mode: full_answer
+  answer_audit_enabled: false
+  query: As a director of Qualcomm, how does Sylvia Acevedo's role in signing the 2024 10-K filing relate to the QCT segment's
+    $33.2 billion revenue disclosure and its audit considerations?
+  gold_chunks:
+  - QCOM_10k_2024.pdf::page_57::chunk_2
+  - QCOM_10k_2024.pdf::page_59::chunk_1
+  top_chunk_ids:
+  - QCOM_10k_2024.pdf::page_57::chunk_2
+  - QCOM_10k_2024.pdf::page_59::chunk_1
+  answer_points:
+  - Sylvia Acevedo, as a director of Qualcomm (Chunk 1), signed the 2024 10-K filing which includes the QCT segment's revenue
+    of $33.2 billion (Chunk 2). This revenue figure is subject to complex customer incentive arrangements requiring detailed
+    audit procedures (Chunk 3), meaning Acevedo's directorial responsibility extends to overseeing the accuracy of disclosures
+    about both the financial results and the audit processes for these arrangements.
+  final_answer: Sylvia Acevedo signed the 2024 10-K filing as a director. [QCOM_10k_2024.pdf::page_57::chunk_2] The QCT segment
+    recorded revenues of $33.2 billion in fiscal 2024. [QCOM_10k_2024.pdf::page_59::chunk_1] Revenue recognition for QCT customer
+    incentive arrangements involves complexity due to certain contractual terms. The audit process includes testing the effectiveness
+    of controls related to management's review of and accounting for QCT customer incentive arrangements. [QCOM_10k_2024.pdf::page_59::chunk_1]
+  hit: 1
+  recall: 1.0
+  reciprocal_rank: 1.0
+  latency_ms: 116512.93136599998
+  answer_latency_ms: 57137.135854994995
+  total_latency_ms: 173650.06722099497
+  token_usage:
+    prompt_tokens: 69542
+    completion_tokens: 1172
+    total_tokens: 70714
+    llm_calls: 12
+    calls_with_usage: 12
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - QCOM_10k_2024.pdf::page_57::chunk_2
+    - QCOM_10k_2024.pdf::page_59::chunk_1
+    llm_calls: 1
+    latency_ms: 57137.135854994995
+    output_format: structured_json
+    parts:
+    - requested_part: Sylvia Acevedo's role in signing the 2024 10-K filing
+      supported_facts:
+      - claim: Sylvia Acevedo signed the 2024 10-K filing as a director.
+        evidence_ids:
+        - QCOM_10k_2024.pdf::page_57::chunk_2
+      missing_information: null
+      answer: Sylvia Acevedo signed the 2024 10-K filing as a director.
+    - requested_part: Relation to the QCT segment's $33.2 billion revenue disclosure
+      supported_facts:
+      - claim: The QCT segment recorded revenues of $33.2 billion in fiscal 2024.
+        evidence_ids:
+        - QCOM_10k_2024.pdf::page_59::chunk_1
+      missing_information: null
+      answer: The QCT segment recorded revenues of $33.2 billion in fiscal 2024.
+    - requested_part: Audit considerations related to the QCT segment's revenue recognition
+      supported_facts:
+      - claim: Revenue recognition for QCT customer incentive arrangements involves complexity due to certain contractual
+          terms.
+        evidence_ids:
+        - QCOM_10k_2024.pdf::page_59::chunk_1
+      - claim: The audit process includes testing the effectiveness of controls related to management's review of and accounting
+          for QCT customer incentive arrangements.
+        evidence_ids:
+        - QCOM_10k_2024.pdf::page_59::chunk_1
+      missing_information: null
+      answer: Revenue recognition for QCT customer incentive arrangements involves complexity due to certain contractual terms.
+        The audit process includes testing the effectiveness of controls related to management's review of and accounting
+        for QCT customer incentive arrangements.
+    cited_chunk_ids:
+    - QCOM_10k_2024.pdf::page_57::chunk_2
+    - QCOM_10k_2024.pdf::page_59::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+- id: FRKG360
+  mode: full_answer
+  answer_audit_enabled: false
+  query: What was the increase in Qualcomm's QCT segment revenue in fiscal 2024, and how does this growth relate to customer
+    incentive arrangements that affect other current liabilities, as disclosed in the financial statements signed by the CEO?
+  gold_chunks:
+  - QCOM_10k_2024.pdf::page_57::chunk_2
+  - QCOM_10k_2023.pdf::page_41::chunk_3
+  - QCOM_10k_2023.pdf::page_59::chunk_1
+  top_chunk_ids:
+  - QCOM_10k_2024.pdf::page_40::chunk_1
+  - QCOM_10k_2023.pdf::page_44::chunk_1
+  - QCOM_10k_2022.pdf::page_43::chunk_1
+  - QCOM_10k_2024.pdf::page_59::chunk_1
+  answer_points:
+  - Qualcomm's QCT segment revenue increased by $2.7 billion in fiscal 2024 (Chunk 2), contributing to total QCT revenue of
+    $33.2 billion for the year (Chunk 3). Customer incentive arrangements, including rebates and cost reimbursements, reduced
+    this revenue and were recorded as reductions to accounts receivable or as other current liabilities (Chunk 3). CEO Cristiano
+    R. Amon, as principal executive officer (Chunk 1), attests to the accuracy of these disclosures, establishing accountability
+    for the financial reporting that links segment revenue growth to liability impacts through incentive programs.
+  final_answer: The revenue figure for the QCT segment in fiscal 2024 is $33.2 billion, but the revenue for fiscal 2023 is
+    not provided in the given evidence. QCT records reductions to revenues for customer incentive arrangements, which include
+    volume-related and other pricing rebates and cost reimbursements for marketing and other activities involving certain
+    products and technologies. These reductions are recorded as a reduction to accounts receivable, net or as other current
+    liabilities based on whether the company has the intent and contractual right of offset. [QCOM_10k_2024.pdf::page_59::chunk_1]
+  hit: 0
+  recall: 0.0
+  reciprocal_rank: 0.0
+  latency_ms: 130260.2863909924
+  answer_latency_ms: 26954.36212500499
+  total_latency_ms: 157214.6485159974
+  token_usage:
+    prompt_tokens: 135061
+    completion_tokens: 1592
+    total_tokens: 136653
+    llm_calls: 21
+    calls_with_usage: 21
+    status: complete
+  synthesis_trace:
+    status: ok
+    selected_chunk_ids:
+    - QCOM_10k_2024.pdf::page_40::chunk_1
+    - QCOM_10k_2023.pdf::page_44::chunk_1
+    - QCOM_10k_2022.pdf::page_43::chunk_1
+    - QCOM_10k_2024.pdf::page_40::chunk_1
+    - QCOM_10k_2024.pdf::page_59::chunk_1
+    - QCOM_10k_2024.pdf::page_59::chunk_1
+    llm_calls: 1
+    latency_ms: 26954.36212500499
+    output_format: structured_json
+    parts:
+    - requested_part: What was the increase in Qualcomm's QCT segment revenue in fiscal 2024?
+      supported_facts: []
+      missing_information: Revenue figures for QCT segment in fiscal 2024 and 2023 are required to calculate the increase.
+      answer: The revenue figure for the QCT segment in fiscal 2024 is $33.2 billion, but the revenue for fiscal 2023 is not
+        provided in the given evidence.
+    - requested_part: How does this growth relate to customer incentive arrangements that affect other current liabilities,
+        as disclosed in the financial statements signed by the CEO?
+      supported_facts:
+      - claim: QCT records reductions to revenues for customer incentive arrangements, including volume-related and other
+          pricing rebates and cost reimbursements for marketing and other activities involving certain products and technologies.
+        evidence_ids:
+        - QCOM_10k_2024.pdf::page_59::chunk_1
+      missing_information: null
+      answer: QCT records reductions to revenues for customer incentive arrangements, which include volume-related and other
+        pricing rebates and cost reimbursements for marketing and other activities involving certain products and technologies.
+        These reductions are recorded as a reduction to accounts receivable, net or as other current liabilities based on
+        whether the company has the intent and contractual right of offset.
+    cited_chunk_ids:
+    - QCOM_10k_2024.pdf::page_59::chunk_1
+    invalid_citation_ids: []
+    citation_status: valid
+measurement:
+  tool: agent_graph
+  mode: full_answer
+  workers: 4
+  selection:
+    start: 1
+    end: 50
+    query_count: 50
+  answer_audit_enabled: false
+  latency_scope: Per-query wall time after warm-up; excludes executor queue, metric calculation and trace writes; includes
+    internal lock waits. Agent retrieval includes planning, assessment and retries.
+  token_usage_scope: Provider-reported LLM tokens across all calls and retries; excludes local embeddings and reranking. Partial
+    totals cover only calls that returned usage. Warm-up is reported separately.
+  warmup:
+    tool: graph
+    latency_ms: 22302.608590995078
+    token_usage:
+      prompt_tokens: 766
+      completion_tokens: 15
+      total_tokens: 781
+      llm_calls: 1
+      calls_with_usage: 1
+      status: complete

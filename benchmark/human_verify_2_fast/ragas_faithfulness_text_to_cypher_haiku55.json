@@ -1,0 +1,580 @@
+{
+  "input": "/home/kantinan/programming/project/benchmark/human_verify_2_fast/controlled_text_to_cypher_sox_smoke50_ttc_full_answer_full_answer.yaml",
+  "metric": "faithfulness",
+  "judge_model": "anthropic/claude-haiku-5.5",
+  "temperature": 0.0,
+  "max_tokens": 4096,
+  "workers": 2,
+  "response_field": "final_answer",
+  "context_field": "synthesis_trace.selected_chunk_ids",
+  "total_cases": 50,
+  "scored_cases": 41,
+  "failed_cases": 9,
+  "mean_score": 0.7609484011923037,
+  "min_score": 0.0,
+  "max_score": 1.0,
+  "results": [
+    {
+      "case_id": "FRKG003",
+      "score": 0.9,
+      "context_count": 3,
+      "context_ids": [
+        "INTC_10k_2024.pdf::page_71::chunk_1",
+        "NVDA_10k_2024.pdf::page_78::chunk_1",
+        "NVDA_10k_2024.pdf::page_41::chunk_5"
+      ]
+    },
+    {
+      "case_id": "FRKG009",
+      "score": 0.8333333333333334,
+      "context_count": 7,
+      "context_ids": [
+        "TXN_10k_2022.pdf::page_33::chunk_2",
+        "TXN_10k_2022.pdf::page_6::chunk_1",
+        "TXN_10k_2022.pdf::page_22::chunk_7",
+        "TXN_10k_2022.pdf::page_54::chunk_1",
+        "TXN_10k_2022.pdf::page_54::chunk_5",
+        "TXN_10k_2022.pdf::page_66::chunk_1",
+        "TXN_10k_2022.pdf::page_9::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG010",
+      "score": 1.0,
+      "context_count": 10,
+      "context_ids": [
+        "TXN_10k_2022.pdf::page_6::chunk_1",
+        "TXN_10k_2023.pdf::page_30::chunk_1",
+        "TXN_10k_2023.pdf::page_4::chunk_1",
+        "TXN_10k_2024.pdf::page_30::chunk_1",
+        "TXN_10k_2024.pdf::page_31::chunk_1",
+        "TXN_10k_2024.pdf::page_31::chunk_3",
+        "TXN_10k_2024.pdf::page_4::chunk_1",
+        "TXN_10k_2024.pdf::page_19::chunk_1",
+        "AMD_10k_2024.pdf::page_69::chunk_1",
+        "INTC_10k_2023.pdf::page_87::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG011",
+      "score": 1.0,
+      "context_count": 10,
+      "context_ids": [
+        "AMD_10k_2023.pdf::page_36::chunk_1",
+        "AMD_10k_2023.pdf::page_88::chunk_2",
+        "AMD_10k_2022.pdf::page_22::chunk_1",
+        "AMD_10k_2022.pdf::page_32::chunk_1",
+        "AMD_10k_2022.pdf::page_6::chunk_1",
+        "AMD_10k_2023.pdf::page_34::chunk_1",
+        "AMD_10k_2023.pdf::page_42::chunk_1",
+        "AMD_10k_2023.pdf::page_4::chunk_1",
+        "AMD_10k_2024.pdf::page_15::chunk_1",
+        "AMD_10k_2024.pdf::page_33::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG070",
+      "score": 0.4444444444444444,
+      "context_count": 4,
+      "context_ids": [
+        "INTC_10k_2022.pdf::page_30::chunk_1",
+        "INTC_10k_2023.pdf::page_88::chunk_2",
+        "INTC_10k_2022.pdf::page_40::chunk_1",
+        "INTC_10k_2022.pdf::page_6::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG071",
+      "score": 0.0,
+      "context_count": 1,
+      "context_ids": [
+        "AVGO_10k_2024.pdf::page_20::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG073",
+      "score": null,
+      "context_count": 0,
+      "context_ids": [],
+      "error": "ValueError: FRKG073 has no synthesis context IDs"
+    },
+    {
+      "case_id": "FRKG082",
+      "score": 0.7692307692307693,
+      "context_count": 4,
+      "context_ids": [
+        "INTC_10k_2023.pdf::page_87::chunk_1",
+        "INTC_10k_2023.pdf::page_88::chunk_2",
+        "AMD_10k_2023.pdf::page_52::chunk_1",
+        "AMD_10k_2023.pdf::page_75::chunk_5"
+      ]
+    },
+    {
+      "case_id": "FRKG084",
+      "score": null,
+      "context_count": 0,
+      "context_ids": [],
+      "error": "ValueError: FRKG084 has no synthesis context IDs"
+    },
+    {
+      "case_id": "FRKG093",
+      "score": 0.8888888888888888,
+      "context_count": 2,
+      "context_ids": [
+        "INTC_10k_2023.pdf::page_89::chunk_2",
+        "INTC_10k_2024.pdf::page_75::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG096",
+      "score": 0.0,
+      "context_count": 1,
+      "context_ids": [
+        "TXN_10k_2024.pdf::page_32::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG098",
+      "score": null,
+      "context_count": 0,
+      "context_ids": [],
+      "error": "ValueError: FRKG098 has no synthesis context IDs"
+    },
+    {
+      "case_id": "FRKG100",
+      "score": 1.0,
+      "context_count": 5,
+      "context_ids": [
+        "TXN_10k_2022.pdf::page_33::chunk_2",
+        "TXN_10k_2024.pdf::page_31::chunk_3",
+        "TXN_10k_2024.pdf::page_19::chunk_1",
+        "TXN_10k_2022.pdf::page_42::chunk_3",
+        "TXN_10k_2024.pdf::page_32::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG102",
+      "score": null,
+      "context_count": 0,
+      "context_ids": [],
+      "error": "ValueError: FRKG102 has no synthesis context IDs"
+    },
+    {
+      "case_id": "FRKG103",
+      "score": 0.8,
+      "context_count": 10,
+      "context_ids": [
+        "TXN_10k_2024.pdf::page_32::chunk_1",
+        "NVDA_10k_2024.pdf::page_39::chunk_1",
+        "QCOM_10k_2024.pdf::page_40::chunk_1",
+        "AVGO_10k_2024.pdf::page_47::chunk_3",
+        "QCOM_10k_2024.pdf::page_48::chunk_1",
+        "QCOM_10k_2024.pdf::page_59::chunk_1",
+        "AVGO_10k_2024.pdf::page_61::chunk_1",
+        "QCOM_10k_2024.pdf::page_69::chunk_1",
+        "QCOM_10k_2024.pdf::page_73::chunk_5",
+        "QCOM_10k_2024.pdf::page_73::chunk_9"
+      ]
+    },
+    {
+      "case_id": "FRKG104",
+      "score": 1.0,
+      "context_count": 6,
+      "context_ids": [
+        "INTC_10k_2023.pdf::page_87::chunk_1",
+        "INTC_10k_2023.pdf::page_88::chunk_2",
+        "INTC_10k_2024.pdf::page_71::chunk_1",
+        "INTC_10k_2024.pdf::page_72::chunk_2",
+        "INTC_10k_2023.pdf::page_22::chunk_1",
+        "INTC_10k_2024.pdf::page_34::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG105",
+      "score": 0.8,
+      "context_count": 3,
+      "context_ids": [
+        "TXN_10k_2023.pdf::page_30::chunk_1",
+        "TXN_10k_2024.pdf::page_30::chunk_1",
+        "TXN_10k_2024.pdf::page_52::chunk_8"
+      ]
+    },
+    {
+      "case_id": "FRKG107",
+      "score": 1.0,
+      "context_count": 10,
+      "context_ids": [
+        "INTC_10k_2022.pdf::page_30::chunk_1",
+        "INTC_10k_2023.pdf::page_87::chunk_1",
+        "INTC_10k_2023.pdf::page_88::chunk_2",
+        "INTC_10k_2023.pdf::page_89::chunk_2",
+        "INTC_10k_2023.pdf::page_97::chunk_2",
+        "INTC_10k_2023.pdf::page_97::chunk_4",
+        "INTC_10k_2024.pdf::page_102::chunk_2",
+        "INTC_10k_2024.pdf::page_24::chunk_1",
+        "INTC_10k_2024.pdf::page_71::chunk_1",
+        "INTC_10k_2024.pdf::page_74::chunk_6"
+      ]
+    },
+    {
+      "case_id": "FRKG108",
+      "score": 0.3333333333333333,
+      "context_count": 9,
+      "context_ids": [
+        "TXN_10k_2022.pdf::page_33::chunk_2",
+        "TXN_10k_2024.pdf::page_30::chunk_1",
+        "TXN_10k_2024.pdf::page_30::chunk_2",
+        "TXN_10k_2024.pdf::page_31::chunk_1",
+        "TXN_10k_2024.pdf::page_31::chunk_3",
+        "TXN_10k_2022.pdf::page_22::chunk_7",
+        "TXN_10k_2023.pdf::page_25::chunk_2",
+        "TXN_10k_2024.pdf::page_19::chunk_1",
+        "TXN_10k_2024.pdf::page_44::chunk_3"
+      ]
+    },
+    {
+      "case_id": "FRKG111",
+      "score": 1.0,
+      "context_count": 4,
+      "context_ids": [
+        "TXN_10k_2022.pdf::page_30::chunk_1",
+        "TXN_10k_2024.pdf::page_31::chunk_3",
+        "TXN_10k_2023.pdf::page_25::chunk_2",
+        "TXN_10k_2024.pdf::page_19::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG138",
+      "score": 0.6666666666666666,
+      "context_count": 2,
+      "context_ids": [
+        "TXN_10k_2022.pdf::page_69::chunk_2",
+        "TXN_10k_2022.pdf::page_42::chunk_3"
+      ]
+    },
+    {
+      "case_id": "FRKG141",
+      "score": 1.0,
+      "context_count": 6,
+      "context_ids": [
+        "INTC_10k_2024.pdf::page_70::chunk_1",
+        "INTC_10k_2024.pdf::page_79::chunk_6",
+        "INTC_10k_2024.pdf::page_28::chunk_3",
+        "INTC_10k_2024.pdf::page_80::chunk_1",
+        "QCOM_10k_2024.pdf::page_69::chunk_1",
+        "INTC_10k_2024.pdf::page_111::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG142",
+      "score": 0.6,
+      "context_count": 2,
+      "context_ids": [
+        "TXN_10k_2024.pdf::page_50::chunk_3",
+        "TXN_10k_2023.pdf::page_51::chunk_3"
+      ]
+    },
+    {
+      "case_id": "FRKG161",
+      "score": 1.0,
+      "context_count": 4,
+      "context_ids": [
+        "INTC_10k_2022.pdf::page_30::chunk_1",
+        "INTC_10k_2023.pdf::page_89::chunk_2",
+        "INTC_10k_2024.pdf::page_74::chunk_6",
+        "INTC_10k_2024.pdf::page_75::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG163",
+      "score": 1.0,
+      "context_count": 1,
+      "context_ids": [
+        "INTC_10k_2024.pdf::page_72::chunk_2"
+      ]
+    },
+    {
+      "case_id": "FRKG173",
+      "score": 0.5,
+      "context_count": 1,
+      "context_ids": [
+        "INTC_10k_2022.pdf::page_86::chunk_2"
+      ]
+    },
+    {
+      "case_id": "FRKG177",
+      "score": 1.0,
+      "context_count": 8,
+      "context_ids": [
+        "INTC_10k_2024.pdf::page_102::chunk_2",
+        "AMD_10k_2024.pdf::page_69::chunk_1",
+        "INTC_10k_2023.pdf::page_87::chunk_1",
+        "INTC_10k_2024.pdf::page_24::chunk_1",
+        "INTC_10k_2024.pdf::page_70::chunk_1",
+        "INTC_10k_2024.pdf::page_71::chunk_1",
+        "INTC_10k_2024.pdf::page_72::chunk_2",
+        "NVDA_10k_2024.pdf::page_78::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG179",
+      "score": 0.5,
+      "context_count": 2,
+      "context_ids": [
+        "TXN_10k_2022.pdf::page_30::chunk_1",
+        "TXN_10k_2022.pdf::page_31::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG182",
+      "score": 0.3333333333333333,
+      "context_count": 4,
+      "context_ids": [
+        "TXN_10k_2022.pdf::page_1::chunk_1",
+        "TXN_10k_2022.pdf::page_60::chunk_1",
+        "TXN_10k_2023.pdf::page_52::chunk_6",
+        "TXN_10k_2024.pdf::page_1::chunk_3"
+      ]
+    },
+    {
+      "case_id": "FRKG185",
+      "score": null,
+      "context_count": 0,
+      "context_ids": [],
+      "error": "ValueError: FRKG185 has no synthesis context IDs"
+    },
+    {
+      "case_id": "FRKG187",
+      "score": 1.0,
+      "context_count": 10,
+      "context_ids": [
+        "TXN_10k_2023.pdf::page_30::chunk_1",
+        "TXN_10k_2023.pdf::page_4::chunk_1",
+        "TXN_10k_2024.pdf::page_30::chunk_2",
+        "TXN_10k_2024.pdf::page_31::chunk_3",
+        "TXN_10k_2024.pdf::page_32::chunk_1",
+        "TXN_10k_2023.pdf::page_25::chunk_2",
+        "TXN_10k_2023.pdf::page_34::chunk_1",
+        "TXN_10k_2024.pdf::page_19::chunk_1",
+        "TXN_10k_2024.pdf::page_30::chunk_1",
+        "TXN_10k_2024.pdf::page_4::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG192",
+      "score": null,
+      "context_count": 0,
+      "context_ids": [],
+      "error": "ValueError: FRKG192 has no synthesis context IDs"
+    },
+    {
+      "case_id": "FRKG239",
+      "score": null,
+      "context_count": 0,
+      "context_ids": [],
+      "error": "ValueError: FRKG239 has no synthesis context IDs"
+    },
+    {
+      "case_id": "FRKG240",
+      "score": 1.0,
+      "context_count": 2,
+      "context_ids": [
+        "INTC_10k_2023.pdf::page_88::chunk_2",
+        "INTC_10k_2023.pdf::page_22::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG241",
+      "score": null,
+      "context_count": 0,
+      "context_ids": [],
+      "error": "ValueError: FRKG241 has no synthesis context IDs"
+    },
+    {
+      "case_id": "FRKG249",
+      "score": 1.0,
+      "context_count": 10,
+      "context_ids": [
+        "INTC_10k_2023.pdf::page_87::chunk_1",
+        "INTC_10k_2023.pdf::page_88::chunk_2",
+        "INTC_10k_2024.pdf::page_71::chunk_1",
+        "INTC_10k_2024.pdf::page_15::chunk_1",
+        "INTC_10k_2024.pdf::page_27::chunk_1",
+        "INTC_10k_2023.pdf::page_43::chunk_2",
+        "INTC_10k_2024.pdf::page_102::chunk_2",
+        "INTC_10k_2024.pdf::page_79::chunk_6",
+        "INTC_10k_2023.pdf::page_92::chunk_4",
+        "INTC_10k_2023.pdf::page_92::chunk_6"
+      ]
+    },
+    {
+      "case_id": "FRKG273",
+      "score": null,
+      "context_count": 0,
+      "context_ids": [],
+      "error": "ValueError: FRKG273 has no synthesis context IDs"
+    },
+    {
+      "case_id": "FRKG274",
+      "score": 0.8571428571428571,
+      "context_count": 10,
+      "context_ids": [
+        "INTC_10k_2023.pdf::page_53::chunk_1",
+        "INTC_10k_2024.pdf::page_71::chunk_1",
+        "TXN_10k_2024.pdf::page_31::chunk_3",
+        "INTC_10k_2022.pdf::page_63::chunk_1",
+        "INTC_10k_2023.pdf::page_60::chunk_1",
+        "INTC_10k_2024.pdf::page_15::chunk_1",
+        "NVDA_10k_2023.pdf::page_55::chunk_1",
+        "TXN_10k_2023.pdf::page_25::chunk_2",
+        "TXN_10k_2024.pdf::page_19::chunk_1",
+        "AVGO_10k_2024.pdf::page_54::chunk_2"
+      ]
+    },
+    {
+      "case_id": "FRKG275",
+      "score": 0.75,
+      "context_count": 8,
+      "context_ids": [
+        "TXN_10k_2022.pdf::page_1::chunk_1",
+        "TXN_10k_2022.pdf::page_60::chunk_1",
+        "TXN_10k_2024.pdf::page_30::chunk_2",
+        "TXN_10k_2024.pdf::page_31::chunk_3",
+        "TXN_10k_2022.pdf::page_57::chunk_1",
+        "TXN_10k_2023.pdf::page_25::chunk_2",
+        "TXN_10k_2024.pdf::page_19::chunk_1",
+        "TXN_10k_2024.pdf::page_1::chunk_3"
+      ]
+    },
+    {
+      "case_id": "FRKG276",
+      "score": 0.7142857142857143,
+      "context_count": 7,
+      "context_ids": [
+        "INTC_10k_2023.pdf::page_87::chunk_1",
+        "INTC_10k_2023.pdf::page_88::chunk_2",
+        "INTC_10k_2024.pdf::page_102::chunk_2",
+        "INTC_10k_2024.pdf::page_71::chunk_1",
+        "INTC_10k_2024.pdf::page_72::chunk_2",
+        "INTC_10k_2023.pdf::page_21::chunk_1",
+        "INTC_10k_2024.pdf::page_15::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG279",
+      "score": 0.7272727272727273,
+      "context_count": 6,
+      "context_ids": [
+        "INTC_10k_2023.pdf::page_87::chunk_1",
+        "INTC_10k_2023.pdf::page_88::chunk_2",
+        "INTC_10k_2023.pdf::page_22::chunk_1",
+        "NVDA_10k_2023.pdf::page_56::chunk_1",
+        "INTC_10k_2023.pdf::page_26::chunk_1",
+        "INTC_10k_2023.pdf::page_32::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG284",
+      "score": 1.0,
+      "context_count": 3,
+      "context_ids": [
+        "AMD_10k_2023.pdf::page_69::chunk_5",
+        "AMD_10k_2023.pdf::page_69::chunk_4",
+        "AMD_10k_2024.pdf::page_68::chunk_4"
+      ]
+    },
+    {
+      "case_id": "FRKG288",
+      "score": 0.8,
+      "context_count": 1,
+      "context_ids": [
+        "TXN_10k_2022.pdf::page_30::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG290",
+      "score": 0.0,
+      "context_count": 1,
+      "context_ids": [
+        "INTC_10k_2022.pdf::page_6::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG300",
+      "score": 0.6,
+      "context_count": 10,
+      "context_ids": [
+        "AMD_10k_2022.pdf::page_5::chunk_1",
+        "AMD_10k_2024.pdf::page_69::chunk_1",
+        "INTC_10k_2023.pdf::page_53::chunk_1",
+        "INTC_10k_2023.pdf::page_87::chunk_1",
+        "INTC_10k_2024.pdf::page_102::chunk_2",
+        "INTC_10k_2024.pdf::page_24::chunk_1",
+        "INTC_10k_2024.pdf::page_70::chunk_1",
+        "INTC_10k_2024.pdf::page_71::chunk_1",
+        "INTC_10k_2024.pdf::page_72::chunk_2",
+        "NVDA_10k_2024.pdf::page_78::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG356",
+      "score": 1.0,
+      "context_count": 2,
+      "context_ids": [
+        "QCOM_10k_2023.pdf::page_59::chunk_1",
+        "QCOM_10k_2024.pdf::page_59::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG357",
+      "score": 1.0,
+      "context_count": 1,
+      "context_ids": [
+        "NVDA_10k_2024.pdf::page_78::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG358",
+      "score": 0.7142857142857143,
+      "context_count": 5,
+      "context_ids": [
+        "INTC_10k_2023.pdf::page_87::chunk_1",
+        "INTC_10k_2023.pdf::page_88::chunk_2",
+        "INTC_10k_2024.pdf::page_71::chunk_1",
+        "INTC_10k_2024.pdf::page_72::chunk_2",
+        "NVDA_10k_2024.pdf::page_78::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG359",
+      "score": 1.0,
+      "context_count": 10,
+      "context_ids": [
+        "QCOM_10k_2024.pdf::page_57::chunk_2",
+        "QCOM_10k_2024.pdf::page_59::chunk_1",
+        "QCOM_10k_2023.pdf::page_59::chunk_1",
+        "AMD_10k_2024.pdf::page_16::chunk_1",
+        "AMD_10k_2024.pdf::page_90::chunk_1",
+        "INTC_10k_2024.pdf::page_102::chunk_2",
+        "INTC_10k_2024.pdf::page_58::chunk_1",
+        "INTC_10k_2024.pdf::page_70::chunk_1",
+        "INTC_10k_2024.pdf::page_71::chunk_1",
+        "NVDA_10k_2024.pdf::page_78::chunk_1"
+      ]
+    },
+    {
+      "case_id": "FRKG360",
+      "score": 0.6666666666666666,
+      "context_count": 7,
+      "context_ids": [
+        "QCOM_10k_2024.pdf::page_59::chunk_1",
+        "QCOM_10k_2024.pdf::page_40::chunk_1",
+        "QCOM_10k_2024.pdf::page_69::chunk_1",
+        "QCOM_10k_2024.pdf::page_73::chunk_5",
+        "QCOM_10k_2024.pdf::page_48::chunk_1",
+        "QCOM_10k_2024.pdf::page_73::chunk_9",
+        "QCOM_10k_2024.pdf::page_84::chunk_3"
+      ]
+    }
+  ]
+}

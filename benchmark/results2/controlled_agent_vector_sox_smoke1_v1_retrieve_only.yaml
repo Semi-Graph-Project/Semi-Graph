@@ -1,0 +1,178 @@
+summary:
+  query_count: 1
+  hit: 1.0
+  recall: 0.333
+  mrr: 1.0
+  average_latency_ms: 44503.3
+  average_answer_latency_ms: 0.0
+  average_total_latency_ms: 44503.3
+  token_usage:
+    prompt_tokens: 114511
+    completion_tokens: 873
+    total_tokens: 115384
+    llm_calls: 9
+    calls_with_usage: 9
+    status: complete
+  token_usage_including_warmup:
+    prompt_tokens: 114511
+    completion_tokens: 873
+    total_tokens: 115384
+    llm_calls: 9
+    calls_with_usage: 9
+    status: complete
+results:
+- id: FRKG003
+  mode: retrieve_only
+  answer_audit_enabled: false
+  query: Based on the segment disclosures and term definitions in their 2024 10-K filings, how do Intel and NVIDIA differ
+    in the treatment of stock-based compensation expenses within their 'All Other' categories, and what does this reveal about
+    their corporate expense allocation practices?
+  gold_chunks:
+  - INTC_10k_2024.pdf::page_102::chunk_2
+  - INTC_10k_2024.pdf::page_71::chunk_1
+  - NVDA_10k_2024.pdf::page_78::chunk_1
+  top_chunk_ids:
+  - INTC_10k_2024.pdf::page_71::chunk_1
+  answer_points:
+  - Intel's 'All Other' category, as defined in its glossary (Chunk 1), includes non-reportable segments and startup businesses.
+    According to Chunk 2, Intel does not allocate stock-based compensation expenses to its operating segments, as these are
+    considered corporate-level expenses. In contrast, NVIDIA's 'All Other' category, as detailed in Chunk 3, explicitly includes
+    stock-based compensation expense as part of its enterprise-level costs. This reveals that Intel maintains stock-based
+    compensation as a centralized corporate expense, while NVIDIA incorporates it directly into its 'All Other' segment's
+    financial reporting, highlighting different approaches to expense allocation between the two companies.
+  final_answer: None
+  hit: 1
+  recall: 0.3333333333333333
+  reciprocal_rank: 1.0
+  latency_ms: 44503.26654800301
+  answer_latency_ms: 0.0
+  total_latency_ms: 44503.26654800301
+  token_usage:
+    prompt_tokens: 114511
+    completion_tokens: 873
+    total_tokens: 115384
+    llm_calls: 9
+    calls_with_usage: 9
+    status: complete
+config_snapshot:
+  llm:
+    provider: openrouter
+    model: mistralai/mistral-nemo
+    temperature: 0.0
+    reasoning:
+      effort: high
+    base_url: https://openrouter.ai/api/v1
+    json_mode: true
+    timeout: 120.0
+  embeddings:
+    model: BAAI/bge-base-en-v1.5
+    dimensions: 768
+    batch_size: 32
+    device: cpu
+    normalize: true
+  agent_retrieval:
+    vector:
+      candidate_pool_k: 20
+      rerank_mode: company+fiscal_year
+    graph:
+      ppr_projection_prefix: semigraph_ppr
+      top_k_entities: 20
+      top_k_triples: 5
+      top_k_chunk_seeds: 5
+      chunk_seed_vector_index: chunk_embedding
+      damping: 0.3
+      use_expansion: false
+      seed_mode: triple
+      candidate_pool_k: 20
+      rerank_mode: cross_encoder
+      ppr_seed_weight_mode: similarity_specificity
+      triple_filter: none
+  agent_harness:
+    max_planned_tasks: 10
+    max_parallel_tasks: 4
+    top_k_chunks: 10
+    max_attempts_per_task: 3
+    max_assessment_attempts: 2
+    max_technical_retries: 1
+    max_synthesis_chunks: 10
+    assess_context_max_chars: 60000
+    max_num_ontology: 8
+  evaluation:
+    answer_audit_enabled: false
+  graph:
+    informative_rel_types:
+    - ANNOUNCES
+    - CAUSES_SHORTAGE_OF
+    - COMPETES_WITH
+    - DEPENDS_ON
+    - DISCLOSES
+    - FACES
+    - GUIDES_ON
+    - HAS_STAKE_IN
+    - IMPACTED_BY
+    - IMPACTS
+    - INTRODUCES
+    - INVESTS_IN
+    - INVOLVED_IN
+    - LISTED_ON
+    - NEGATIVELY_IMPACTS
+    - OPERATES_IN
+    - PARTNERS_WITH
+    - POSITIVELY_IMPACTS
+    - PRODUCES
+    - SUBJECT_TO
+    - SUPPLIES
+  tickers:
+  - ACLS
+  - ADI
+  - ALAB
+  - AMAT
+  - AMD
+  - AMKR
+  - AVGO
+  - COHR
+  - ENTG
+  - INTC
+  - KLAC
+  - LRCX
+  - MCHP
+  - MPWR
+  - MRVL
+  - MU
+  - NVDA
+  - 'ON'
+  - QCOM
+  - RMBS
+  - SWKS
+  - TXN
+  evaluator:
+    dataset: /home/kantinan/programming/project/benchmark/freezes/sox74_retrieval_ablation_v1/inputs/finreflectkg_sox_strict74.yaml
+    version_name: v1
+    top_k: 10
+    vector_index: gold_chunk_embedding
+    overrides:
+      agent_retrieval.vector:
+        vector_index: gold_chunk_embedding
+measurement:
+  tool: agent_vector
+  mode: retrieve_only
+  workers: 8
+  selection:
+    start: 1
+    end: 1
+    query_count: 1
+  answer_audit_enabled: false
+  latency_scope: Per-query wall time after warm-up; excludes executor queue, metric calculation and trace writes; includes
+    internal lock waits. Agent retrieval includes planning, assessment and retries.
+  token_usage_scope: Provider-reported LLM tokens across all calls and retries; excludes local embeddings and reranking. Partial
+    totals cover only calls that returned usage. Warm-up is reported separately.
+  warmup:
+    tool: vector
+    latency_ms: 15938.856724002108
+    token_usage:
+      prompt_tokens: 0
+      completion_tokens: 0
+      total_tokens: 0
+      llm_calls: 0
+      calls_with_usage: 0
+      status: no_calls
